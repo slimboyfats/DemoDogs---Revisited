@@ -142,6 +142,15 @@ export class Scene implements WorldRenderer {
     });
     R.flush();
 
+    // loose voxels (drawn over the stacks here; the pixel engine depth-tests them)
+    for (const v of fx.voxels) {
+      const sx = R.sx(v.x);
+      const sy = R.sy(v.y, v.z);
+      if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+      ctx.fillStyle = `#${v.rgb.toString(16).padStart(6, '0')}`;
+      ctx.fillRect(Math.round(sx - S / 2), Math.round(sy - S / 2), S, S);
+    }
+
     // particles
     for (const f of fx.fx) {
       const sx = R.sx(f.x);

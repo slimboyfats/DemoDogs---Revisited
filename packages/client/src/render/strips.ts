@@ -79,34 +79,64 @@ export function clone(s: Strip): Strip {
 }
 
 /**
+ * One voxel knocked off a strip: where it was in the part (x forward and y across from the
+ * middle, z the layer), and its colour.
+ */
+export interface Chip {
+  x: number;
+  y: number;
+  z: number;
+  rgb: number;
+}
+
+/** A strip's pixels: RGBA rows `W` wide, slices of cw by ch side by side, n of them. */
+export interface Voxels {
+  px: Uint8ClampedArray;
+  W: number;
+  cw: number;
+  ch: number;
+  n: number;
+}
+
+function chipAt(v: Voxels, j: number, x: number, y: number, z: number): Chip {
+  const px = v.px;
+  return {
+    x: x + 0.5 - v.cw / 2,
+    y: y + 0.5 - v.ch / 2,
+    z,
+    rgb: (px[j]! << 16) | (px[j + 1]! << 8) | px[j + 2]!,
+  };
+}
+
+/**
  * Punch a dent at (lx, ly) (art px from the cell's middle, x forward): near the centre the top
  * layers are crushed away, around it the paint is scuffed darker. The bottom `keep` layers stay.
+ * Returns the voxels that were knocked off, so they can fly away as debris.
  */
-export function dent(
-  s: Strip,
+export function dentVoxels(
+  v: Voxels,
   lx: number,
   ly: number,
   r: number,
   power: number,
   rand: () => number,
   keep = 1,
-): void {
-  const g = s.img.getContext('2d')!;
-  const W = s.img.width;
-  const id = g.getImageData(0, 0, W, s.img.height);
-  const px = id.data;
-  const cx = s.cw / 2 + lx;
-  const cy = s.ch / 2 + ly;
-  const crush = Math.min(s.n - keep, Math.round(power * s.n));
-  for (let z = 0; z < s.n; z++)
-    for (let y = 0; y < s.ch; y++)
-      for (let x = 0; x < s.cw; x++) {
-        const j = (y * W + z * s.cw + x) * 4;
+): Chip[] {
+  const px = v.px;
+  const cx = v.cw / 2 + lx;
+  const cy = v.ch / 2 + ly;
+  const crush = Math.min(v.n - keep, Math.round(power * v.n));
+  const chips: Chip[] = [];
+  for (let z = 0; z < v.n; z++)
+    for (let y = 0; y < v.ch; y++)
+      for (let x = 0; x < v.cw; x++) {
+        const j = (y * v.W + z * v.cw + x) * 4;
         if (!px[j + 3]) continue;
         const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy) / r;
         if (d > 1) continue;
-        const fromTop = s.n - 1 - z;
+        const fromTop = v.n - 1 - z;
         if (z >= keep && ((d < 0.55 && fromTop < crush) || (d < 0.85 && rand() < 0.35 * power))) {
+          chips.push(chipAt(v, j, x, y, z));
           px[j + 3] = 0;
           continue;
         }
@@ -115,7 +145,70 @@ export function dent(
         px[j + 1] = px[j + 1]! * k;
         px[j + 2] = px[j + 2]! * k;
       }
+  return chips;
+}
+
+/**
+ * Blow a strip apart: each voxel above the bottom `keep` layers is knocked off with chance
+ * `share` (more likely the higher it sits). Returns the voxels that came off.
+ */
+export function shatterVoxels(v: Voxels, share: number, rand: () => number, keep = 1): Chip[] {
+  const px = v.px;
+  const chips: Chip[] = [];
+  for (let z = keep; z < v.n; z++) {
+    const p = share * (0.6 + (0.8 * z) / v.n);
+    for (let y = 0; y < v.ch; y++)
+      for (let x = 0; x < v.cw; x++) {
+        const j = (y * v.W + z * v.cw + x) * 4;
+        if (!px[j + 3] || rand() >= p) continue;
+        chips.push(chipAt(v, j, x, y, z));
+        px[j + 3] = 0;
+      }
+  }
+  return chips;
+}
+
+/** Every voxel there is, without changing anything. */
+export function allVoxels(v: Voxels): Chip[] {
+  const chips: Chip[] = [];
+  for (let z = 0; z < v.n; z++)
+    for (let y = 0; y < v.ch; y++)
+      for (let x = 0; x < v.cw; x++) {
+        const j = (y * v.W + z * v.cw + x) * 4;
+        if (v.px[j + 3]) chips.push(chipAt(v, j, x, y, z));
+      }
+  return chips;
+}
+
+/** Run `fn` over a strip's pixels and write them back. */
+function edit<T>(s: Strip, fn: (v: Voxels) => T): T {
+  const g = s.img.getContext('2d')!;
+  const id = g.getImageData(0, 0, s.img.width, s.img.height);
+  const out = fn({ px: id.data, W: s.img.width, cw: s.cw, ch: s.ch, n: s.n });
   g.putImageData(id, 0, 0);
+  return out;
+}
+
+export function dent(
+  s: Strip,
+  lx: number,
+  ly: number,
+  r: number,
+  power: number,
+  rand: () => number,
+  keep = 1,
+): Chip[] {
+  return edit(s, (v) => dentVoxels(v, lx, ly, r, power, rand, keep));
+}
+
+export function shatter(s: Strip, share: number, rand: () => number, keep = 1): Chip[] {
+  return edit(s, (v) => shatterVoxels(v, share, rand, keep));
+}
+
+/** Every voxel of a strip (for things that vanish as they burst). */
+export function voxelsOf(s: Strip): Chip[] {
+  const px = s.img.getContext('2d')!.getImageData(0, 0, s.img.width, s.img.height).data;
+  return allVoxels({ px, W: s.img.width, cw: s.cw, ch: s.ch, n: s.n });
 }
 
 /** A burnt-out shell: everything charred dark. */

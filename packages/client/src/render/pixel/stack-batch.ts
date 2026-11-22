@@ -140,6 +140,17 @@ export class StackBatch {
       this.push(x, y, z + k / zk, up + k, rot, a.x + i * s.cw, a.y, s.cw, s.ch, alpha);
   }
 
+  /**
+   * One loose voxel: a 1 by 1 slice in a flat colour (0xRRGGBB), no texture. The colour rides in
+   * the texel-x slot with texel-y at -1, which the shader reads as "plain colour".
+   */
+  voxel(rgb: number, x: number, y: number, z: number, rot: number): void {
+    const zk = this.v.zk;
+    const up = Math.round(z * zk);
+    const rows = Math.max(1, Math.ceil(zk - 0.02));
+    for (let k = 0; k < rows; k++) this.push(x, y, z + k / zk, up + k, rot, rgb, -1, 1, 1, 1);
+  }
+
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
     for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i, rot, 1, alpha);
   }

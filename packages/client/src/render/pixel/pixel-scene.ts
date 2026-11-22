@@ -189,6 +189,7 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.gatherLights(w, fx);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot);
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 

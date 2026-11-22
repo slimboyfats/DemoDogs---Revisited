@@ -4,7 +4,8 @@ import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
-import { char, clone, dent } from './strips';
+import { char, clone, dent, shatter, voxelsOf, type Chip } from './strips';
+import { launch, sample, stepVoxel, type Burst, type Voxel } from './voxels';
 import type { Sound } from '../audio/sound';
 
 const TAU = Math.PI * 2;
@@ -56,6 +57,9 @@ export interface FloatText {
   big: boolean;
 }
 
+/** The most loose voxels in the air at once. */
+const MAX_VOXELS = 2400;
+
 const BOT_RIG = {
   thigh: 3.4,
   shin: 3.6,
@@ -83,6 +87,9 @@ export class Effects {
   readonly bodies: Strip[] = [];
   /** Short bursts of light (explosions, muzzle flashes) for renderers that light the world. */
   readonly flashes: Flash[] = [];
+  /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
+  readonly voxels: Voxel[] = [];
+  private readonly propAlive: boolean[] = [];
   /** Strips redrawn since a renderer last looked (dents, charring, a fresh body). */
   readonly changed = new Set<Strip>();
   readonly walkers: Walker[] = [];
@@ -225,7 +232,7 @@ export class Effects {
       switch (e.t) {
         case 'hit': {
           const c = w.cars[e.car]!;
-          dent(
+          const chips = dent(
             this.bodies[e.car]!,
             e.lx * 0.9,
             e.ly * 0.85,
@@ -235,6 +242,13 @@ export class Effects {
             1,
           );
           this.changed.add(this.bodies[e.car]!);
+          // the pixels knocked off fly away from the hit
+          this.burst(chips, 70, {
+            ...this.carBurst(c),
+            ox: e.x,
+            oy: e.y,
+            speed: 30 + e.amount * 3,
+          });
           if (c.isPlayer && e.amount > 6)
             this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
           break;
@@ -269,6 +283,9 @@ export class Effects {
         }
         case 'wreck': {
           const c = w.cars[e.car]!;
+          // the car bursts: about half of what is left of the body flies off, the rest is a burnt hull
+          const chips = shatter(this.bodies[e.car]!, 0.5, Math.random);
+          this.burst(chips, 320, { ...this.carBurst(c), ox: c.x, oy: c.y, speed: 110 });
           char(this.bodies[e.car]!);
           this.changed.add(this.bodies[e.car]!);
           const A = this.carArt(c);
@@ -324,17 +341,18 @@ export class Effects {
           const sp = Math.hypot(e.vx, e.vy);
           const ux = e.vx / (sp || 1);
           const uy = e.vy / (sp || 1);
-          this.fling(
-            A.body,
-            e.x,
-            e.y,
-            4,
-            ux * sp * 0.9 + rand(-20, 20),
-            uy * sp * 0.9 + rand(-20, 20),
-            rand(110, 170),
-            b.h,
-            7,
-          );
+          // the bot's body bursts into its pixels, thrown the way the car was going
+          this.burst(voxelsOf(A.body), 70, {
+            x: e.x,
+            y: e.y,
+            h: b.h,
+            z: 3,
+            ox: e.x - ux * 6,
+            oy: e.y - uy * 6,
+            speed: 50 + sp * 0.5,
+            vx: e.vx,
+            vy: e.vy,
+          });
           for (let i = 0; i < 5; i++)
             this.fling(
               i < 2 ? A.foot : A.chunk,
@@ -369,18 +387,7 @@ export class Effects {
           break;
         }
         case 'break':
-          for (let i = 0; i < 6; i++)
-            this.fling(
-              this.art.plank,
-              e.x,
-              e.y,
-              rand(1, 6),
-              e.vx * 0.5 + rand(-60, 60),
-              e.vy * 0.5 + rand(-60, 60),
-              rand(60, 140),
-              rand(0, TAU),
-              5,
-            );
+          // the crate itself bursts into voxels in afterStep, like any prop that dies
           for (let i = 0; i < 4; i++) this.puff(e.x, e.y, 4, 'smoke');
           if (this.near(e.x, e.y, 250)) S.crash(20);
           break;
@@ -435,10 +442,51 @@ export class Effects {
   }
   private endShown = false;
 
+  private carBurst(c: Car): Omit<Burst, 'ox' | 'oy' | 'speed'> {
+    return { x: c.x, y: c.y, h: c.h, z: c.z + 0.6, vx: c.vx, vy: c.vy };
+  }
+
+  /** Send up to `max` of these chips flying (the rest just vanish), within the overall budget. */
+  private burst(chips: Chip[], max: number, b: Burst): void {
+    const room = Math.max(0, MAX_VOXELS - this.voxels.length);
+    for (const c of sample(chips, Math.min(max, room), Math.random))
+      this.voxels.push(launch(c, b, Math.random));
+  }
+
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   afterStep(): void {
     const w = this.w;
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
+    // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
+    for (const p of w.props) {
+      if (!p.alive && this.propAlive[p.index] !== false) {
+        const boom = p.def.explodesAt !== undefined;
+        this.burst(voxelsOf(this.art.prop(p.def.id)), boom ? 260 : 200, {
+          x: p.x,
+          y: p.y,
+          h: p.rot,
+          z: p.z,
+          ox: p.x,
+          oy: p.y,
+          speed: boom ? 150 : 80,
+          vx: p.vx,
+          vy: p.vy,
+        });
+      }
+      this.propAlive[p.index] = p.alive;
+    }
+    // loose voxels fly, bounce and settle: one that stops is painted into the ground for good
+    const g = this.ground.g;
+    for (let i = this.voxels.length - 1; i >= 0; i--) {
+      const v = this.voxels[i]!;
+      if (!stepVoxel(v, DT)) continue;
+      const [x, y] = w.keepInside(v.x, v.y, 1);
+      g.fillStyle = `rgb(${((v.rgb >> 16) & 255) * 0.8},${((v.rgb >> 8) & 255) * 0.8},${(v.rgb & 255) * 0.8})`;
+      g.fillRect(Math.floor(x), Math.floor(y), 1, 1);
+      markGround(this.ground, x, y, 1);
+      this.voxels[i] = this.voxels[this.voxels.length - 1]!;
+      this.voxels.pop();
+    }
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);

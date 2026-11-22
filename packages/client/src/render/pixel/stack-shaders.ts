@@ -62,9 +62,16 @@ float bayer(ivec2 p) {
   return (float(t[i]) + 0.5) / 16.0;
 }
 void main() {
-  ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
-  vec4 c = texelFetch(u_atlas, t, 0);
-  if (c.a < 0.5) discard;
+  vec4 c;
+  if (v_uv.y < 0.0) {
+    // a loose voxel: flat colour packed as 0xRRGGBB in the texel-x slot
+    int p = int(v_uv.x + 0.5);
+    c = vec4(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255), 255.0) / 255.0;
+  } else {
+    ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
+    c = texelFetch(u_atlas, t, 0);
+    if (c.a < 0.5) discard;
+  }
   ivec2 cell = ivec2(floor(v_world.xy)) + ivec2(0, int(floor(v_world.z)));
   float b = bayer(cell);
   if (v_alpha < 1.0 && b >= v_alpha) discard;
