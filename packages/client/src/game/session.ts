@@ -26,6 +26,9 @@ export interface SessionOptions {
   /** Online: the other drivers (seats 1, 2, ...) and which seat this screen drives. */
   humans?: Entrant[];
   you?: number;
+  /** Online: seat 0's name and paint. */
+  name?: string;
+  paint?: string;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -44,6 +47,8 @@ function makeWorld(o: SessionOptions): World {
     ...(o.sandbox ? { sandbox: true } : {}),
     ...(o.humans ? { humans: o.humans } : {}),
     ...(o.you !== undefined ? { you: o.you } : {}),
+    ...(o.name ? { name: o.name } : {}),
+    ...(o.paint ? { paint: o.paint } : {}),
   });
 }
 

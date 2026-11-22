@@ -22,7 +22,8 @@
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",
-    "signal": "pnpm --filter @demodogs/signal start"
+    "signal": "pnpm --filter @demodogs/signal start",
+    "play:net": "pnpm build && node scripts/play-net.mjs && node scripts/play-net.mjs relay"
   },
   "browserslist": [
     "baseline 2026"

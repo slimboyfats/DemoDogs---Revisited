@@ -11,6 +11,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm verify`                                              | `check`, then build and `scripts/play-smoke.mjs` (headless Chromium at 844×390, screenshots in `captures/`) |
 | `pnpm dev`, then `/?dev`                                   | the test range: fire weapons at parked cars and props, slow time, read the counters                         |
 | `/?perf`, or RECORD PERFORMANCE when paused                | the performance recorder: saves a log of what each second cost on that device                               |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE   | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)              |
 | `pnpm format`                                              | Prettier, write                                                                                             |
 | `pnpm content:validate`                                    | resolve and validate every manifest                                                                         |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden` | regenerate golden hashes after an intended sim change                                                       |
@@ -33,6 +34,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **The kernel never imports content** and never names a content id. Rules take ids from manifests.
 - **Every item is a folder** `packages/content/core/<type>/<name>/` with `manifest.json`, a `<name>.test.ts`, and a
   `look.ts` if it is drawn (cars, props, weapons, bots) or `behaviour.ts` for AI. New ids go in `ids.lock.json`.
+- **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.
 - **Original content only.** No names, characters, tracks or art from existing games.

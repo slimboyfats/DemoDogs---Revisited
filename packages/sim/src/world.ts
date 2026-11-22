@@ -63,6 +63,9 @@ export interface WorldOptions {
    * the same world from the same options; only `you` differs.
    */
   humans?: Entrant[];
+  /** The player's name and paint, instead of YOU and the car's own (online seat 0). */
+  name?: string;
+  paint?: string;
   /**
    * Which seat `player` points at (default 0): the car this screen follows. It is a viewpoint
    * only: no rule reads `player`, so every peer simulates the same race whatever its `you`.
@@ -201,8 +204,8 @@ export class World {
     const player = makeCar(
       this,
       carDef,
-      carDef.paint,
-      'YOU',
+      opts.paint ?? carDef.paint,
+      opts.name ?? 'YOU',
       true,
       opts.autopilot ? aiDef : null,
       opts.player,

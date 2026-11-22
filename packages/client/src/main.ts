@@ -132,6 +132,8 @@ const online = new OnlineScreen(
         {
           venue: s.venue,
           car: host.car,
+          name: host.name,
+          paint: host.paint,
           seed: s.seed,
           autopilot: false,
           humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
