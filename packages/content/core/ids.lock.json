@@ -12,6 +12,7 @@
   "material.concrete",
   "material.fuel",
   "material.glass",
+  "material.glue",
   "material.ice",
   "material.mud",
   "material.oil",
@@ -70,8 +71,11 @@
   "venue.tank-farm",
   "venue.tar-flats",
   "venue.the-pit",
+  "weapon.glue-pot",
   "weapon.gun",
   "weapon.mine",
   "weapon.oil-can",
-  "weapon.rocket"
+  "weapon.rocket",
+  "weapon.smoke-pot",
+  "weapon.tacks"
 ]

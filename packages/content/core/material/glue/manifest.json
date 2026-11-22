@@ -1,0 +1,13 @@
+{
+  "id": "material.glue",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glue",
+    "description": "A sticky yellow patch. Tyres keep their grip but drag through it as if wading, and it will not burn.",
+    "since": "core@0.4.0"
+  },
+  "grip": 1,
+  "drag": 3.6,
+  "colour": "#c9b45a",
+  "alpha": 0.82
+}

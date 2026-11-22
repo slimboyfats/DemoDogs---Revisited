@@ -24,6 +24,12 @@ export const CKind = {
    * it stays: `landed` hands it over to be painted into the ground. (mudders: PKind.Leaf.)
    */
   Leaf: 3,
+  /**
+   * A smoke screen's smoke: heavy and cold, so it does not climb like Wisp. It rolls low over the
+   * ground at its own height, drifts a little on the wind and stays thick two cells across for
+   * most of its life, so that a bank of it hides the road under it.
+   */
+  Fog: 4,
 } as const;
 export type CKind = (typeof CKind)[keyof typeof CKind];
 
@@ -246,6 +252,16 @@ export class Cells {
           this.landed.push(x + vx * dt, y + vy * dt, shade(this.rgb[i]!, th < 0.5 ? 1 : 0.72));
           continue;
         }
+      } else if (k === CKind.Fog) {
+        if (calm) air[0] = air[1] = air[2] = 0;
+        else this.air(x, y, z, air);
+        // it seeks its own height a little above the ground and churns slowly there
+        const th = this.th[i]!;
+        const f = Math.min(1, 2.5 * dt);
+        const roll = a * (0.8 + th) + th * 30;
+        vx += (air[0] + WIND[0] * 0.25 + Math.sin(roll) * 5 - vx) * f;
+        vy += (air[1] + WIND[1] * 0.25 + Math.cos(roll) * 5 - vy) * f;
+        vz += (air[2] + (2 + th * 9 - z) * 1.5 - vz) * f;
       } else {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
@@ -319,6 +335,13 @@ export class Cells {
             1,
             Shape.Rect,
           );
+        } else if (k === CKind.Fog) {
+          if (pass !== 0) continue;
+          // thick from the start, thinning out cell by cell in its last fifth
+          if (t > 0.8 && th < (t - 0.8) / 0.2) continue;
+          if (!seen(x, y, z)) continue;
+          const s = stepT(t, th, 4);
+          normal(x, y, z, t < 0.85 ? 2 : 1, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
         } else if (k === CKind.Fire) {
           const s = stepT(t, th, 12);
           const hot = s < 0.3;

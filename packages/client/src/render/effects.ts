@@ -17,6 +17,7 @@ import {
 import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
 import type { Sound } from '../audio/sound';
+import { dropEvent, feedClouds } from './drops-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -1088,6 +1089,13 @@ export class Effects {
           } else if (c.isPlayer) S.drop();
           break;
         }
+        case 'puncture': {
+          dropEvent(this, w, e);
+          const vol = this.vol(e.x, e.y);
+          if (vol > 0) S.pop(vol);
+          if (e.car === w.player.index) this.text(e.x, e.y, 'FLAT TYRE', '#ff6a3d');
+          break;
+        }
         case 'score':
           if (e.car === w.player.index && `${e.x},${e.y}` !== smashAt) {
             const big = e.label.startsWith('WRECKED');
@@ -1281,6 +1289,7 @@ export class Effects {
       if (Math.random() < 0.2) this.ember(x, y, 5);
     }
     this.feed();
+    feedClouds(this, w);
     this.cells.step(DT);
     this.leafFall();
     this.litter();

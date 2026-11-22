@@ -218,7 +218,7 @@ export type ModeManifest = z.infer<typeof ModeSchema>;
 export const WeaponSchema = z.strictObject({
   ...base,
   id: id('weapon'),
-  kind: z.enum(['rocket', 'mine', 'gun', 'slick']),
+  kind: z.enum(['rocket', 'mine', 'gun', 'slick', 'smoke', 'caltrops']),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
   ammo: z.number().int().positive(),
@@ -243,6 +243,18 @@ export const WeaponSchema = z.strictObject({
   /** Mines: seconds before it arms; trigger radius. */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
+  /**
+   * Smoke: a cloud of this `radius` set down behind the car that hangs for `life` seconds. A
+   * driver who goes into it cannot see the road for `blind` seconds after, and a gun cannot pick
+   * out a car inside it.
+   */
+  blind: z.number().positive().optional(),
+  /**
+   * Caltrops: `count` spikes scattered over `radius` behind the car, lying for `life` seconds. A
+   * car that rolls over one has a flat for `flat` seconds (slow and wobbly) and takes `damage`.
+   */
+  count: z.number().int().positive().optional(),
+  flat: z.number().positive().optional(),
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 

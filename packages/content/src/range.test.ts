@@ -1,6 +1,8 @@
 import { NO_CONTROLS } from '@demodogs/shared';
 import {
+  dropsBehind,
   rangeBlast,
+  rangeDrop,
   rangeHit,
   rangeMend,
   rangeMine,
@@ -68,5 +70,25 @@ describe('the test range', () => {
     expect(w.statics.length).toBeGreaterThan(s);
     expect(w.props.length).toBeGreaterThan(p);
     expect(w.props.at(-1)!.index).toBe(w.props.length - 1);
+  });
+
+  it('rear weapons drop where you tap: smoke hangs, glue and oil pour, tacks pop a tyre', () => {
+    const w = range();
+    const P = w.player;
+    const t = w.cars.find((c) => c !== P)!;
+    const drops = [...w.content.weapon.values()].filter((d) => dropsBehind(d.kind));
+    const of = (kind: string) => drops.find((d) => d.kind === kind)!;
+    rangeDrop(w, of('smoke'), P, P.x + 100, P.y - 100);
+    expect(w.clouds.length).toBe(1);
+    const pools = w.spills.length;
+    rangeDrop(w, of('slick'), P, P.x + 100, P.y + 100);
+    expect(w.spills.length).toBe(pools + 1);
+    rangeDrop(w, of('caltrops'), P, P.x - 200, P.y, 0);
+    expect(w.spikes.length).toBeGreaterThan(0);
+    const s = w.spikes[0]!;
+    rangeMove(t, s.x, s.y);
+    w.step();
+    expect(t.flat).toBeGreaterThan(0);
+    expect(t.hp).toBeLessThan(100);
   });
 });
