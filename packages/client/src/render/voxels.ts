@@ -196,6 +196,34 @@ export function rebuilt(t: number, dur: number): number {
   return Math.min(1, Math.max(0, (t - fly) / Math.max(0.01, dur - fly)));
 }
 
+/** How far a rebuild runs left to right rather than bottom up (0 to 1). */
+export const SWEEP = 0.6;
+
+/** A fallen piece growing back: `t` of `dur` seconds in, sweeping across world x from x0 to x1. */
+export interface Rising {
+  t: number;
+  dur: number;
+  x0: number;
+  x1: number;
+}
+
+/**
+ * Where a point `fx` of the way across (left to right) and `fz` of the way up comes in the rebuild,
+ * 0 to 1: the front sweeps mostly left to right, tilted so lower parts come a little sooner.
+ */
+export const front = (fx: number, fz: number): number => SWEEP * fx + (1 - SWEEP) * fz;
+
+/**
+ * How far across (world x) a layer `fz` of the way up has grown back, `g` of the way through
+ * the rebuild: -Infinity before it starts, Infinity once it is whole.
+ */
+export function grownTo(r: Rising, g: number, fz: number): number {
+  const f = (g - (1 - SWEEP) * fz) / SWEEP;
+  if (f <= 0) return -Infinity;
+  if (f >= 1) return Infinity;
+  return r.x0 + f * (r.x1 - r.x0);
+}
+
 /** When (seconds in) the layer a share `f` of the way up lands, and when its blocks take off. */
 export function landing(f: number, dur: number): [number, number] {
   const fly = Math.min(FLIGHT, dur * 0.4);

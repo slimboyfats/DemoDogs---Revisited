@@ -6,6 +6,8 @@ import { STACK_FS, STACK_VS } from './stack-shaders';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res. */
 const STRIDE = 11;
+/** An alpha this big or more is a wipe: draw only west of world x = alpha - WIPE. */
+const WIPE = 100000;
 
 /** The view a frame of slices is drawn with. */
 export interface StackView {
@@ -133,8 +135,11 @@ export class StackBatch {
     rot: number,
     thick = 1,
     alpha = 1,
+    wipe?: number,
   ): void {
     const a = this.atlas.slot(s);
+    // a wipe rides in the alpha slot, offset far past 1 (see the fragment shader)
+    if (wipe !== undefined) alpha = WIPE + wipe;
     const zk = this.v.zk;
     const up = Math.round(z * zk);
     // a layer is drawn a row or two thick so stacks have no gaps between slices

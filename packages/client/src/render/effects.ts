@@ -3,7 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
-import type { Strip } from './stack';
+import { tall, type Strip } from './stack';
 import {
   char,
   clone,
@@ -23,7 +23,9 @@ import {
   shards,
   stepVoxel,
   type Burst,
+  front,
   landing,
+  type Rising,
   stepHoming,
   type Homing,
   type Voxel,
@@ -125,7 +127,9 @@ export class Effects {
   /** Blocks flying back to rebuild something that fell (a flyover span). */
   readonly homing: Homing[] = [];
   /** Scenery growing back from the bottom up as its blocks land: seconds in, and how long it takes. */
-  readonly rising = new Map<StaticProp, { t: number; dur: number }>();
+  readonly rising = new Map<StaticProp, Rising>();
+  /** Pieces told to mend this step: they rebuild as one, so the sweep runs across them all. */
+  private mends: { s: StaticProp; in: number }[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
@@ -153,7 +157,7 @@ export class Effects {
   /** Strips of its own that will not be drawn again (the renderer gives their room back). */
   readonly dropped: Strip[] = [];
   /** What each piece of shared art breaks into, worked out once. */
-  private readonly bits = new WeakMap<Strip, Chip[]>();
+  private readonly bits = new WeakMap<Strip, Map<number, Chip[]>>();
   private readonly where = new WeakMap<Strip, Float64Array>();
   readonly walkers: Walker[] = [];
   shake = 0;
@@ -560,10 +564,69 @@ export class Effects {
     L.length = 0;
   }
 
+  /**
+   * Fly back together everything told to mend this step, as one: each fine chip lands as a front
+   * sweeping left to right (and a little bottom up) reaches it, and the art grows in behind that
+   * front (see `queueRising`), so the pieces stand when the last chips land.
+   */
+  private mendAll(): void {
+    const all = this.mends.map(({ s, in: dur }) => {
+      const art = this.art.prop(s.def.id);
+      const cs = Math.cos(s.rot);
+      const sn = Math.sin(s.rot);
+      const chips = this.finesOf(art, MEND_CHIPS, true).map((c) => ({
+        c,
+        x: s.x + c.x * cs - c.y * sn,
+        y: s.y + c.x * sn + c.y * cs,
+      }));
+      return { s, dur, art, chips };
+    });
+    this.mends = [];
+    let x0 = Infinity;
+    let x1 = -Infinity;
+    for (const p of all)
+      for (const q of p.chips) {
+        x0 = Math.min(x0, q.x);
+        x1 = Math.max(x1, q.x);
+      }
+    const wide = Math.max(1, x1 - x0);
+    for (const { s, dur, art, chips } of all) {
+      this.rising.set(s, { t: 0, dur, x0, x1 });
+      const lift = s.lift ?? 0;
+      const top = tall(art);
+      for (const { c, x, y } of chips) {
+        const [wait, land] = landing(front((x - x0) / wide, c.z / top), dur);
+        const a = rand(0, TAU);
+        const d = rand(2, s.def.radius + 12);
+        this.homing.push({
+          x0: x + Math.cos(a) * d,
+          y0: y + Math.sin(a) * d * 0.7 + lift * 0.3,
+          z0: 0,
+          x1: x,
+          y1: y,
+          z1: lift + c.z,
+          x,
+          y,
+          z: 0,
+          rot: s.rot + rand(-2, 2),
+          rgb: c.rgb,
+          s: c.s,
+          t: 0,
+          wait: Math.max(0, wait - rand(0, 0.25)),
+          dur: land,
+        });
+      }
+      for (let i = 0; i < 6; i++) this.puff(s.x + rand(-8, 8), s.y + rand(-8, 8), 1, 'dust');
+    }
+  }
+
   /** A piece of shared art as blocks, kept: many of a kind burst the same way. */
-  private chipsOf(art: Strip): Chip[] {
-    let c = this.bits.get(art);
-    if (!c) this.bits.set(art, (c = voxelsOf(art)));
+  private chipsOf(art: Strip, shared = true, block = art.res * 2): Chip[] {
+    if (!shared) return voxelsOf(art, block);
+    let byBlock = this.bits.get(art);
+    if (!byBlock) this.bits.set(art, (byBlock = new Map()));
+    let c = byBlock.get(block);
+    if (!c) byBlock.set(block, (c = voxelsOf(art, block)));
     // a copy: `sample` shuffles and trims what it is given
     return c.slice();
   }
@@ -684,6 +747,11 @@ export class Effects {
 
   // ------------------------------------------------------------ events
   handle(events: SimEvent[]): void {
+    this.read(events);
+    if (this.mends.length) this.mendAll();
+  }
+
+  private read(events: SimEvent[]): void {
     const w = this.w;
     const S = this.sound;
     let smashAt = '';
@@ -885,44 +953,10 @@ export class Effects {
           if (e.by === 'impact') for (let i = 0; i < 3; i++) this.puff(e.x, e.y, 2, 'dust');
           break;
         }
-        case 'mend': {
-          // it flies back together off the rubble, bottom layers first, and stands when they land
-          const s = w.statics[e.prop]!;
-          const chips = this.finesOf(this.art.prop(s.def.id), MEND_CHIPS, true);
-          this.rising.set(s, { t: 0, dur: e.in });
-          const cs = Math.cos(s.rot);
-          const sn = Math.sin(s.rot);
-          const lift = s.lift ?? 0;
-          let top = 1;
-          for (const c of chips) top = Math.max(top, c.z);
-          for (const c of chips) {
-            // each block lands just as the layer it belongs to grows back
-            const [wait, land] = landing(c.z / top, e.in);
-            const x1 = s.x + c.x * cs - c.y * sn;
-            const y1 = s.y + c.x * sn + c.y * cs;
-            const a = rand(0, TAU);
-            const d = rand(2, s.def.radius + 12);
-            this.homing.push({
-              x0: x1 + Math.cos(a) * d,
-              y0: y1 + Math.sin(a) * d * 0.7 + lift * 0.3,
-              z0: 0,
-              x1,
-              y1,
-              z1: lift + c.z,
-              x: x1,
-              y: y1,
-              z: 0,
-              rot: s.rot + rand(-2, 2),
-              rgb: c.rgb,
-              s: c.s,
-              t: 0,
-              wait: Math.max(0, wait - rand(0, 0.25)),
-              dur: land,
-            });
-          }
-          for (let i = 0; i < 6; i++) this.puff(s.x + rand(-8, 8), s.y + rand(-8, 8), 1, 'dust');
+        case 'mend':
+          // gathered up and started together once this step's events are read
+          this.mends.push({ s: w.statics[e.prop]!, in: e.in });
           break;
-        }
         case 'stand': {
           const s = w.statics[e.prop]!;
           this.rising.delete(s);
@@ -939,21 +973,14 @@ export class Effects {
             const C = s.def.crown;
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
-          this.burst(
-            this.finesOf(strip, big(strip) ? 1400 : 600, strip === this.art.prop(s.def.id)),
-            big(strip) ? 1400 : 600,
-            {
-              x: s.x,
-              y: s.y,
-              h: s.rot,
-              z: s.lift ?? 0,
-              ox: e.x,
-              oy: e.y,
-              speed: 55,
-              vx: 0,
-              vy: 0,
-            },
-          );
+          // chunky first: big lumps thrown hard break into smaller ones each time they land,
+          // then mid-sized bits, then a spray of fine grit
+          const shared = strip === this.art.prop(s.def.id);
+          const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
+          const k = big(strip) ? 1 : 0.4;
+          this.burst(this.chipsOf(strip, shared, strip.res * 4), 160 * k, { ...from, speed: 120 });
+          this.burst(this.chipsOf(strip, shared, strip.res * 2), 320 * k, { ...from, speed: 95 });
+          this.burst(this.finesOf(strip, 900 * k, shared), 900 * k, { ...from, speed: 75 });
           if (this.scarred.delete(s)) this.dropped.push(strip);
           const col = s.made?.colour ?? '#6a6660';
           const r = s.def.radius;

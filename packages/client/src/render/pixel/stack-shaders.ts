@@ -79,6 +79,8 @@ void main() {
   float b = bayer(cell);
   // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
   // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
+  // a rebuild sweeping in: only what lies west of the wipe line, its edge ragged on the dither
+  if (v_alpha >= 50000.0 && v_world.x > v_alpha - 100000.0 + (b - 0.5) * 3.0) discard;
   if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
   vec3 l = vec3(0.0);
   for (int i = 0; i < 8; i++) {

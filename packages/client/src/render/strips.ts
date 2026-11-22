@@ -620,8 +620,8 @@ export function shatter(s: Strip, share: number, rand: () => number, keep = 1): 
 }
 
 /** A whole strip as blocks about two art px a side (for things that vanish as they burst). */
-export function voxelsOf(s: Strip): Chip[] {
-  return allVoxels(voxels(s, pixels(s)), s.res * 2);
+export function voxelsOf(s: Strip, block = s.res * 2): Chip[] {
+  return allVoxels(voxels(s, pixels(s)), block);
 }
 
 /** Every filled texel of a strip, packed as (z·4096 + y)·4096 + x: where fine chips come from. */
