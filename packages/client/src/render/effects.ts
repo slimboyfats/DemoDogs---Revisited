@@ -1264,7 +1264,8 @@ export class Effects {
       if (Math.random() < (small ? 0.25 : 0.6)) this.plume(bx, by, 5, small ? 1.5 : 2.5, HAZE, 6);
       // a seeker paints its target: a ring of red cells turning round the car it is chasing
       const tg = r.target !== undefined ? w.cars[r.target] : undefined;
-      if (tg && !tg.wrecked) {
+      // (every few ticks, cells that last a few frames, so slow phones still see it)
+      if (tg && !tg.wrecked && w.tick % 3 === 0) {
         const spin = w.tick * DT * 5;
         for (let k = 0; k < 4; k++) {
           const a = spin + (k * TAU) / 4;
@@ -1277,7 +1278,7 @@ export class Effects {
               0,
               0,
               0,
-              DT * 1.5,
+              0.14,
               1,
               0xff3a2e,
             );
