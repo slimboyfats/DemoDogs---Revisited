@@ -120,9 +120,14 @@ export class Session {
   step(): void {
     const w = this.world;
     const P = w.player;
+    const t0 = performance.now();
     w.step(this.o.input.read(P.h));
+    const t1 = performance.now();
     this.fx.handle(w.takeEvents());
     this.fx.afterStep();
+    this.simMs += t1 - t0;
+    this.stepMs += performance.now() - t1;
+    this.ticks++;
     if (!P.ai) this.o.sound.engineSet(Math.abs(P.vf), P.throttle, P.boosting);
     // the camera looks ahead of the car, the way it is going
     // never so far that the car leaves the middle third of the picture
@@ -138,6 +143,11 @@ export class Session {
     }
     this.cam.shake = this.fx.shake;
   }
+
+  /** Since they were last taken: ticks run, ms in the world alone, ms taking them into effects. */
+  ticks = 0;
+  simMs = 0;
+  stepMs = 0;
 
   /** Advance by dt seconds of real time. Returns true once the race is over (the first time). */
   advance(dt: number): boolean {

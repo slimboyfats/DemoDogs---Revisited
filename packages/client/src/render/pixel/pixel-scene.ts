@@ -24,7 +24,7 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
 export class PixelScene implements WorldRenderer, StackSink {
-  private readonly gl: WebGL2RenderingContext;
+  readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
   private readonly stacks: StackBatch;
   private readonly quads: QuadBatch;

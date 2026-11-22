@@ -653,3 +653,17 @@ tr.me td {
 #devTap.hidden {
   display: none;
 }
+
+/* the performance recorder's light: shown while a recording runs */
+#recDot {
+  position: fixed;
+  left: calc(60px + env(safe-area-inset-left));
+  top: calc(20px + env(safe-area-inset-top));
+  font: 700 11px/1 monospace;
+  color: #ff5b5b;
+  pointer-events: none;
+  display: none;
+}
+body.recording[data-screen='game'] #recDot {
+  display: block;
+}

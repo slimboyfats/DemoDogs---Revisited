@@ -1,3 +1,11 @@
+import {
+  PerfRecorder,
+  SlowWatch,
+  perfFileName,
+  stallDetail,
+  watchGl,
+  type PerfContext,
+} from './game/perf-log';
 import './styles.css';
 import { loadContent, loadLooks } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
@@ -104,6 +112,7 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   view: () => ({ w: W, h: H, scale, dpr: DPR }),
   restart: startDev,
   exit: () => setScreen('menu'),
+  record: () => (perf ? stopPerf() : startPerf()),
   stats: () => (scene instanceof PixelScene ? `slices ${scene.instances}` : 'canvas'),
 });
 let paused = false;
@@ -379,29 +388,148 @@ function buildMenu(): void {
   }
 }
 
+// ---- the performance recorder (from mudders): REC on the pause menu, or ?perf
+let perf: PerfRecorder | null = null;
+let glWatch: { take: () => number; stop: () => void } | null = null;
+const slow = new SlowWatch();
+
+function perfContext(): PerfContext {
+  const s = session!;
+  const w = s.world;
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  return {
+    phase: devMode ? 'range' : w.phase,
+    quality: s.fx.quality.toFixed(2),
+    cells: s.fx.cells.n,
+    particles: s.fx.fx.length,
+    voxels: s.fx.voxels.length,
+    slices: scene instanceof PixelScene ? scene.instances : 0,
+    fires: s.fx.fires.length,
+    pools: w.spills.length,
+    fallen: w.statics.reduce((n, p) => n + (p.down ? 1 : 0), 0),
+    note: `${w.venue.id} ${w.player.def.id}`,
+    heap: mem ? mem.usedJSHeapSize / 1048576 : 0,
+  };
+}
+
+function startPerf(): void {
+  if (perf) return;
+  perf = new PerfRecorder({
+    game: `demodogs ${content.packs.map((p) => `${p.name}@${p.version}`).join(' ')}`,
+    when: new Date().toISOString(),
+    agent: navigator.userAgent,
+    screen: `${innerWidth}x${innerHeight} css px, dpr ${devicePixelRatio}`,
+    renderer: rendererName,
+    cores: navigator.hardwareConcurrency ?? 0,
+  });
+  const rec = perf;
+  if (scene instanceof PixelScene)
+    glWatch = watchGl(scene.gl, (ms) =>
+      rec.note(performance.now(), 'shader linked', `${ms.toFixed(1)} ms`),
+    );
+  document.body.classList.add('recording');
+  setRecLabel();
+}
+
+/** Stop recording and hand the log over: shared where the device can, downloaded otherwise. */
+function stopPerf(): void {
+  if (!perf) return;
+  const text = perf.report();
+  const name = perfFileName(new Date());
+  perf = null;
+  glWatch?.stop();
+  glWatch = null;
+  document.body.classList.remove('recording');
+  setRecLabel();
+  const file = new File([text], name, { type: 'text/plain' });
+  const save = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  };
+  (window as unknown as { __dd: { perfLog?: string } }).__dd.perfLog = text;
+  if (navigator.canShare?.({ files: [file] }))
+    navigator.share({ files: [file], title: name }).catch(save);
+  else save();
+}
+
+function setRecLabel(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.recBtn'))
+    b.textContent = perf ? `STOP AND SAVE LOG (${perf.seconds} s)` : 'RECORD PERFORMANCE';
+  $('recDot').textContent = perf ? `REC ${perf.seconds}s` : '';
+}
+
+if ('PerformanceObserver' in window)
+  for (const type of ['long-animation-frame', 'longtask'])
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries())
+          perf?.stall(e.startTime, type, e.duration, stallDetail(e));
+      }).observe({ type, buffered: false });
+    } catch {
+      // this browser does not report that kind of stall
+    }
+addEventListener('error', (e) => perf?.note(performance.now(), 'error', e.message));
+document.addEventListener('visibilitychange', () =>
+  perf?.note(performance.now(), 'tab', document.hidden ? 'hidden' : 'shown'),
+);
+
 let last = performance.now();
 function frame(t: number): void {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
+  const wall = t - last;
+  const dt = Math.min(0.1, Math.max(0, wall / 1000));
   last = t;
   if (screen === 'game' && session) {
+    const f0 = performance.now();
     if (input.takePause()) togglePause();
+    session.ticks = session.simMs = session.stepMs = 0;
     if (!paused && session.advance(dt)) {
       finish();
       return;
     }
+    const r0 = performance.now();
     scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
+    const r1 = performance.now();
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     if (devMode) dev.frame(dt);
     else hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
+    // a device that keeps falling behind gets thinner fire and smoke, by itself
+    if (!paused && slow.frame(t, wall) && session.fx.quality > 0.3) {
+      session.fx.quality = Math.max(0.3, session.fx.quality * 0.65);
+      perf?.note(t, 'quality', `effects thinned to ${session.fx.quality.toFixed(2)}`);
+    }
+    if (perf && !paused) {
+      if (glWatch) perf.drew(glWatch.take());
+      const { ticks, simMs, stepMs } = session;
+      const other = performance.now() - f0 - simMs - stepMs - (r1 - r0);
+      const before = perf.seconds;
+      perf.frame(
+        t,
+        wall,
+        ticks,
+        simMs,
+        stepMs,
+        r1 - r0,
+        Math.max(0, other),
+        dt * 1000 * session.rate,
+        perfContext,
+      );
+      if (perf.seconds !== before) setRecLabel();
+    }
   } else if (screen === 'menu') garage.draw(cars[carIdx]!, dt);
   else if (screen === 'career') careerScreen.draw(dt);
 }
 
 function boot(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.recBtn'))
+    b.onclick = () => (perf ? stopPerf() : startPerf());
+  if (params.has('perf')) startPerf();
   resize();
   addEventListener('resize', resize);
   buildMenu();

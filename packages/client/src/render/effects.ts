@@ -105,7 +105,7 @@ export class Effects {
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
   /** Single cells of fire and smoke, and the rolling air that carries them. */
-  readonly cells = new Cells(26000);
+  readonly cells = new Cells(14000);
   /** How much of the full effect to draw: 1 everything, less on a slow device. */
   quality = 1;
   /** Blasts still letting go of their burning gas. */
@@ -271,7 +271,7 @@ export class Effects {
       life: 2.2,
     });
     // the bang: it fills the blast radius in a few ticks and burns out fast
-    const nBang = Math.min(4200, Math.round(r * r * 4.2 * q));
+    const nBang = Math.min(3000, Math.round(r * r * 3.6 * q));
     const vMax = (0.5 + r * 0.13) * 38;
     for (let i = 0; i < nBang; i++) {
       const a = rand(0, TAU);
@@ -290,7 +290,16 @@ export class Effects {
         rand(0.23, 0.73),
       );
     }
-    this.burning.push({ x, y, z, r, left: Math.round(r * r * 8 * q), ticks: 22, smoke: 50, high });
+    this.burning.push({
+      x,
+      y,
+      z,
+      r,
+      left: Math.min(4500, Math.round(r * r * 6 * q)),
+      ticks: 22,
+      smoke: 50,
+      high,
+    });
     // the shock front: a ring of sparks racing out along the ground
     if (!high)
       for (let i = 0; i < 40; i++) {
@@ -349,7 +358,7 @@ export class Effects {
       if (b.ticks <= 0) {
         // the fire is out: the crater goes on smoking into the air that is still turning
         if (--b.smoke <= 0) this.burning.splice(i, 1);
-        for (let k = 0; k < r * 1.6 * this.quality; k++) {
+        for (let k = 0; k < r * 1.2 * this.quality; k++) {
           const a = rand(0, TAU);
           const d = Math.sqrt(Math.random()) * r * 0.5;
           C.add(

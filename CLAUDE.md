@@ -10,6 +10,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm check`                                               | lint + format check + typecheck + tests with coverage. Run before every push                                |
 | `pnpm verify`                                              | `check`, then build and `scripts/play-smoke.mjs` (headless Chromium at 844×390, screenshots in `captures/`) |
 | `pnpm dev`, then `/?dev`                                   | the test range: fire weapons at parked cars and props, slow time, read the counters                         |
+| `/?perf`, or RECORD PERFORMANCE when paused                | the performance recorder: saves a log of what each second cost on that device                               |
 | `pnpm format`                                              | Prettier, write                                                                                             |
 | `pnpm content:validate`                                    | resolve and validate every manifest                                                                         |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden` | regenerate golden hashes after an intended sim change                                                       |

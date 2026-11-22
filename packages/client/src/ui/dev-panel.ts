@@ -41,6 +41,8 @@ export interface DevHooks {
   /** Start the range again in this car. */
   restart(car: string): void;
   exit(): void;
+  /** Start or stop the performance recorder. */
+  record(): void;
   /** Extra readouts from the renderer (slices drawn), if it has any. */
   stats(): string;
 }
@@ -107,6 +109,7 @@ export class DevPanel {
       this.carSel.append(new Option(`Drive ${c.meta.name}`, c.id));
     this.carSel.onchange = () => hooks.restart(this.carSel.value);
     root.append(this.carSel);
+    btn('REC', 'Record performance; press again to stop and save the log', () => hooks.record());
     btn('EXIT', 'Back to the menu', () => hooks.exit());
     this.statsEl.className = 'stats';
     root.append(this.statsEl);

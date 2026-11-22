@@ -118,3 +118,27 @@ The sim knows nothing of the career. It takes what a career race needs as plain 
 starting health, ram and fuel multipliers, a loaded weapon) and `knockout` (a wreck is out for good,
 and the race ends when the player is wrecked or is the last car running). A car's effective stats
 live in `car.stats`, the type's stats with `TUNE_STEP` applied per upgrade level.
+
+## Materials, pools and breaking scenery
+
+`material` is a content type. A material lies on the ground in pools (`world.spills`: oil takes
+grip, fuel burns, water quenches and bogs) and is what scenery is made of (`strength` against
+blast, impact and heat). A static prop with `integrity` is told `batter()` by blasts, rams and
+fire; the sim emits `chip` where it was struck and `fall` when it comes down, and the client cuts
+the same voxels it cuts out of cars. The `build` scenery rule puts buildings up piece by piece
+(`group`, `bears`); one that has lost half its walls comes down whole.
+
+## Fire and smoke
+
+`render/pixel/cells.ts` is mudders' way of drawing fire: single cells (`Bang`, `Fire`, `Wisp`)
+carried by rings of turning air, each burning down a colour ramp on its own clock. `Effects.fireball`
+lets go the bang and feeds the fire over a third of a second; `flame()` and `plume()` are clutches
+of the same cells. `Effects.quality` thins all of it; the frame loop lowers it by itself when
+frames run slow (`SlowWatch`).
+
+## The performance recorder
+
+`game/perf-log.ts`, from mudders. RECORD PERFORMANCE on the pause menu, REC in the test range, or
+`?perf` in the address starts it; stopping shares or downloads `demodogs-perf-<date>.txt`: one row
+per second with frame times, sim, effects and draw CPU, counts of cells, voxels and slices, long
+frames, browser stalls and events. Ask for that file when a device runs slow.

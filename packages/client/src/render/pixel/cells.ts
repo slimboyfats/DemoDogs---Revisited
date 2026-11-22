@@ -174,14 +174,15 @@ export class Cells {
       const d = Math.hypot(dr, dh) + 0.001;
       const q = d / g.r;
       // fastest at the roll's own radius, falling off inside and outside it
-      const s = (g.spin * q * Math.exp(1 - q) * g.life) / g.max / d;
+      const fall = 2 / (1 + q * q);
+      const s = (g.spin * q * fall * g.life) / g.max / d;
       const out2 = s * dh;
       if (rho > 0.01) {
         ax += (out2 * dx) / rho;
         ay += (out2 * dy) / rho;
       }
       // the whole roll is climbing: what is in it climbs with it
-      az += -s * dr + g.vz * Math.exp(-q);
+      az += -s * dr + g.vz * fall * 0.5;
     }
     out[0] = ax;
     out[1] = ay;
@@ -218,15 +219,14 @@ export class Cells {
       let vx = this.vx[i]!;
       let vy = this.vy[i]!;
       let vz = this.vz[i]!;
-      if (calm) air[0] = air[1] = air[2] = 0;
-      else this.air(x, y, z, air);
       if (k === CKind.Bang) {
-        // thrown hard: it brakes in the air, is nudged by it, and licks upward
-        const f = 2.2 * dt;
-        vx = vx * drag + (air[0] - vx) * f;
-        vy = vy * drag + (air[1] - vy) * f;
-        vz = vz * drag + (air[2] - vz) * f + 70 * dt;
+        // thrown too hard for the air to turn it: it brakes, and licks upward
+        vx *= drag;
+        vy *= drag;
+        vz = vz * drag + 70 * dt;
       } else {
+        if (calm) air[0] = air[1] = air[2] = 0;
+        else this.air(x, y, z, air);
         // weightless: it takes up the air's speed, lifts on its own heat and jitters
         const t = a / life;
         const fire = k === CKind.Fire;
