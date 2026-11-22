@@ -1,0 +1,15 @@
+{
+  "id": "material.wood",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Wood",
+    "description": "Timber. Stands a knock, burns down fast.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 0.8,
+    "impact": 1,
+    "heat": 0.3
+  },
+  "colour": "#6b4724"
+}

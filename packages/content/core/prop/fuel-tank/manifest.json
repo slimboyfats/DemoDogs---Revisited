@@ -1,0 +1,26 @@
+{
+  "id": "prop.fuel-tank",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fuel tank",
+    "description": "A steel tank of fuel on two saddles. Hit hard or caught in a blast it leaks, then goes up in one huge fireball that throws burning fuel and blazing drums.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 9,
+  "mass": 6,
+  "explodesAt": 150,
+  "blast": 1.9,
+  "launch": 0.02,
+  "spills": {
+    "material": "material.fuel",
+    "r": 11,
+    "n": 6
+  },
+  "throws": {
+    "stars": 10,
+    "globs": 6,
+    "drums": 3,
+    "drum": "prop.barrel"
+  }
+}

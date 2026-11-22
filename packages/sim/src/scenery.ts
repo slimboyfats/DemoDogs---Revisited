@@ -1,4 +1,5 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
+import type { StaticProp } from './entities';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -7,11 +8,36 @@ import type { World } from './world';
  * Lays out a venue's scenery from its rules, using the venue's own seed so a venue always looks the
  * same. Static props go in world.statics; loose ones (cones, crates, barrels) in world.props.
  */
+/** Stand a static prop in the world. */
+export function stand(
+  w: World,
+  def: PropManifest,
+  x: number,
+  y: number,
+  rot: number,
+  seed: number,
+): StaticProp {
+  const s: StaticProp = {
+    index: w.statics.length,
+    def,
+    made: def.made ? (w.content.material.get(def.made) ?? null) : null,
+    x,
+    y,
+    rot,
+    seed,
+  };
+  if (def.integrity !== undefined) s.hp = def.integrity;
+  w.statics.push(s);
+  return s;
+}
+
+type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
+
 export function buildScenery(w: World, rng: Rng): void {
   const prop = (id: string): PropManifest => w.content.prop.get(id)!;
-  const add = (id: string, x: number, y: number, rot: number) => {
+  const add: Add = (id, x, y, rot) => {
     const def = prop(id);
-    if (def.body === 'static') w.statics.push({ def, x, y, rot, seed: rng.range(0, 10) });
+    if (def.body === 'static') return stand(w, def, x, y, rot, rng.range(0, 10));
     else
       w.props.push({
         index: w.props.length,
@@ -28,6 +54,7 @@ export function buildScenery(w: World, rng: Rng): void {
         fuse: 0,
         owner: -1,
       });
+    return null;
   };
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
@@ -44,7 +71,7 @@ function apply(
   w: World,
   rng: Rng,
   rule: SceneryRule,
-  add: (id: string, x: number, y: number, rot: number) => void,
+  add: Add,
   weighted: (items: { prop: string; weight: number }[]) => string,
   prop: (id: string) => PropManifest,
 ): void {
@@ -64,6 +91,70 @@ function apply(
         const y = T.y[i]! + ny * (half + rule.offset);
         if (w.grid.at(x, y) < half + 12 || !w.free(x, y, 6)) continue;
         add(rule.props[(i / 3) % rule.props.length]!, x, y, 0);
+      }
+      return;
+    }
+    case 'build': {
+      let group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
+      const total = rule.kinds.reduce((s, k) => s + k.weight, 0);
+      for (let n = 0, tries = 0; n < rule.count && tries < rule.count * 30; tries++) {
+        let pick = rng.next() * total;
+        const K = rule.kinds.find((k) => (pick -= k.weight) < 0) ?? rule.kinds[0]!;
+        const L = rng.int(K.long[1] - K.long[0] + 1) + K.long[0];
+        const Dp = K.shape === 'wall' ? 1 : rng.int(K.deep[1] - K.deep[0] + 1) + K.deep[0];
+        const cx = 60 + rng.next() * (w.w - 120);
+        const cy = 60 + rng.next() * (w.h - 120);
+        const rot = rng.next() * TAU;
+        const cs = Math.cos(rot);
+        const sn = Math.sin(rot);
+        const st = K.step;
+        // the ground it would stand on must be clear of the road and of everything else
+        const reach = (Math.hypot(L, Dp) * st) / 2 + 6;
+        if (w.grid && w.grid.at(cx, cy) < half + rule.clear + reach) continue;
+        if (O && Math.hypot((cx - O.cx) / O.rx, (cy - O.cy) / O.ry) > 1 - (reach + 20) / O.rx)
+          continue;
+        if (!w.free(cx, cy, reach + 6)) continue;
+        if (w.cars.some((c) => Math.hypot(c.x - cx, c.y - cy) < reach + 30)) continue;
+        const at = (i: number, j: number): [number, number] => {
+          const lx = (i - (L - 1) / 2) * st;
+          const ly = (j - (Dp - 1) / 2) * st;
+          return [cx + lx * cs - ly * sn, cy + lx * sn + ly * cs];
+        };
+        const piece = (id: string, i: number, j: number, r: number, bears: boolean) => {
+          const s = add(id, ...at(i, j), r);
+          if (s) {
+            s.group = group;
+            s.bears = bears;
+          }
+        };
+        if (K.shape === 'wall') {
+          for (let i = 0; i < L; i++)
+            piece((i === 0 || i === L - 1) && K.post ? K.post : K.wall, i, 0, rot, true);
+        } else {
+          const door = 1 + rng.int(Math.max(1, L - 2));
+          const wide = K.shape === 'yard' ? 2 : 1;
+          for (let i = 0; i < L; i++)
+            for (let j = 0; j < Dp; j++) {
+              const ex = i === 0 || i === L - 1;
+              const ey = j === 0 || j === Dp - 1;
+              if (!ex && !ey) {
+                if (K.shape === 'house' && K.roof) piece(K.roof, i, j, rot, false);
+                else if (K.inside.length && rng.next() < 0.45)
+                  add(rng.pick(K.inside), ...at(i, j), rng.next() * TAU);
+                continue;
+              }
+              if (ex && ey) {
+                piece(K.post ?? K.wall, i, j, rot, true);
+                continue;
+              }
+              // the doorway, in the near long side
+              if (j === 0 && i >= door && i < door + wide) continue;
+              const glass = K.window && rng.next() < 0.3;
+              piece(glass ? K.window! : K.wall, i, j, ey ? rot : rot + Math.PI / 2, true);
+            }
+        }
+        group++;
+        n++;
       }
       return;
     }
@@ -101,6 +192,8 @@ function apply(
           add(rule.stack, x, y, rng.next() * TAU);
           add(rule.stack, x + 10, y + 3, rng.next() * TAU);
           add(rule.drum, x + 4, y - 10, 0);
+        } else if (rule.tanks.length && rng.next() < 0.5) {
+          add(rng.pick(rule.tanks), x, y, 0);
         } else {
           add(rule.drum, x, y, 0);
           add(rule.drum, x + 8, y + 4, 0);

@@ -1,3 +1,4 @@
+import { stand } from './scenery';
 import type { PropManifest, WeaponManifest } from '@demodogs/shared';
 import { damage, explode, wreck } from './damage';
 import type { Car } from './entities';
@@ -61,7 +62,7 @@ export function rangeMove(c: Car, x: number, y: number, h = c.h): void {
 
 /** Put a prop down at (x, y): scenery if it is static, otherwise something that can be shoved. */
 export function rangeProp(w: World, def: PropManifest, x: number, y: number, rot = 0): void {
-  if (def.body === 'static') w.statics.push({ def, x, y, rot, seed: w.rng.range(0, 10) });
+  if (def.body === 'static') stand(w, def, x, y, rot, w.rng.range(0, 10));
   else
     w.props.push({
       index: w.props.length,

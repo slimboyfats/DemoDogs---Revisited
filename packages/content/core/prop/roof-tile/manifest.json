@@ -1,0 +1,13 @@
+{
+  "id": "prop.roof-tile",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Roof",
+    "description": "A square of tiled roof on its rafters. Burns, and comes down with the walls under it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "made": "material.wood",
+  "integrity": 45
+}

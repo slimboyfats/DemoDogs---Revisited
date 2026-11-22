@@ -1,3 +1,4 @@
+import { batter, footing } from './damage';
 import {
   BASE_SPEED,
   CAR_OFFSET,
@@ -141,7 +142,15 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const weak = c.hp < 35 ? 0.86 : 1;
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
-  let turn = ctl.steer * 3.0 * S.grip * grip * Math.sign(vf || 1) * (c.handbrake ? 1.4 : 1);
+  const [hold, bog] = airborne ? [1, 0] : footing(w, c.x, c.y);
+  let turn =
+    ctl.steer *
+    3.0 *
+    S.grip *
+    grip *
+    Math.sign(vf || 1) *
+    (c.handbrake ? 1.4 : 1) *
+    (0.45 + 0.55 * hold);
   if (c.hp < 30) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
   if (airborne) turn *= 0.15;
   c.h += (turn + c.spin) * DT;
@@ -164,9 +173,9 @@ export function drive(w: World, c: Car, ctl: Controls): void {
       const acc = 240 * S.accel * (boost ? 1.8 : 1);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
-    vf -= vf * (off ? 1.4 : 0.42) * DT;
+    vf -= vf * ((off ? 1.4 : 0.42) + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
-    vl *= Math.exp(-8 * S.grip * (off ? 0.55 : 1) * (c.handbrake ? 0.22 : 1) * DT);
+    vl *= Math.exp(-8 * S.grip * hold * (off ? 0.55 : 1) * (c.handbrake ? 0.22 : 1) * DT);
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
@@ -261,14 +270,31 @@ export function collideWorld(w: World, c: Car): void {
   }
   for (const s of w.statics) {
     const r = s.def.radius;
-    if (!s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16) continue;
+    if (s.down || !s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16)
+      continue;
     for (const p of circles(c)) {
       const dx = p[0] - s.x;
       const dy = p[1] - s.y;
       const d = Math.hypot(dx, dy);
       const m = r + R;
-      if (d < m && d > 0.001)
-        bump(w, c, s.x + (dx / d) * r, s.y + (dy / d) * r, dx / d, dy / d, m - d, s.def.hardness);
+      if (d >= m || d <= 0.001) continue;
+      // a hard enough ram knocks pieces off it, and may bring it down: then the car ploughs
+      // on through, slower, instead of bouncing off
+      const vn = -(c.vx * dx + c.vy * dy) / d;
+      const px = s.x + (dx / d) * r;
+      const py = s.y + (dy / d) * r;
+      if (
+        vn > 45 &&
+        c.z < 6 &&
+        batter(w, s, (vn - 35) * 0.5 * c.def.stats.mass, 'impact', px, py)
+      ) {
+        c.vx *= 0.72;
+        c.vy *= 0.72;
+        damage(w, c, (vn - 28) * 0.1 * s.def.hardness, null, px, py);
+        w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c.isPlayer });
+        break;
+      }
+      bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
     }
   }
 }

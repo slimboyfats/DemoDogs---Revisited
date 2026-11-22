@@ -1,0 +1,13 @@
+{
+  "id": "material.fuel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fuel",
+    "description": "Spilt fuel. Slippery, quick to catch and burns long and hot.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.45,
+  "burns": 7,
+  "colour": "#5a3d14",
+  "alpha": 0.6
+}

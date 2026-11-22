@@ -36,6 +36,21 @@ export type SimEvent =
   | { t: 'explode'; x: number; y: number; power: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }
   | { t: 'bot-spawn'; bot: number }
+  /** A piece was knocked off scenery (world.statics[prop]) at (x, y). */
+  | {
+      t: 'chip';
+      prop: number;
+      x: number;
+      y: number;
+      amount: number;
+      by: 'blast' | 'impact' | 'heat';
+    }
+  /** That piece of scenery came down for good. */
+  | { t: 'fall'; prop: number; x: number; y: number }
+  /** A pool of a material poured out on the ground. */
+  | { t: 'spill'; material: string; x: number; y: number; r: number }
+  /** Fire was put out here. */
+  | { t: 'quench'; x: number; y: number; r: number }
   /** A fuel drum burst open and is rocketing up. */
   | { t: 'launch'; prop: number; x: number; y: number }
   /** Something blew apart in the air at height z. */

@@ -66,7 +66,7 @@ export interface FloatText {
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 2400;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
-const MAX_SCARRED = 40;
+const MAX_SCARRED = 260;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -317,7 +317,8 @@ export class Effects {
       const dx = x - s.x;
       const dy = y - s.y;
       const d = Math.hypot(dx, dy);
-      if (d > reach + s.def.radius) continue;
+      // scenery that can be broken is told by the sim what it lost ('chip'); this is for the rest
+      if (d > reach + s.def.radius || s.down || s.hp !== undefined) continue;
       let strip = this.scarred.get(s);
       if (!strip) {
         if (this.scarred.size >= MAX_SCARRED) continue;
@@ -454,6 +455,128 @@ export class Effects {
           const v = this.vol(x, y);
           if (v > 0) S.boom(v);
           if (this.near(x, y, 160)) this.shake = Math.max(this.shake, 9 * power * v);
+          break;
+        }
+        case 'chip': {
+          // a piece knocked out of scenery where it was struck
+          const s = w.statics[e.prop]!;
+          let strip = this.scarred.get(s);
+          if (!strip) {
+            if (this.scarred.size >= MAX_SCARRED) break;
+            this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
+          }
+          const cs = Math.cos(s.rot);
+          const sn = Math.sin(s.rot);
+          const dx = e.x - s.x;
+          const dy = e.y - s.y;
+          const part = Math.min(1, e.amount / (s.def.integrity ?? 100));
+          const broke = dent(
+            strip,
+            dx * cs + dy * sn,
+            -dx * sn + dy * cs,
+            clamp(1.2 + part * s.def.radius * 2.2, 1.2, 7),
+            e.by === 'heat' ? 0.35 : 0.9,
+            Math.random,
+            e.by === 'heat' ? 1 : 0.4,
+          );
+          this.changed.add(strip);
+          const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
+          if (e.by === 'heat') {
+            if (Math.random() < 0.5)
+              this.flame(e.x + rand(-3, 3), e.y + rand(-3, 3), rand(3, 9), rand(3, 5));
+            break;
+          }
+          this.burst(broke.chips, 50, { ...from, speed: 40 + 60 * part });
+          this.burst(broke.loose, 40, { ...from, speed: 25 }, true);
+          if (e.by === 'impact') for (let i = 0; i < 3; i++) this.puff(e.x, e.y, 2, 'dust');
+          break;
+        }
+        case 'fall': {
+          // it comes down: every voxel it still has flies apart, and rubble marks the spot
+          const s = w.statics[e.prop]!;
+          const strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
+          this.burst(voxelsOf(strip), 220, {
+            x: s.x,
+            y: s.y,
+            h: s.rot,
+            z: 0,
+            ox: e.x,
+            oy: e.y,
+            speed: 55,
+            vx: 0,
+            vy: 0,
+          });
+          this.scarred.delete(s);
+          const col = s.made?.colour ?? '#6a6660';
+          const r = s.def.radius;
+          this.paintGround(s.x, s.y, r + 3, (g) => {
+            g.fillStyle = col;
+            g.globalAlpha = 0.55;
+            for (let i = 0; i < 16; i++) {
+              const a = rand(0, TAU);
+              const d = rand(0, 1) * (r + 1);
+              const q = Math.random() < 0.3 ? 2 : 1;
+              g.fillRect(
+                Math.round(s.x + Math.cos(a) * d),
+                Math.round(s.y + Math.sin(a) * d),
+                q,
+                q,
+              );
+            }
+            g.globalAlpha = 1;
+          });
+          for (let i = 0; i < 8; i++)
+            this.puff(s.x + rand(-r, r), s.y + rand(-r, r), rand(1, 6), 'dust');
+          const v = this.vol(s.x, s.y);
+          if (v > 0) S.crash(6 * v);
+          break;
+        }
+        case 'spill': {
+          // a pool poured on the ground: a ragged blot of the material's colour, with a sheen
+          const m = w.content.material.get(e.material);
+          if (!m) break;
+          const { x, y, r } = e;
+          this.paintGround(x, y, r + 3, (g) => {
+            g.globalAlpha = m.alpha;
+            g.fillStyle = m.colour;
+            g.beginPath();
+            g.arc(x, y, r * 0.75, 0, TAU);
+            g.fill();
+            for (let i = 0; i < 14; i++) {
+              const a = rand(0, TAU);
+              const d = rand(0.45, 0.95) * r;
+              g.beginPath();
+              g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rand(1.2, r * 0.35), 0, TAU);
+              g.fill();
+            }
+            g.globalAlpha = 0.16;
+            g.fillStyle = '#ffffff';
+            for (let i = 0; i < 5; i++)
+              g.fillRect(
+                Math.round(x + rand(-0.5, 0.5) * r),
+                Math.round(y + rand(-0.5, 0.5) * r),
+                Math.round(rand(1, 3)),
+                1,
+              );
+            g.globalAlpha = 1;
+          });
+          for (let i = 0; i < 6; i++) this.puff(x, y, 1, 'dust');
+          break;
+        }
+        case 'quench': {
+          // fire put out: the flames stop and steam rolls up
+          for (let i = this.fires.length - 1; i >= 0; i--) {
+            const f = this.fires[i]!;
+            if (Math.hypot(f.x - e.x, f.y - e.y) < e.r + 2) this.fires.splice(i, 1);
+          }
+          for (let i = 0; i < 10; i++)
+            this.plume(
+              e.x + rand(-e.r, e.r) * 0.6,
+              e.y + rand(-e.r, e.r) * 0.6,
+              rand(1, 5),
+              rand(4, 7),
+              0xd8dde0,
+            );
           break;
         }
         case 'launch': {

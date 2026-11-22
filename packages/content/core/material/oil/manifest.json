@@ -1,0 +1,14 @@
+{
+  "id": "material.oil",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Oil",
+    "description": "A slick. Cars lose nearly all grip on it, and it goes up in flames at the first spark.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.12,
+  "burns": 4.5,
+  "wreck": 11,
+  "colour": "#14110f",
+  "alpha": 0.78
+}

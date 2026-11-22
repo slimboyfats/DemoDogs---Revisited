@@ -1,4 +1,4 @@
-import { World, type WorldOptions } from '@demodogs/sim';
+import { World, stand, type WorldOptions } from '@demodogs/sim';
 import { loadContent } from './index';
 
 /** A world on the shipped content, for tests. */
@@ -91,7 +91,7 @@ export function propTest(id: string, speed: number, clearance = 30) {
       fuse: 0,
       owner: -1,
     });
-  else w.statics.push({ def, x, y, rot: 0, seed: 0 });
+  const piece = loose ? null : stand(w, def, x, y, 0, 0);
   for (let i = 0; i < 90; i++) {
     w.step({ steer: 0, throttle: 0, brake: false, boost: false, fire: false });
     for (const e of w.takeEvents()) events.push(e.t);
@@ -99,7 +99,7 @@ export function propTest(id: string, speed: number, clearance = 30) {
     if (loose) maxZ = Math.max(maxZ, w.props[0]!.z);
   }
   const prop = loose ? w.props[0]! : { alive: true, x, z: 0 };
-  return { world: w, prop, events, blocked, maxZ, start: x };
+  return { world: w, prop, piece, events, blocked, maxZ, start: x };
 }
 
 /** The derby bowl emptied of everything: open flat ground with no road to leave. */

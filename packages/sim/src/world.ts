@@ -6,6 +6,7 @@ import {
   type ModeManifest,
   type SimEvent,
   type VenueManifest,
+  type MaterialManifest,
   type WeaponManifest,
 } from '@demodogs/shared';
 import type { Content } from './content';
@@ -20,6 +21,7 @@ import type {
   Pickup,
   Rocket,
   Setup,
+  Spill,
   StaticProp,
 } from './entities';
 import { Hasher, TAU, angDiff, clamp } from './math';
@@ -119,6 +121,10 @@ export class World {
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
   readonly blazes: Blaze[] = [];
+  /** Pools of oil, fuel, water and the like on the ground. */
+  readonly spills: Spill[] = [];
+  /** What a wrecked car leaks: the pack's material that says so, if any. */
+  readonly leak: MaterialManifest | null;
   readonly player: Car;
   /** Car indices in finishing order. */
   readonly finishers: number[] = [];
@@ -148,6 +154,10 @@ export class World {
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
     this.sandbox = opts.sandbox ?? false;
+    this.leak =
+      [...C.material.values()]
+        .filter((d) => d.wreck !== undefined)
+        .sort((a, b) => (a.id < b.id ? -1 : 1))[0] ?? null;
     this.gun =
       [...C.weapon.values()]
         .filter((d) => d.kind === 'gun')
@@ -303,6 +313,7 @@ export class World {
     for (const s of this.statics) {
       const r = s.def.radius;
       if (
+        !s.down &&
         Math.abs(s.x - x) < d + r &&
         Math.abs(s.y - y) < d + r &&
         Math.hypot(s.x - x, s.y - y) < d + r
@@ -427,7 +438,10 @@ export class World {
         .num(p.y)
         .num(p.alive ? 1 : 0);
     H.num(this.rockets.length).num(this.mines.length);
-    H.num(this.embers.length).num(this.blazes.length);
+    H.num(this.embers.length).num(this.blazes.length).num(this.spills.length);
+    let down = 0;
+    for (const s of this.statics) if (s.down) down++;
+    H.num(down);
     return H.hex();
   }
 

@@ -74,7 +74,8 @@ export default defineAi({
       out.boost = true;
     }
     if (c.weapon?.kind === 'rocket' && t && Math.abs(d) < 0.2) out.fire = true;
-    if (c.weapon?.kind === 'mine' && w.rng.next() < 0.01) out.fire = true;
+    if ((c.weapon?.kind === 'mine' || c.weapon?.kind === 'slick') && w.rng.next() < 0.01)
+      out.fire = true;
     if (!c.isPlayer) c.aiSpeed = ai.skill * 0.95;
     return unstick(c, out);
   },

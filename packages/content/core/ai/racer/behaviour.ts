@@ -52,7 +52,7 @@ export default defineAi({
       out.boost = true;
     } else if (curv < 0.15 && c.nitro > 0.5 && w.rng.next() < 0.006) ai.boostT = 1.3;
     if (c.weapon?.kind === 'rocket' && prey && pd < 200 && Math.abs(d) < 0.2) out.fire = true;
-    if (c.weapon?.kind === 'mine') {
+    if (c.weapon?.kind === 'mine' || c.weapon?.kind === 'slick') {
       const [behind] = nearestCar(
         w,
         c,

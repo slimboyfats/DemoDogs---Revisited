@@ -74,7 +74,8 @@
       "every": 23,
       "pair": "prop.cone",
       "stack": "prop.crate",
-      "drum": "prop.barrel"
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
     },
     {
       "rule": "border",

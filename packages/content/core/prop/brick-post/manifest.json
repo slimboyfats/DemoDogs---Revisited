@@ -1,0 +1,13 @@
+{
+  "id": "prop.brick-post",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Brick pier",
+    "description": "A square brick pier at the corner of a building. Stouter than the wall beside it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.2,
+  "made": "material.brick",
+  "integrity": 150
+}

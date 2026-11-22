@@ -1,0 +1,15 @@
+{
+  "id": "material.glass",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glass",
+    "description": "Window panes. Shatter at the first touch.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 0.2,
+    "impact": 0.15,
+    "heat": 2
+  },
+  "colour": "#9cc4d8"
+}

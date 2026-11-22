@@ -1,0 +1,15 @@
+{
+  "id": "material.stone",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Stone",
+    "description": "Rock. Takes several heavy hits before it breaks up.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 2.1,
+    "impact": 3,
+    "heat": 9
+  },
+  "colour": "#63656b"
+}

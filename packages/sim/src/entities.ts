@@ -1,4 +1,10 @@
-import type { BotManifest, CarManifest, PropManifest, WeaponManifest } from '@demodogs/shared';
+import type {
+  BotManifest,
+  CarManifest,
+  MaterialManifest,
+  PropManifest,
+  WeaponManifest,
+} from '@demodogs/shared';
 import type { AiBehaviour } from './behaviours';
 
 /** What a rival's AI remembers between ticks. */
@@ -133,7 +139,17 @@ export interface Bot {
 
 /** Scenery that never moves. */
 export interface StaticProp {
+  /** Its place in world.statics. */
+  index: number;
   def: PropManifest;
+  /** What it is made of, and what it can still take; undefined if it cannot be broken. */
+  made: MaterialManifest | null;
+  hp?: number;
+  /** It has come down: it is no longer in the way and no longer drawn. */
+  down?: boolean;
+  /** The building it is a piece of, and whether it helps hold that building up. */
+  group?: number;
+  bears?: boolean;
   x: number;
   y: number;
   rot: number;
@@ -157,6 +173,8 @@ export interface LooseProp {
   /** Seconds until it explodes, once lit; 0 when not lit. */
   fuse: number;
   owner: number;
+  /** It has poured out what it held. */
+  leaked?: boolean;
   /** A burst fuel drum on its way up; it blows apart at the top of its climb. */
   flying?: boolean;
 }
@@ -170,6 +188,15 @@ export interface Ember {
   vx: number;
   vy: number;
   vz: number;
+  owner: number;
+}
+
+/** A pool of a material lying on the ground. */
+export interface Spill {
+  def: MaterialManifest;
+  x: number;
+  y: number;
+  r: number;
   owner: number;
 }
 

@@ -1,5 +1,5 @@
-import { DT, GRAVITY, type CarPart } from '@demodogs/shared';
-import type { Car, LooseProp } from './entities';
+import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shared';
+import type { Car, LooseProp, StaticProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
 import type { World } from './world';
@@ -70,6 +70,8 @@ export function wreck(w: World, c: Car, by: Car | null): void {
   explode(w, c.x, c.y, 0.5, null);
   // the fuel tank goes too: burning fuel and sparks rain down around the wreck
   scatter(w, c.x, c.y, 5, 3, 2, by ? by.index : -1, c.vx * 0.4, c.vy * 0.4);
+  // and the sump: whatever the pack says a wreck leaks
+  if (w.leak) spill(w, w.leak, c.x, c.y, w.leak.wreck!, by ? by.index : -1);
   if (by && by !== c) {
     by.wrecks++;
     by.score += 500;
@@ -117,6 +119,7 @@ export function light(p: LooseProp, owner: number, fuse: number): void {
 export function breakProp(w: World, p: LooseProp, by: Car | null): void {
   p.alive = false;
   w.emit({ t: 'break', prop: p.index, x: p.x, y: p.y, vx: p.vx, vy: p.vy });
+  pour(w, p);
   if (by && p.def.points) {
     by.score += p.def.points;
     w.emit({
@@ -134,6 +137,7 @@ export function breakProp(w: World, p: LooseProp, by: Car | null): void {
 export function explode(w: World, x: number, y: number, power: number, owner: Car | null): void {
   w.emit({ t: 'explode', x, y, power });
   const rad = 48 * power;
+  ignite(w, x, y, rad * 0.7, owner ? owner.index : -1);
   for (const c of w.cars) {
     const dx = c.x - x;
     const dy = c.y - y;
@@ -164,6 +168,17 @@ export function explode(w: World, x: number, y: number, power: number, owner: Ca
       owner.score += b.def.points;
       owner.smashed++;
     }
+  }
+  for (const s of w.statics) {
+    if (s.down || s.hp === undefined) continue;
+    const r = s.def.radius;
+    if (Math.abs(s.x - x) > rad + r || Math.abs(s.y - y) > rad + r) continue;
+    const d = Math.hypot(s.x - x, s.y - y);
+    if (d > rad * 0.8 + r) continue;
+    const k = 1 - Math.max(0, d - r) / (rad * 0.8);
+    // it is struck on the side that faces the blast
+    const e = Math.min(1, r / (d || 1));
+    batter(w, s, 75 * power * k, 'blast', s.x + (x - s.x) * e, s.y + (y - s.y) * e);
   }
   for (const p of w.props) {
     if (!p.alive) continue;
@@ -266,6 +281,12 @@ export function updateEmbers(w: World): void {
       for (const p of w.props)
         if (p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 8)
           light(p, e.owner, 0.15 + w.rng.next() * 0.2);
+      ignite(w, x, y, 6, e.owner);
+      for (const s of w.statics)
+        if (!s.down && s.hp !== undefined && Math.hypot(s.x - x, s.y - y) < 6 + s.def.radius)
+          batter(w, s, 6, 'blast', x, y);
+    } else if (wet(w, x, y)) {
+      w.emit({ t: 'quench', x, y, r: 5 });
     } else {
       const life = w.rng.range(3.5, 5.5);
       w.blazes.push({ x, y, r: 9, t: life, bite: 0.2, owner: e.owner });
@@ -289,6 +310,165 @@ export function updateEmbers(w: World): void {
     for (const p of w.props)
       if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
         light(p, b.owner, 0.3 + w.rng.next() * 0.5);
+    for (const s of w.statics)
+      if (!s.down && s.hp !== undefined && Math.hypot(s.x - b.x, s.y - b.y) < b.r + s.def.radius)
+        batter(w, s, 3, 'heat', s.x, s.y);
+    // fire runs on through any pool that touches this one
+    ignite(w, b.x, b.y, b.r, b.owner);
   }
   if (w.blazes.length > 40) w.blazes.splice(0, w.blazes.length - 40);
+}
+
+/** Is this spot under something that puts fire out? */
+function wet(w: World, x: number, y: number): boolean {
+  return w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r);
+}
+
+/** Pour a pool of a material on the ground. Water puts out the fire it lands on. */
+export function spill(
+  w: World,
+  def: MaterialManifest,
+  px: number,
+  py: number,
+  r: number,
+  owner: number,
+): void {
+  const [x, y] = w.keepInside(px, py, 2);
+  w.spills.push({ def, x, y, r, owner });
+  w.emit({ t: 'spill', material: def.id, x, y, r });
+  if (def.quenches)
+    for (let i = w.blazes.length - 1; i >= 0; i--) {
+      const b = w.blazes[i]!;
+      if (Math.hypot(b.x - x, b.y - y) > r + b.r * 0.5) continue;
+      w.blazes.splice(i, 1);
+      w.emit({ t: 'quench', x: b.x, y: b.y, r: b.r });
+    }
+  if (w.spills.length > 90) w.spills.splice(0, w.spills.length - 90);
+}
+
+/** Fire reaches this far from (x, y): every pool that burns and touches it goes up. */
+export function ignite(w: World, x: number, y: number, rad: number, owner: number): void {
+  for (let i = w.spills.length - 1; i >= 0; i--) {
+    const s = w.spills[i]!;
+    if (s.def.burns === undefined || Math.hypot(s.x - x, s.y - y) > rad + s.r) continue;
+    w.spills.splice(i, 1);
+    if (wet(w, s.x, s.y)) continue;
+    w.blazes.push({ x: s.x, y: s.y, r: s.r, t: s.def.burns, bite: 0.25, owner });
+    w.emit({ t: 'blaze', x: s.x, y: s.y, r: s.r, life: s.def.burns });
+  }
+}
+
+/** A prop that holds a liquid pours it out round itself, once. */
+export function pour(
+  w: World,
+  p: Pick<LooseProp, 'def' | 'x' | 'y'> & { leaked?: boolean; owner?: number },
+): void {
+  const S = p.def.spills;
+  if (!S || p.leaked) return;
+  p.leaked = true;
+  const def = w.content.material.get(S.material)!;
+  for (let i = 0; i < S.n; i++) {
+    const a = w.rng.range(0, Math.PI * 2);
+    const d = i === 0 ? 0 : w.rng.range(0.5, 1.3) * S.r;
+    spill(
+      w,
+      def,
+      p.x + Math.cos(a) * d,
+      p.y + Math.sin(a) * d,
+      S.r * w.rng.range(0.7, 1.1),
+      p.owner ?? -1,
+    );
+  }
+}
+
+/** What a car's wheels are in at (x, y): [share of grip kept, drag]. The worst pool wins. */
+export function footing(w: World, x: number, y: number): [number, number] {
+  let grip = 1;
+  let drag = 0;
+  for (const s of w.spills) {
+    if (Math.hypot(s.x - x, s.y - y) > s.r) continue;
+    grip = Math.min(grip, s.def.grip);
+    drag = Math.max(drag, s.def.drag);
+  }
+  return [grip, drag];
+}
+
+/** An exploding prop throws out what its manifest says: stars, burning fuel, blazing drums. */
+export function throwOut(
+  w: World,
+  p: Pick<LooseProp, 'def' | 'x' | 'y'> & { owner?: number },
+): void {
+  const owner = p.owner ?? -1;
+  const T = p.def.throws;
+  if (!T) return;
+  scatter(w, p.x, p.y, 6, T.stars, T.globs, owner);
+  const drum = T.drum ? w.content.prop.get(T.drum) : undefined;
+  if (!drum?.rocket) return;
+  for (let i = 0; i < T.drums; i++) {
+    const a = w.rng.range(0, Math.PI * 2);
+    const v = w.rng.range(40, 110);
+    w.props.push({
+      index: w.props.length,
+      def: drum,
+      x: p.x,
+      y: p.y,
+      z: 4,
+      vx: Math.cos(a) * v,
+      vy: Math.sin(a) * v,
+      vz: drum.rocket.up * w.rng.range(0.7, 1.1),
+      rot: 0,
+      spin: w.rng.range(-9, 9),
+      alive: true,
+      fuse: 0,
+      owner,
+      flying: true,
+    });
+  }
+}
+
+/**
+ * Scenery takes a knock at (x, y). What it is made of decides how much of it counts; when it has
+ * taken all it can it comes down. Returns true if this knock brought it down.
+ */
+export function batter(
+  w: World,
+  s: StaticProp,
+  amount: number,
+  by: 'blast' | 'impact' | 'heat',
+  x: number,
+  y: number,
+): boolean {
+  if (s.down || s.hp === undefined) return false;
+  const d = amount / (s.made?.strength[by] ?? 1);
+  if (d <= 0) return false;
+  s.hp -= d;
+  if (s.hp > 0) {
+    w.emit({ t: 'chip', prop: s.index, x, y, amount: d, by });
+    return false;
+  }
+  fall(w, s, x, y);
+  return true;
+}
+
+/** A piece of scenery comes down. A building that has lost half its walls follows it. */
+export function fall(w: World, s: StaticProp, x: number, y: number): void {
+  if (s.down) return;
+  s.down = true;
+  s.hp = 0;
+  w.emit({ t: 'fall', prop: s.index, x, y });
+  pour(w, s);
+  if (s.def.blast) {
+    explode(w, s.x, s.y, s.def.blast, null);
+    throwOut(w, s);
+  }
+  if (s.group === undefined || !s.bears) return;
+  let walls = 0;
+  let gone = 0;
+  for (const o of w.statics)
+    if (o.group === s.group && o.bears) {
+      walls++;
+      if (o.down) gone++;
+    }
+  if (gone * 2 < walls) return;
+  for (const o of w.statics) if (o.group === s.group && !o.down) fall(w, o, o.x, o.y);
 }

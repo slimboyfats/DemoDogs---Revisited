@@ -77,6 +77,8 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     pair: id('prop'),
     stack: id('prop'),
     drum: id('prop'),
+    /** Bigger things that now and then stand by the road instead of a pair of drums. */
+    tanks: z.array(id('prop')).default([]),
   }),
   /** A ring of props round the world's edge (looks only). */
   z.strictObject({ rule: z.literal('border'), prop: id('prop'), spacing: z.number().positive() }),
@@ -100,6 +102,35 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     items: z.array(
       z.strictObject({ prop: id('prop'), x: z.number(), y: z.number(), rot: z.number() }),
     ),
+  }),
+  /**
+   * Buildings put up piece by piece off the road, so that each piece can be knocked out on its
+   * own. A `house` is a rectangle of `wall` pieces with a doorway, `window` pieces here and
+   * there, a `post` at each corner and `roof` pieces over the inside; a `yard` is the same with
+   * no roof, a wide gateway and `inside` props standing in it; a `wall` is one straight run.
+   * Sizes are in pieces, `step` art px apart. When half of a building's walls are down, the
+   * rest of it comes down too.
+   */
+  z.strictObject({
+    rule: z.literal('build'),
+    count: z.number().int().positive(),
+    clear: z.number(),
+    kinds: z
+      .array(
+        z.strictObject({
+          shape: z.enum(['house', 'yard', 'wall']),
+          weight: z.number().positive(),
+          wall: id('prop'),
+          window: id('prop').optional(),
+          post: id('prop').optional(),
+          roof: id('prop').optional(),
+          inside: z.array(id('prop')).default([]),
+          step: z.number().positive().default(8),
+          long: z.tuple([z.number().int().min(2), z.number().int().min(2)]),
+          deep: z.tuple([z.number().int().min(2), z.number().int().min(2)]).default([2, 2]),
+        }),
+      )
+      .min(1),
   }),
   /** Random props inside the oval between radii qMin and qMax (fractions of the oval). */
   z.strictObject({
@@ -163,7 +194,7 @@ export type ModeManifest = z.infer<typeof ModeSchema>;
 export const WeaponSchema = z.strictObject({
   ...base,
   id: id('weapon'),
-  kind: z.enum(['rocket', 'mine', 'gun']),
+  kind: z.enum(['rocket', 'mine', 'gun', 'slick']),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
   ammo: z.number().int().positive(),
@@ -182,6 +213,9 @@ export const WeaponSchema = z.strictObject({
   damage: z.number().positive().optional(),
   range: z.number().positive().optional(),
   aim: z.number().positive().optional(),
+  /** Slicks: a pool of `material` of this `radius` poured out behind the car. */
+  material: id('material').optional(),
+  radius: z.number().positive().optional(),
   /** Mines: seconds before it arms; trigger radius. */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
@@ -213,6 +247,12 @@ export const PropSchema = z.strictObject({
   mass: z.number().positive().optional(),
   /** Damage a car takes hitting it is scaled by this (tyres are soft). */
   hardness: z.number().min(0).default(1),
+  /**
+   * Static props: what it is made of and how much it takes before it comes down. Without
+   * `integrity` it cannot be broken.
+   */
+  made: id('material').optional(),
+  integrity: z.number().positive().optional(),
   /** Sways in the wind (trees). */
   sway: z.boolean().default(false),
   /** Loose props: breaks into planks above this impact speed. */
@@ -232,6 +272,29 @@ export const PropSchema = z.strictObject({
       burst: z.number().positive(),
       stars: z.number().int().min(0),
       globs: z.number().int().min(0),
+    })
+    .optional(),
+  /**
+   * Holds a liquid: when it is broken, or its fuse is lit, `n` pools of `material` of about
+   * radius `r` pour out round it.
+   */
+  spills: z
+    .strictObject({
+      material: id('material'),
+      r: z.number().positive(),
+      n: z.number().int().min(1),
+    })
+    .optional(),
+  /**
+   * What an exploding prop throws out besides its blast: burning stars, globs of burning fuel,
+   * and `drums` flying props of kind `drum` (which must be able to rocket).
+   */
+  throws: z
+    .strictObject({
+      stars: z.number().int().min(0).default(0),
+      globs: z.number().int().min(0).default(0),
+      drums: z.number().int().min(0).default(0),
+      drum: id('prop').optional(),
     })
     .optional(),
   /** Loose props: how much of an impact sends it up in the air. */
@@ -268,6 +331,40 @@ export const AiSchema = z.strictObject({
 });
 export type AiManifest = z.infer<typeof AiSchema>;
 
+/**
+ * Something that lies on the ground in pools: oil, fuel, water. A pool changes how a car drives
+ * through it, and may catch fire or put fire out.
+ */
+export const MaterialSchema = z.strictObject({
+  ...base,
+  id: id('material'),
+  /** How much of its sideways grip a car keeps on it (1: all of it). */
+  grip: z.number().min(0).max(1).default(1),
+  /** Speed a car loses each second in it, as a share of its speed. */
+  drag: z.number().min(0).default(0),
+  /** Catches fire from any blast, spark or flame that touches it, and burns this many seconds. */
+  burns: z.number().positive().optional(),
+  /** Puts out fire it touches, and fire cannot start on it. */
+  quenches: z.boolean().default(false),
+  /** A wrecked car leaks a pool of this, of this radius. */
+  wreck: z.number().positive().optional(),
+  /**
+   * As something scenery is made of: how well it stands a blast, a ram and fire. 1 is ordinary;
+   * glass is far below it, steel far above.
+   */
+  strength: z
+    .strictObject({
+      blast: z.number().positive().default(1),
+      impact: z.number().positive().default(1),
+      heat: z.number().positive().default(1),
+    })
+    .default({ blast: 1, impact: 1, heat: 1 }),
+  /** How the client paints it on the ground. */
+  colour: z.string().regex(/^#[0-9a-f]{6}$/),
+  alpha: z.number().min(0).max(1).default(0.7),
+});
+export type MaterialManifest = z.infer<typeof MaterialSchema>;
+
 export const PackSchema = z.strictObject({
   name: z.string(),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -282,6 +379,7 @@ export const SCHEMAS = {
   weapon: WeaponSchema,
   pickup: PickupSchema,
   prop: PropSchema,
+  material: MaterialSchema,
   bot: BotSchema,
   ai: AiSchema,
 } as const;
@@ -295,6 +393,7 @@ export interface ManifestByType {
   weapon: WeaponManifest;
   pickup: PickupManifest;
   prop: PropManifest;
+  material: MaterialManifest;
   bot: BotManifest;
   ai: AiManifest;
 }

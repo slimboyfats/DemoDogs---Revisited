@@ -1,0 +1,13 @@
+{
+  "id": "prop.brick-wall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Brick wall",
+    "description": "A length of brick wall. Rams and blasts knock bricks out of it until it comes down.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "made": "material.brick",
+  "integrity": 70
+}

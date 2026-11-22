@@ -1,0 +1,16 @@
+{
+  "id": "weapon.oil-can",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Oil",
+    "description": "Pours a slick out behind. Whoever drives on it loses grip, and any spark sets it burning.",
+    "since": "core@0.4.0"
+  },
+  "kind": "slick",
+  "label": "OIL",
+  "ammo": 3,
+  "power": 1,
+  "cooldown": 0.5,
+  "material": "material.oil",
+  "radius": 13
+}

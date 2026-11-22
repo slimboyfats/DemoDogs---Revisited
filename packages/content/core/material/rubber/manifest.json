@@ -1,0 +1,15 @@
+{
+  "id": "material.rubber",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rubber",
+    "description": "Old tyres. Soak up rams, burn with time.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 1.1,
+    "impact": 2.2,
+    "heat": 0.6
+  },
+  "colour": "#1d1e21"
+}

@@ -1,7 +1,7 @@
 import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { airburst, damage, explode, launch, light } from './damage';
+import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import type { World } from './world';
 
 // ---------------------------------------------------------------- scrap bots
@@ -99,7 +99,8 @@ export function updateBot(w: World, b: Bot): void {
   let ny = b.y + Math.sin(b.h) * b.speed * DT;
   for (const s of w.statics) {
     const r = s.def.radius;
-    if (!s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4) continue;
+    if (s.down || !s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4)
+      continue;
     const d = Math.hypot(nx - s.x, ny - s.y) || 1;
     if (d < r + 3.5) {
       nx = s.x + ((nx - s.x) / d) * (r + 3.5);
@@ -146,12 +147,15 @@ export function updateProps(w: World): void {
   for (const p of w.props) {
     if (!p.alive) continue;
     if (p.fuse > 0) {
+      // lit: whatever it holds is already pouring out
+      pour(w, p);
       p.fuse -= DT;
       if (p.fuse <= 0) {
         if (p.def.rocket) launch(w, p);
         else {
           p.alive = false;
           explode(w, p.x, p.y, p.def.blast ?? 1, p.owner >= 0 ? w.cars[p.owner]! : null);
+          throwOut(w, p);
           continue;
         }
       }
@@ -191,7 +195,7 @@ export function updateProps(w: World): void {
       p.vy *= -0.4;
     }
     for (const s of w.statics) {
-      if (!s.def.solid) continue;
+      if (s.down || !s.def.solid) continue;
       const m = s.def.radius + p.def.radius;
       if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
       const dx = p.x - s.x;
@@ -277,6 +281,15 @@ export function fire(w: World, c: Car): void {
       life: wpn.life ?? 2,
       def: wpn,
     });
+  else if (wpn.kind === 'slick')
+    spill(
+      w,
+      w.content.material.get(wpn.material!)!,
+      c.x - cs * 17,
+      c.y - sn * 17,
+      wpn.radius ?? 12,
+      c.index,
+    );
   else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;
@@ -348,7 +361,7 @@ export function updateRockets(w: World): void {
       );
     if (!hit)
       hit = w.statics.some(
-        (s) => s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2,
+        (s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2,
       );
     if (!hit)
       hit = w.props.some(

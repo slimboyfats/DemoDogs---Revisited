@@ -1,0 +1,15 @@
+{
+  "id": "material.concrete",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Concrete",
+    "description": "Cast concrete. Harder than brick against everything.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 1.9,
+    "impact": 2.4,
+    "heat": 8
+  },
+  "colour": "#8f8c85"
+}

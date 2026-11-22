@@ -40,7 +40,7 @@ export function queueStacks(
   fx: Effects,
   still?: StaticHook,
 ): void {
-  for (const s of w.statics) queueStatic(R, art, w, fx, s, still);
+  for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, still);
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -190,7 +190,7 @@ export function queueShadows(
   shadow: ShadowFn,
 ): void {
   for (const s of w.statics)
-    if (s.def.sway && R.visible(s.x, s.y, 14)) {
+    if (!s.down && s.def.sway && R.visible(s.x, s.y, 14)) {
       const st = art.prop(s.def.id);
       shadow(s.x + 3, s.y + 2, (st.cw / st.res) * 0.45, (st.ch / st.res) * 0.4, 0, 0.22);
     }

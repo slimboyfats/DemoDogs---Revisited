@@ -1,0 +1,15 @@
+{
+  "id": "material.steel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Steel",
+    "description": "Plate, girders and scrap. Shrugs off blasts and fire.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 2.6,
+    "impact": 3,
+    "heat": 7
+  },
+  "colour": "#5d6168"
+}
