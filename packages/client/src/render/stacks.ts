@@ -228,10 +228,12 @@ export function queueShadows(
   R: Pick<StackSink, 'visible'>,
   art: Art,
   w: World,
+  /** Scenery whose shadow is cast from its own shape elsewhere (the pixel engine's ShadowMap). */
+  cast: ((s: StaticProp) => boolean) | null,
   shadow: ShadowFn,
 ): void {
   for (const s of w.statics) {
-    if (s.down) continue;
+    if (s.down || cast?.(s)) continue;
     const lift = s.lift ?? 0;
     if (lift > 0) {
       // things up high throw their shadow further off, so you can tell how high they are

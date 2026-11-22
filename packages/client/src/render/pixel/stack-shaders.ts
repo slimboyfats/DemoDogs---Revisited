@@ -129,3 +129,27 @@ void main() {
   float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
   o = vec4(c * (0.955 + 0.045 * floor(h * 3.0)), 1.0);
 }`;
+
+/**
+ * Shadows cast from the shape of tall scenery: a one-byte mask over the ground, drawn on the
+ * ground's fine grid. Where the mask is part covered (its edge, blended between art px) it is
+ * dithered on the Bayer grid, so the edge steps in fine cells instead of blurring.
+ */
+export const SHADOW_FS = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_tex;
+uniform vec2 u_size;
+uniform float u_alpha;
+out vec4 o;
+float bayer(ivec2 p) {
+  int i = (p.y & 3) * 4 + (p.x & 3);
+  int t[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+  return (float(t[i]) + 0.5) / 16.0;
+}
+void main() {
+  vec2 cell = floor(v_uv * u_size * 3.0);
+  float a = texture(u_tex, (cell + 0.5) / (u_size * 3.0)).r;
+  if (a < 0.05 || a < bayer(ivec2(cell))) discard;
+  o = vec4(0.0, 0.0, 0.0, u_alpha);
+}`;
