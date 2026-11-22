@@ -3,11 +3,24 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Arms crate",
-    "description": "A weapon: rockets, mines or oil.",
+    "description": "A weapon: rockets, mines, oil, or one of the heavy arms (flame, hose, rail, ball, fire shell, bomb, sticky bomb, lightning, suction orb).",
     "since": "core@0.1.0"
   },
   "kind": "arms",
   "weight": 0.68,
   "hurtWeight": 0.45,
-  "weapons": ["weapon.rocket", "weapon.mine", "weapon.oil-can"]
+  "weapons": [
+    "weapon.rocket",
+    "weapon.mine",
+    "weapon.oil-can",
+    "weapon.hot-breath",
+    "weapon.hydrant",
+    "weapon.long-bark",
+    "weapon.bowler",
+    "weapon.hot-dish",
+    "weapon.tick",
+    "weapon.zap-collar",
+    "weapon.lobster",
+    "weapon.gulp"
+  ]
 }

@@ -1,0 +1,18 @@
+{
+  "id": "weapon.zap-collar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Zap Collar",
+    "description": "A coil on the roof that throws lightning at the car in front, and on from it to the next car and the next. Lights slicks and drums it lands near.",
+    "since": "core@0.5.0"
+  },
+  "kind": "arc",
+  "label": "ZAP",
+  "ammo": 3,
+  "power": 0.1,
+  "cooldown": 1.0,
+  "life": 0.6,
+  "range": 130,
+  "count": 4,
+  "damage": 5
+}

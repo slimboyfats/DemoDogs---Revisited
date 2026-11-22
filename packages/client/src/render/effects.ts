@@ -17,6 +17,7 @@ import {
 import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
 import type { Sound } from '../audio/sound';
+import { armsEvent, armsTick } from './arms-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -163,7 +164,7 @@ export class Effects {
   }
 
   // ------------------------------------------------------------ helpers
-  private emit(
+  emit(
     kind: FxKind,
     x: number,
     y: number,
@@ -440,12 +441,7 @@ export class Effects {
     this.debris.push({ strip, x, y, z, vx, vy, vz, rot, spin: rand(-14, 14), life });
   }
 
-  private paintGround(
-    x: number,
-    y: number,
-    r: number,
-    fn: (g: CanvasRenderingContext2D) => void,
-  ): void {
+  paintGround(x: number, y: number, r: number, fn: (g: CanvasRenderingContext2D) => void): void {
     fn(this.ground.g);
     markGround(this.ground, x, y, r);
   }
@@ -590,7 +586,7 @@ export class Effects {
     });
   }
 
-  private scorch(x: number, y: number, r: number): void {
+  scorch(x: number, y: number, r: number): void {
     this.paintGround(x, y, r + 1, (g) => {
       const gr = g.createRadialGradient(x, y, 0, x, y, r);
       gr.addColorStop(0, 'rgba(10,8,6,0.6)');
@@ -1080,9 +1076,18 @@ export class Effects {
           if (vol > 0) S.gun(vol);
           break;
         }
+        case 'rail':
+        case 'arc':
+        case 'orb':
+        case 'stick':
+        case 'pass':
+        case 'splash':
+          armsEvent(this, w, e, S);
+          break;
         case 'fire': {
           const c = w.cars[e.car]!;
           const wpn = w.content.weapon.get(e.weapon);
+          if (armsEvent(this, w, e, S)) break;
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
           } else if (c.isPlayer) S.drop();
@@ -1280,6 +1285,7 @@ export class Effects {
       if (Math.random() < 0.45) this.plume(x, y, rand(5, 10), rand(4, 7));
       if (Math.random() < 0.2) this.ember(x, y, 5);
     }
+    armsTick(this, w, this.sound);
     this.feed();
     this.cells.step(DT);
     this.leafFall();

@@ -1,0 +1,16 @@
+{
+  "id": "weapon.tick",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tick",
+    "description": "A sticky bomb dart. It clings to the first car it strikes and blows a few seconds later, unless that car rams someone and hands it on.",
+    "since": "core@0.5.0"
+  },
+  "kind": "sticky",
+  "label": "TICK",
+  "ammo": 2,
+  "power": 1.1,
+  "cooldown": 0.6,
+  "speed": 300,
+  "fuse": 2.6
+}

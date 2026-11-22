@@ -1,0 +1,20 @@
+{
+  "id": "weapon.hydrant",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hydrant",
+    "description": "A water cannon. Hardly scratches the paint, but shoves a car clean off its line, puts fires out and leaves the road wet.",
+    "since": "core@0.5.0"
+  },
+  "kind": "spray",
+  "label": "HOSE",
+  "ammo": 4,
+  "power": 0.1,
+  "cooldown": 1.1,
+  "life": 1.0,
+  "speed": 260,
+  "range": 150,
+  "spread": 0.08,
+  "push": 5,
+  "material": "material.water"
+}

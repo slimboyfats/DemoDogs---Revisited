@@ -196,6 +196,32 @@ export class Sound {
     this.tone(90, 0.1, 0.15 * v, 'sine', 0.5);
   }
 
+  /** A spray burst: a roar of burning fuel, or the hiss of a water cannon. */
+  hiss(v = 1, lit = false): void {
+    if (lit) {
+      this.noise(0.9, 420, 0.5, 0.5 * v, 'lowpass');
+      this.noise(0.8, 1600, 0.7, 0.18 * v);
+    } else this.noise(0.9, 2800, 0.6, 0.3 * v, 'highpass');
+  }
+
+  /** A rail slug: a charged whine that cracks. */
+  zap(v = 1): void {
+    this.tone(260, 0.12, 0.12 * v, 'sawtooth', 6);
+    this.noise(0.35, 3400, 0.9, 0.5 * v, 'bandpass', 0.1);
+    this.tone(70, 0.4, 0.4 * v, 'sine', 0.4, 0.1);
+  }
+
+  /** One lightning strike: a dry, buzzing crack. */
+  crackle(v = 1): void {
+    this.noise(0.09, 4200, 1.2, 0.3 * v, 'bandpass');
+    this.tone(95, 0.08, 0.08 * v, 'sawtooth', 1.4);
+  }
+
+  /** A sticky bomb's lamp: a tiny blip, higher the nearer it is to going off. */
+  tick(hi: boolean, v = 1): void {
+    this.tone(hi ? 1760 : 1320, 0.05, 0.1 * v, 'square');
+  }
+
   drop(): void {
     this.tone(160, 0.12, 0.2, 'square', 0.6);
   }

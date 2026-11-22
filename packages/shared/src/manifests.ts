@@ -218,7 +218,19 @@ export type ModeManifest = z.infer<typeof ModeSchema>;
 export const WeaponSchema = z.strictObject({
   ...base,
   id: id('weapon'),
-  kind: z.enum(['rocket', 'mine', 'gun', 'slick']),
+  kind: z.enum([
+    'rocket',
+    'mine',
+    'gun',
+    'slick',
+    'spray',
+    'rail',
+    'ball',
+    'lob',
+    'sticky',
+    'arc',
+    'vortex',
+  ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
   ammo: z.number().int().positive(),
@@ -243,6 +255,36 @@ export const WeaponSchema = z.strictObject({
   /** Mines: seconds before it arms; trigger radius. */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
+  /**
+   * Sprays: one press is a burst `life` seconds long of drops of `material` thrown forward at
+   * `speed`, fanned by `spread` (radians), each reaching `range`. `lit` drops are burning fuel:
+   * they set alight what they touch and leave fire where they land. Each drop that strikes a car
+   * does `damage` and shoves it by `push`; where drops land some leave a little pool behind.
+   */
+  spread: z.number().min(0).optional(),
+  push: z.number().min(0).optional(),
+  lit: z.boolean().optional(),
+  /**
+   * Rails: a slug that crosses `range` at once. It goes through every car on its line for
+   * `damage` each, and punches through up to `pierce` pieces of scenery it can knock down.
+   */
+  pierce: z.number().int().min(0).optional(),
+  /**
+   * Balls: a heavy ball of `radius` rolled forward at `speed` that rolls for `life` seconds,
+   * smashing through what it can and glancing off what it cannot; `damage` per unit of speed.
+   * Lobs: a shell thrown over everything onto a car ahead (or `range` ahead) that bursts into a
+   * blast of `power` and `count` pools of `material`, lit. Stickies: a dart that clings to the
+   * first car it strikes and blows `fuse` seconds later, unless that car hands it on by touching
+   * another car first.
+   */
+  fuse: z.number().positive().optional(),
+  /**
+   * Arcs: one press crackles for `life` seconds, each strike jumping from the car to a rival in
+   * front within `range`, then on through up to `count` cars in all, `damage` less a quarter each
+   * jump. Vortexes: an orb thrown out at `speed` that anchors and pulls everything within `radius`
+   * in with strength `push` for `life` seconds, then bursts with `power`.
+   */
+  count: z.number().int().positive().optional(),
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 

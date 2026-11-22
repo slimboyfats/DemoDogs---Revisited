@@ -1,0 +1,17 @@
+{
+  "id": "weapon.long-bark",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Long Bark",
+    "description": "A rail slug that crosses the screen at once: through every car in line, and through walls, trees and windows until something holds it.",
+    "since": "core@0.5.0"
+  },
+  "kind": "rail",
+  "label": "RAIL",
+  "ammo": 2,
+  "power": 0.1,
+  "cooldown": 0.9,
+  "range": 420,
+  "damage": 40,
+  "pierce": 4
+}

@@ -43,6 +43,7 @@ import {
   updateRockets,
 } from './things';
 import { standings, trackIndex } from './race';
+import { newArms, updateArms, type Arms } from './arms';
 
 export interface WorldOptions {
   content: Content;
@@ -126,6 +127,8 @@ export class World {
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
   readonly spills: Spill[] = [];
+  /** Sprays, rail slugs, wrecking balls, fire shells and sticky bombs in play. */
+  readonly arms: Arms = newArms();
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   readonly player: Car;
@@ -420,6 +423,7 @@ export class World {
     updatePickups(this);
     updateRockets(this);
     updateMines(this);
+    updateArms(this);
     updateEmbers(this);
 
     if (this.sandbox) return;
@@ -479,6 +483,9 @@ export class World {
       .num(this.blazes.length)
       .num(this.spills.length)
       .num(this.craters.length);
+    const A = this.arms;
+    H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
+    for (const b of A.balls) H.num(b.x).num(b.y);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

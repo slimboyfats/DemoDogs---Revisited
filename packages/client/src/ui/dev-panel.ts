@@ -1,4 +1,6 @@
 import {
+  isArms,
+  rangeArms,
   rangeBlast,
   rangeHit,
   rangeMend,
@@ -14,12 +16,23 @@ import type { Session } from '../game/session';
 import { PITCH } from '../render/scene';
 
 export type Tool =
-  'drive' | 'rocket' | 'mine' | 'blast' | 'hit' | 'wreck' | 'mend' | 'car' | 'prop' | 'pan';
+  | 'drive'
+  | 'rocket'
+  | 'mine'
+  | 'arms'
+  | 'blast'
+  | 'hit'
+  | 'wreck'
+  | 'mend'
+  | 'car'
+  | 'prop'
+  | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
   ['rocket', 'ROCKET', 'Tap: a rocket flies from your car to that spot'],
   ['mine', 'MINE', 'Tap: lay a mine there'],
+  ['arms', 'ARMS', 'Tap: your car turns to that spot and fires the chosen heavy weapon'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
   ['wreck', 'WRECK', 'Tap a car: wreck it'],
@@ -61,6 +74,7 @@ export class DevPanel {
   private readonly toolBtns = new Map<Tool, HTMLButtonElement>();
   private readonly rateBtns: HTMLButtonElement[] = [];
   private readonly propSel = document.createElement('select');
+  private readonly armsSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
   private fps = 60;
 
@@ -85,6 +99,10 @@ export class DevPanel {
         t,
         btn(label, title, () => this.pick(t)),
       );
+    for (const d of [...content.weapon.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
+      if (isArms(d.kind)) this.armsSel.append(new Option(d.meta.name, d.id));
+    this.armsSel.onchange = () => this.pick('arms');
+    root.append(this.armsSel);
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
@@ -215,6 +233,11 @@ export class DevPanel {
       case 'mine': {
         const def = weapon('mine');
         if (def) rangeMine(w, def, P, x, y);
+        break;
+      }
+      case 'arms': {
+        const def = this.content.weapon.get(this.armsSel.value);
+        if (def) rangeArms(w, def, P, x, y);
         break;
       }
       case 'blast':

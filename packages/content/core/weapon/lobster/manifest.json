@@ -1,0 +1,15 @@
+{
+  "id": "weapon.lobster",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lobster",
+    "description": "A fat high-explosive bomb lobbed over walls onto the car ahead. A bigger bang and a deeper crater than any rocket.",
+    "since": "core@0.5.0"
+  },
+  "kind": "lob",
+  "label": "BOMB",
+  "ammo": 2,
+  "power": 1.45,
+  "cooldown": 0.9,
+  "range": 260
+}
