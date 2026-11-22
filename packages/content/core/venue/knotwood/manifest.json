@@ -1,0 +1,114 @@
+{
+  "id": "venue.knotwood",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Knotwood",
+    "description": "Race. A figure of eight through old oaks: one half climbs a girder flyover, the other dives under it, and great crowns hang over the road.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 4207,
+  "size": {
+    "w": 2020,
+    "h": 1300
+  },
+  "track": {
+    "road": 72,
+    "points": [
+      [1860, 520],
+      [1780, 900],
+      [1450, 1060],
+      [1220, 900],
+      [1000, 650],
+      [760, 380],
+      [420, 250],
+      [160, 520],
+      [220, 900],
+      [560, 1060],
+      [800, 900],
+      [1000, 650],
+      [1300, 360],
+      [1620, 250]
+    ]
+  },
+  "colors": {
+    "ground": "#36552f",
+    "ground2": "#426339",
+    "dirt": "#6a5638",
+    "outside": "#1d2a1a"
+  },
+  "scenery": [
+    {
+      "rule": "flyover",
+      "at": 0.7745,
+      "length": 220,
+      "ramp": 150,
+      "height": 24,
+      "deck": "prop.flyover-deck",
+      "pillar": "prop.flyover-pillar",
+      "span": 5
+    },
+    {
+      "rule": "canopy",
+      "count": 26,
+      "trunk": "prop.giant-oak",
+      "crowns": ["prop.oak-crown", "prop.oak-crown", "prop.elm-crown"],
+      "clumps": [4, 6],
+      "lift": [19, 30],
+      "reach": 30,
+      "edge": 9
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres", "prop.tyres-red"],
+      "offset": 17,
+      "minCurve": 0.22
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 5,
+      "r": [14, 22],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 14,
+      "r": [18, 34],
+      "on": "off"
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0004,
+      "clear": 30,
+      "items": [
+        { "prop": "prop.tree", "weight": 0.3 },
+        { "prop": "prop.maple", "weight": 0.2 },
+        { "prop": "prop.pine", "weight": 0.25 },
+        { "prop": "prop.bush", "weight": 0.4 },
+        { "prop": "prop.rock", "weight": 0.12 },
+        { "prop": "prop.log-pile", "weight": 0.08 },
+        { "prop": "prop.snag", "weight": 0.05 }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 29,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

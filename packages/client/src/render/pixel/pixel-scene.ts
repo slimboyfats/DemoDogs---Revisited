@@ -186,7 +186,7 @@ export class PixelScene implements WorldRenderer, StackSink {
     const quadOrigin: [number, number] = [this.ox, this.oy];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    queueShadows(this, this.art, w, (x, y, rx, ry, rot, a) =>
+    queueShadows(this, this.art, w, (x, y, rx, ry, rot, a, box) =>
       this.quads.push(
         x,
         this.my(y, 0),
@@ -194,7 +194,7 @@ export class PixelScene implements WorldRenderer, StackSink {
         ry * 2 * this.ys,
         0x000000,
         a,
-        Shape.Disc,
+        box ? Shape.Rect : Shape.Disc,
         Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
       ),
     );

@@ -256,7 +256,12 @@ function startGame(venue: string): void {
 /** The test range: a derby bowl with every other car parked as a target, and endless rockets. */
 function startDev(car: string): void {
   careerRace = null;
-  const venue = venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ?? venues[0]!;
+  // ?dev&venue=<id> opens the range on that venue (a flyover to test on, say)
+  const pick = params.get('venue');
+  const venue =
+    venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`)) ??
+    venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ??
+    venues[0]!;
   const rocket = [...content.weapon.values()].find((w) => w.kind === 'rocket');
   void launch(
     {

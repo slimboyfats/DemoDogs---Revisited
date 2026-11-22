@@ -67,11 +67,11 @@ export function wreck(w: World, c: Car, by: Car | null): void {
   c.weapon = null;
   c.ammo = 0;
   w.emit({ t: 'wreck', car: c.index, by: by ? by.index : -1 });
-  explode(w, c.x, c.y, 0.5, null);
+  explode(w, c.x, c.y, 0.5, null, c.deck);
   // the fuel tank goes too: burning fuel and sparks rain down around the wreck
   scatter(w, c.x, c.y, 5, 3, 2, by ? by.index : -1, c.vx * 0.4, c.vy * 0.4);
   // and the sump: whatever the pack says a wreck leaks
-  if (w.leak) spill(w, w.leak, c.x, c.y, w.leak.wreck!, by ? by.index : -1);
+  if (w.leak && c.deck < 1) spill(w, w.leak, c.x, c.y, w.leak.wreck!, by ? by.index : -1);
   if (by && by !== c) {
     by.wrecks++;
     by.score += 500;
@@ -96,6 +96,7 @@ export function respawn(w: World, c: Car): void {
   c.wrecked = false;
   w.placeOnTrack(c, i, 0);
   c.vx = c.vy = c.vz = c.z = c.spin = 0;
+  c.z = c.deck = w.deckAt(i);
   c.invuln = 2.2;
   c.nitro = Math.max(c.nitro, 0.5);
   for (
@@ -134,21 +135,32 @@ export function breakProp(w: World, p: LooseProp, by: Car | null): void {
 }
 
 /** A blast at (x, y): hurts and throws cars, flattens bots, lights barrels, smashes crates. */
-export function explode(w: World, x: number, y: number, power: number, owner: Car | null): void {
-  w.emit({ t: 'explode', x, y, power });
+export function explode(
+  w: World,
+  x: number,
+  y: number,
+  power: number,
+  owner: Car | null,
+  z = 0,
+): void {
+  w.emit(z > 0 ? { t: 'explode', x, y, power, z } : { t: 'explode', x, y, power });
   const rad = 48 * power;
-  ignite(w, x, y, rad * 0.7, owner ? owner.index : -1);
-  dig(w, x, y, power);
+  // up on a deck there is no ground to set alight or dig
+  if (z < 4) {
+    ignite(w, x, y, rad * 0.7, owner ? owner.index : -1);
+    dig(w, x, y, power);
+  }
   for (const c of w.cars) {
     const dx = c.x - x;
     const dy = c.y - y;
     const d = Math.hypot(dx, dy);
     if (d > rad) continue;
-    const k = 1 - d / rad;
+    // a deck between the blast and the car takes the worst of it
+    const k = (1 - d / rad) * (Math.abs(c.deck - z) > 12 ? 0.35 : 1);
     c.vx += (dx / (d || 1)) * 230 * k;
     c.vy += (dy / (d || 1)) * 230 * k;
     c.vz = Math.max(c.vz, 150 * k);
-    c.z = Math.max(c.z, 0.5);
+    c.z = Math.max(c.z, c.deck + 0.5);
     c.spin += w.rng.range(-6, 6) * k;
     damage(w, c, 36 * k * power, owner && owner !== c ? owner : null, x, y);
   }
@@ -502,6 +514,7 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   s.hp = 0;
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
+  if (s.lift !== undefined && s.lift > 6) drop(w, s);
   if (s.def.blast) {
     explode(w, s.x, s.y, s.def.blast, null);
     throwOut(w, s);
@@ -516,6 +529,27 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
     }
   if (gone * 2 < walls) return;
   for (const o of w.statics) if (o.group === s.group && !o.down) fall(w, o, o.x, o.y);
+}
+
+/** Something up high comes down: it lands on the cars below it. */
+function drop(w: World, s: StaticProp): void {
+  const r = s.def.radius;
+  const cs = Math.cos(s.rot);
+  const sn = Math.sin(s.rot);
+  // a deck piece is as wide as the road across its length; a crown of leaves is round and light
+  const leafy = s.def.crown !== undefined;
+  const across = leafy || s.def.solid ? r : Math.max(r, w.road / 2 + 3);
+  for (const c of w.cars) {
+    if (c.wrecked || c.z > s.lift! - 6) continue;
+    const dx = c.x - s.x;
+    const dy = c.y - s.y;
+    const along = dx * cs + dy * sn;
+    const side = -dx * sn + dy * cs;
+    if (Math.abs(along) > r + 6 || Math.abs(side) > across + 4) continue;
+    damage(w, c, leafy ? 6 : 22, null, c.x, c.y);
+    if (!leafy) c.vz = Math.max(c.vz, 40);
+    w.emit({ t: 'crash', x: c.x, y: c.y, impact: 90, player: c.isPlayer });
+  }
 }
 
 /**

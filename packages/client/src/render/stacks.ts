@@ -40,7 +40,9 @@ export function queueStacks(
   fx: Effects,
   still?: StaticHook,
 ): void {
-  for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, still);
+  // a crown you are driving under thins out so you can see your car through it
+  const P = w.player;
+  for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -48,9 +50,9 @@ export function queueStacks(
     }
   const t = w.time;
   for (const p of w.pickups)
-    if (p.on && R.visible(p.x, p.y, 8, 12)) {
+    if (p.on && R.visible(p.x, p.y, 8, 12 + p.z)) {
       R.group(p.y);
-      R.stack(art.pickup, p.x, p.y, 2.5 + Math.sin(t * 3 + p.x) * 1.5, t * 1.8 + p.y);
+      R.stack(art.pickup, p.x, p.y, p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5, t * 1.8 + p.y);
     }
   for (const m of w.mines)
     if (R.visible(m.x, m.y, 6)) {
@@ -59,13 +61,13 @@ export function queueStacks(
         Math.floor(m.t * 4) % 2 ? art.prop(m.def.id) : art.prop(m.def.id, MINE_OFF),
         m.x,
         m.y,
-        0,
+        m.z,
         0,
       );
     }
   for (const r of w.rockets) {
     R.group(r.y);
-    R.stack(art.prop(r.def.id), r.x, r.y, 4, r.h);
+    R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
   for (const b of w.bots) queueBot(R, art, fx, b);
   for (const d of fx.debris)
@@ -82,23 +84,61 @@ function queueStatic(
   w: World,
   fx: Effects,
   s: StaticProp,
+  P: Car,
   still?: StaticHook,
 ): void {
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
-  if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip))) return;
+  const lift = s.lift ?? 0;
+  if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
   R.group(s.y);
+  if (lift !== 0) {
+    // stood up off the ground: a deck piece or a crown up in a tree. Slices that would be under
+    // the ground (the foot of a ramp) are left out.
+    const alpha = over(s, strip, lift, P) ? 0.4 : 1;
+    const from = Math.max(0, Math.ceil(-lift * strip.res));
+    const wind = s.def.sway ? sway(w.time, s.seed) : 0;
+    for (let i = from; i < strip.n; i++) {
+      const o = wind * (0.5 + (0.5 * i) / strip.n) * 1.6;
+      R.slice(strip, i, s.x + o, s.y + o * 0.4, lift + i / strip.res, s.rot, 1, alpha);
+    }
+    return;
+  }
   if (!s.def.sway) {
     if (!still?.(s, strip)) R.stack(strip, s.x, s.y, 0, s.rot);
     return;
   }
   // trees sway: the higher the slice, the further it moves
-  const t = w.time;
-  const wind = Math.sin(t * 1.3 + s.seed) * 0.9 + Math.sin(t * 2.9 + s.seed * 2) * 0.3;
+  const wind = sway(w.time, s.seed);
   for (let i = 0; i < strip.n; i++) {
     const k = i / strip.n;
     const o = wind * k * k * 1.8;
     R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
   }
+}
+
+/** How far the wind has a tree over, for its phase `seed`. */
+function sway(t: number, seed: number): number {
+  return Math.sin(t * 1.3 + seed) * 0.9 + Math.sin(t * 2.9 + seed * 2) * 0.3;
+}
+
+/** cot of the camera pitch: how far north on the ground a thing at height 1 is drawn over. */
+const OVER = 0.67;
+
+/**
+ * Is the player's car under this lifted piece (a crown, a deck), so that it would hide it? The
+ * piece is drawn lifted on screen, so it hides what is a little north of it on the ground.
+ */
+function over(s: StaticProp, strip: Strip, lift: number, P: Car): boolean {
+  if (P.z > lift) return false;
+  const dx = P.x - s.x;
+  const dy = P.y + lift * OVER - s.y;
+  if (s.def.crown) return Math.hypot(dx, dy) < strip.cw / strip.res / 2 + 5;
+  // a deck piece: thin out a stretch either side of the car, the whole width of the road
+  const cs = Math.cos(s.rot);
+  const sn = Math.sin(s.rot);
+  return (
+    Math.abs(dx * cs + dy * sn) < 22 && Math.abs(-dx * sn + dy * cs) < strip.ch / strip.res / 2
+  );
 }
 
 function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
@@ -172,7 +212,7 @@ function queueBot(R: StackSink, art: Art, fx: Effects, b: Bot): void {
   R.stack(A.aerial, P.x - Math.cos(a) * 1.4, P.y - Math.sin(a) * 1.4, z0 + tall(A.body), a);
 }
 
-/** A soft shadow on the ground: centre, radii (art px) along and across `rot`, opacity. */
+/** A soft shadow on the ground: centre, radii (art px) along and across `rot`, opacity; `box`: square. */
 export type ShadowFn = (
   x: number,
   y: number,
@@ -180,6 +220,7 @@ export type ShadowFn = (
   ry: number,
   rot: number,
   alpha: number,
+  box?: boolean,
 ) => void;
 
 /** Shadows under trees, cars and bots. */
@@ -189,13 +230,27 @@ export function queueShadows(
   w: World,
   shadow: ShadowFn,
 ): void {
-  for (const s of w.statics)
-    if (!s.down && s.def.sway && R.visible(s.x, s.y, 14)) {
+  for (const s of w.statics) {
+    if (s.down) continue;
+    const lift = s.lift ?? 0;
+    if (lift > 0) {
+      // things up high throw their shadow further off, so you can tell how high they are
+      const x = s.x + 3 + lift * 0.3;
+      const y = s.y + 2 + lift * 0.2;
+      if (!R.visible(x, y, 40)) continue;
+      const st = art.prop(s.def.id);
+      if (s.def.crown) shadow(x, y, (st.cw / st.res) * 0.42, (st.ch / st.res) * 0.38, 0, 0.2);
+      else shadow(x, y, st.cw / st.res / 2, st.ch / st.res / 2 - 2, s.rot, 0.24, true);
+      continue;
+    }
+    if (s.def.sway && R.visible(s.x, s.y, 14)) {
       const st = art.prop(s.def.id);
       shadow(s.x + 3, s.y + 2, (st.cw / st.res) * 0.45, (st.ch / st.res) * 0.4, 0, 0.22);
     }
+  }
   for (const c of w.cars)
-    if (R.visible(c.x, c.y, 20))
+    // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
+    if (c.deck < 4 && R.visible(c.x, c.y, 20))
       shadow(
         c.x + 1.5,
         c.y + 1.5,

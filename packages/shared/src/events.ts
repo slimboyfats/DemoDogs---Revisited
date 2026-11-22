@@ -33,7 +33,8 @@ export type SimEvent =
   | { t: 'wreck'; car: number; by: number }
   | { t: 'respawn'; car: number }
   | { t: 'land'; car: number; impact: number }
-  | { t: 'explode'; x: number; y: number; power: number }
+  /** z: up on a deck, art px; absent on the ground. */
+  | { t: 'explode'; x: number; y: number; power: number; z?: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }
   | { t: 'bot-spawn'; bot: number }
   /** A piece was knocked off scenery (world.statics[prop]) at (x, y). */

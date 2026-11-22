@@ -64,6 +64,7 @@ export function makeCar(
     y: 0,
     z: 0,
     vz: 0,
+    deck: 0,
     h: 0,
     vx: 0,
     vy: 0,
@@ -137,13 +138,20 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
 export function drive(w: World, c: Car, ctl: Controls): void {
   const S = c.stats;
   const off = w.offroad(c.x, c.y);
-  const airborne = c.z > 0.6;
+  const floor = (c.deck = w.support(c));
+  // climbing a ramp: the deck lifts the car with it
+  if (floor > 0 && c.z < floor) {
+    c.z = floor;
+    c.vz = Math.max(0, c.vz);
+  }
+  const airborne = c.z - floor > 0.6;
   c.offroad = off;
   let vf = c.vx * Math.cos(c.h) + c.vy * Math.sin(c.h);
   const weak = c.hp < 35 ? 0.86 : 1;
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
-  const [hold, bog, pit] = airborne ? [1, 0, false] : footing(w, c.x, c.y);
+  // the deck is clean: pools and pits are on the ground below it
+  const [hold, bog, pit] = airborne || floor > 0 ? [1, 0, false] : footing(w, c.x, c.y);
   // dropping into a crater at speed throws the car up off its far lip
   if (pit && !c.pit && Math.abs(vf) > 70) c.vz = Math.max(c.vz, Math.min(70, Math.abs(vf) * 0.3));
   if (!airborne) c.pit = pit;
@@ -186,11 +194,15 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   c.vf = vf;
   c.x += c.vx * DT;
   c.y += c.vy * DT;
-  if (c.z > 0 || c.vz !== 0) {
+  if (floor > 0 && c.vz <= 0 && c.z - floor < 1.5) {
+    // running down a ramp keeps the wheels on it
+    c.z = floor;
+    c.vz = 0;
+  } else if (c.z > floor || c.vz !== 0) {
     c.vz -= GRAVITY * DT;
     c.z += c.vz * DT;
-    if (c.z <= 0) {
-      c.z = 0;
+    if (c.z <= floor) {
+      c.z = floor;
       if (c.vz < -90) {
         w.emit({ t: 'land', car: c.index, impact: -c.vz });
         c.vz = -c.vz * 0.3;
@@ -272,6 +284,10 @@ export function collideWorld(w: World, c: Car): void {
       }
     }
   }
+  if (c.deck > 4) {
+    rails(w, c);
+    return;
+  }
   for (const s of w.near(c.x, c.y, 20)) {
     const r = s.def.radius;
     if (s.down || !s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16)
@@ -300,6 +316,31 @@ export function collideWorld(w: World, c: Car): void {
       }
       bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
     }
+  }
+}
+
+/** A car up on a deck is kept on it by the rails along its edges; nothing below is in its way. */
+function rails(w: World, c: Car): void {
+  const T = w.track!;
+  const i = c.idx;
+  const a = T.a[i]!;
+  const nx = -Math.sin(a);
+  const ny = Math.cos(a);
+  const lim = w.road / 2 - CAR_RADIUS;
+  for (const p of circles(c)) {
+    const off = (p[0] - T.x[i]!) * nx + (p[1] - T.y[i]!) * ny;
+    if (Math.abs(off) <= lim) continue;
+    const sg = Math.sign(off);
+    bump(
+      w,
+      c,
+      p[0] + nx * sg * CAR_RADIUS,
+      p[1] + ny * sg * CAR_RADIUS,
+      -nx * sg,
+      -ny * sg,
+      Math.abs(off) - lim,
+      0.7,
+    );
   }
 }
 
@@ -370,7 +411,14 @@ export function collideCars(w: World, a: Car, b: Car): void {
 
 export function collideProps(w: World, c: Car): void {
   for (const p of w.props) {
-    if (!p.alive || p.z > 10 || Math.abs(p.x - c.x) > 22 || Math.abs(p.y - c.y) > 22) continue;
+    if (
+      !p.alive ||
+      p.z - c.deck > 10 ||
+      c.deck - p.z > 10 ||
+      Math.abs(p.x - c.x) > 22 ||
+      Math.abs(p.y - c.y) > 22
+    )
+      continue;
     const pr = p.def.radius;
     const pm = p.def.mass ?? 0.5;
     for (const q of circles(c)) {

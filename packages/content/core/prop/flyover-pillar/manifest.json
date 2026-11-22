@@ -1,0 +1,13 @@
+{
+  "id": "prop.flyover-pillar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Flyover pillar",
+    "description": "A concrete column under a flyover. Knock out a pair and the span above them drops onto whatever is under it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.5,
+  "made": "material.concrete",
+  "integrity": 120
+}

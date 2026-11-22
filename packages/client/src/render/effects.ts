@@ -1,4 +1,4 @@
-import { DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
+import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
@@ -69,6 +69,9 @@ export interface FloatText {
 const MAX_VOXELS = 2400;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
+/** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
+const BIG_STRIP = 120_000;
+const big = (s: Strip): boolean => s.cw * s.ch * s.n >= BIG_STRIP;
 /** mudders' soot tones: what a blast's smoke is made of. */
 const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
 /** The most particles alive at once. */
@@ -472,7 +475,7 @@ export class Effects {
         CKind.Leaf,
         s.x + c.x * cs - c.y * sn,
         s.y + c.x * sn + c.y * cs,
-        c.z,
+        c.z + (s.lift ?? 0),
         vx * k + rand(-1, 1) * spread,
         vy * k + rand(-1, 1) * spread,
         rand(-0.2, 1) * spread,
@@ -616,7 +619,7 @@ export class Effects {
       if (d > reach + s.def.radius || s.down || s.hp !== undefined) continue;
       let strip = this.scarred.get(s);
       if (!strip) {
-        if (this.scarred.size >= MAX_SCARRED) continue;
+        if (this.scarred.size >= MAX_SCARRED || big(this.art.prop(s.def.id))) continue;
         this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
       }
       // the blast in the prop's own frame, pulled in to its edge
@@ -627,7 +630,7 @@ export class Effects {
       const ly = (-dx * sn + dy * cs) * k;
       const broke = dent(strip, lx, ly, 2.5 + 2.5 * power, 0.85, Math.random, 1);
       this.changed.add(strip);
-      const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: x, oy: y, vx: 0, vy: 0 };
+      const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: x, oy: y, vx: 0, vy: 0 };
       this.burst(broke.chips, 60, { ...from, speed: 70 + 50 * power });
       this.burst(broke.loose, 50, { ...from, speed: 30 }, true);
     }
@@ -742,10 +745,11 @@ export class Effects {
           break;
         case 'explode': {
           const { x, y, power } = e;
-          this.fireball(x, y, power);
+          const z = e.z ?? 0;
+          this.fireball(x, y, power, z);
           this.scar(x, y, power);
-          for (let i = 0; i < 16; i++) this.spark(x, y, 4, 120);
-          this.scorch(x, y, 16 * power);
+          for (let i = 0; i < 16; i++) this.spark(x, y, z + 4, 120);
+          if (z < 4) this.scorch(x, y, 16 * power);
           this.flashes.push({ x, y, r: 70 * power + 20, life: 0.45, max: 0.45, rgb: 0xffa040 });
           const v = this.vol(x, y);
           if (v > 0) S.boom(v);
@@ -782,7 +786,7 @@ export class Effects {
             // burnt off: the crown is in flames, and a few leaves get away alight
             for (let i = 0; i < 3; i++) {
               const c = off[Math.floor(Math.random() * off.length)];
-              if (c) this.flame(s.x + c.x, s.y + c.y, c.z, rand(3, 5));
+              if (c) this.flame(s.x + c.x, s.y + c.y, c.z + (s.lift ?? 0), rand(3, 5));
             }
             this.leaves(s, off, 12, 0, 0, 18);
             break;
@@ -803,6 +807,14 @@ export class Effects {
           // a piece knocked out of scenery where it was struck
           const s = w.statics[e.prop]!;
           let strip = this.scarred.get(s);
+          if (!strip && big(this.art.prop(s.def.id))) {
+            // a deck piece is too big to keep a scarred copy of each: it throws grit and dust
+            // where it was struck, and shows its damage by coming down
+            const z = (s.lift ?? 0) + DECK_SURFACE;
+            for (let i = 0; i < 4; i++) this.puff(e.x, e.y, z, 'dust');
+            for (let i = 0; i < 6; i++) this.spark(e.x, e.y, z, 70);
+            break;
+          }
           if (!strip) {
             if (this.scarred.size >= MAX_SCARRED) break;
             this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
@@ -822,10 +834,15 @@ export class Effects {
             e.by === 'heat' ? 1 : 0.4,
           );
           this.changed.add(strip);
-          const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
+          const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
           if (e.by === 'heat') {
             if (Math.random() < 0.5)
-              this.flame(e.x + rand(-3, 3), e.y + rand(-3, 3), rand(3, 9), rand(3, 5));
+              this.flame(
+                e.x + rand(-3, 3),
+                e.y + rand(-3, 3),
+                (s.lift ?? 0) + rand(3, 9),
+                rand(3, 5),
+              );
             break;
           }
           this.burst(broke.chips, 50, { ...from, speed: 40 + 60 * part });
@@ -850,7 +867,7 @@ export class Effects {
               x: s.x,
               y: s.y,
               h: s.rot,
-              z: 0,
+              z: s.lift ?? 0,
               ox: e.x,
               oy: e.y,
               speed: 55,
@@ -1187,7 +1204,8 @@ export class Effects {
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
-      if (c.sliding)
+      // up on a deck, the marks would land on the ground below it
+      if (c.sliding && c.deck < 1)
         for (const sgn of [-1, 1]) {
           const wx = -7;
           const wy = 5.4 * sgn;

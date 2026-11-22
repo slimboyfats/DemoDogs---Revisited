@@ -24,13 +24,22 @@ export function rangeRocket(
   y: number,
   h: number,
 ): void {
-  w.rockets.push({ x, y, h, v: def.speed ?? 340, owner: owner.index, life: def.life ?? 2, def });
+  w.rockets.push({
+    x,
+    y,
+    z: 0,
+    h,
+    v: def.speed ?? 340,
+    owner: owner.index,
+    life: def.life ?? 2,
+    def,
+  });
   w.emit({ t: 'fire', car: owner.index, weapon: def.id });
 }
 
 /** A mine laid at (x, y). It is nobody's friend: `owner` sets it off too once it has armed. */
 export function rangeMine(w: World, def: WeaponManifest, owner: Car, x: number, y: number): void {
-  w.mines.push({ x, y, owner: owner.index, t: 2, def });
+  w.mines.push({ x, y, z: 0, owner: owner.index, t: 2, def });
 }
 
 /** A blow of `amount` to a car at the point (x, y). */

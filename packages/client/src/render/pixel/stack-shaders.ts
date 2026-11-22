@@ -56,6 +56,7 @@ uniform highp sampler2D u_atlas;
 uniform vec4 u_lpos[8];  // x, y, radius, strength
 uniform vec3 u_lcol[8];
 uniform int u_lcount;
+uniform float u_scale;
 out vec4 o;
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
@@ -76,7 +77,9 @@ void main() {
   // the dither and the light bands step on a grid three to the art pixel, as fine as the art
   ivec2 cell = ivec2(floor(v_world.xy * 3.0)) + ivec2(0, int(floor(v_world.z * 3.0)));
   float b = bayer(cell);
-  if (v_alpha < 1.0 && b >= v_alpha) discard;
+  // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
+  // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
+  if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
   vec3 l = vec3(0.0);
   for (int i = 0; i < 8; i++) {
     if (i >= u_lcount) break;

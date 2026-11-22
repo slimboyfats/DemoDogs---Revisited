@@ -63,6 +63,39 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     offset: z.number(),
     minCurve: z.number(),
   }),
+  /**
+   * A flyover: the road climbs a ramp onto a raised deck at fraction `at` of the way round, runs
+   * flat for `length`, and comes down a ramp the other side (each ramp `ramp` long, art px). Cars
+   * on the deck ride at `height`; the rest of the track passes under it. The deck is laid in
+   * `deck` pieces, `span` of them to a span held up by a pair of `pillar`s (none where a road
+   * passes below). A span comes down when its pillars go.
+   */
+  z.strictObject({
+    rule: z.literal('flyover'),
+    at: unit,
+    length: z.number().positive(),
+    ramp: z.number().positive(),
+    height: z.number().min(8).max(40),
+    deck: id('prop'),
+    pillar: id('prop'),
+    span: z.number().int().min(1),
+  }),
+  /**
+   * Great trees beside the road whose crowns hang out over it: a `trunk` with `clumps` of
+   * `crowns` up in it, from `lift[0]` to `lift[1]` art px high and up to `reach` from the trunk,
+   * leaning out over the road. Cars drive under the crowns. The crowns fall with the trunk.
+   */
+  z.strictObject({
+    rule: z.literal('canopy'),
+    count: z.number().int().positive(),
+    trunk: id('prop'),
+    crowns: z.array(id('prop')).min(1),
+    clumps: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    lift: z.tuple([z.number().min(0), z.number().min(0)]),
+    reach: z.number().positive(),
+    /** How far from the road's edge the trunk stands. */
+    edge: z.number(),
+  }),
   /** Random props on open ground at least `clear` from the road. */
   z.strictObject({
     rule: z.literal('scatter'),

@@ -70,6 +70,11 @@ export interface Car {
   y: number;
   z: number;
   vz: number;
+  /**
+   * Height of the road under the car: 0 on the ground, more on a raised deck (a flyover). The car
+   * rests on it, and things on another level pass over or under it.
+   */
+  deck: number;
   /** Heading, radians. */
   h: number;
   vx: number;
@@ -156,6 +161,8 @@ export interface StaticProp {
   bears?: boolean;
   x: number;
   y: number;
+  /** Height its foot stands at, art px: a deck span or a crown up in a tree. Absent: on the ground. */
+  lift?: number;
   rot: number;
   /** Per-prop phase for swaying. */
   seed: number;
@@ -227,6 +234,8 @@ export interface Blaze {
 export interface Rocket {
   x: number;
   y: number;
+  /** The level it flies at: the deck height it was fired from. */
+  z: number;
   h: number;
   v: number;
   owner: number;
@@ -237,6 +246,8 @@ export interface Rocket {
 export interface Mine {
   x: number;
   y: number;
+  /** The level it lies on. */
+  z: number;
   owner: number;
   t: number;
   def: WeaponManifest;
@@ -245,6 +256,8 @@ export interface Mine {
 export interface Pickup {
   x: number;
   y: number;
+  /** The level it floats over. */
+  z: number;
   on: boolean;
   t: number;
 }
