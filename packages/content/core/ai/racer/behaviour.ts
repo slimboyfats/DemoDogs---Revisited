@@ -43,7 +43,7 @@ export default defineAi({
     const [steer, d] = steerTo(c, tx, ty);
     const out: Controls = { steer, throttle: 1, brake: false, boost: false, fire: false };
     const curv = Math.abs(angDiff(T.a[(c.idx + Math.round(k * 2.2)) % N]!, T.a[c.idx]!));
-    const target = BASE_SPEED * c.def.stats.speed * (1 - Math.min(0.5, curv * 0.5));
+    const target = BASE_SPEED * c.stats.speed * (1 - Math.min(0.5, curv * 0.5));
     if (sp > target + 25) out.brake = true;
     else if (sp > target) out.throttle = 0.3;
     if (Math.abs(d) > 1.1 && sp > 70) out.throttle = 0.25;

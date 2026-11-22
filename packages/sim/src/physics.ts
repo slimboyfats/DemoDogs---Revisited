@@ -4,11 +4,13 @@ import {
   CAR_RADIUS,
   DT,
   GRAVITY,
+  TUNE_MAX,
+  TUNE_STEP,
   type AiManifest,
   type CarManifest,
   type Controls,
 } from '@demodogs/shared';
-import type { Car } from './entities';
+import type { Car, Setup } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import type { World } from './world';
@@ -20,11 +22,25 @@ export function makeCar(
   name: string,
   isPlayer: boolean,
   ai: AiManifest | null,
+  setup: Setup = {},
 ): Car {
   const behaviour = ai ? w.content.behaviours.get(ai.behaviour)! : null;
+  const t = setup.tune ?? {};
+  const lv = (n: number | undefined) => clamp(Math.floor(n ?? 0), 0, TUNE_MAX);
+  const hp = clamp(setup.hp ?? 100, 1, 100);
+  const gun = setup.weapon ? (w.content.weapon.get(setup.weapon.id) ?? null) : null;
   return {
     index: 0,
     def,
+    stats: {
+      speed: def.stats.speed * (1 + TUNE_STEP.speed * lv(t.engine)),
+      accel: def.stats.accel * (1 + TUNE_STEP.accel * lv(t.engine)),
+      grip: def.stats.grip * (1 + TUNE_STEP.grip * lv(t.tyres)),
+      mass: def.stats.mass,
+      armor: def.stats.armor * (1 + TUNE_STEP.armor * lv(t.armor)),
+    },
+    ram: setup.ram ?? 1,
+    fuel: setup.fuel ?? 1,
     name,
     paint,
     isPlayer,
@@ -34,7 +50,7 @@ export function makeCar(
             behaviour,
             lane: w.rng.range(-0.5, 0.5),
             phase: w.rng.range(0, 100),
-            skill: w.rng.range(ai.skill[0], ai.skill[1]),
+            skill: setup.skill ?? w.rng.range(ai.skill[0], ai.skill[1]),
             aggro: w.rng.range(ai.aggro[0], ai.aggro[1]),
             stuckT: 0,
             revT: 0,
@@ -59,7 +75,8 @@ export function makeCar(
     sliding: false,
     offroad: false,
     nitro: 1,
-    hp: 100,
+    hp,
+    hp0: hp,
     roll: 0,
     lurch: 0,
     bounce: 0,
@@ -76,8 +93,8 @@ export function makeCar(
     score: 0,
     wrecks: 0,
     smashed: 0,
-    weapon: null,
-    ammo: 0,
+    weapon: gun,
+    ammo: gun ? setup.weapon!.ammo : 0,
     invuln: 0,
     fireCd: 0,
     hitCd: 0,
@@ -112,7 +129,7 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
  * and grip pulls it round, so a car drifts when it turns hard or the handbrake is on.
  */
 export function drive(w: World, c: Car, ctl: Controls): void {
-  const S = c.def.stats;
+  const S = c.stats;
   const off = w.offroad(c.x, c.y);
   const airborne = c.z > 0.6;
   c.offroad = off;
@@ -132,7 +149,8 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const boost = ctl.boost && c.nitro > 0.02 && !airborne;
   c.boosting = boost;
   c.nitro = boost ? Math.max(0, c.nitro - 0.32 * DT) : Math.min(1, c.nitro + 0.025 * DT);
-  const maxS = BASE_SPEED * S.speed * weak * (off ? 0.56 : 1) * (boost ? 1.33 : 1) * c.aiSpeed;
+  const maxS =
+    BASE_SPEED * S.speed * weak * (off ? 0.56 : 1) * (boost ? 1.33 * c.fuel : 1) * c.aiSpeed;
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
@@ -273,8 +291,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
       }
     }
   if (!best) return;
-  const ma = a.def.stats.mass * (a.wrecked ? 1.6 : 1);
-  const mb = b.def.stats.mass * (b.wrecked ? 1.6 : 1);
+  const ma = a.stats.mass * (a.wrecked ? 1.6 : 1);
+  const mb = b.stats.mass * (b.wrecked ? 1.6 : 1);
   const tot = ma + mb;
   a.x -= (best.nx * best.ov * mb) / tot;
   a.y -= (best.ny * best.ov * mb) / tot;
@@ -306,8 +324,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
   const fresh = a.hitCd <= 0 && b.hitCd <= 0;
   a.hitCd = b.hitCd = 0.3;
   if (fresh) {
-    damage(w, a, (base * zoneFactor(ra[0]) * mb) / 1.1, b, best.px, best.py);
-    damage(w, b, (base * zoneFactor(rb[0]) * ma) / 1.1, a, best.px, best.py);
+    damage(w, a, ((base * zoneFactor(ra[0]) * mb) / 1.1) * b.ram, b, best.px, best.py);
+    damage(w, b, ((base * zoneFactor(rb[0]) * ma) / 1.1) * a.ram, a, best.px, best.py);
   }
   if (w.kind === 'derby' && impact > 60) {
     if (a.ai) a.ai.revT = w.rng.range(0.3, 0.7);
@@ -333,7 +351,7 @@ export function collideProps(w: World, c: Car): void {
       p.y += ny * (m - d);
       const vrel = (p.vx - c.vx) * nx + (p.vy - c.vy) * ny;
       if (vrel >= 0) continue;
-      const mc = c.def.stats.mass * 3;
+      const mc = c.stats.mass * 3;
       const j = (-1.5 * vrel) / (1 / mc + 1 / pm);
       p.vx += (j / pm) * nx;
       p.vy += (j / pm) * ny;

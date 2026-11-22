@@ -7,6 +7,7 @@
     "since": "core@0.1.0"
   },
   "paint": "#3a79d6",
+  "price": 9000,
   "stats": {
     "speed": 0.94,
     "accel": 0.85,

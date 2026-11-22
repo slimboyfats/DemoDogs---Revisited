@@ -51,9 +51,11 @@ export function trackIndex(w: World, c: Car): void {
 export function standings(w: World): Car[] {
   if (w.kind === 'race') {
     const done = w.finishers.map((i) => w.cars[i]!);
+    // in a knockout race a wreck is out for good, behind everyone still running
+    const out = (c: Car) => (w.knockout && c.wrecked ? 1 : 0);
     const rest = w.cars
       .filter((c) => !c.finished)
-      .sort((a, b) => b.progress - a.progress || a.index - b.index);
+      .sort((a, b) => out(a) - out(b) || b.progress - a.progress || a.index - b.index);
     return [...done, ...rest];
   }
   return w.cars.slice().sort((a, b) => {

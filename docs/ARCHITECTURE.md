@@ -79,3 +79,17 @@ and words and the HUD go on a flat overlay canvas above either one.
     mudders' stipple and solid pixel-blob shapes.
 - **Canvas (fallback):** `render/scene.ts` and `render/stack.ts`. This is 2D canvas drawing with a per-frame sort
   and baked static props. It is used when WebGL2 is missing or with `?renderer=canvas`.
+
+## Career
+
+`client/src/game/career.ts` holds the career as pure rules over a plain, JSON-saved state: the car
+shop (cars sorted by their manifest `price`), upgrades, repairs, trade-ins, the one-race black
+market kit, the loan shark, three race tiers, the ladder and the final. `raceSetup` turns the state
+into a field of named rivals and the player's `Setup`; `settle` turns a finished race into a payout
+and the next state. `ui/career-screen.ts` only draws the state and calls those functions.
+
+The sim knows nothing of the career. It takes what a career race needs as plain `WorldOptions`:
+`field` (named `Entrant`s with upgrades and a fixed skill), `player` (a `Setup`: upgrade levels,
+starting health, ram and fuel multipliers, a loaded weapon) and `knockout` (a wreck is out for good,
+and the race ends when the player is wrecked or is the last car running). A car's effective stats
+live in `car.stats`, the type's stats with `TUNE_STEP` applied per upgrade level.

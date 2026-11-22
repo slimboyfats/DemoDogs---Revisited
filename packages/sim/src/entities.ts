@@ -18,9 +18,42 @@ export interface AiState {
   targetT: number;
 }
 
+/** Upgrade levels, 0 (stock) to TUNE_MAX. */
+export interface Tune {
+  engine: number;
+  tyres: number;
+  armor: number;
+}
+
+/** How a car comes to the grid: its upgrades and whatever was bolted on or done to it. */
+export interface Setup {
+  tune?: Partial<Tune>;
+  /** Health at the start, 1 to 100 (a car that was not repaired, or was tampered with). */
+  hp?: number;
+  /** Multiplier on the damage this car deals by ramming (ram spikes). */
+  ram?: number;
+  /** Multiplier on what nitro adds to its top speed (hot fuel). */
+  fuel?: number;
+  /** A weapon already loaded at the start. */
+  weapon?: { id: string; ammo: number };
+  /** A fixed driving skill for an AI driver, instead of one drawn from the AI's range. */
+  skill?: number;
+}
+
+/** A rival on the entry list. */
+export interface Entrant extends Setup {
+  car: string;
+  name: string;
+  paint: string;
+}
+
 export interface Car {
   index: number;
   def: CarManifest;
+  /** The car type's stats with this car's upgrades applied. */
+  stats: CarManifest['stats'];
+  ram: number;
+  fuel: number;
   name: string;
   paint: string;
   isPlayer: boolean;
@@ -45,6 +78,8 @@ export interface Car {
   offroad: boolean;
   nitro: number;
   hp: number;
+  /** Health it started the race with. */
+  hp0: number;
   /** Body lean across (roll) and along (lurch) the car, for the stack's slices. */
   roll: number;
   lurch: number;

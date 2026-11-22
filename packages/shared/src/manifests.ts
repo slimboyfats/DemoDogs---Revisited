@@ -28,6 +28,8 @@ export const CarSchema = z.strictObject({
   id: id('car'),
   /** Default paint for the player's copy; rivals get their own. */
   paint: hex,
+  /** What it costs in the career's car shop; the cheapest is the car a career starts in. */
+  price: z.number().int().min(0),
   /** Multipliers around 1.0. */
   stats: z.strictObject({
     speed: z.number().min(0.7).max(1.3),

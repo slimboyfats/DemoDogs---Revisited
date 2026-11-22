@@ -35,7 +35,9 @@ export function results(w: World): Results {
       w.kind === 'race'
         ? c.finished
           ? fmtTime(c.finishTime)
-          : 'racing'
+          : c.wrecked && w.knockout
+            ? 'wrecked'
+            : 'racing'
         : c.wrecked
           ? 'wrecked'
           : 'survived',

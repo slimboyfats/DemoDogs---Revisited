@@ -1,5 +1,5 @@
 import { DT } from '@demodogs/shared';
-import { World, type Content } from '@demodogs/sim';
+import { World, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Input } from '../input/input';
 import type { Art } from '../render/art';
@@ -16,6 +16,10 @@ export interface SessionOptions {
   car: string;
   seed: number;
   autopilot: boolean;
+  /** A career race: the named rivals, the player's car as it stands, and no tow truck. */
+  field?: Entrant[];
+  player?: Setup;
+  knockout?: boolean;
 }
 
 /** At most this many sim ticks per frame, so a slow frame does not snowball. */
@@ -40,6 +44,9 @@ export class Session {
       car: o.car,
       seed: o.seed,
       autopilot: o.autopilot,
+      ...(o.field ? { field: o.field } : {}),
+      ...(o.player ? { player: o.player } : {}),
+      ...(o.knockout ? { knockout: true } : {}),
     });
     this.ground = makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);

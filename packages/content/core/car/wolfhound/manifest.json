@@ -1,0 +1,30 @@
+{
+  "id": "car.wolfhound",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Wolfhound",
+    "description": "Wedge-nosed racer. Quick everywhere, and it costs like it.",
+    "since": "core@0.2.0"
+  },
+  "paint": "#22252e",
+  "price": 30000,
+  "stats": {
+    "speed": 1.16,
+    "accel": 1.22,
+    "grip": 1.16,
+    "mass": 1.05,
+    "armor": 1.05
+  },
+  "body": {
+    "halfLength": 12.5,
+    "halfWidth": 6
+  },
+  "wheels": [
+    [7.8, 5.8],
+    [-7.6, 5.9]
+  ],
+  "top": {
+    "x": -6.5,
+    "z": 5
+  }
+}

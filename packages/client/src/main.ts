@@ -2,6 +2,17 @@ import './styles.css';
 import { loadContent, loadLooks } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
+import {
+  forfeit,
+  newCareer,
+  parseCareer,
+  raceSetup,
+  readOutcome,
+  settle,
+  type Career,
+  type Outcome,
+  type RaceId,
+} from './game/career';
 import { Session } from './game/session';
 import { Input } from './input/input';
 import { Art } from './render/art';
@@ -9,13 +20,15 @@ import { Hud } from './render/hud';
 import { drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { Scene } from './render/scene';
+import { CareerScreen, money } from './ui/career-screen';
 import { Garage } from './ui/garage';
 import { results } from './ui/results';
 
 /**
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
  * ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
- * player's car with the rivals' AI). window.__dd exposes the running session.
+ * player's car with the rivals' AI); ?career opens the career, ?career=<easy|medium|hard|final>
+ * enters that race. window.__dd exposes the running session and the career.
  */
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const params = new URLSearchParams(location.search);
@@ -44,8 +57,48 @@ let carIdx = Math.max(
 );
 let session: Session | null = null;
 let lastVenue = venues[0]!.id;
-let screen: 'menu' | 'game' | 'results' = 'menu';
+let screen: 'menu' | 'game' | 'results' | 'career' = 'menu';
+const SAVE = 'dd-career-v1';
+let career: Career | null = null;
+/** The career race being run, or null in a quick race. */
+let careerRace: RaceId | null = null;
+
+function saveCareer(k: Career): void {
+  career = k;
+  try {
+    localStorage.setItem(SAVE, JSON.stringify(k));
+  } catch {
+    /* private mode: the career lasts as long as the page */
+  }
+}
+function loadCareer(): Career {
+  if (career) return career;
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(SAVE);
+  } catch {
+    /* ignore */
+  }
+  career = parseCareer(content, saved) ?? newCareer(content, Math.floor(Math.random() * 2 ** 31));
+  return career;
+}
+const careerScreen = new CareerScreen($('careerPanel'), content, art, {
+  change: saveCareer,
+  race: startCareerRace,
+  back: () => setScreen('menu'),
+  reset: () => {
+    saveCareer(newCareer(content, Math.floor(Math.random() * 2 ** 31)));
+    openCareer();
+  },
+});
+function openCareer(): void {
+  careerRace = null;
+  careerScreen.open(loadCareer());
+  setScreen('career');
+}
 let paused = false;
+/** The results on screen are a career race's: CONTINUE goes back to the career. */
+let lastCareer = false;
 let W = 0;
 let H = 0;
 let DPR = 1;
@@ -65,7 +118,8 @@ function resize(): void {
 }
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu']) $(k).classList.toggle('hidden', k !== id);
+  for (const k of ['menu', 'results', 'pauseMenu', 'career'])
+    $(k).classList.toggle('hidden', k !== id);
 }
 
 function setScreen(s: typeof screen): void {
@@ -88,8 +142,7 @@ function updateFireButton(): void {
   b.classList.toggle('empty', !P.weapon);
 }
 
-function startGame(venue: string): void {
-  sound.init();
+function goFullscreen(): void {
   try {
     if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement)
       document.documentElement
@@ -103,6 +156,36 @@ function startGame(venue: string): void {
   } catch {
     /* not allowed */
   }
+}
+
+function startCareerRace(race: RaceId): void {
+  sound.init();
+  goFullscreen();
+  const k = loadCareer();
+  const s = raceSetup(content, k, race);
+  careerRace = race;
+  session = new Session({
+    content,
+    art,
+    sound,
+    input,
+    venue: s.venue,
+    car: k.car,
+    seed: s.seed,
+    autopilot: params.has('autoplay'),
+    field: s.field,
+    player: s.player,
+    knockout: true,
+  });
+  hud.layout(session.world, DPR);
+  paused = false;
+  setScreen('game');
+}
+
+function startGame(venue: string): void {
+  sound.init();
+  goFullscreen();
+  careerRace = null;
   lastVenue = venue;
   const seed = params.has('seed')
     ? Number(params.get('seed'))
@@ -122,22 +205,51 @@ function startGame(venue: string): void {
   setScreen('game');
 }
 
-function finish(): void {
+function finish(gaveUp = false): void {
   if (!session) return;
   const w = session.world;
   const r = results(w);
   $('resTitle').textContent = r.title;
   let sub = r.sub;
-  try {
-    const k = `dd-best-${w.venue.id}`;
-    const best = Number(localStorage.getItem(k)) || 0;
-    if (w.player.score > best) {
-      localStorage.setItem(k, String(w.player.score));
-      sub += ' · NEW BEST SCORE!';
+  const pay = $('payout');
+  pay.replaceChildren();
+  $('again').textContent = careerRace ? 'CONTINUE' : 'GO AGAIN';
+  $('toMenu').classList.toggle('hidden', careerRace !== null);
+  if (careerRace) {
+    // settle once: the race is spent, so leaving the results cannot pay twice
+    const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
+    const { career: next, payout } = settle(loadCareer(), careerRace, o);
+    saveCareer(next);
+    careerRace = null;
+    lastCareer = true;
+    if (payout.champion) $('resTitle').textContent = 'TOP DOG!';
+    else if (gaveUp) $('resTitle').textContent = 'GAVE UP';
+    else if (o.wrecked) $('resTitle').textContent = 'WRECKED';
+    const line = (label: string, cash: string, cls = '') => {
+      const d = document.createElement('div');
+      d.className = cls;
+      d.append(
+        Object.assign(document.createElement('span'), { textContent: label }),
+        Object.assign(document.createElement('b'), { textContent: cash }),
+      );
+      pay.append(d);
+    };
+    for (const l of payout.lines) line(l.label, money(l.cash), l.cash < 0 ? 'neg' : '');
+    if (payout.lines.length === 0)
+      line(o.wrecked ? 'A WRECK EARNS NOTHING' : 'OUT OF THE MONEY', money(0));
+    line(`CASH ${money(next.cash)} · +${payout.points} PTS`, money(payout.total), 'sum');
+  } else lastCareer = false;
+  if (!lastCareer)
+    try {
+      const k = `dd-best-${w.venue.id}`;
+      const best = Number(localStorage.getItem(k)) || 0;
+      if (w.player.score > best) {
+        localStorage.setItem(k, String(w.player.score));
+        sub += ' · NEW BEST SCORE!';
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
-  }
   $('resSub').textContent = sub;
   const table = $<HTMLTableElement>('resTable');
   table.replaceChildren();
@@ -163,6 +275,8 @@ function togglePause(): void {
   if (screen !== 'game') return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
+  $('restart').classList.toggle('hidden', careerRace !== null);
+  $('quit').textContent = careerRace ? 'GIVE UP THE RACE' : 'QUIT TO MENU';
   if (paused) sound.engineStop();
   else {
     sound.engineStart();
@@ -219,6 +333,7 @@ function frame(t: number): void {
     hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
   } else if (screen === 'menu') garage.draw(cars[carIdx]!, dt);
+  else if (screen === 'career') careerScreen.draw(dt);
 }
 
 function boot(): void {
@@ -233,14 +348,17 @@ function boot(): void {
     carIdx = (carIdx + 1) % cars.length;
     showCar();
   };
-  $('again').onclick = () => startGame(lastVenue);
+  $('again').onclick = () => (lastCareer ? openCareer() : startGame(lastVenue));
+  $('toCareer').onclick = openCareer;
   $('toMenu').onclick = () => setScreen('menu');
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
   $('restart').onclick = () => startGame(lastVenue);
   $('quit').onclick = () => {
     paused = false;
-    setScreen('menu');
+    // walking out of a career race is a last place, not a free retry
+    if (careerRace) finish(true);
+    else setScreen('menu');
   };
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () =>
@@ -263,6 +381,12 @@ function boot(): void {
       );
     if (v) startGame(v.id);
   }
+  if (params.has('career')) {
+    const race = params.get('career');
+    if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
+      startCareerRace(race);
+    else openCareer();
+  }
   Object.assign(window, {
     __dd: {
       renderer: rendererName,
@@ -270,6 +394,13 @@ function boot(): void {
         return session;
       },
       finish,
+      get career() {
+        return loadCareer();
+      },
+      setCareer(k: Career) {
+        saveCareer(k);
+        if (screen === 'career') openCareer();
+      },
       get screen() {
         return screen;
       },

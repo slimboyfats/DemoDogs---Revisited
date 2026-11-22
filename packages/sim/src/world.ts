@@ -8,7 +8,17 @@ import {
   type VenueManifest,
 } from '@demodogs/shared';
 import type { Content } from './content';
-import type { Bot, Car, LooseProp, Mine, Pickup, Rocket, StaticProp } from './entities';
+import type {
+  Bot,
+  Car,
+  Entrant,
+  LooseProp,
+  Mine,
+  Pickup,
+  Rocket,
+  Setup,
+  StaticProp,
+} from './entities';
 import { Hasher, TAU, angDiff, clamp } from './math';
 import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
@@ -37,6 +47,14 @@ export interface WorldOptions {
   autopilot?: boolean;
   /** Rivals in the field (default: fill to FIELD_SIZE). */
   rivals?: number;
+  /** The rivals by name, front of the grid first, instead of a drawn field. */
+  field?: Entrant[];
+  /** The player's upgrades and extras. */
+  player?: Setup;
+  /** A wrecked car is out for good, and the race ends when the player is. */
+  knockout?: boolean;
+  /** Laps, instead of the mode's. */
+  laps?: number;
 }
 
 export interface Oval {
@@ -77,6 +95,8 @@ export class World {
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
   readonly road: number;
+  readonly knockout: boolean;
+  private readonly lapsOpt: number | undefined;
   readonly cars: Car[] = [];
   readonly bots: Bot[] = [];
   readonly statics: StaticProp[] = [];
@@ -111,6 +131,8 @@ export class World {
     this.w = venue.size.w;
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
+    this.knockout = opts.knockout ?? false;
+    this.lapsOpt = opts.laps;
     if (venue.track) {
       this.track = sampleTrack(venue.track.points, 4);
       this.grid = new DistanceGrid(this.track, this.w, this.h, 6, this.road / 2 + 80);
@@ -124,9 +146,22 @@ export class World {
     const aiDef = C.ai.get(mode.ai)!;
     const paints = this.rng.shuffle(RIVAL_PAINTS);
     const names = this.rng.shuffle(RIVAL_NAMES);
-    const player = makeCar(this, carDef, carDef.paint, 'YOU', true, opts.autopilot ? aiDef : null);
+    const player = makeCar(
+      this,
+      carDef,
+      carDef.paint,
+      'YOU',
+      true,
+      opts.autopilot ? aiDef : null,
+      opts.player,
+    );
     const rivals: Car[] = [];
-    const count = opts.rivals ?? FIELD_SIZE - 1;
+    for (const e of opts.field ?? []) {
+      const def = C.car.get(e.car);
+      if (!def) throw new Error(`no car ${e.car}`);
+      rivals.push(makeCar(this, def, e.paint, e.name, false, aiDef, e));
+    }
+    const count = opts.field ? 0 : (opts.rivals ?? FIELD_SIZE - 1);
     for (let i = 0; i < count; i++) {
       const t = types[(types.indexOf(opts.car) + 1 + i) % types.length]!;
       rivals.push(
@@ -211,7 +246,7 @@ export class World {
   }
 
   get laps(): number {
-    return this.mode.laps ?? 0;
+    return this.lapsOpt ?? this.mode.laps ?? 0;
   }
 
   emit(e: SimEvent): void {
@@ -285,7 +320,11 @@ export class World {
       let ctl: Controls = NO_CONTROLS;
       if (c.wrecked) {
         c.wreckT += DT;
-        if (this.mode.respawnSeconds !== undefined && c.wreckT > this.mode.respawnSeconds)
+        if (
+          !this.knockout &&
+          this.mode.respawnSeconds !== undefined &&
+          c.wreckT > this.mode.respawnSeconds
+        )
           respawn(this, c);
       } else if (live) {
         ctl = c.ai ? c.ai.behaviour.drive(this, c) : player;
@@ -312,6 +351,20 @@ export class World {
     updateRockets(this);
     updateMines(this);
 
+    if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
+      // the race is over for a wrecked player, and won when no rival is left running
+      const P = this.player;
+      if (P.wrecked) this.endT = 2.6;
+      else if (this.cars.length > 1 && this.cars.every((c) => c === P || c.wrecked)) {
+        if (!P.finished) {
+          P.finished = true;
+          P.finishTime = this.raceTime;
+          this.finishers.push(P.index);
+          this.emit({ t: 'finish', car: P.index, place: this.finishers.length });
+        }
+        this.endT = 2.8;
+      }
+    }
     if (this.kind === 'derby' && live) {
       this.timeLeft -= DT;
       const alive = this.cars.filter((c) => !c.wrecked).length;

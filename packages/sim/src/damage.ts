@@ -14,7 +14,7 @@ export function damage(
   py: number,
 ): void {
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
-  const dealt = (amount * w.mode.damageScale) / c.def.stats.armor;
+  const dealt = (amount * w.mode.damageScale) / c.stats.armor;
   c.hp -= dealt;
   const L = toLocal(c, px, py);
   const lx = clamp(L[0], -12, 12);
