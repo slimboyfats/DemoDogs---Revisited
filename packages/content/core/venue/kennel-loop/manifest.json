@@ -1,0 +1,89 @@
+{
+  "id": "venue.kennel-loop",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Kennel Loop",
+    "description": "Race. Grass verges, tyre walls on the bends.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.race",
+  "seed": 465,
+  "size": {
+    "w": 1640,
+    "h": 1120
+  },
+  "track": {
+    "road": 72,
+    "points": [
+      [220, 560],
+      [240, 320],
+      [370, 190],
+      [600, 180],
+      [790, 270],
+      [990, 190],
+      [1240, 190],
+      [1410, 330],
+      [1420, 560],
+      [1320, 790],
+      [1110, 900],
+      [910, 810],
+      [700, 910],
+      [450, 930],
+      [270, 810]
+    ]
+  },
+  "colors": {
+    "ground": "#4f7a37",
+    "ground2": "#5c8a3f",
+    "dirt": "#8a6d45",
+    "outside": "#2d3a24"
+  },
+  "scenery": [
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000192,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.1
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 0.02
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel"
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 16
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms"]
+}

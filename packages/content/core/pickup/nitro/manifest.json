@@ -1,0 +1,12 @@
+{
+  "id": "pickup.nitro",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Boost refill",
+    "description": "Fills the boost tank.",
+    "since": "core@0.1.0"
+  },
+  "kind": "nitro",
+  "weight": 0.17,
+  "hurtWeight": 0.15
+}

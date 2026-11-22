@@ -1,0 +1,10 @@
+{
+  "id": "prop.pine",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pine",
+    "description": "A tall pine; sways.",
+    "since": "core@0.1.0"
+  },
+  "extends": "prop.tree"
+}

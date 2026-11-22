@@ -1,0 +1,12 @@
+{
+  "id": "prop.tyres",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tyres",
+    "description": "A stack of old tyres. Soft to hit.",
+    "since": "core@0.1.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "hardness": 0.5
+}

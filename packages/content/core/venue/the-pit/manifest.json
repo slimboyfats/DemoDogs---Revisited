@@ -1,0 +1,110 @@
+{
+  "id": "venue.the-pit",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "The Pit",
+    "description": "Derby. Six cars in a walled bowl.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.derby",
+  "seed": 99,
+  "size": {
+    "w": 1060,
+    "h": 840
+  },
+  "oval": {
+    "cx": 530,
+    "cy": 420,
+    "rx": 470,
+    "ry": 360
+  },
+  "colors": {
+    "ground": "#7b6446",
+    "ground2": "#866e4e",
+    "dirt": "#6a5439",
+    "outside": "#3a3a3e"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.block",
+      "spacing": 12
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.husk",
+          "x": -40,
+          "y": -10,
+          "rot": 0.4
+        },
+        {
+          "prop": "prop.husk-van",
+          "x": 36,
+          "y": 14,
+          "rot": 2.6
+        }
+      ]
+    },
+    {
+      "rule": "ring",
+      "props": ["prop.tyres", "prop.tyres-red"],
+      "count": 10,
+      "rx": 64,
+      "ry": 50
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 8,
+      "qMin": 0.45,
+      "qMax": 0.8,
+      "clear": 22,
+      "items": [
+        {
+          "prop": "prop.rock",
+          "weight": 1
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 26,
+      "qMin": 0.3,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.barrel",
+          "weight": 1
+        },
+        {
+          "prop": "prop.crate",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 16,
+      "qMin": 0.2,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.cone",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 14
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms"]
+}

@@ -1,0 +1,11 @@
+{
+  "id": "prop.husk",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Husk",
+    "description": "A rusted pickup shell.",
+    "since": "core@0.1.0"
+  },
+  "body": "static",
+  "radius": 9
+}

@@ -1,2 +1,8 @@
+node_modules
+dist
+coverage
+*.tsbuildinfo
 .DS_Store
-node_modules/
+.env
+.env.*
+captures/

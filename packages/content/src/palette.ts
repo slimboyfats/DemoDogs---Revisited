@@ -1,0 +1,43 @@
+import type { Tones } from '@demodogs/shared';
+
+/**
+ * Materials every look can use, three tones each: [side in shade, side, top]. `paint` and `trim`
+ * are filled in per car (or per bot) from its paint colour.
+ */
+export const PALETTE: Record<string, Tones> = {
+  under: ['#121317', '#1b1c21', '#26282e'],
+  bumper: ['#4b4d54', '#72757d', '#a3a6ae'],
+  glass: ['#16222f', '#24384a', '#5d8db0'],
+  light: ['#c79f2c', '#f1cf52', '#fff2ae'],
+  tail: ['#7c1a1f', '#b8262d', '#ff5b5b'],
+  tire: ['#111113', '#1b1c1f', '#2a2b2f'],
+  tread: ['#2a2b2f', '#3a3b40', '#4c4d53'],
+  engine: ['#34363c', '#555861', '#8a8d97'],
+  cage: ['#5b5e66', '#8a8d96', '#c3c6ce'],
+  seat: ['#2a1d18', '#3d2a22', '#55392d'],
+  bark: ['#3b2616', '#55361f', '#6e4728'],
+  leaf: ['#1f4a24', '#2d6a32', '#3f8a3f'],
+  leaf2: ['#24562a', '#357a38', '#55a04a'],
+  pine: ['#173a2a', '#20503a', '#2f6b4b'],
+  rubber: ['#141416', '#1d1e21', '#303136'],
+  paintw: ['#9a9a9a', '#c9c9c9', '#f2f2f2'],
+  paintr: ['#7a1d1d', '#b02a2a', '#e04646'],
+  barrel: ['#7d1f12', '#b03019', '#d8492a'],
+  band: ['#6b6e74', '#94979e', '#c4c7cd'],
+  hazard: ['#8f7a12', '#d1b11c', '#f6d93b'],
+  black: ['#141414', '#1f1f1f', '#2e2e2e'],
+  wood: ['#6b4724', '#8f6232', '#b88447'],
+  wood2: ['#553819', '#704b24', '#8f6232'],
+  cone: ['#9c3c0c', '#e05a12', '#ff8a3a'],
+  glow: ['#1b7f86', '#2fc0c9', '#a6fbff'],
+  crate: ['#24324a', '#33476b', '#4d6799'],
+  concrete: ['#6e6c67', '#94918a', '#bdbab2'],
+  rust: ['#4a2a18', '#6b3d22', '#8d5631'],
+  rust2: ['#3a2a20', '#54402e', '#6e5640'],
+  botdark: ['#1e2026', '#2c2f37', '#414550'],
+  boteye: ['#3fb9c9', '#7ff0ff', '#e6ffff'],
+  mine: ['#2b2d33', '#3d4048', '#5b5f69'],
+  minelit: ['#a01010', '#ff2a2a', '#ff9a9a'],
+  rocket: ['#9fa3ab', '#cfd2d8', '#f4f5f7'],
+  stone: ['#55575c', '#74767c', '#9a9ca1'],
+};

@@ -1,0 +1,12 @@
+{
+  "id": "prop.block",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Block",
+    "description": "Concrete wall block of the derby bowl (looks only).",
+    "since": "core@0.1.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "solid": false
+}

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#16141c" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>DemoDogs</title>
+  </head>
+  <body data-screen="menu">
+    <canvas id="game"></canvas>
+
+    <!-- touch controls: left half is a floating stick, buttons on the right -->
+    <div id="controls">
+      <div id="stickZone"><span class="hint">DRAG TO DRIVE</span></div>
+      <div id="stickBase"><div id="stickKnob"></div></div>
+      <button id="btnFire" class="pad empty">FIRE</button>
+      <button id="btnBrake" class="pad">BRAKE</button>
+      <button id="btnBoost" class="pad">BOOST</button>
+    </div>
+    <button id="pauseBtn" aria-label="Pause">II</button>
+
+    <section id="menu" class="screen">
+      <div class="panel">
+        <h1>DEMO<span>DOGS</span></h1>
+        <p class="tag">Scrap-metal racing. Ram, wreck and outrun the pack.</p>
+        <div class="cols">
+          <div class="garageBox">
+            <canvas id="garage"></canvas>
+            <div class="carPick">
+              <button id="prevCar" aria-label="Previous car">&#9664;</button>
+              <div><b id="carName">MUTT</b><small id="carBlurb"></small></div>
+              <button id="nextCar" aria-label="Next car">&#9654;</button>
+            </div>
+            <div class="stats">
+              <label
+                >SPEED<i><b id="stSpeed"></b></i
+              ></label>
+              <label
+                >ACCEL<i><b id="stAccel"></b></i
+              ></label>
+              <label
+                >GRIP<i><b id="stGrip"></b></i
+              ></label>
+              <label
+                >TOUGH<i><b id="stArmor"></b></i
+              ></label>
+            </div>
+          </div>
+          <div class="events">
+            <div id="venues"></div>
+            <p class="help">
+              <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
+              BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X fire,
+              P pause.<br />Smash scrap bots for points and boost. Crates give rockets, mines,
+              repairs.
+            </p>
+            <button class="muteBtn small">SOUND ON</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pauseMenu" class="screen hidden">
+      <div class="panel narrow">
+        <h2>PAUSED</h2>
+        <button id="resume">RESUME</button>
+        <button id="restart">RESTART</button>
+        <button class="muteBtn">SOUND ON</button>
+        <button id="quit">QUIT TO MENU</button>
+      </div>
+    </section>
+
+    <section id="results" class="screen hidden">
+      <div class="panel">
+        <h2 id="resTitle">RESULTS</h2>
+        <p id="resSub" class="tag"></p>
+        <div class="tableWrap"><table id="resTable"></table></div>
+        <div class="row"><button id="again">GO AGAIN</button><button id="toMenu">MENU</button></div>
+      </div>
+    </section>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

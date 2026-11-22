@@ -1,0 +1,41 @@
+{
+  "name": "demodogs",
+  "private": true,
+  "description": "DemoDogs: a mobile top-down combat racer drawn with animated sprite stacks.",
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @demodogs/client dev",
+    "build": "pnpm --filter @demodogs/client build",
+    "preview": "pnpm --filter @demodogs/client preview",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "content:validate": "vitest run --project content validate",
+    "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
+    "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
+    "verify": "pnpm check && pnpm play:smoke",
+    "deploy:pages": "bash scripts/deploy-pages.sh"
+  },
+  "browserslist": [
+    "baseline 2026"
+  ],
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.0",
+    "eslint": "^10.14.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.9.10",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.1",
+    "vite": "^8.3.6",
+    "vitest": "^5.1.0"
+  }
+}

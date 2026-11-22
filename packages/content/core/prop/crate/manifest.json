@@ -1,0 +1,15 @@
+{
+  "id": "prop.crate",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crate",
+    "description": "Wooden crate. Splinters when hit hard.",
+    "since": "core@0.1.0"
+  },
+  "body": "loose",
+  "radius": 5,
+  "mass": 0.6,
+  "breaksAt": 55,
+  "launch": 0.3,
+  "points": 25
+}

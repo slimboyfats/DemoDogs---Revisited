@@ -1,0 +1,10 @@
+{
+  "id": "prop.husk-van",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Husk Van",
+    "description": "A rusted van shell.",
+    "since": "core@0.1.0"
+  },
+  "extends": "prop.husk"
+}

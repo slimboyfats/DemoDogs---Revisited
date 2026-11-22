@@ -1,0 +1,36 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { describe, expect, it } from 'vitest';
+import { loadContent, loadLooks } from './index';
+import { itemFolders } from './glob';
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..');
+
+describe('content validate', () => {
+  it('resolves: schemas, extends and references all hold', () => {
+    expect(() => loadContent()).not.toThrow();
+  });
+
+  it('every item folder has a test', () => {
+    const missing = itemFolders().filter(
+      (f) => !existsSync(join(root, f, `${f.split('/').pop()}.test.ts`)),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it('ids are permanent: every locked id still exists, and every id is locked', () => {
+    const lock: string[] = JSON.parse(readFileSync(join(root, 'core/ids.lock.json'), 'utf8'));
+    const ids = itemFolders().map((f) => f.split('/').slice(-2).join('.'));
+    expect(lock.filter((id) => !ids.includes(id))).toEqual([]);
+    expect(ids.filter((id) => !lock.includes(id))).toEqual([]);
+  });
+
+  it('everything drawn has a look', () => {
+    const C = loadContent();
+    const looks = loadLooks();
+    const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...C.weapon.keys()];
+    expect(drawn.filter((id) => !looks.has(id))).toEqual([]);
+    for (const id of looks.keys()) expect(drawn).toContain(id);
+  });
+});

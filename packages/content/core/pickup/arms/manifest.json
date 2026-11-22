@@ -1,0 +1,13 @@
+{
+  "id": "pickup.arms",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Arms crate",
+    "description": "A weapon: rockets or mines.",
+    "since": "core@0.1.0"
+  },
+  "kind": "arms",
+  "weight": 0.68,
+  "hurtWeight": 0.45,
+  "weapons": ["weapon.rocket", "weapon.mine"]
+}

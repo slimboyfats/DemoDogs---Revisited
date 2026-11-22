@@ -1,0 +1,95 @@
+{
+  "id": "venue.scrapyard-run",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrapyard Run",
+    "description": "Race. Tight turns, junk everywhere.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.race",
+  "seed": 527,
+  "size": {
+    "w": 1820,
+    "h": 1340
+  },
+  "track": {
+    "road": 70,
+    "points": [
+      [260, 310],
+      [600, 210],
+      [900, 330],
+      [1160, 210],
+      [1500, 260],
+      [1610, 500],
+      [1420, 660],
+      [1110, 610],
+      [900, 730],
+      [1060, 910],
+      [1500, 960],
+      [1560, 1160],
+      [1110, 1220],
+      [610, 1160],
+      [310, 1010],
+      [460, 760],
+      [260, 560]
+    ]
+  },
+  "colors": {
+    "ground": "#6b5b3e",
+    "ground2": "#76664a",
+    "dirt": "#5a4a33",
+    "outside": "#3a3226"
+  },
+  "scenery": [
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000192,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.husk",
+          "weight": 0.1
+        },
+        {
+          "prop": "prop.husk-van",
+          "weight": 0.08
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.06
+        },
+        {
+          "prop": "prop.tree",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.05
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel"
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 16
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms"]
+}

@@ -1,0 +1,2 @@
+# Parallel threads append to these docs. Union merge keeps both sides of a conflicting hunk.
+CLAUDE.md merge=union

@@ -1,0 +1,21 @@
+{
+  "name": "@demodogs/client",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Vite client: sprite-stack renderer, effects, HUD, menus, touch input and synth audio.",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc -p . && vite build",
+    "preview": "vite preview --host",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@demodogs/content": "workspace:*",
+    "@demodogs/shared": "workspace:*",
+    "@demodogs/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.3.6"
+  }
+}

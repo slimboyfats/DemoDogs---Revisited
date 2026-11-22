@@ -1,6 +1,7 @@
 # Third-party notices
 
-`js/rig.js` is copied unchanged, and `js/stack.js` is adapted, from
+`packages/client/src/render/rig.ts` is ported to TypeScript (walk logic unchanged, arms left out) and
+`packages/client/src/render/stack.ts` is adapted from `js/rig.js` and `js/stack.js` of
 https://github.com/loktar00/sprite-stack-animation, under this licence:
 
 ```

@@ -1,0 +1,15 @@
+{
+  "id": "mode.race",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Race",
+    "description": "Laps of a track. Wrecked cars are towed back to the road.",
+    "since": "core@0.1.0"
+  },
+  "kind": "race",
+  "damageScale": 0.9,
+  "laps": 3,
+  "respawnSeconds": 2.6,
+  "ai": "ai.racer",
+  "pickupRespawn": 7
+}

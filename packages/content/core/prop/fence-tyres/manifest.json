@@ -1,0 +1,11 @@
+{
+  "id": "prop.fence-tyres",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fence Tyres",
+    "description": "Tyre fence at the edge of the world (looks only).",
+    "since": "core@0.1.0"
+  },
+  "extends": "prop.tyres",
+  "solid": false
+}

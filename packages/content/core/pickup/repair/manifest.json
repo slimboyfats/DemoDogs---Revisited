@@ -1,0 +1,13 @@
+{
+  "id": "pickup.repair",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Repair",
+    "description": "Patches up armour.",
+    "since": "core@0.1.0"
+  },
+  "kind": "repair",
+  "weight": 0.15,
+  "hurtWeight": 0.4,
+  "amount": 45
+}

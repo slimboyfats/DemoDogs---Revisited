@@ -1,0 +1,13 @@
+{
+  "id": "prop.cone",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cone",
+    "description": "Traffic cone. Flies.",
+    "since": "core@0.1.0"
+  },
+  "body": "loose",
+  "radius": 2.6,
+  "mass": 0.12,
+  "launch": 0.7
+}
