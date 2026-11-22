@@ -1,0 +1,29 @@
+{
+  "id": "car.bruiser",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bruiser",
+    "description": "Van. Heavy, hits hard, slow off the line.",
+    "since": "core@0.1.0"
+  },
+  "paint": "#3a79d6",
+  "stats": {
+    "speed": 0.94,
+    "accel": 0.85,
+    "grip": 0.92,
+    "mass": 1.35,
+    "armor": 1.3
+  },
+  "body": {
+    "halfLength": 11.5,
+    "halfWidth": 5.9
+  },
+  "wheels": [
+    [7.0, 5.6],
+    [-7.4, 5.6]
+  ],
+  "top": {
+    "x": -3,
+    "z": 9
+  }
+}

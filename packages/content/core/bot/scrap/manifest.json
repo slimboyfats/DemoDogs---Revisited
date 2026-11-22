@@ -1,0 +1,18 @@
+{
+  "id": "bot.scrap",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrap bot",
+    "description": "Little walking robots that wander the course. Flatten them for points and boost.",
+    "since": "core@0.1.0"
+  },
+  "walkSpeed": 17,
+  "fleeSpeed": 40,
+  "scareRadius": 64,
+  "fleeAbove": 30,
+  "smashAbove": 24,
+  "points": 100,
+  "nitro": 0.22,
+  "respawn": [4, 8],
+  "paints": ["#e9c23b", "#3fb7a8", "#e3609a", "#8fd14f", "#f08a3c", "#b3b8c4"]
+}

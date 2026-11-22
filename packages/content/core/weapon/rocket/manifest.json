@@ -1,0 +1,17 @@
+{
+  "id": "weapon.rocket",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rockets",
+    "description": "Fired forward; leans towards a car ahead.",
+    "since": "core@0.1.0"
+  },
+  "kind": "rocket",
+  "label": "ROCKET",
+  "ammo": 3,
+  "power": 0.85,
+  "cooldown": 0.4,
+  "speed": 340,
+  "life": 2.0,
+  "homing": 2.2
+}

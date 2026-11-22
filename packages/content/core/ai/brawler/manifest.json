@@ -1,0 +1,12 @@
+{
+  "id": "ai.brawler",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Brawler",
+    "description": "Hunts the nearest car and rams it; backs off to ram again.",
+    "since": "core@0.1.0"
+  },
+  "behaviour": "ai.brawler",
+  "skill": [0.9, 1.0],
+  "aggro": [0.6, 1.0]
+}

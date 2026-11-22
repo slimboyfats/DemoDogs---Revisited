@@ -1,0 +1,10 @@
+{
+  "id": "prop.tyres-red",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tyres Red",
+    "description": "Painted tyre stack.",
+    "since": "core@0.1.0"
+  },
+  "extends": "prop.tyres"
+}

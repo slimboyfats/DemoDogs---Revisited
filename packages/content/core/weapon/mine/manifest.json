@@ -1,0 +1,16 @@
+{
+  "id": "weapon.mine",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mines",
+    "description": "Dropped behind; arms after a moment and blows on contact.",
+    "since": "core@0.1.0"
+  },
+  "kind": "mine",
+  "label": "MINE",
+  "ammo": 3,
+  "power": 0.95,
+  "cooldown": 0.4,
+  "arm": 0.7,
+  "trigger": 11
+}

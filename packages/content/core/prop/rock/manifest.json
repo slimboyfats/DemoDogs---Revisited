@@ -1,0 +1,11 @@
+{
+  "id": "prop.rock",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rock",
+    "description": "A boulder.",
+    "since": "core@0.1.0"
+  },
+  "body": "static",
+  "radius": 6
+}

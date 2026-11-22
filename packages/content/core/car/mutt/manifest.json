@@ -1,0 +1,29 @@
+{
+  "id": "car.mutt",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mutt",
+    "description": "Pickup. The all-rounder.",
+    "since": "core@0.1.0"
+  },
+  "paint": "#e2682a",
+  "stats": {
+    "speed": 1.0,
+    "accel": 1.0,
+    "grip": 1.0,
+    "mass": 1.0,
+    "armor": 1.0
+  },
+  "body": {
+    "halfLength": 11.5,
+    "halfWidth": 5.6
+  },
+  "wheels": [
+    [7.2, 5.4],
+    [-7.2, 5.4]
+  ],
+  "top": {
+    "x": 1,
+    "z": 7
+  }
+}

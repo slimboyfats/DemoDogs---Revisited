@@ -1,0 +1,29 @@
+{
+  "id": "car.pug",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pug",
+    "description": "Dune buggy. Nimble and light.",
+    "since": "core@0.1.0"
+  },
+  "paint": "#e6bf33",
+  "stats": {
+    "speed": 1.02,
+    "accel": 1.18,
+    "grip": 1.15,
+    "mass": 0.8,
+    "armor": 0.85
+  },
+  "body": {
+    "halfLength": 10.5,
+    "halfWidth": 5.4
+  },
+  "wheels": [
+    [7.0, 5.6],
+    [-6.8, 5.8]
+  ],
+  "top": {
+    "x": -0.5,
+    "z": 7
+  }
+}

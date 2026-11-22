@@ -1,0 +1,12 @@
+{
+  "id": "prop.tree",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tree",
+    "description": "A leafy tree that sways in the wind.",
+    "since": "core@0.1.0"
+  },
+  "body": "static",
+  "radius": 4,
+  "sway": true
+}

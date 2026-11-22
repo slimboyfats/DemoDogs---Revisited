@@ -1,0 +1,14 @@
+{
+  "id": "mode.derby",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Derby",
+    "description": "A walled bowl. Wrecks stay wrecked; last car running wins.",
+    "since": "core@0.1.0"
+  },
+  "kind": "derby",
+  "damageScale": 0.3,
+  "timeLimit": 150,
+  "ai": "ai.brawler",
+  "pickupRespawn": 7
+}

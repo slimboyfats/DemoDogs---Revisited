@@ -1,0 +1,21 @@
+{
+  "name": "@demodogs/content",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The core pack: one folder per car, venue, weapon, pickup, prop, bot, AI and mode.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@demodogs/shared": "workspace:*",
+    "@demodogs/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^8.3.6"
+  }
+}

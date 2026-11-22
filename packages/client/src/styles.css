@@ -1,0 +1,419 @@
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: #16141c;
+  color: #fff;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+#overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  pointer-events: none;
+}
+body[data-screen='game'] #overlay {
+  display: block;
+}
+#game {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  image-rendering: pixelated;
+}
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+/* touch controls */
+#controls {
+  position: fixed;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+body[data-screen='game'] #controls {
+  display: block;
+}
+#stickZone {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 55%;
+  pointer-events: auto;
+  touch-action: none;
+}
+#stickZone .hint {
+  position: absolute;
+  left: 24px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  opacity: 0.45;
+}
+#stickBase {
+  position: absolute;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.35);
+  background: rgba(0, 0, 0, 0.18);
+  display: none;
+}
+#stickBase.on {
+  display: block;
+}
+#stickKnob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 50px;
+  height: 50px;
+  margin: -25px 0 0 -25px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.pad {
+  position: absolute;
+  pointer-events: auto;
+  touch-action: none;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.45);
+  background: rgba(10, 10, 16, 0.35);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0;
+}
+.pad.down {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0.94);
+}
+#btnBoost {
+  right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  width: 86px;
+  height: 86px;
+  border-color: rgba(79, 184, 255, 0.8);
+}
+#btnBrake {
+  right: calc(116px + env(safe-area-inset-right));
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  width: 70px;
+  height: 70px;
+}
+#btnFire {
+  right: calc(40px + env(safe-area-inset-right));
+  bottom: calc(116px + env(safe-area-inset-bottom));
+  width: 72px;
+  height: 72px;
+  border-color: rgba(255, 120, 80, 0.85);
+  font-size: 11px;
+}
+#btnFire.empty {
+  opacity: 0.4;
+}
+#pauseBtn {
+  position: fixed;
+  left: calc(12px + env(safe-area-inset-left));
+  top: calc(12px + env(safe-area-inset-top));
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  background: rgba(0, 0, 0, 0.35);
+  font-weight: 900;
+  display: none;
+}
+body[data-screen='game'] #pauseBtn {
+  display: block;
+}
+@media (hover: hover) and (pointer: fine) {
+  #controls .pad,
+  #stickZone .hint {
+    display: none;
+  }
+}
+
+/* screens */
+.screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: safe center;
+  justify-content: center;
+  padding: 12px;
+  background: radial-gradient(ellipse at center, rgba(40, 30, 50, 0.82), rgba(10, 8, 14, 0.95));
+  overflow: auto;
+  touch-action: pan-y;
+}
+.screen.hidden {
+  display: none;
+}
+.panel {
+  width: min(860px, 100%);
+  max-height: 100%;
+}
+.panel.narrow {
+  width: min(320px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+h1 {
+  margin: 0;
+  font-size: clamp(38px, 9vmin, 76px);
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  color: #ffd24a;
+  text-shadow:
+    0 4px 0 #8a3a14,
+    0 8px 18px rgba(0, 0, 0, 0.6);
+  font-style: italic;
+}
+h1 span {
+  color: #ff6a3d;
+}
+h2 {
+  margin: 0 0 6px;
+  font-size: clamp(26px, 6vmin, 44px);
+  font-weight: 900;
+  color: #ffd24a;
+  font-style: italic;
+}
+.tag {
+  margin: 6px 0 14px;
+  opacity: 0.8;
+  font-size: 14px;
+}
+.cols {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.garageBox {
+  flex: 1 1 260px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 14px;
+  padding: 10px;
+}
+#garage {
+  width: 100%;
+  height: clamp(120px, 30vmin, 220px);
+  display: block;
+  image-rendering: pixelated;
+}
+.carPick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.carPick > div {
+  flex: 1;
+  text-align: center;
+}
+.carPick b {
+  display: block;
+  font-size: 20px;
+  font-weight: 900;
+  color: #ffd24a;
+}
+.carPick small {
+  opacity: 0.8;
+  font-size: 12px;
+}
+.carPick button {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 18px;
+}
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+  margin-top: 8px;
+}
+.stats label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  opacity: 0.9;
+}
+.stats i {
+  display: block;
+  height: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+.stats i b {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #ff6a3d, #ffd24a);
+  border-radius: 4px;
+  transition: width 0.2s;
+}
+.events {
+  flex: 1 1 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.events button,
+.panel.narrow button,
+.row button {
+  text-align: left;
+  border: 2px solid rgba(255, 210, 74, 0.55);
+  background: rgba(255, 210, 74, 0.1);
+  border-radius: 12px;
+  padding: 10px 14px;
+}
+.panel.narrow button,
+.row button {
+  text-align: center;
+  font-weight: 900;
+  font-size: 16px;
+  padding: 12px;
+}
+.events button b {
+  display: block;
+  font-size: 18px;
+  font-weight: 900;
+}
+.events button small {
+  opacity: 0.75;
+  font-size: 12px;
+}
+.events button:active,
+.row button:active,
+.panel.narrow button:active {
+  background: rgba(255, 210, 74, 0.3);
+}
+.events .small {
+  align-self: flex-start;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 12px;
+  border-color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+}
+.help {
+  font-size: 12px;
+  opacity: 0.75;
+  line-height: 1.45;
+  margin: 4px 0;
+}
+.tableWrap {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+th {
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+  padding: 4px 6px;
+}
+td {
+  padding: 5px 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+td small {
+  opacity: 0.6;
+  font-size: 10px;
+}
+tr.me td {
+  color: #ffd24a;
+  font-weight: 800;
+}
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+  vertical-align: -1px;
+}
+.row {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.row button {
+  flex: 1;
+}
+
+@media (max-height: 520px) {
+  h1 {
+    font-size: 34px;
+  }
+  .tag {
+    margin: 2px 0 8px;
+    font-size: 12px;
+  }
+  #garage {
+    height: 92px;
+  }
+  .carPick b {
+    font-size: 16px;
+  }
+  .carPick button {
+    width: 38px;
+    height: 38px;
+  }
+  .events button {
+    padding: 6px 12px;
+  }
+  .events button b {
+    font-size: 15px;
+  }
+  .help {
+    font-size: 11px;
+    line-height: 1.35;
+  }
+  .cols {
+    gap: 12px;
+  }
+}
+#venues {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}

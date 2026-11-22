@@ -1,0 +1,12 @@
+{
+  "id": "ai.racer",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Racer",
+    "description": "Follows the racing line, picks fights with cars just ahead, uses weapons.",
+    "since": "core@0.1.0"
+  },
+  "behaviour": "ai.racer",
+  "skill": [0.9, 1.0],
+  "aggro": [0.25, 0.8]
+}

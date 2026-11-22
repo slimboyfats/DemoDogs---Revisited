@@ -1,0 +1,16 @@
+{
+  "name": "@demodogs/sim",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Deterministic simulation kernel. No content, no DOM, no rendering, no wall-clock time.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@demodogs/shared": "workspace:*"
+  }
+}

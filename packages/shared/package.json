@@ -1,0 +1,16 @@
+{
+  "name": "@demodogs/shared",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Constants, Zod manifest schemas and sim event types shared by every package.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  }
+}

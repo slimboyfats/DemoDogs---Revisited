@@ -1,0 +1,6 @@
+pnpm-lock.yaml
+dist
+coverage
+captures
+packages/content/golden.json
+packages/content/core/ids.lock.json
