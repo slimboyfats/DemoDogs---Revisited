@@ -1,5 +1,6 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
+import { spill } from './damage';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -174,6 +175,26 @@ function apply(
             }
         }
         group++;
+        n++;
+      }
+      return;
+    }
+    case 'patches': {
+      const def = w.content.material.get(rule.material)!;
+      for (let n = 0, tries = 0; n < rule.count && tries < rule.count * 40; tries++) {
+        const r = rng.range(rule.r[0], rule.r[1]);
+        let x = 40 + rng.next() * (w.w - 80);
+        let y = 40 + rng.next() * (w.h - 80);
+        if (T && rule.on === 'road') {
+          const i = 25 + rng.int(T.n - 50);
+          const o = rng.range(-1, 1) * Math.max(0, half - r * 0.6);
+          x = T.x[i]! - Math.sin(T.a[i]!) * o;
+          y = T.y[i]! + Math.cos(T.a[i]!) * o;
+        } else if (rule.on === 'off' && w.grid && w.grid.at(x, y) < half + r + 4) continue;
+        if (O && Math.hypot((x - O.cx) / O.rx, (y - O.cy) / O.ry) > 0.9) continue;
+        // not under the cars on the grid
+        if (w.cars.some((c) => Math.hypot(c.x - x, c.y - y) < r + 40)) continue;
+        spill(w, def, x, y, r, -1, true);
         n++;
       }
       return;

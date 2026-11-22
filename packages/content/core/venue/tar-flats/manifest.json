@@ -1,0 +1,134 @@
+{
+  "id": "venue.tar-flats",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tar Flats",
+    "description": "Derby. An old filling station sunk in tar: pits that hold a car fast and burn for ages, pumps that go up, and kegs of powder everywhere.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.derby",
+  "seed": 909,
+  "size": {
+    "w": 1200,
+    "h": 920
+  },
+  "oval": {
+    "cx": 600,
+    "cy": 460,
+    "rx": 540,
+    "ry": 400
+  },
+  "colors": {
+    "ground": "#4b4741",
+    "ground2": "#565149",
+    "dirt": "#3a3631",
+    "outside": "#19191b"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.block",
+      "spacing": 12
+    },
+    {
+      "rule": "patches",
+      "material": "material.tar",
+      "count": 16,
+      "r": [12, 22],
+      "on": "any"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 8,
+      "r": [16, 28],
+      "on": "any"
+    },
+    {
+      "rule": "ring",
+      "props": ["prop.gas-pump", "prop.pylon", "prop.gas-pump", "prop.chimney"],
+      "count": 12,
+      "rx": 260,
+      "ry": 190
+    },
+    {
+      "rule": "build",
+      "count": 14,
+      "clear": 0,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "inside": ["prop.powder-keg", "prop.gas-pump"],
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "yard",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "inside": ["prop.powder-keg", "prop.barrel", "prop.oil-drum"],
+          "long": [4, 7],
+          "deep": [4, 5]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "long": [3, 6]
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 10,
+      "qMin": 0.2,
+      "qMax": 0.85,
+      "clear": 14,
+      "items": [
+        {
+          "prop": "prop.gas-pump",
+          "weight": 2
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 1
+        },
+        {
+          "prop": "prop.pylon",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 40,
+      "qMin": 0.15,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.powder-keg",
+          "weight": 3
+        },
+        {
+          "prop": "prop.barrel",
+          "weight": 2
+        },
+        {
+          "prop": "prop.crate",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

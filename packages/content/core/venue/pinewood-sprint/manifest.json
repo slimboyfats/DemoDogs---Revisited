@@ -45,6 +45,45 @@
       "minCurve": 0.2
     },
     {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 6,
+      "r": [14, 24],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 12,
+      "r": [18, 32],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 24,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "window": "prop.window-wall",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "yard",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "inside": ["prop.crate", "prop.barrel", "prop.oil-drum"],
+          "long": [4, 7],
+          "deep": [4, 5]
+        }
+      ]
+    },
+    {
       "rule": "scatter",
       "perArea": 0.00034,
       "clear": 34,
@@ -64,6 +103,10 @@
         {
           "prop": "prop.husk",
           "weight": 0.02
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 0.1
         }
       ]
     },

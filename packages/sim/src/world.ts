@@ -14,6 +14,7 @@ import type {
   Blaze,
   Bot,
   Car,
+  Crater,
   Ember,
   Entrant,
   LooseProp,
@@ -121,6 +122,8 @@ export class World {
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
   readonly blazes: Blaze[] = [];
+  /** Pits blasts have dug in the ground. */
+  readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
   readonly spills: Spill[] = [];
   /** What a wrecked car leaks: the pack's material that says so, if any. */
@@ -472,7 +475,10 @@ export class World {
         .num(p.y)
         .num(p.alive ? 1 : 0);
     H.num(this.rockets.length).num(this.mines.length);
-    H.num(this.embers.length).num(this.blazes.length).num(this.spills.length);
+    H.num(this.embers.length)
+      .num(this.blazes.length)
+      .num(this.spills.length)
+      .num(this.craters.length);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

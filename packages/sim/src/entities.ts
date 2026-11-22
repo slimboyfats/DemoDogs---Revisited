@@ -112,6 +112,8 @@ export interface Car {
   gun: WeaponManifest | null;
   rounds: number;
   gunCd: number;
+  /** Its wheels are in a crater. */
+  pit: boolean;
   /** Money picked up off the track this race. */
   cash: number;
   invuln: number;
@@ -191,8 +193,17 @@ export interface Ember {
   owner: number;
 }
 
+/** A pit a blast dug in the ground. Cars lose speed and grip crossing it. */
+export interface Crater {
+  x: number;
+  y: number;
+  r: number;
+}
+
 /** A pool of a material lying on the ground. */
 export interface Spill {
+  /** Part of the map: it was there from the start and is never cleared away to make room. */
+  fixed?: boolean;
   def: MaterialManifest;
   x: number;
   y: number;

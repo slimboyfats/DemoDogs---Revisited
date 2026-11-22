@@ -150,6 +150,7 @@ export function resolveContent(src: ContentSource): Content {
         for (const k of r.kinds)
           for (const p of [k.wall, k.window, k.post, k.roof, ...k.inside])
             if (p) need(v.id, 'prop', p);
+      if (r.rule === 'patches') need(v.id, 'material', r.material);
       if (r.rule === 'place') for (const i of r.items) need(v.id, 'prop', i.prop);
       if (r.rule === 'roadside')
         for (const p of [r.pair, r.stack, r.drum, ...r.tanks]) need(v.id, 'prop', p);

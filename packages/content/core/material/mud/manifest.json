@@ -1,0 +1,13 @@
+{
+  "id": "material.mud",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mud",
+    "description": "Deep mud. Cars wallow through it at half speed and slide a little.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.75,
+  "drag": 1.5,
+  "colour": "#3d2e1e",
+  "alpha": 0.8
+}

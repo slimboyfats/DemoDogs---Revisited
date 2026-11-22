@@ -28,11 +28,12 @@ export function startRace(w: World): World {
   return w;
 }
 
-/** A field with only the player, no bots and no loose props: a clean bench for physics tests. */
+/** A field with only the player, no bots, no loose props and no mud: a clean bench for physics tests. */
 export function bench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   const w = startRace(makeWorld({ rivals: 0, ...opts }));
   w.bots.length = 0;
   w.props.length = 0;
+  w.spills.length = 0;
   return w;
 }
 

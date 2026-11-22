@@ -142,3 +142,16 @@ frames run slow (`SlowWatch`).
 `?perf` in the address starts it; stopping shares or downloads `demodogs-perf-<date>.txt`: one row
 per second with frame times, sim, effects and draw CPU, counts of cells, voxels and slices, long
 frames, browser stalls and events. Ask for that file when a device runs slow.
+
+## Terrain: craters and patches
+
+A blast of any size digs a pit (`dig` in `damage.ts`, kept in `World.craters`): wider in open
+ground than in a road, and a second blast in the same pit widens it instead of adding one. `footing`
+reports a pit as its third value; a car in one loses some grip and speed, and one that drops in fast
+is thrown up off the far lip. The sim reports it with a `crater` event and the client paints the pit
+into the ground cell by cell and throws clods and dust.
+
+The `patches` scenery rule lays pools of a material (mud, tar, ice) on the road, off it or anywhere
+when the venue is built. They are ordinary `Spill`s marked `fixed`: they give the same footing and
+burn the same way, but no event is sent for them (the client paints them when it builds the
+ground) and they are never cleared to make room for new pools.

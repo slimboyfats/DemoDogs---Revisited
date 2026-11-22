@@ -1,0 +1,13 @@
+{
+  "id": "prop.chimney",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Chimney stack",
+    "description": "A tall brick chimney. It takes a lot of blasting, and it is a long way to fall.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "made": "material.brick",
+  "integrity": 260
+}

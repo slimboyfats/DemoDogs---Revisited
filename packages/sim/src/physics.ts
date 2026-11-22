@@ -101,6 +101,7 @@ export function makeCar(
     rounds: setup.rounds ?? w.gun?.ammo ?? 0,
     gunCd: 0,
     cash: 0,
+    pit: false,
     fireCd: 0,
     hitCd: 0,
     scrapeCd: 0,
@@ -142,7 +143,10 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const weak = c.hp < 35 ? 0.86 : 1;
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
-  const [hold, bog] = airborne ? [1, 0] : footing(w, c.x, c.y);
+  const [hold, bog, pit] = airborne ? [1, 0, false] : footing(w, c.x, c.y);
+  // dropping into a crater at speed throws the car up off its far lip
+  if (pit && !c.pit && Math.abs(vf) > 70) c.vz = Math.max(c.vz, Math.min(70, Math.abs(vf) * 0.3));
+  if (!airborne) c.pit = pit;
   let turn =
     ctl.steer *
     3.0 *

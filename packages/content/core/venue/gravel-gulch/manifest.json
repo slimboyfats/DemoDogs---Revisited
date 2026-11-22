@@ -47,6 +47,42 @@
       "minCurve": 0.2
     },
     {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 5,
+      "r": [14, 22],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 14,
+      "r": [18, 34],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 26,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.concrete-wall",
+          "inside": ["prop.powder-keg", "prop.crate", "prop.barrel"],
+          "long": [5, 8],
+          "deep": [4, 6]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.concrete-wall",
+          "long": [3, 7]
+        }
+      ]
+    },
+    {
       "rule": "scatter",
       "perArea": 0.00026,
       "clear": 34,
@@ -66,6 +102,14 @@
         {
           "prop": "prop.pine",
           "weight": 0.1
+        },
+        {
+          "prop": "prop.pylon",
+          "weight": 0.05
+        },
+        {
+          "prop": "prop.chimney",
+          "weight": 0.04
         }
       ]
     },

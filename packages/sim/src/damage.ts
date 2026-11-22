@@ -138,6 +138,7 @@ export function explode(w: World, x: number, y: number, power: number, owner: Ca
   w.emit({ t: 'explode', x, y, power });
   const rad = 48 * power;
   ignite(w, x, y, rad * 0.7, owner ? owner.index : -1);
+  dig(w, x, y, power);
   for (const c of w.cars) {
     const dx = c.x - x;
     const dy = c.y - y;
@@ -332,8 +333,14 @@ export function spill(
   py: number,
   r: number,
   owner: number,
+  fixed = false,
 ): void {
   const [x, y] = w.keepInside(px, py, 2);
+  if (fixed) {
+    // part of the map: the client paints these when it builds the ground
+    w.spills.push({ def, x, y, r, owner, fixed });
+    return;
+  }
   w.spills.push({ def, x, y, r, owner });
   w.emit({ t: 'spill', material: def.id, x, y, r });
   if (def.quenches)
@@ -343,7 +350,12 @@ export function spill(
       w.blazes.splice(i, 1);
       w.emit({ t: 'quench', x: b.x, y: b.y, r: b.r });
     }
-  if (w.spills.length > 90) w.spills.splice(0, w.spills.length - 90);
+  // too many pools: the oldest one that is not part of the map dries up
+  if (w.spills.length > 90 && w.spills.reduce((n, s) => n + (s.fixed ? 0 : 1), 0) > 90)
+    w.spills.splice(
+      w.spills.findIndex((s) => !s.fixed),
+      1,
+    );
 }
 
 /** Fire reaches this far from (x, y): every pool that burns and touches it goes up. */
@@ -382,15 +394,22 @@ export function pour(
 }
 
 /** What a car's wheels are in at (x, y): [share of grip kept, drag]. The worst pool wins. */
-export function footing(w: World, x: number, y: number): [number, number] {
+export function footing(w: World, x: number, y: number): [number, number, boolean] {
   let grip = 1;
   let drag = 0;
+  let pit = false;
+  for (const c of w.craters) {
+    if (Math.abs(c.x - x) > c.r || Math.hypot(c.x - x, c.y - y) > c.r) continue;
+    pit = true;
+    grip = 0.8;
+    drag = 0.9;
+  }
   for (const s of w.spills) {
     if (Math.hypot(s.x - x, s.y - y) > s.r) continue;
     grip = Math.min(grip, s.def.grip);
     drag = Math.max(drag, s.def.drag);
   }
-  return [grip, drag];
+  return [grip, drag, pit];
 }
 
 /** An exploding prop throws out what its manifest says: stars, burning fuel, blazing drums. */
@@ -471,4 +490,23 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
     }
   if (gone * 2 < walls) return;
   for (const o of w.statics) if (o.group === s.group && !o.down) fall(w, o, o.x, o.y);
+}
+
+/**
+ * A blast digs a pit where it goes off: wider in open ground than in a road. One that lands in
+ * a pit that is already there widens it instead.
+ */
+export function dig(w: World, x: number, y: number, power: number): void {
+  if (power < 0.45) return;
+  const soft = w.grid === null || w.offroad(x, y);
+  const r = (soft ? 8 : 5) * Math.sqrt(power);
+  for (const c of w.craters) {
+    if (Math.hypot(c.x - x, c.y - y) > c.r * 0.6) continue;
+    c.r = Math.min(24, Math.sqrt(c.r * c.r + r * r * 0.6));
+    w.emit({ t: 'crater', x: c.x, y: c.y, r: c.r });
+    return;
+  }
+  w.craters.push({ x, y, r });
+  if (w.craters.length > 160) w.craters.shift();
+  w.emit({ t: 'crater', x, y, r });
 }

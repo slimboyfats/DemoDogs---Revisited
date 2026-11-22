@@ -47,6 +47,8 @@ export type SimEvent =
     }
   /** That piece of scenery came down for good. */
   | { t: 'fall'; prop: number; x: number; y: number }
+  /** A blast dug a pit of radius r in the ground (or widened one that was there). */
+  | { t: 'crater'; x: number; y: number; r: number }
   /** A pool of a material poured out on the ground. */
   | { t: 'spill'; material: string; x: number; y: number; r: number }
   /** Fire was put out here. */

@@ -1,4 +1,4 @@
-import { DT, type SimEvent } from '@demodogs/shared';
+import { DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
@@ -14,11 +14,12 @@ import {
   type Burst,
   type Voxel,
 } from './voxels';
-import { HAZE, SOOT, stepParticle, type FxKind, type Particle } from './pixel/particles';
+import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
 import type { Sound } from '../audio/sound';
 
 const TAU = Math.PI * 2;
+const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]!;
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
@@ -143,6 +144,8 @@ export class Effects {
       place(wk, b.x, b.y, b.h);
       this.walkers.push(wk);
     }
+    // the pools the map starts with
+    for (const s of w.spills) if (s.fixed) this.pool(s.def, s.x, s.y, s.r);
   }
 
   carArt(c: Car) {
@@ -442,6 +445,38 @@ export class Effects {
     markGround(this.ground, x, y, r);
   }
 
+  /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
+  private pool(m: MaterialManifest, x: number, y: number, r: number): void {
+    const rgb = parseInt(m.colour.slice(1), 16);
+    const k = 2 + Math.floor(rand(0, 3));
+    const ph = rand(0, TAU);
+    this.paintGround(x, y, r + 3, (g) => {
+      for (let py = Math.floor(y - r - 1); py <= y + r + 1; py++)
+        for (let px = Math.floor(x - r - 1); px <= x + r + 1; px++) {
+          const dx = px + 0.5 - x;
+          const dy = py + 0.5 - y;
+          const a = Math.atan2(dy, dx);
+          const edge = r * (0.84 + 0.11 * Math.sin(a * k + ph) + 0.05 * Math.sin(a * (k + 3) - ph));
+          const d = Math.hypot(dx, dy) / edge + rand(-0.07, 0.07);
+          if (d > 1) continue;
+          g.globalAlpha = m.alpha * (d > 0.86 ? 0.55 : 1);
+          g.fillStyle = hex(shade(rgb, rand(0.88, 1.12)));
+          g.fillRect(px, py, 1, 1);
+        }
+      // the sheen: a few light cells
+      g.globalAlpha = 0.16;
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < 4 + r * 0.4; i++)
+        g.fillRect(
+          Math.round(x + rand(-0.55, 0.55) * r),
+          Math.round(y + rand(-0.55, 0.55) * r),
+          Math.round(rand(1, 3)),
+          1,
+        );
+      g.globalAlpha = 1;
+    });
+  }
+
   private splat(x: number, y: number): void {
     this.paintGround(x, y, 10, (g) => {
       g.fillStyle = 'rgba(16,14,20,0.55)';
@@ -693,35 +728,76 @@ export class Effects {
           if (v > 0) S.crash(6 * v);
           break;
         }
+        case 'crater': {
+          const { x, y, r } = e;
+          const dirt = parseInt(w.venue.colors.dirt.slice(1), 16);
+          const top = parseInt(w.venue.colors.ground2.slice(1), 16);
+          // the pit: dark in the middle, a lip of thrown-up earth round it, all in single cells
+          this.paintGround(x, y, r + 4, (g) => {
+            for (let py = Math.floor(y - r - 3); py <= y + r + 3; py++)
+              for (let px = Math.floor(x - r - 3); px <= x + r + 3; px++) {
+                const d = Math.hypot(px + 0.5 - x, py + 0.5 - y) / r + rand(-0.12, 0.12);
+                if (d > 1.28) continue;
+                if (d > 1) {
+                  if (Math.random() < 0.55) {
+                    g.fillStyle = hex(shade(top, rand(1.12, 1.4)));
+                    g.fillRect(px, py, 1, 1);
+                  }
+                } else {
+                  // lit from the top left: the far wall catches the light, the near one is in shade
+                  const lit = (px - x + (py - y)) / r;
+                  g.fillStyle = hex(shade(dirt, 0.34 + 0.2 * d + 0.14 * lit + rand(-0.04, 0.04)));
+                  g.fillRect(px, py, 1, 1);
+                }
+              }
+          });
+          // clods of earth thrown out: they land and stay as specks, and dust hangs over the pit
+          const clods: Chip[] = [];
+          for (let i = 0; i < r * 5; i++) {
+            const a = rand(0, TAU);
+            const d = rand(0.2, 1) * r;
+            clods.push({
+              x: Math.cos(a) * d,
+              y: Math.sin(a) * d,
+              z: rand(0, 2),
+              s: Math.random() < 0.3 ? 1 : 0.5,
+              rgb: shade(dirt, rand(0.6, 1.2)),
+            });
+          }
+          this.burst(clods, 90, {
+            x,
+            y,
+            h: 0,
+            z: 0,
+            ox: x,
+            oy: y,
+            speed: 60 + r * 5,
+            vx: 0,
+            vy: 0,
+          });
+          for (let i = 0; i < r * 14 * this.quality; i++) {
+            const a = rand(0, TAU);
+            const v = rand(10, 60);
+            this.cells.add(
+              CKind.Wisp,
+              x + Math.cos(a) * rand(0, r),
+              y + Math.sin(a) * rand(0, r),
+              rand(0, 4),
+              Math.cos(a) * v,
+              Math.sin(a) * v,
+              rand(20, 90),
+              rand(0.6, 1.5),
+              shade(dirt, rand(0.9, 1.3)),
+            );
+          }
+          break;
+        }
         case 'spill': {
           // a pool poured on the ground: a ragged blot of the material's colour, with a sheen
           const m = w.content.material.get(e.material);
           if (!m) break;
           const { x, y, r } = e;
-          this.paintGround(x, y, r + 3, (g) => {
-            g.globalAlpha = m.alpha;
-            g.fillStyle = m.colour;
-            g.beginPath();
-            g.arc(x, y, r * 0.75, 0, TAU);
-            g.fill();
-            for (let i = 0; i < 14; i++) {
-              const a = rand(0, TAU);
-              const d = rand(0.45, 0.95) * r;
-              g.beginPath();
-              g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, rand(1.2, r * 0.35), 0, TAU);
-              g.fill();
-            }
-            g.globalAlpha = 0.16;
-            g.fillStyle = '#ffffff';
-            for (let i = 0; i < 5; i++)
-              g.fillRect(
-                Math.round(x + rand(-0.5, 0.5) * r),
-                Math.round(y + rand(-0.5, 0.5) * r),
-                Math.round(rand(1, 3)),
-                1,
-              );
-            g.globalAlpha = 1;
-          });
+          this.pool(m, x, y, r);
           for (let i = 0; i < 6; i++) this.puff(x, y, 1, 'dust');
           break;
         }

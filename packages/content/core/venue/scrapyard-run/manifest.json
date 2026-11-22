@@ -48,6 +48,52 @@
       "minCurve": 0.2
     },
     {
+      "rule": "patches",
+      "material": "material.tar",
+      "count": 5,
+      "r": [12, 18],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 12,
+      "r": [16, 30],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 30,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.concrete-wall",
+          "inside": ["prop.fuel-tank", "prop.barrel", "prop.oil-drum", "prop.powder-keg"],
+          "long": [5, 7],
+          "deep": [4, 5]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "long": [4, 9]
+        }
+      ]
+    },
+    {
       "rule": "scatter",
       "perArea": 0.000192,
       "clear": 34,
@@ -70,6 +116,14 @@
         },
         {
           "prop": "prop.pine",
+          "weight": 0.05
+        },
+        {
+          "prop": "prop.gas-pump",
+          "weight": 0.05
+        },
+        {
+          "prop": "prop.pylon",
           "weight": 0.05
         }
       ]

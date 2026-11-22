@@ -31,6 +31,13 @@
       "spacing": 12
     },
     {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 7,
+      "r": [16, 28],
+      "on": "any"
+    },
+    {
       "rule": "place",
       "items": [
         {
@@ -97,6 +104,19 @@
       "items": [
         {
           "prop": "prop.cone",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 8,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.powder-keg",
           "weight": 1
         }
       ]

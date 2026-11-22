@@ -145,6 +145,17 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     step: z.number().positive().default(8),
     gap: z.number().int().min(0).default(0),
   }),
+  /**
+   * Patches of a material the ground has from the start (mud, tar, ice): `count` of them, of a
+   * radius between the two `r`, on the road, off it, or anywhere.
+   */
+  z.strictObject({
+    rule: z.literal('patches'),
+    material: id('material'),
+    count: z.number().int().positive(),
+    r: z.tuple([z.number().positive(), z.number().positive()]),
+    on: z.enum(['road', 'off', 'any']).default('any'),
+  }),
   /** Random props inside the oval between radii qMin and qMax (fractions of the oval). */
   z.strictObject({
     rule: z.literal('oval-scatter'),

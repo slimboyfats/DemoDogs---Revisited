@@ -1,0 +1,14 @@
+{
+  "id": "material.tar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tar",
+    "description": "A tar pit. Holds a car like glue, and once it is alight it burns for a long time.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.9,
+  "drag": 2.6,
+  "burns": 12,
+  "colour": "#0d0d10",
+  "alpha": 0.92
+}
