@@ -1,0 +1,13 @@
+{
+  "id": "prop.container-teal",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Container (teal)",
+    "description": "A steel shipping container on the quay. Takes a lot of knocking; when it goes, whatever is stacked on it falls off.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "made": "material.steel",
+  "integrity": 55
+}

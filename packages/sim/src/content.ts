@@ -152,6 +152,13 @@ export function resolveContent(src: ContentSource): Content {
             if (p) need(v.id, 'prop', p);
       if (r.rule === 'patches') need(v.id, 'material', r.material);
       if (r.rule === 'place') for (const i of r.items) need(v.id, 'prop', i.prop);
+      if (r.rule === 'harbour') {
+        need(v.id, 'material', r.material);
+        for (const p of [r.piers.deck, r.piers.post, r.bollard, r.barges?.prop])
+          if (p) need(v.id, 'prop', p);
+        if (r.cranes) for (const p of [r.cranes.leg, r.cranes.beam]) need(v.id, 'prop', p);
+      }
+      if (r.rule === 'stacks') for (const p of [...r.bottom, ...r.top]) need(v.id, 'prop', p);
       if (r.rule === 'roadside')
         for (const p of [r.pair, r.stack, r.drum, ...r.tanks]) need(v.id, 'prop', p);
     }
@@ -160,6 +167,11 @@ export function resolveContent(src: ContentSource): Content {
   for (const p of out.prop.values()) {
     if (p.spills) need(p.id, 'material', p.spills.material);
     if (p.made) need(p.id, 'material', p.made);
+    if (p.topples) {
+      if (p.body !== 'static') problems.push(`${p.id}: only static props topple`);
+      if (out.prop.get(p.topples.into)?.body !== 'loose')
+        problems.push(`${p.id}: topples into ${p.topples.into}, which is not a loose prop`);
+    }
     if (p.throws?.drums) {
       if (!p.throws.drum) problems.push(`${p.id}: throws drums but names none`);
       else if (!out.prop.get(p.throws.drum)?.rocket)

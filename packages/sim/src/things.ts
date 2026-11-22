@@ -2,6 +2,7 @@ import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
+import { crush } from './docks';
 import type { World } from './world';
 
 // ---------------------------------------------------------------- scrap bots
@@ -177,6 +178,7 @@ export function updateProps(w: World): void {
     if (p.z > 0 || p.vz) {
       p.vz -= GRAVITY * 0.95 * DT;
       p.z += p.vz * DT;
+      if (p.def.crush && p.vz < -20 && p.z < 9) crush(w, p);
       if (p.z <= 0) {
         p.z = 0;
         p.vz = p.vz < -60 ? -p.vz * 0.35 : 0;

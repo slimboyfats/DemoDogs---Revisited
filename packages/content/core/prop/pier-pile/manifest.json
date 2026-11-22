@@ -1,0 +1,13 @@
+{
+  "id": "prop.pier-pile",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pier pile",
+    "description": "A tarred timber pile along the edge of a pier. Snaps if rammed.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 2,
+  "made": "material.wood",
+  "integrity": 20
+}

@@ -1,0 +1,13 @@
+{
+  "id": "material.brine",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Harbour water",
+    "description": "Deep, oily dock water. A car in it wallows and loses grip; spilt fuel floats on it and burns.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.55,
+  "drag": 2.4,
+  "colour": "#1d3a44",
+  "alpha": 0.88
+}

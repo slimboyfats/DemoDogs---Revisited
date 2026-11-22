@@ -1,0 +1,19 @@
+{
+  "id": "prop.pier-deck",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pier deck",
+    "description": "Weathered planks over the water. Cars drive across it; blasts, fire and falling containers break through and let the water in.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "solid": false,
+  "made": "material.wood",
+  "integrity": 34,
+  "spills": {
+    "material": "material.brine",
+    "r": 7,
+    "n": 1
+  }
+}

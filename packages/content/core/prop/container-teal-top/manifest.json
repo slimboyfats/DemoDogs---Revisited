@@ -1,0 +1,18 @@
+{
+  "id": "prop.container-teal-top",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Stacked container (teal)",
+    "description": "A container stacked on another. Knocked, or left with nothing under it, it tips off whole and comes down on whatever is beside it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "solid": false,
+  "made": "material.steel",
+  "integrity": 40,
+  "topples": {
+    "into": "prop.container-teal-loose",
+    "z": 8
+  }
+}

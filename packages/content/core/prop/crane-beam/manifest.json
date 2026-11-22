@@ -1,0 +1,14 @@
+{
+  "id": "prop.crane-beam",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crane gantry",
+    "description": "A length of the lattice gantry high over the water (looks only, until it falls).",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 12,
+  "solid": false,
+  "made": "material.steel",
+  "integrity": 120
+}

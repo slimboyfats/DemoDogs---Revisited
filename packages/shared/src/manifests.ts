@@ -156,6 +156,49 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     r: z.tuple([z.number().positive(), z.number().positive()]),
     on: z.enum(['road', 'off', 'any']).default('any'),
   }),
+  /**
+   * A harbour basin straight across the arena, `y` from the centre and `half` deep each way:
+   * deep `material` laid in pools of radius `r`, crossed by wooden `piers` (`deck` pieces with
+   * `post` piles down both sides; a broken deck lets the water through), `bollard`s every
+   * `spacing` along both quays, `barges` moored in the water between the piers, and gantry
+   * `cranes` straddling it on four `leg`s with `beam` pieces overhead. A crane that loses two
+   * legs comes down whole.
+   */
+  z.strictObject({
+    rule: z.literal('harbour'),
+    material: id('material'),
+    y: z.number(),
+    half: z.number().positive(),
+    r: z.number().positive().default(16),
+    piers: z.strictObject({
+      deck: id('prop'),
+      post: id('prop'),
+      at: z.array(z.number()).min(1),
+      wide: z.number().positive(),
+    }),
+    bollard: id('prop').optional(),
+    spacing: z.number().positive().default(30),
+    barges: z.strictObject({ prop: id('prop'), count: z.number().int().min(0) }).optional(),
+    cranes: z
+      .strictObject({ leg: id('prop'), beam: id('prop'), at: z.array(z.number()).min(1) })
+      .optional(),
+  }),
+  /**
+   * A container yard: `count` blocks of `cols` x `rows` boxes `step` apart, squared to the
+   * arena, on dry ground. Every box is a `bottom` piece, and `high` of them carry a `top` piece
+   * that falls off whole when it or the box under it is knocked out.
+   */
+  z.strictObject({
+    rule: z.literal('stacks'),
+    count: z.number().int().positive(),
+    bottom: z.array(id('prop')).min(1),
+    top: z.array(id('prop')).min(1),
+    high: unit,
+    cols: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    rows: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    step: z.tuple([z.number().positive(), z.number().positive()]),
+    clear: z.number().min(0),
+  }),
   /** Random props inside the oval between radii qMin and qMax (fractions of the oval). */
   z.strictObject({
     rule: z.literal('oval-scatter'),
@@ -335,6 +378,13 @@ export const PropSchema = z.strictObject({
       drum: id('prop').optional(),
     })
     .optional(),
+  /**
+   * Static props standing on something: when it comes down it does not break up but falls off
+   * whole, as the loose prop `into`, from height `z` (art px), tipping away from what hit it.
+   */
+  topples: z.strictObject({ into: id('prop'), z: z.number().min(0) }).optional(),
+  /** Loose props: damage done to a car it lands on from a height (a falling container). */
+  crush: z.number().positive().optional(),
   /** Loose props: how much of an impact sends it up in the air. */
   launch: z.number().min(0).default(0.25),
   /** Points for the car that breaks it. */

@@ -1,6 +1,7 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
+import { harbour, stacks } from './docks';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -305,6 +306,12 @@ function apply(
       for (const i of rule.items) add(i.prop, cx + i.x, cy + i.y, i.rot);
       return;
     }
+    case 'harbour':
+      harbour(w, rng, rule, add);
+      return;
+    case 'stacks':
+      stacks(w, rng, rule, add);
+      return;
     case 'oval-scatter': {
       if (!O) return;
       for (let k = 0; k < rule.count; k++) {

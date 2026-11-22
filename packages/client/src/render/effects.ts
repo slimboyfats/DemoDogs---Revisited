@@ -837,6 +837,12 @@ export class Effects {
           // it comes down: every voxel it still has flies apart, and rubble marks the spot
           const s = w.statics[e.prop]!;
           let strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
+          if (s.def.topples) {
+            // it does not break up: it tips off what it stood on and falls whole (a loose prop now)
+            if (this.scarred.delete(s)) this.dropped.push(strip);
+            for (let i = 0; i < 4; i++) this.puff(s.x + rand(-4, 4), s.y + rand(-4, 4), 8, 'dust');
+            break;
+          }
           if (s.def.crown && s.leaves) {
             // a tree: what leaves it still has drift down while the wood flies apart
             if (!this.scarred.has(s)) strip = clone(strip);
