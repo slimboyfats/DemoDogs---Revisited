@@ -4,7 +4,18 @@ import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
-import { char, clone, dent, restore, shatter, stripCrown, voxelsOf, type Chip } from './strips';
+import {
+  char,
+  clone,
+  dent,
+  filled,
+  finesOf,
+  restore,
+  shatter,
+  stripCrown,
+  voxelsOf,
+  type Chip,
+} from './strips';
 import {
   launch,
   launchTogether,
@@ -69,7 +80,9 @@ export interface FloatText {
 }
 
 /** The most loose voxels in the air at once. */
-const MAX_VOXELS = 2400;
+const MAX_VOXELS = 4000;
+/** How many fine chips fly back to rebuild a piece. */
+const MEND_CHIPS = 1800;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
 /** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
@@ -141,6 +154,7 @@ export class Effects {
   readonly dropped: Strip[] = [];
   /** What each piece of shared art breaks into, worked out once. */
   private readonly bits = new WeakMap<Strip, Chip[]>();
+  private readonly where = new WeakMap<Strip, Float64Array>();
   readonly walkers: Walker[] = [];
   shake = 0;
   msg = '';
@@ -550,7 +564,21 @@ export class Effects {
   private chipsOf(art: Strip): Chip[] {
     let c = this.bits.get(art);
     if (!c) this.bits.set(art, (c = voxelsOf(art)));
-    return c;
+    // a copy: `sample` shuffles and trims what it is given
+    return c.slice();
+  }
+
+  /**
+   * `count` fine chips, a third the size of `chipsOf`'s, from anywhere in a strip. Shared art keeps
+   * where its texels are; a scarred copy changes, so it is looked over afresh.
+   */
+  private finesOf(art: Strip, count: number, shared: boolean): Chip[] {
+    let at = shared ? this.where.get(art) : undefined;
+    if (!at) {
+      at = filled(art);
+      if (shared) this.where.set(art, at);
+    }
+    return finesOf(art, at, count, Math.max(1, Math.round((art.res * 2) / 3)), Math.random);
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
@@ -860,7 +888,7 @@ export class Effects {
         case 'mend': {
           // it flies back together off the rubble, bottom layers first, and stands when they land
           const s = w.statics[e.prop]!;
-          const chips = sample(this.chipsOf(this.art.prop(s.def.id)), 700, Math.random);
+          const chips = this.finesOf(this.art.prop(s.def.id), MEND_CHIPS, true);
           this.rising.set(s, { t: 0, dur: e.in });
           const cs = Math.cos(s.rot);
           const sn = Math.sin(s.rot);
@@ -912,8 +940,8 @@ export class Effects {
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
           this.burst(
-            this.scarred.has(s) || s.def.crown ? voxelsOf(strip) : this.chipsOf(strip),
-            220,
+            this.finesOf(strip, big(strip) ? 1400 : 600, strip === this.art.prop(s.def.id)),
+            big(strip) ? 1400 : 600,
             {
               x: s.x,
               y: s.y,
