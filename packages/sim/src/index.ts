@@ -7,3 +7,4 @@ export * from './prng';
 export * from './track';
 export { circles, toLocal, zoneFactor } from './physics';
 export { World, ahead, type Oval, type Phase, type WorldOptions } from './world';
+export * from './range';

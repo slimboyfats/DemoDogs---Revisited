@@ -55,6 +55,11 @@ export interface WorldOptions {
   knockout?: boolean;
   /** Laps, instead of the mode's. */
   laps?: number;
+  /**
+   * A test range: no countdown and no end, and the rivals are parked targets that nobody drives.
+   * See range.ts for what can be done to them.
+   */
+  sandbox?: boolean;
 }
 
 export interface Oval {
@@ -96,6 +101,7 @@ export class World {
   readonly oval: Oval | null = null;
   readonly road: number;
   readonly knockout: boolean;
+  readonly sandbox: boolean;
   private readonly lapsOpt: number | undefined;
   readonly cars: Car[] = [];
   readonly bots: Bot[] = [];
@@ -132,6 +138,8 @@ export class World {
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
+    this.sandbox = opts.sandbox ?? false;
+    if (this.sandbox) this.phase = 'race';
     this.lapsOpt = opts.laps;
     if (venue.track) {
       this.track = sampleTrack(venue.track.points, 4);
@@ -159,7 +167,7 @@ export class World {
     for (const e of opts.field ?? []) {
       const def = C.car.get(e.car);
       if (!def) throw new Error(`no car ${e.car}`);
-      rivals.push(makeCar(this, def, e.paint, e.name, false, aiDef, e));
+      rivals.push(makeCar(this, def, e.paint, e.name, false, this.sandbox ? null : aiDef, e));
     }
     const count = opts.field ? 0 : (opts.rivals ?? FIELD_SIZE - 1);
     for (let i = 0; i < count; i++) {
@@ -171,7 +179,7 @@ export class World {
           paints[i % paints.length]!,
           names[i % names.length]!,
           false,
-          aiDef,
+          this.sandbox ? null : aiDef,
         ),
       );
     }
@@ -327,7 +335,7 @@ export class World {
         )
           respawn(this, c);
       } else if (live) {
-        ctl = c.ai ? c.ai.behaviour.drive(this, c) : player;
+        ctl = c.ai ? c.ai.behaviour.drive(this, c) : c.isPlayer ? player : NO_CONTROLS;
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
       } else if (c.isPlayer) c.throttle = player.throttle;
       if (live || c.wrecked) drive(this, c, ctl);
@@ -351,6 +359,7 @@ export class World {
     updateRockets(this);
     updateMines(this);
 
+    if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
       // the race is over for a wrecked player, and won when no rival is left running
       const P = this.player;

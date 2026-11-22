@@ -26,6 +26,8 @@
       <button id="btnBoost" class="pad">BOOST</button>
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
+    <div id="devTap" class="hidden"></div>
+    <div id="devPanel" class="hidden"></div>
 
     <section id="menu" class="screen">
       <div class="panel">
@@ -66,6 +68,7 @@
               repairs.
             </p>
             <button class="muteBtn small">SOUND ON</button>
+            <button id="toDev" class="small">TEST RANGE</button>
           </div>
         </div>
       </div>
@@ -73,6 +76,15 @@
 
     <section id="career" class="screen hidden">
       <div class="panel" id="careerPanel"></div>
+    </section>
+
+    <section id="loader" class="screen hidden">
+      <div class="panel narrow">
+        <h2 id="loadTitle">GETTING READY</h2>
+        <div class="loadBar"><b id="loadFill"></b></div>
+        <p id="loadLine">&nbsp;</p>
+        <small id="loadCount">&nbsp;</small>
+      </div>
     </section>
 
     <section id="pauseMenu" class="screen hidden">

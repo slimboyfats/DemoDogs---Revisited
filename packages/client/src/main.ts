@@ -13,7 +13,7 @@ import {
   type Outcome,
   type RaceId,
 } from './game/career';
-import { Session } from './game/session';
+import { Session, type SessionOptions } from './game/session';
 import { Input } from './input/input';
 import { Art } from './render/art';
 import { Hud } from './render/hud';
@@ -21,6 +21,7 @@ import { drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
+import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { results } from './ui/results';
 
@@ -28,7 +29,8 @@ import { results } from './ui/results';
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
  * ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
  * player's car with the rivals' AI); ?career opens the career, ?career=<easy|medium|hard|final>
- * enters that race. window.__dd exposes the running session and the career.
+ * enters that race; ?dev opens the test range. window.__dd exposes the running session, the
+ * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const params = new URLSearchParams(location.search);
@@ -57,7 +59,9 @@ let carIdx = Math.max(
 );
 let session: Session | null = null;
 let lastVenue = venues[0]!.id;
-let screen: 'menu' | 'game' | 'results' | 'career' = 'menu';
+let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' = 'menu';
+/** The game on screen is the test range. */
+let devMode = false;
 const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
@@ -96,6 +100,12 @@ function openCareer(): void {
   careerScreen.open(loadCareer());
   setScreen('career');
 }
+const dev = new DevPanel($('devPanel'), $('devTap'), content, {
+  view: () => ({ w: W, h: H, scale, dpr: DPR }),
+  restart: startDev,
+  exit: () => setScreen('menu'),
+  stats: () => (scene instanceof PixelScene ? `slices ${scene.instances}` : 'canvas'),
+});
 let paused = false;
 /** The results on screen are a career race's: CONTINUE goes back to the career. */
 let lastCareer = false;
@@ -124,14 +134,19 @@ function resize(): void {
 }
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu', 'career'])
+  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader'])
     $(k).classList.toggle('hidden', k !== id);
 }
 
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
-  if (s === 'game') {
+  if (s !== 'game' && devMode) {
+    devMode = false;
+    dev.close();
+  }
+  if (s === 'loading') show('loader');
+  else if (s === 'game') {
     show(null);
     sound.engineStart();
   } else {
@@ -164,53 +179,94 @@ function goFullscreen(): void {
   }
 }
 
-function startCareerRace(race: RaceId): void {
+type Launch = Pick<SessionOptions, 'venue' | 'car' | 'seed'> & Partial<SessionOptions>;
+let launching = 0;
+
+/**
+ * Build a session behind the loader, which says what is being built as it goes, then show it.
+ * A newer launch (or leaving the loader) drops an older one.
+ */
+async function launch(o: Launch, title: string, ready?: (s: Session) => void): Promise<void> {
+  const mine = ++launching;
   sound.init();
   goFullscreen();
-  const k = loadCareer();
-  const s = raceSetup(content, k, race);
-  careerRace = race;
-  session = new Session({
-    content,
-    art,
-    sound,
-    input,
-    venue: s.venue,
-    car: k.car,
-    seed: s.seed,
-    autopilot: params.has('autoplay'),
-    field: s.field,
-    player: s.player,
-    knockout: true,
-  });
+  $('loadTitle').textContent = title;
+  $('loadFill').style.width = '0';
+  setScreen('loading');
+  const t0 = performance.now();
+  const built0 = art.built;
+  const made = await Session.load(
+    { content, art, sound, input, autopilot: params.has('autoplay'), ...o },
+    (text, done, of) => {
+      $('loadLine').textContent = `${text}…`;
+      $('loadFill').style.width = `${Math.round((done / of) * 100)}%`;
+      const px = art.built - built0;
+      $('loadCount').textContent =
+        `Step ${Math.min(done + 1, of)} of ${of} · ${px.toLocaleString('en')} pixels built · ` +
+        `${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      // let the screen show the line before the next piece is built
+      return new Promise((r) => {
+        const go = () => setTimeout(r, 0);
+        requestAnimationFrame(go);
+        setTimeout(go, 60);
+      });
+    },
+  );
+  if (mine !== launching || screen !== 'loading') return;
+  session = made;
   session.setView(W / scale, H / scale);
   hud.layout(session.world, DPR);
   paused = false;
   setScreen('game');
+  ready?.(made);
+}
+
+function startCareerRace(race: RaceId): void {
+  const k = loadCareer();
+  const s = raceSetup(content, k, race);
+  careerRace = race;
+  const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
+  void launch(
+    { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
+    venue,
+  );
 }
 
 function startGame(venue: string): void {
-  sound.init();
-  goFullscreen();
   careerRace = null;
   lastVenue = venue;
   const seed = params.has('seed')
     ? Number(params.get('seed'))
     : Math.floor(Math.random() * 2 ** 31);
-  session = new Session({
-    content,
-    art,
-    sound,
-    input,
-    venue,
-    car: cars[carIdx]!.id,
-    seed,
-    autopilot: params.has('autoplay'),
-  });
-  session.setView(W / scale, H / scale);
-  hud.layout(session.world, DPR);
-  paused = false;
-  setScreen('game');
+  void launch(
+    { venue, car: cars[carIdx]!.id, seed },
+    content.venue.get(venue)!.meta.name.toUpperCase(),
+  );
+}
+
+/** The test range: a derby bowl with every other car parked as a target, and endless rockets. */
+function startDev(car: string): void {
+  careerRace = null;
+  const venue = venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ?? venues[0]!;
+  const rocket = [...content.weapon.values()].find((w) => w.kind === 'rocket');
+  void launch(
+    {
+      venue: venue.id,
+      car,
+      seed: 1,
+      autopilot: false,
+      sandbox: true,
+      field: cars
+        .filter((c) => c.id !== car)
+        .map((c) => ({ car: c.id, name: c.meta.name.toUpperCase(), paint: c.paint })),
+      ...(rocket ? { player: { weapon: { id: rocket.id, ammo: 9999 } } } : {}),
+    },
+    'TEST RANGE',
+    (s) => {
+      devMode = true;
+      dev.open(s, car);
+    },
+  );
 }
 
 function finish(gaveUp = false): void {
@@ -283,7 +339,7 @@ function togglePause(): void {
   if (screen !== 'game') return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
-  $('restart').classList.toggle('hidden', careerRace !== null);
+  $('restart').classList.toggle('hidden', careerRace !== null || devMode);
   $('quit').textContent = careerRace ? 'GIVE UP THE RACE' : 'QUIT TO MENU';
   if (paused) sound.engineStop();
   else {
@@ -338,7 +394,8 @@ function frame(t: number): void {
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
-    hud.draw(session.world, session.fx, W, H, DPR);
+    if (devMode) dev.frame(dt);
+    else hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
   } else if (screen === 'menu') garage.draw(cars[carIdx]!, dt);
   else if (screen === 'career') careerScreen.draw(dt);
@@ -358,6 +415,7 @@ function boot(): void {
   };
   $('again').onclick = () => (lastCareer ? openCareer() : startGame(lastVenue));
   $('toCareer').onclick = openCareer;
+  $('toDev').onclick = () => startDev(cars[carIdx]!.id);
   $('toMenu').onclick = () => setScreen('menu');
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
@@ -389,6 +447,10 @@ function boot(): void {
       );
     if (v) startGame(v.id);
   }
+  if (params.has('dev')) {
+    const c = params.get('car');
+    startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
+  }
   if (params.has('career')) {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
@@ -412,6 +474,7 @@ function boot(): void {
       get screen() {
         return screen;
       },
+      dev,
     },
   });
   requestAnimationFrame(frame);

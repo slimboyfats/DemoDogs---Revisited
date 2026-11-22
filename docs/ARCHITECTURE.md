@@ -80,6 +80,31 @@ and words and the HUD go on a flat overlay canvas above either one.
 - **Canvas (fallback):** `render/scene.ts` and `render/stack.ts`. This is 2D canvas drawing with a per-frame sort
   and baked static props. It is used when WebGL2 is missing or with `?renderer=canvas`.
 
+## Art and breaking (`render/strips.ts`, `render/voxels.ts`)
+
+A look is a shape function; `build` samples it into voxels, shades them, and lays the slices out in a strip.
+Scenery, bots and weapons are built at `DETAIL` (3 texels to the art pixel); cars, wheels and bumpers at
+`CAR_DETAIL` (6). Sampling and shading are cached per part, so another paint colour only recolours.
+
+A strip keeps its pixels in memory (`Strip.px`). Dents, shattering and charring edit those pixels; the pixel
+engine uploads them straight to the atlas, and the canvas renderer brings the strip's canvas up to date only
+when it draws from it (`settle`). `dentVoxels` punches a crater and returns what came off as blocks.
+`detachNear` then looks only around the crater for pieces no longer joined to the floor of the part.
+`shatterVoxels` with `detachVoxels` (the whole part) is used once, when a car is wrecked. Loose blocks
+(`voxels.ts`) fly, split into 2, 4 or 8 when they land hard, down to `CRUMB`, and are painted into the ground
+when they stop.
+
+## Loading and the test range
+
+`Session.load` builds a session a piece at a time (world, ground, each car, scenery, bots) and reports each
+step, which `main.ts` shows on the loader with a running count of pixels built.
+
+The test range (`?dev`, or TEST RANGE on the menu) is a world made with `sandbox: true`: no countdown, no
+end, and the rivals are parked. `ui/dev-panel.ts` gives tools that tap the world: rocket, mine, blast, hit,
+wreck, mend, move a car, put down any prop, pan the camera, and slow or stop time. Every tool calls a function
+in `sim/src/range.ts`, which goes through the same `explode`, `damage` and `wreck` as a race, so the range
+shows what a race would do. Scripts can use the same tools as `window.__dd.dev.use(x, y, 'blast')`.
+
 ## Career
 
 `client/src/game/career.ts` holds the career as pure rules over a plain, JSON-saved state: the car

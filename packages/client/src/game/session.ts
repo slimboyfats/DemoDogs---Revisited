@@ -20,6 +20,25 @@ export interface SessionOptions {
   field?: Entrant[];
   player?: Setup;
   knockout?: boolean;
+  /** A test range: parked targets, no countdown, no end. */
+  sandbox?: boolean;
+}
+
+/** What is being got ready, step `done` of `of`; resolves once it has been shown. */
+export type Report = (text: string, done: number, of: number) => Promise<void>;
+
+function makeWorld(o: SessionOptions): World {
+  return new World({
+    content: o.content,
+    venue: o.venue,
+    car: o.car,
+    seed: o.seed,
+    autopilot: o.autopilot,
+    ...(o.field ? { field: o.field } : {}),
+    ...(o.player ? { player: o.player } : {}),
+    ...(o.knockout ? { knockout: true } : {}),
+    ...(o.sandbox ? { sandbox: true } : {}),
+  });
 }
 
 /** At most this many sim ticks per frame, so a slow frame does not snowball. */
@@ -39,21 +58,56 @@ export class Session {
   private viewH = 260;
   private overSeen = false;
 
-  constructor(private readonly o: SessionOptions) {
-    this.world = new World({
-      content: o.content,
-      venue: o.venue,
-      car: o.car,
-      seed: o.seed,
-      autopilot: o.autopilot,
-      ...(o.field ? { field: o.field } : {}),
-      ...(o.player ? { player: o.player } : {}),
-      ...(o.knockout ? { knockout: true } : {}),
-    });
-    this.ground = makeGround(this.world);
+  /** Game seconds per real second (the test range slows time down or stops it). */
+  rate = 1;
+  /** The camera follows the player's car; off, it stays where it is put. */
+  follow = true;
+
+  constructor(
+    private readonly o: SessionOptions,
+    made?: { world: World; ground: Ground },
+  ) {
+    this.world = made?.world ?? makeWorld(o);
+    this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;
     this.cam = { x: P.x, y: P.y, shake: 0 };
+  }
+
+  /**
+   * Get a session ready a piece at a time, saying what is being built as it goes: the world, the
+   * ground, each car in the field (the slow part: a car is hundreds of thousands of pixels), the
+   * scenery and the bots.
+   */
+  static async load(o: SessionOptions, report: Report): Promise<Session> {
+    const venue = o.content.venue.get(o.venue)?.meta.name.toUpperCase() ?? '';
+    await report(`Laying out ${venue}`, 0, 1);
+    const world = makeWorld(o);
+    const cars = new Map<string, { id: string; paint: string; name: string }>();
+    for (const c of world.cars)
+      cars.set(c.def.id + c.paint, { id: c.def.id, paint: c.paint, name: c.def.meta.name });
+    const props = new Set<string>();
+    for (const s of world.statics) props.add(s.def.id);
+    for (const p of world.props) props.add(p.def.id);
+    const bots = new Map<string, { id: string; paint: string }>();
+    for (const b of world.bots) bots.set(b.def.id + b.paint, { id: b.def.id, paint: b.paint });
+    const of = 3 + cars.size + props.size;
+    let done = 1;
+    await report('Painting the ground', done++, of);
+    const ground = makeGround(world);
+    for (const c of cars.values()) {
+      await report(`Building ${c.name.toUpperCase()}`, done++, of);
+      o.art.car(c.id, c.paint);
+    }
+    for (const id of props) {
+      const name = o.content.prop.get(id)?.meta.name ?? id;
+      await report(`Scenery: ${name.toLowerCase()}`, done++, of);
+      o.art.prop(id);
+    }
+    await report('Waking the scrap bots', done++, of);
+    for (const b of bots.values()) o.art.bot(b.id, b.paint);
+    await report('Starting engines', done, of);
+    return new Session(o, { world, ground });
   }
 
   /** How much of the world the screen shows, in art pixels across and down the ground. */
@@ -77,15 +131,17 @@ export class Session {
     const my = this.viewH * 0.3;
     const tx = P.x + Math.max(-mx, Math.min(mx, P.vx * lead));
     const ty = P.y + Math.max(-my, Math.min(my, P.vy * lead));
-    const k = Math.min(1, 4 * DT);
-    this.cam.x += (tx - this.cam.x) * k;
-    this.cam.y += (ty - this.cam.y) * k;
+    if (this.follow) {
+      const k = Math.min(1, 4 * DT);
+      this.cam.x += (tx - this.cam.x) * k;
+      this.cam.y += (ty - this.cam.y) * k;
+    }
     this.cam.shake = this.fx.shake;
   }
 
   /** Advance by dt seconds of real time. Returns true once the race is over (the first time). */
   advance(dt: number): boolean {
-    this.acc += dt;
+    this.acc += dt * this.rate;
     let n = 0;
     while (this.acc >= DT && n < MAX_STEPS) {
       this.step();
