@@ -1,5 +1,5 @@
 import { DT, type SimEvent } from '@demodogs/shared';
-import type { Car, World } from '@demodogs/sim';
+import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
@@ -65,6 +65,8 @@ export interface FloatText {
 
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 2400;
+/** The most pieces of scenery that keep their own damaged copy of their art. */
+const MAX_SCARRED = 40;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -97,6 +99,8 @@ export class Effects {
   readonly flashes: Flash[] = [];
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
+  /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
+  readonly scarred = new Map<StaticProp, Strip>();
   /** Fires still burning where something blew up. */
   readonly fires: Fire[] = [];
   private readonly propAlive: boolean[] = [];
@@ -299,6 +303,36 @@ export class Effects {
     });
   }
 
+  /**
+   * A blast takes a bite out of the scenery around it: each piece in reach gets its own copy of
+   * its art, cratered on the side that faced the blast, and what came off goes flying.
+   */
+  private scar(x: number, y: number, power: number): void {
+    const reach = 10 + 14 * power;
+    for (const s of this.w.statics) {
+      const dx = x - s.x;
+      const dy = y - s.y;
+      const d = Math.hypot(dx, dy);
+      if (d > reach + s.def.radius) continue;
+      let strip = this.scarred.get(s);
+      if (!strip) {
+        if (this.scarred.size >= MAX_SCARRED) continue;
+        this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
+      }
+      // the blast in the prop's own frame, pulled in to its edge
+      const cs = Math.cos(s.rot);
+      const sn = Math.sin(s.rot);
+      const k = Math.min(1, (s.def.radius * 0.8) / (d || 1));
+      const lx = (dx * cs + dy * sn) * k;
+      const ly = (-dx * sn + dy * cs) * k;
+      const broke = dent(strip, lx, ly, 2.5 + 2.5 * power, 0.85, Math.random, 1);
+      this.changed.add(strip);
+      const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: x, oy: y, vx: 0, vy: 0 };
+      this.burst(broke.chips, 60, { ...from, speed: 70 + 50 * power });
+      this.burst(broke.loose, 50, { ...from, speed: 30 }, true);
+    }
+  }
+
   /** How loud a sound at (x, y) is for the player: 1 close, 0 far away. */
   vol(x: number, y: number): number {
     const P = this.w.player;
@@ -411,6 +445,7 @@ export class Effects {
         case 'explode': {
           const { x, y, power } = e;
           this.fireball(x, y, power);
+          this.scar(x, y, power);
           for (let i = 0; i < 16; i++) this.spark(x, y, 4, 120);
           this.scorch(x, y, 16 * power);
           this.flashes.push({ x, y, r: 70 * power + 20, life: 0.45, max: 0.45, rgb: 0xffa040 });

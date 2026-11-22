@@ -1,5 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
-import { disc, rr } from '../../../src/shapes';
+import { disc } from '../../../src/shapes';
 
 /** A boxy little robot: one glowing eye, an aerial, stubby legs (posed by the walk rig). */
 const look: LookModule = {
@@ -10,11 +10,28 @@ const look: LookModule = {
       w: 9,
       h: 9,
       layers: 7,
+      smooth: true,
       fn: (x, y, z) => {
-        const r = z === 6 ? 2.6 : 3.6;
-        if (!rr(x, y, r, r, 1.4)) return null;
-        if (x > 2.4 && z >= 3 && z <= 4 && Math.abs(y) < 1.4) return 'boteye';
-        return z === 1 ? 'botdark' : 'paint';
+        const ax = Math.abs(x);
+        const ay = Math.abs(y);
+        // a rounded box of a body, and a smaller head on a collar
+        const head = z > 4.6;
+        const half = head ? 2.5 : 3.6;
+        const d = Math.hypot(Math.max(0, ax - half + 1.2), Math.max(0, ay - half + 1.2)) - 1.2;
+        if (d > 0 || z > 6.7 - Math.max(0, d + 0.9) * 0.9) return null;
+        if (head) {
+          // one wide glowing visor
+          if (x > 1.6 && z > 5.1 && z < 6.1 && ay < 1.7) return 'boteye';
+          return z < 4.9 ? 'botdark' : 'paint';
+        }
+        if (z < 1) return 'botdark';
+        // a chest plate, vents down each side, bolts at the corners
+        if (x > 3.2 && ay < 1.9 && z > 1.8 && z < 3.9)
+          return ((z * 3) | 0) % 2 ? 'botdark' : 'band';
+        if (ay > 3.3 && ax < 1.8 && z > 1.6 && z < 3.8)
+          return ((x * 2.5 + 9) | 0) % 2 ? 'botdark' : 'paint';
+        if (z > 4.25 && Math.abs(ax - 2.7) < 0.4 && Math.abs(ay - 2.7) < 0.4) return 'band';
+        return Math.abs(z - 2.9) < 0.16 && d > -0.4 ? 'botdark' : 'paint';
       },
     },
     aerial: {

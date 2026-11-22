@@ -99,6 +99,12 @@ export class Scene implements WorldRenderer {
     const ctx = this.ctx;
     const R = this.R;
     const S = this.scale;
+    // a strip that was redrawn (scenery with a bite out of it) is baked again
+    for (const s of fx.changed) {
+      const id = this.ids.get(s);
+      if (id) for (let q = 0; q < 32; q++) this.bakes.delete(`${id}:${q}`);
+    }
+    fx.changed.clear();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.fillStyle = w.venue.colors.outside;

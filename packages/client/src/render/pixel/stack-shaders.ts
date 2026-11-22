@@ -111,7 +111,18 @@ export const GROUND_FS = `#version 300 es
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
+uniform vec2 u_size;
 out vec4 o;
 void main() {
-  o = vec4(texture(u_tex, v_uv).rgb, 1.0);
+  // The ground is painted one texel to the art pixel, and drawn on the art's finer grid (three
+  // cells to the art pixel): each fine cell takes a colour blended between the texels around it,
+  // sharpened so edges stay crisp, so a kerb steps in fine cells instead of whole art pixels.
+  vec2 cell = floor(v_uv * u_size * 3.0);
+  vec2 a = (cell + 0.5) / 3.0 - 0.5;
+  vec2 i = floor(a);
+  vec2 f = smoothstep(0.2, 0.8, a - i);
+  vec3 c = texture(u_tex, (i + 0.5 + f) / u_size).rgb;
+  // a little grain, in three flat steps, so tarmac and grass are not flat fills
+  float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+  o = vec4(c * (0.955 + 0.045 * floor(h * 3.0)), 1.0);
 }`;

@@ -18,7 +18,8 @@ export class GroundLayer {
     private readonly gl: WebGL2RenderingContext,
     private readonly ground: Ground,
   ) {
-    this.tex = texture(gl);
+    // filtered: the shader blends between texels itself and needs their neighbours
+    this.tex = texture(gl, gl.LINEAR);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, ground.cv);
     ground.dirty = null;
     this.prog = compile(gl, GROUND_VS, GROUND_FS);

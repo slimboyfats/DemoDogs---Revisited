@@ -40,7 +40,7 @@ export function queueStacks(
   fx: Effects,
   still?: StaticHook,
 ): void {
-  for (const s of w.statics) queueStatic(R, art, w, s, still);
+  for (const s of w.statics) queueStatic(R, art, w, fx, s, still);
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -76,8 +76,15 @@ export function queueStacks(
   for (const c of w.cars) queueCar(R, art, w, fx, c);
 }
 
-function queueStatic(R: StackSink, art: Art, w: World, s: StaticProp, still?: StaticHook): void {
-  const strip = art.prop(s.def.id);
+function queueStatic(
+  R: StackSink,
+  art: Art,
+  w: World,
+  fx: Effects,
+  s: StaticProp,
+  still?: StaticHook,
+): void {
+  const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip))) return;
   R.group(s.y);
   if (!s.def.sway) {
