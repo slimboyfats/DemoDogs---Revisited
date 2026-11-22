@@ -1,0 +1,19 @@
+{
+  "id": "prop.scrap-tower",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrap tower",
+    "description": "Three crushed cars stacked up. Knock it down and the slabs come tumbling off onto whoever is near.",
+    "since": "core@0.5.0"
+  },
+  "body": "static",
+  "radius": 7,
+  "made": "material.steel",
+  "integrity": 45,
+  "topple": {
+    "prop": "prop.scrap-slab",
+    "n": 3,
+    "height": 15,
+    "spread": 110
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "prop.scrap-tower-tall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tall scrap tower",
+    "description": "Five crushed cars high and leaning. It comes down with a long reach.",
+    "since": "core@0.5.0"
+  },
+  "extends": "prop.scrap-tower",
+  "radius": 8,
+  "integrity": 60,
+  "topple": {
+    "prop": "prop.scrap-slab",
+    "n": 5,
+    "height": 25,
+    "spread": 150
+  }
+}

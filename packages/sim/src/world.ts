@@ -43,6 +43,7 @@ import {
   updateRockets,
 } from './things';
 import { standings, trackIndex } from './race';
+import { updatePresses } from './hazards';
 
 export interface WorldOptions {
   content: Content;
@@ -417,6 +418,7 @@ export class World {
     }
     for (const b of this.bots) updateBot(this, b);
     updateProps(this);
+    updatePresses(this);
     updatePickups(this);
     updateRockets(this);
     updateMines(this);

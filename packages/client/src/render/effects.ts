@@ -677,6 +677,28 @@ export class Effects {
           if (v > 0) S.crash(e.impact * v);
           break;
         }
+        case 'press': {
+          // the ram lands: dust squirts out from under it on every side, sparks at its edges
+          const s = w.statics[e.prop]!;
+          const r = s.def.radius;
+          for (let i = 0; i < 18; i++) {
+            const a = rand(0, TAU);
+            this.puff(
+              e.x + Math.cos(a) * r,
+              e.y + Math.sin(a) * r * 0.8,
+              rand(0.5, 2),
+              'dust',
+              Math.cos(a) * rand(30, 70),
+              Math.sin(a) * rand(30, 70),
+            );
+          }
+          for (let i = 0; i < 10; i++)
+            this.spark(e.x + rand(-r, r), e.y + rand(-r, r) * 0.7, 2, e.caught ? 120 : 50);
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.crash((e.caught ? 140 : 70) * v);
+          if (this.near(e.x, e.y, 140)) this.shake = Math.max(this.shake, e.caught ? 7 : 3);
+          break;
+        }
         case 'scrape':
           this.spark(e.x, e.y, 3, 20);
           if (e.player) S.scrape();

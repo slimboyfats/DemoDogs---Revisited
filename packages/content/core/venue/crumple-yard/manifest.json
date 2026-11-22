@@ -1,0 +1,128 @@
+{
+  "id": "venue.crumple-yard",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crumple Yard",
+    "description": "Derby. A scrapyard bowl: towers of crushed cars that topple onto whoever is near, tyre walls, oil everywhere, and a car crusher slamming away in the middle.",
+    "since": "core@0.5.0"
+  },
+  "mode": "mode.derby",
+  "seed": 4417,
+  "size": {
+    "w": 1120,
+    "h": 880
+  },
+  "oval": {
+    "cx": 560,
+    "cy": 440,
+    "rx": 500,
+    "ry": 380
+  },
+  "colors": {
+    "ground": "#5a4e40",
+    "ground2": "#645747",
+    "dirt": "#463c31",
+    "outside": "#26221f"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "patches",
+      "material": "material.oil",
+      "count": 14,
+      "r": [12, 26],
+      "on": "any"
+    },
+    {
+      "rule": "place",
+      "items": [
+        { "prop": "prop.crusher", "x": 0, "y": 0, "rot": 0 },
+        { "prop": "prop.crusher-post", "x": 0, "y": -16, "rot": 0 },
+        { "prop": "prop.crusher-post", "x": 0, "y": 16, "rot": 3.1416 },
+        { "prop": "prop.tyres-red", "x": -32, "y": -22, "rot": 0 },
+        { "prop": "prop.tyres", "x": -40, "y": -26, "rot": 0 },
+        { "prop": "prop.tyres-red", "x": -32, "y": 22, "rot": 0 },
+        { "prop": "prop.tyres", "x": -40, "y": 26, "rot": 0 },
+        { "prop": "prop.tyres-red", "x": 32, "y": -22, "rot": 0 },
+        { "prop": "prop.tyres", "x": 40, "y": -26, "rot": 0 },
+        { "prop": "prop.tyres-red", "x": 32, "y": 22, "rot": 0 },
+        { "prop": "prop.tyres", "x": 40, "y": 26, "rot": 0 },
+        { "prop": "prop.scrap-slab", "x": 0, "y": -40, "rot": 0.3 },
+        { "prop": "prop.scrap-slab", "x": 9, "y": 42, "rot": 2.8 }
+      ]
+    },
+    {
+      "rule": "ring",
+      "props": ["prop.scrap-tower-tall", "prop.scrap-tower"],
+      "count": 10,
+      "rx": 190,
+      "ry": 145
+    },
+    {
+      "rule": "build",
+      "count": 18,
+      "clear": 0,
+      "kinds": [
+        {
+          "shape": "wall",
+          "weight": 3,
+          "wall": "prop.scrap-tower",
+          "step": 15,
+          "long": [2, 4]
+        },
+        {
+          "shape": "wall",
+          "weight": 3,
+          "wall": "prop.tyres",
+          "post": "prop.tyres-red",
+          "step": 9,
+          "long": [4, 7]
+        },
+        {
+          "shape": "yard",
+          "weight": 1,
+          "wall": "prop.tyres",
+          "post": "prop.tyres-red",
+          "inside": ["prop.scrap-slab", "prop.oil-drum", "prop.husk"],
+          "step": 9,
+          "long": [5, 6],
+          "deep": [4, 5]
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 10,
+      "qMin": 0.35,
+      "qMax": 0.85,
+      "clear": 18,
+      "items": [
+        { "prop": "prop.husk", "weight": 2 },
+        { "prop": "prop.husk-van", "weight": 1 },
+        { "prop": "prop.scrap-tower", "weight": 1 }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 28,
+      "qMin": 0.15,
+      "qMax": 0.9,
+      "clear": 6,
+      "items": [
+        { "prop": "prop.oil-drum", "weight": 2 },
+        { "prop": "prop.barrel", "weight": 1 },
+        { "prop": "prop.scrap-slab", "weight": 2 },
+        { "prop": "prop.crate", "weight": 1 }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 8
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

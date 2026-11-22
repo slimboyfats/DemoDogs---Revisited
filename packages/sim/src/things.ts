@@ -3,6 +3,7 @@ import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import type { World } from './world';
+import { land } from './hazards';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -178,6 +179,7 @@ export function updateProps(w: World): void {
       p.vz -= GRAVITY * 0.95 * DT;
       p.z += p.vz * DT;
       if (p.z <= 0) {
+        if (p.def.crush && p.vz < -60) land(w, p, -p.vz);
         p.z = 0;
         p.vz = p.vz < -60 ? -p.vz * 0.35 : 0;
       }
@@ -194,8 +196,10 @@ export function updateProps(w: World): void {
       p.vx *= -0.4;
       p.vy *= -0.4;
     }
+    // something heavy still in the air comes down on top of scenery instead of bouncing off it
+    const over = p.def.crush !== undefined && p.z > 4;
     for (const s of w.near(p.x, p.y, p.def.radius)) {
-      if (s.down || !s.def.solid) continue;
+      if (over || s.down || !s.def.solid) continue;
       const m = s.def.radius + p.def.radius;
       if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
       const dx = p.x - s.x;
