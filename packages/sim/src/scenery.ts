@@ -28,6 +28,7 @@ export function stand(
     seed,
   };
   if (def.integrity !== undefined) s.hp = def.integrity;
+  if (def.crown) s.leaves = 1;
   w.statics.push(s);
   return s;
 }

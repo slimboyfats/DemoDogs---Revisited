@@ -141,6 +141,8 @@ export interface Bot {
 
 /** Scenery that never moves. */
 export interface StaticProp {
+  /** A tree: how much of its crown of leaves it still has, 1 to 0. */
+  leaves?: number;
   /** Its place in world.statics. */
   index: number;
   def: PropManifest;

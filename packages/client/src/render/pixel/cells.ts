@@ -18,6 +18,12 @@ export const CKind = {
   Fire: 1,
   /** Smoke, steam or dust: dark when fresh, its own colour, paler as it thins out. */
   Wisp: 2,
+  /**
+   * A leaf torn off a tree: flung out, brakes hard in the air, then flutters down on the wind,
+   * swinging from side to side and flipping between its light and its dark face. Where it lands
+   * it stays: `landed` hands it over to be painted into the ground. (mudders: PKind.Leaf.)
+   */
+  Leaf: 3,
 } as const;
 export type CKind = (typeof CKind)[keyof typeof CKind];
 
@@ -86,6 +92,8 @@ const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.flo
 export class Cells {
   n = 0;
   readonly rings: Ring[] = [];
+  /** Leaves that came to rest this tick, as x, y, colour triples; whoever paints them empties it. */
+  readonly landed: number[] = [];
   private readonly x: Float32Array;
   private readonly y: Float32Array;
   private readonly z: Float32Array;
@@ -224,6 +232,20 @@ export class Cells {
         vx *= drag;
         vy *= drag;
         vz = vz * drag + 70 * dt;
+      } else if (k === CKind.Leaf) {
+        if (calm) air[0] = air[1] = air[2] = 0;
+        else this.air(x, y, z, air);
+        // it brakes hard, takes up the air and the wind, and sinks slowly, swinging as it goes
+        const th = this.th[i]!;
+        const f = Math.min(1, 3.2 * dt);
+        const beat = a * (2.4 + th * 2.6) + th * 40;
+        vx += (air[0] + WIND[0] * 0.7 + Math.sin(beat) * 16 - vx) * f;
+        vy += (air[1] + WIND[1] * 0.7 + Math.cos(beat * 0.7) * 9 - vy) * f;
+        vz += (air[2] * 0.6 - 7 - Math.cos(beat) * 3 - vz) * f;
+        if (z + vz * dt <= 0 && a > 0.15) {
+          this.landed.push(x + vx * dt, y + vy * dt, shade(this.rgb[i]!, th < 0.5 ? 1 : 0.72));
+          continue;
+        }
       } else {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
@@ -275,7 +297,13 @@ export class Cells {
         const x = this.x[i]!;
         const y = this.y[i]!;
         const z = this.z[i]!;
-        if (k === CKind.Wisp) {
+        if (k === CKind.Leaf) {
+          if (pass !== 0 || !seen(x, y, z)) continue;
+          // tumbling: it shows its light face and its dark face in turn, on its own beat
+          const face = (Math.floor(this.age[i]! * (5 + th * 5)) + (th < 0.5 ? 0 : 1)) & 1;
+          const c = this.rgb[i]!;
+          normal(x, y, z, 1, face ? shade(c, 0.72) : c, 1, Shape.Rect);
+        } else if (k === CKind.Wisp) {
           if (pass !== 0) continue;
           if (th >= Math.min(1, t * 8 + 0.4) * (t < 0.25 ? 1 : (1 - t) / 0.75)) continue;
           if (!seen(x, y, z)) continue;
@@ -313,5 +341,6 @@ export class Cells {
   clear(): void {
     this.n = 0;
     this.rings.length = 0;
+    this.landed.length = 0;
   }
 }

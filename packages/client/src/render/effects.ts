@@ -4,7 +4,7 @@ import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
-import { char, clone, dent, restore, shatter, voxelsOf, type Chip } from './strips';
+import { char, clone, dent, restore, shatter, stripCrown, voxelsOf, type Chip } from './strips';
 import {
   launch,
   launchTogether,
@@ -105,6 +105,7 @@ export class Effects {
   readonly voxels: Voxel[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
+  private readonly tones = new Map<string, number[]>();
   /** Single cells of fire and smoke, and the rolling air that carries them. */
   readonly cells = new Cells(14000);
   /** How much of the full effect to draw: 1 everything, less on a slow device. */
@@ -445,6 +446,92 @@ export class Effects {
     markGround(this.ground, x, y, r);
   }
 
+  /**
+   * Let leaves that came off a tree go as single cells: up to `max` of them, each from where it
+   * grew, thrown at (vx, vy) and scattered by `spread`.
+   */
+  private leaves(
+    s: StaticProp,
+    off: Chip[],
+    max: number,
+    vx: number,
+    vy: number,
+    spread: number,
+  ): void {
+    const cs = Math.cos(s.rot);
+    const sn = Math.sin(s.rot);
+    const keep = Math.min(1, (max * Math.max(0.35, this.quality)) / (off.length || 1));
+    for (const c of off) {
+      if (Math.random() >= keep) continue;
+      const k = rand(0.35, 1.2);
+      this.cells.add(
+        CKind.Leaf,
+        s.x + c.x * cs - c.y * sn,
+        s.y + c.x * sn + c.y * cs,
+        c.z,
+        vx * k + rand(-1, 1) * spread,
+        vy * k + rand(-1, 1) * spread,
+        rand(-0.2, 1) * spread,
+        rand(5, 9),
+        c.rgb,
+      );
+    }
+  }
+
+  /** The colours of a kind of tree's leaves, sampled from its art once. */
+  private leafTones(s: StaticProp): number[] {
+    let t = this.tones.get(s.def.id);
+    if (!t) {
+      const C = s.def.crown!;
+      const all = voxelsOf(this.art.prop(s.def.id)).filter(
+        (c) => Math.hypot(c.x, c.y) > C.trunk || c.z > C.top,
+      );
+      t = [];
+      for (let i = 0; i < 12 && all.length; i++)
+        t.push(all[Math.floor(Math.random() * all.length)]!.rgb);
+      this.tones.set(s.def.id, t);
+    }
+    return t;
+  }
+
+  /** Now and then a leaf lets go of a tree near the player and drifts off on the wind. */
+  private leafFall(): void {
+    if (Math.random() > 0.3 * this.quality) return;
+    const P = this.w.player;
+    const list = this.w.near(P.x, P.y, 230);
+    const s = list[Math.floor(Math.random() * list.length)];
+    const C = s?.def.crown;
+    if (!s || !C || s.down || !s.leaves || Math.random() > s.leaves) return;
+    const t = this.leafTones(s);
+    if (!t.length) return;
+    const a = rand(0, TAU);
+    const d = rand(0.3, 1) * (s.def.radius + 3);
+    this.cells.add(
+      CKind.Leaf,
+      s.x + Math.cos(a) * d,
+      s.y + Math.sin(a) * d,
+      C.top + rand(0, 5),
+      rand(-6, 6),
+      rand(-6, 6),
+      0,
+      rand(5, 9),
+      pick(t),
+    );
+  }
+
+  /** Leaves that have come down stay where they lie, a cell each. */
+  private litter(): void {
+    const L = this.cells.landed;
+    if (!L.length) return;
+    const g = this.ground.g;
+    for (let i = 0; i < L.length; i += 3) {
+      g.fillStyle = hex(L[i + 2]!);
+      g.fillRect(Math.floor(L[i]!), Math.floor(L[i + 1]!), 1, 1);
+      markGround(this.ground, L[i]!, L[i + 1]!, 1);
+    }
+    L.length = 0;
+  }
+
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
   private pool(m: MaterialManifest, x: number, y: number, r: number): void {
     const rgb = parseInt(m.colour.slice(1), 16);
@@ -654,6 +741,53 @@ export class Effects {
           if (this.near(x, y, 160)) this.shake = Math.max(this.shake, 9 * power * v);
           break;
         }
+        case 'strip': {
+          // leaves come off a tree: off the side facing a blast, all round when shaken or burnt
+          const s = w.statics[e.prop]!;
+          const C = s.def.crown;
+          if (!C) break;
+          let strip = this.scarred.get(s);
+          if (!strip) {
+            if (this.scarred.size >= MAX_SCARRED) break;
+            this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
+          }
+          const dx = e.x - s.x;
+          const dy = e.y - s.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const blast = e.by === 'blast';
+          const cs = Math.cos(s.rot);
+          const sn = Math.sin(s.rot);
+          const off = stripCrown(
+            strip,
+            C.trunk,
+            C.top,
+            blast ? (dx * cs + dy * sn) / d : 0,
+            blast ? (-dx * sn + dy * cs) / d : 0,
+            e.amount / (e.left + e.amount),
+            Math.random,
+          );
+          this.changed.add(strip);
+          if (e.by === 'heat') {
+            // burnt off: the crown is in flames, and a few leaves get away alight
+            for (let i = 0; i < 3; i++) {
+              const c = off[Math.floor(Math.random() * off.length)];
+              if (c) this.flame(s.x + c.x, s.y + c.y, c.z, rand(3, 5));
+            }
+            this.leaves(s, off, 12, 0, 0, 18);
+            break;
+          }
+          // away from the blast, faster the more it tore off; a shaken tree just lets them drop
+          const sp = blast ? 60 + 380 * e.amount : 0;
+          this.leaves(
+            s,
+            off,
+            blast ? 170 : 60,
+            (-dx / d) * sp,
+            (-dy / d) * sp,
+            blast ? 30 + sp * 0.25 : 14,
+          );
+          break;
+        }
         case 'chip': {
           // a piece knocked out of scenery where it was struck
           const s = w.statics[e.prop]!;
@@ -691,7 +825,13 @@ export class Effects {
         case 'fall': {
           // it comes down: every voxel it still has flies apart, and rubble marks the spot
           const s = w.statics[e.prop]!;
-          const strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
+          let strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
+          if (s.def.crown && s.leaves) {
+            // a tree: what leaves it still has drift down while the wood flies apart
+            if (!this.scarred.has(s)) strip = clone(strip);
+            const C = s.def.crown;
+            this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
+          }
           this.burst(voxelsOf(strip), 220, {
             x: s.x,
             y: s.y,
@@ -1127,6 +1267,8 @@ export class Effects {
     }
     this.feed();
     this.cells.step(DT);
+    this.leafFall();
+    this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {
       if (stepParticle(this.fx[i]!, DT)) continue;
       this.fx[i] = this.fx[this.fx.length - 1]!;

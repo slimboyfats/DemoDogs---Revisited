@@ -1,0 +1,13 @@
+{
+  "id": "prop.snag",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dead tree",
+    "description": "A dead tree: a grey trunk and a few bare limbs. Dry as tinder.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 3,
+  "made": "material.wood",
+  "integrity": 30
+}

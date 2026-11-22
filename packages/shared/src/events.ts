@@ -47,6 +47,19 @@ export type SimEvent =
     }
   /** That piece of scenery came down for good. */
   | { t: 'fall'; prop: number; x: number; y: number }
+  /**
+   * A tree lost `amount` of a full crown of leaves and has `left`: torn off by a blast at (x, y),
+   * burnt off, or shaken loose by a ram there.
+   */
+  | {
+      t: 'strip';
+      prop: number;
+      x: number;
+      y: number;
+      amount: number;
+      left: number;
+      by: 'blast' | 'heat' | 'shake';
+    }
   /** A blast dug a pit of radius r in the ground (or widened one that was there). */
   | { t: 'crater'; x: number; y: number; r: number }
   /** A pool of a material poured out on the ground. */

@@ -84,7 +84,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00026,
+      "perArea": 0.000325,
       "clear": 34,
       "items": [
         {
@@ -110,6 +110,14 @@
         {
           "prop": "prop.chimney",
           "weight": 0.04
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.15
         }
       ]
     },

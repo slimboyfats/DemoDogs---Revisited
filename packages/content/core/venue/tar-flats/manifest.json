@@ -124,6 +124,23 @@
           "weight": 1
         }
       ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 12,
+      "qMin": 0.25,
+      "qMax": 0.9,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.bush",
+          "weight": 3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 1
+        }
+      ]
     }
   ],
   "bots": {

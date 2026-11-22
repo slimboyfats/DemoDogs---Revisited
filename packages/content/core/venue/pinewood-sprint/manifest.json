@@ -85,7 +85,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00034,
+      "perArea": 0.000442,
       "clear": 34,
       "items": [
         {
@@ -107,6 +107,18 @@
         {
           "prop": "prop.log-pile",
           "weight": 0.1
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.04
         }
       ]
     },

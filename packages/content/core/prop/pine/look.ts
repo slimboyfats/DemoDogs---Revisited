@@ -13,7 +13,7 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         const r = Math.hypot(x, y);
-        if (z < 6 && r < 1.25 - z * 0.05) return 'bark';
+        if (z < 19 && r < 1.25 - z * 0.05) return 'bark';
         if (z < 3.2 || z > 21.6) return null;
         // five skirts, each wide at its hem and drawn in under the one above
         const tier = (z - 3.2) / 3.7;

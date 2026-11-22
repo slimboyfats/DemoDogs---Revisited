@@ -1,0 +1,21 @@
+{
+  "id": "prop.bush",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bush",
+    "description": "A low bush. A car goes straight through it in a burst of leaves.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 3.4,
+  "sway": true,
+  "hardness": 0,
+  "made": "material.wood",
+  "integrity": 3,
+  "crown": {
+    "trunk": 0.8,
+    "top": 1.6,
+    "hold": 0.1,
+    "flash": 0.2
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "prop.maple",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Maple",
+    "description": "A maple in its amber autumn leaves. They come off at the least blast, and dry as they are they catch fire readily.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 55,
+  "crown": {
+    "trunk": 1.9,
+    "top": 12,
+    "hold": 0.15,
+    "flash": 0.3
+  }
+}

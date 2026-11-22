@@ -24,7 +24,14 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         const r = Math.hypot(x, y);
-        if (z < 8.5 && r < 1.3 + Math.max(0, 1.6 - z) * 0.8 + 0.25 * Math.sin(Math.atan2(y, x) * 5))
+        if (
+          z < 12.5 &&
+          r <
+            1.3 -
+              Math.max(0, z - 8) * 0.12 +
+              Math.max(0, 1.6 - z) * 0.8 +
+              0.25 * Math.sin(Math.atan2(y, x) * 5)
+        )
           return noise3(x * 3, y * 3, z * 0.6) > 0.55 ? 'bark2' : 'bark';
         // ragged edges: the leaves stick out and fall back, a few to the art pixel
         const rag = (noise3(x * 1.3, y * 1.3, z * 1.3) - 0.5) * 2.4;

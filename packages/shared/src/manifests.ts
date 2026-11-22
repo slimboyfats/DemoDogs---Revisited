@@ -277,6 +277,20 @@ export const PropSchema = z.strictObject({
    */
   made: id('material').optional(),
   integrity: z.number().positive().optional(),
+  /**
+   * Static props: a crown of leaves. Everything outside the bare trunk (a cylinder of radius
+   * `trunk` up to height `top`, art px) is leaf. A blast's pressure tears leaves off well beyond
+   * its crater, less the higher `hold` is; `flash` is the chance the heat of one close by sets the
+   * crown alight.
+   */
+  crown: z
+    .strictObject({
+      trunk: z.number().min(0),
+      top: z.number().min(0),
+      hold: z.number().min(0).max(1).default(0.3),
+      flash: z.number().min(0).max(1).default(0.15),
+    })
+    .optional(),
   /** Sways in the wind (trees). */
   sway: z.boolean().default(false),
   /** Loose props: breaks into planks above this impact speed. */

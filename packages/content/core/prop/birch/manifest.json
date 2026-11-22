@@ -1,0 +1,20 @@
+{
+  "id": "prop.birch",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Birch",
+    "description": "A slim white birch with a light, airy crown. Easy to knock down.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 2.6,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 26,
+  "crown": {
+    "trunk": 1.0,
+    "top": 19,
+    "hold": 0.3,
+    "flash": 0.15
+  }
+}

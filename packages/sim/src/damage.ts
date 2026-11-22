@@ -181,6 +181,29 @@ export function explode(w: World, x: number, y: number, power: number, owner: Ca
     const e = Math.min(1, r / (d || 1));
     batter(w, s, 75 * power * k, 'blast', s.x + (x - s.x) * e, s.y + (y - s.y) * e);
   }
+  // the pressure of a blast tears the leaves off trees well beyond its crater, and the heat of
+  // one close by sets a crown alight
+  const reach = rad * 2.6;
+  for (const s of w.near(x, y, reach)) {
+    const C = s.def.crown;
+    if (!C || s.down || !s.leaves) continue;
+    const d = Math.hypot(s.x - x, s.y - y);
+    if (d > reach) continue;
+    const near = 1 - d / reach;
+    shed(w, s, near * (1 - C.hold) * Math.min(1.5, power), 'blast', x, y);
+    if (near > 0.5 && w.rng.next() < C.flash * power && !wet(w, s.x, s.y)) {
+      const b = {
+        x: s.x,
+        y: s.y,
+        r: s.def.radius + 3,
+        t: 4,
+        bite: 0.25,
+        owner: owner ? owner.index : -1,
+      };
+      w.blazes.push(b);
+      w.emit({ t: 'blaze', x: b.x, y: b.y, r: b.r, life: b.t });
+    }
+  }
   for (const p of w.props) {
     if (!p.alive) continue;
     const dx = p.x - x;
@@ -460,6 +483,9 @@ export function batter(
   if (s.down || s.hp === undefined) return false;
   const d = amount / (s.made?.strength[by] ?? 1);
   if (d <= 0) return false;
+  // fire eats the crown, and a ram shakes leaves out of it
+  if (by === 'heat') shed(w, s, 0.25, 'heat', x, y);
+  else if (by === 'impact') shed(w, s, Math.min(0.3, 0.06 + d / 150), 'shake', x, y);
   s.hp -= d;
   if (s.hp > 0) {
     w.emit({ t: 'chip', prop: s.index, x, y, amount: d, by });
@@ -509,4 +535,20 @@ export function dig(w: World, x: number, y: number, power: number): void {
   w.craters.push({ x, y, r });
   if (w.craters.length > 160) w.craters.shift();
   w.emit({ t: 'crater', x, y, r });
+}
+
+/** A tree loses up to `amount` of a full crown of leaves. */
+export function shed(
+  w: World,
+  s: StaticProp,
+  amount: number,
+  by: 'blast' | 'heat' | 'shake',
+  x: number,
+  y: number,
+): void {
+  if (!s.leaves) return;
+  const a = Math.min(s.leaves, amount);
+  if (a < 0.02) return;
+  s.leaves = s.leaves - a < 0.02 ? 0 : s.leaves - a;
+  w.emit({ t: 'strip', prop: s.index, x, y, amount: a, left: s.leaves, by });
 }

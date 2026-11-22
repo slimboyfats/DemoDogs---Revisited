@@ -1,0 +1,20 @@
+{
+  "id": "prop.poplar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Poplar",
+    "description": "A tall, narrow poplar. Rows of them line a road like a wall of leaves.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 3,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 45,
+  "crown": {
+    "trunk": 1.1,
+    "top": 24,
+    "hold": 0.35,
+    "flash": 0.15
+  }
+}

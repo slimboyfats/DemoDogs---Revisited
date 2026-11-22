@@ -155,3 +155,17 @@ The `patches` scenery rule lays pools of a material (mud, tar, ice) on the road,
 when the venue is built. They are ordinary `Spill`s marked `fixed`: they give the same footing and
 burn the same way, but no event is sent for them (the client paints them when it builds the
 ground) and they are never cleared to make room for new pools.
+
+## Trees and leaves
+
+A static prop with a `crown` is a tree: everything outside its bare trunk is leaf, and
+`StaticProp.leaves` runs from 1 (full) to 0 (bare). `shed` in `damage.ts` takes leaves off and
+reports it with a `strip` event: a blast's pressure does it out to 2.6 times its damage radius
+(less the higher the crown's `hold`), its heat may set a near crown alight (`flash`), fire burns
+the crown off before the wood goes, and a ram shakes leaves loose.
+
+The client peels that share of the tree's own copy of its art off, an art pixel at a time, from
+the outside in and from the side facing the blast (`stripCrown`), and lets each one go as a
+`CKind.Leaf` cell: flung out, braking, then fluttering down on the wind and flipping between a
+light and a dark face. Where a leaf lands it is painted into the ground and stays. Now and then a
+leaf lets go of a tree near the player by itself.

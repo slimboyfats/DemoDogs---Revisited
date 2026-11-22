@@ -95,7 +95,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.000192,
+      "perArea": 0.00025,
       "clear": 34,
       "items": [
         {
@@ -125,6 +125,18 @@
         {
           "prop": "prop.pylon",
           "weight": 0.05
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.1
         }
       ]
     },

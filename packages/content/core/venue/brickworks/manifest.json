@@ -87,7 +87,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 2.2e-5,
+      "perArea": 2.9e-5,
       "clear": 30,
       "items": [
         {
@@ -104,6 +104,18 @@
         },
         {
           "prop": "prop.tree",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.bush",
           "weight": 0.25
         }
       ]

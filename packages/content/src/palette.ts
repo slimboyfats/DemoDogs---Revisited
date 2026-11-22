@@ -52,5 +52,12 @@ export const PALETTE: Record<string, Tones> = {
   rocket: ['#9fa3ab', '#cfd2d8', '#f4f5f7'],
   stone: ['#55575c', '#74767c', '#9a9ca1'],
   stone2: ['#47494e', '#63656b', '#868890'],
+  maple: ['#9a4a14', '#c8742c', '#e89a3c'],
+  maple2: ['#7a2e10', '#a84418', '#d06a24'],
+  maple3: ['#b8861c', '#e0b030', '#f6d860'],
+  lime: ['#4f7f26', '#74a636', '#a2cc56'],
+  lime2: ['#6b9a2e', '#93be44', '#c4e070'],
+  birch: ['#a9aaa2', '#d6d7cf', '#f4f4ec'],
+  dead: ['#4a4038', '#655a50', '#857a6e'],
   moss: ['#3a5a2a', '#4f7a38', '#6f9c4c'],
 };

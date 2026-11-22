@@ -9,4 +9,4 @@ export { circles, toLocal, zoneFactor } from './physics';
 export { World, ahead, type Oval, type Phase, type WorldOptions } from './world';
 export * from './range';
 export { stand } from './scenery';
-export { batter, dig, explode, fall, footing, ignite, spill } from './damage';
+export { batter, dig, shed, explode, fall, footing, ignite, spill } from './damage';

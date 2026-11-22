@@ -635,3 +635,82 @@ export function char(s: Strip): void {
   }
   s.stale = true;
 }
+
+/**
+ * Tear leaves off a tree: everything outside its bare trunk (radius `trunk`, up to `top`, art px)
+ * is leaf, taken an art pixel at a time. `share` of what is left goes, peeled off from the outside
+ * in and from the side facing (dx, dy) first (a unit vector in the strip's own frame; 0, 0 for all
+ * round), raggedly. Returns the leaves that came off.
+ */
+export function stripCrown(
+  s: Strip,
+  trunk: number,
+  top: number,
+  dx: number,
+  dy: number,
+  share: number,
+  rand: () => number,
+): Chip[] {
+  return edit(s, (v) => {
+    const { px, cw, ch, n, res: B } = v;
+    // every art pixel of leaf there still is, and how exposed it is
+    const found: [number, number, number, number][] = [];
+    let mx = 0;
+    let my = 0;
+    let mz = 0;
+    for (let bz = 0; bz < n; bz += B)
+      for (let by = 0; by < ch; by += B)
+        for (let bx = 0; bx < cw; bx += B) {
+          const x = (bx + B / 2 - cw / 2) / B;
+          const y = (by + B / 2 - ch / 2) / B;
+          if (Math.hypot(x, y) <= trunk && bz / B <= top) continue;
+          let any = false;
+          for (let k = 0; k < B && bz + k < n && !any; k++)
+            for (let j = 0; j < B && by + j < ch && !any; j++)
+              for (let i = 0; i < B && bx + i < cw; i++)
+                if (px[at(v, bx + i, by + j, bz + k) + 3]) {
+                  any = true;
+                  break;
+                }
+          if (!any) continue;
+          found.push([bx, by, bz, 0]);
+          mx += x;
+          my += y;
+          mz += bz / B;
+        }
+    const N = found.length;
+    if (!N) return [];
+    mx /= N;
+    my /= N;
+    mz /= N;
+    for (const f of found) {
+      const x = (f[0] + B / 2 - cw / 2) / B - mx;
+      const y = (f[1] + B / 2 - ch / 2) / B - my;
+      const z = f[2] / B - mz;
+      f[3] = (x * dx + y * dy) * 1.6 + Math.hypot(x, y, z) + rand() * 3.5;
+    }
+    found.sort((a, b) => b[3] - a[3]);
+    const out: Chip[] = [];
+    const take = Math.min(N, Math.ceil(N * share));
+    for (let q = 0; q < take; q++) {
+      const [bx, by, bz] = found[q]!;
+      let rgb = -1;
+      for (let k = 0; k < B && bz + k < n; k++)
+        for (let j = 0; j < B && by + j < ch; j++)
+          for (let i = 0; i < B && bx + i < cw; i++) {
+            const o = at(v, bx + i, by + j, bz + k);
+            if (!px[o + 3]) continue;
+            if (rgb < 0) rgb = (px[o]! << 16) | (px[o + 1]! << 8) | px[o + 2]!;
+            px[o + 3] = 0;
+          }
+      out.push({
+        x: (bx + B / 2 - cw / 2) / B,
+        y: (by + B / 2 - ch / 2) / B,
+        z: bz / B,
+        s: 1,
+        rgb,
+      });
+    }
+    return out;
+  });
+}

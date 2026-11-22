@@ -22,6 +22,35 @@ describe('cells', () => {
     expect(C.n).toBe(0);
   });
 
+  it('a leaf brakes, flutters down and is handed over where it lands', () => {
+    const C = new Cells(8, rng());
+    C.add(CKind.Leaf, 0, 0, 10, 200, 0, 20, 9, 0x3f8a3f);
+    let ticks = 0;
+    while (C.n && ticks < 600) {
+      C.step(1 / 60);
+      ticks++;
+    }
+    // it did not fly off at 200 px a second, and it took its time coming down
+    expect(C.n).toBe(0);
+    expect(ticks).toBeGreaterThan(40);
+    expect(C.landed.length).toBe(3);
+    const far = Math.abs(C.landed[0]!);
+    expect(far).toBeGreaterThan(5);
+    expect(far).toBeLessThan(160);
+    const seen: number[] = [];
+    C.add(CKind.Leaf, 0, 0, 10, 0, 0, 0, 9, 0x3f8a3f);
+    for (let i = 0; i < 30; i++) {
+      C.step(1 / 60);
+      C.draw(
+        (_x, _y, _z, _s, rgb) => seen.push(rgb),
+        () => {},
+        () => true,
+      );
+    }
+    // tumbling shows two faces
+    expect(new Set(seen).size).toBe(2);
+  });
+
   it('a ring of air lifts what is in its middle and rolls it out over the top', () => {
     const C = new Cells(8, rng());
     C.ring({ x: 0, y: 0, z: 10, vz: 0, R: 10, r: 6, spin: 50, grow: 0, life: 2 });
