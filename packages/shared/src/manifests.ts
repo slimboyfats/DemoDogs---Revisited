@@ -163,7 +163,7 @@ export type ModeManifest = z.infer<typeof ModeSchema>;
 export const WeaponSchema = z.strictObject({
   ...base,
   id: id('weapon'),
-  kind: z.enum(['rocket', 'mine']),
+  kind: z.enum(['rocket', 'mine', 'gun']),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
   ammo: z.number().int().positive(),
@@ -174,6 +174,14 @@ export const WeaponSchema = z.strictObject({
   speed: z.number().positive().optional(),
   life: z.number().positive().optional(),
   homing: z.number().min(0).optional(),
+  /**
+   * Guns: fitted to every car and fired by themselves at a car in the sights. `ammo` is the rounds
+   * a car starts with, `damage` what a round does, `range` how far it reaches and `aim` how far
+   * off the nose (radians) a target may be.
+   */
+  damage: z.number().positive().optional(),
+  range: z.number().positive().optional(),
+  aim: z.number().positive().optional(),
   /** Mines: seconds before it arms; trigger radius. */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
@@ -183,11 +191,11 @@ export type WeaponManifest = z.infer<typeof WeaponSchema>;
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
-  kind: z.enum(['repair', 'nitro', 'arms']),
+  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash']),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
-  /** Repair: armour restored. */
+  /** Repair: armour restored. Ammo: rounds for the gun. Cash: money. */
   amount: z.number().positive().optional(),
   /** Arms: weapons to pick from. */
   weapons: z.array(id('weapon')).min(1).optional(),

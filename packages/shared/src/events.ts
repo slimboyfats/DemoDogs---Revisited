@@ -39,6 +39,8 @@ export type SimEvent =
   | { t: 'break'; prop: number; x: number; y: number; vx: number; vy: number }
   | { t: 'pickup'; car: number; x: number; y: number; label: string; kind: string }
   | { t: 'fire'; car: number; weapon: string }
+  /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
+  | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }
   | { t: 'countdown'; n: number }
   | { t: 'go' }

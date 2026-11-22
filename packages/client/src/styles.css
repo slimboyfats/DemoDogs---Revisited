@@ -649,3 +649,7 @@ tr.me td {
   touch-action: none;
   cursor: crosshair;
 }
+#devPanel.hidden,
+#devTap.hidden {
+  display: none;
+}

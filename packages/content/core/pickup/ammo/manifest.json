@@ -1,0 +1,13 @@
+{
+  "id": "pickup.ammo",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ammo",
+    "description": "Rounds for the nose gun.",
+    "since": "core@0.3.0"
+  },
+  "kind": "ammo",
+  "weight": 0.3,
+  "hurtWeight": 0.2,
+  "amount": 30
+}

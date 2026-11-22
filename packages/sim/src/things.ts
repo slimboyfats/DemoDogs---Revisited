@@ -1,7 +1,7 @@
 import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { explode, light } from './damage';
+import { damage, explode, light } from './damage';
 import type { World } from './world';
 
 // ---------------------------------------------------------------- scrap bots
@@ -228,6 +228,12 @@ export function updatePickups(w: World): void {
       } else if (got.kind === 'nitro') {
         c.nitro = 1;
         label = 'BOOST REFILL';
+      } else if (got.kind === 'ammo') {
+        c.rounds += got.amount ?? 30;
+        label = `AMMO +${got.amount ?? 30}`;
+      } else if (got.kind === 'cash') {
+        c.cash += got.amount ?? 100;
+        label = `+${got.amount ?? 100} CASH`;
       } else {
         const wpn = w.content.weapon.get(w.rng.pick(got.weapons ?? []))!;
         c.weapon = wpn;
@@ -260,6 +266,44 @@ export function fire(w: World, c: Car): void {
   else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;
+}
+
+/**
+ * The gun fires by itself when a rival is in the sights: the nearest running car within the gun's
+ * range and a narrow cone off the nose. Rounds are few, so none are spent on an empty road. Most
+ * rounds strike; a hit is a small blow where the round lands.
+ */
+export function shoot(w: World, c: Car): void {
+  const g = c.gun;
+  c.gunCd -= DT;
+  if (!g || c.rounds <= 0 || c.gunCd > 0) return;
+  const range = g.range ?? 110;
+  const aim = g.aim ?? 0.12;
+  let best: Car | null = null;
+  let bd = range;
+  for (const o of w.cars) {
+    if (o === c || o.wrecked || o.invuln > 0 || o.z > 10) continue;
+    const d = Math.hypot(o.x - c.x, o.y - c.y);
+    if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
+      bd = d;
+      best = o;
+    }
+  }
+  if (!best) return;
+  c.rounds--;
+  c.gunCd = g.cooldown;
+  const cs = Math.cos(c.h);
+  const sn = Math.sin(c.h);
+  const x = c.x + cs * (c.def.body.halfLength + 1);
+  const y = c.y + sn * (c.def.body.halfLength + 1);
+  const hit = w.rng.next() < 0.8;
+  // a hit lands on the near side of the target, a miss flies on past it
+  const off = w.rng.range(-3, 3);
+  const reach = hit ? bd - 5 : range;
+  const tx = c.x + cs * reach - sn * off;
+  const ty = c.y + sn * reach + cs * off;
+  w.emit({ t: 'shot', car: c.index, x, y, tx, ty, hit: hit ? best.index : -1 });
+  if (hit) damage(w, best, g.damage ?? 1.5, c, tx, ty);
 }
 
 export function updateRockets(w: World): void {

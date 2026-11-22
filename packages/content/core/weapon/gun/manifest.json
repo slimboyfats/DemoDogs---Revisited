@@ -1,0 +1,17 @@
+{
+  "id": "weapon.gun",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Nose gun",
+    "description": "Fitted to every car. Fires by itself at a car in the sights; rounds are few.",
+    "since": "core@0.3.0"
+  },
+  "kind": "gun",
+  "label": "GUN",
+  "ammo": 50,
+  "power": 0.1,
+  "cooldown": 0.12,
+  "damage": 0.8,
+  "range": 110,
+  "aim": 0.12
+}

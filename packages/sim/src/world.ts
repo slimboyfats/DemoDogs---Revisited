@@ -6,6 +6,7 @@ import {
   type ModeManifest,
   type SimEvent,
   type VenueManifest,
+  type WeaponManifest,
 } from '@demodogs/shared';
 import type { Content } from './content';
 import type {
@@ -33,6 +34,7 @@ import {
   updateMines,
   updatePickups,
   updateProps,
+  shoot,
   updateRockets,
 } from './things';
 import { standings, trackIndex } from './race';
@@ -102,6 +104,8 @@ export class World {
   readonly road: number;
   readonly knockout: boolean;
   readonly sandbox: boolean;
+  /** The gun every car carries: the pack's gun, if it has one. */
+  readonly gun: WeaponManifest | null;
   private readonly lapsOpt: number | undefined;
   readonly cars: Car[] = [];
   readonly bots: Bot[] = [];
@@ -139,6 +143,10 @@ export class World {
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
     this.sandbox = opts.sandbox ?? false;
+    this.gun =
+      [...C.weapon.values()]
+        .filter((d) => d.kind === 'gun')
+        .sort((a, b) => (a.id < b.id ? -1 : 1))[0] ?? null;
     if (this.sandbox) this.phase = 'race';
     this.lapsOpt = opts.laps;
     if (venue.track) {
@@ -344,6 +352,7 @@ export class World {
         c.bounce = c.isPlayer && c.throttle > 0 ? this.rng.range(0, 0.4) : 0;
       }
       if (ctl.fire) fire(this, c);
+      if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
     for (let i = 0; i < this.cars.length; i++)
       for (let j = i + 1; j < this.cars.length; j++)

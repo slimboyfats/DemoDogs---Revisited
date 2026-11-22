@@ -512,11 +512,25 @@ export class Effects {
           for (let i = 0; i < 8; i++) this.spark(e.x, e.y, 6, 30);
           if (e.car === w.player.index) {
             this.text(e.x, e.y, e.label, '#a6fbff');
-            if (e.kind === 'repair') S.repair();
+            if (e.kind === 'repair' || e.kind === 'cash') S.repair();
             else if (e.kind === 'nitro') S.nitro();
             else S.pickup();
           }
           break;
+        case 'shot': {
+          // a tracer down the line of fire, a flash at the muzzle, sparks where it lands
+          const dx = e.tx - e.x;
+          const dy = e.ty - e.y;
+          const d = Math.hypot(dx, dy) || 1;
+          const v = 620;
+          this.emit('spark', e.x, e.y, 4.5, (dx / d) * v, (dy / d) * v, 8, d / v, 1, 0xfff0a0);
+          this.flashes.push({ x: e.x, y: e.y, r: 16, life: 0.06, max: 0.06, rgb: 0xffd070 });
+          if (e.hit >= 0) for (let i = 0; i < 3; i++) this.spark(e.tx, e.ty, 4, 40);
+          else this.puff(e.tx, e.ty, 0.5, 'dust');
+          const vol = this.vol(e.x, e.y);
+          if (vol > 0) S.gun(vol);
+          break;
+        }
         case 'fire': {
           const c = w.cars[e.car]!;
           const wpn = w.content.weapon.get(e.weapon);

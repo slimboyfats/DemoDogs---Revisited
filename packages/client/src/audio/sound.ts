@@ -178,6 +178,12 @@ export class Sound {
     this.tone(300, 0.3, 0.12, 'sawtooth', 0.3);
   }
 
+  /** One round from a gun: a short crack. */
+  gun(v = 1): void {
+    this.noise(0.05, 1900, 0.8, 0.16 * v, 'bandpass');
+    this.tone(210, 0.04, 0.05 * v, 'square', 0.5);
+  }
+
   drop(): void {
     this.tone(160, 0.12, 0.2, 'square', 0.6);
   }

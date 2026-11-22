@@ -10,7 +10,9 @@
   "car.wolfhound",
   "mode.derby",
   "mode.race",
+  "pickup.ammo",
   "pickup.arms",
+  "pickup.cash",
   "pickup.nitro",
   "pickup.repair",
   "prop.barrel",
@@ -28,6 +30,7 @@
   "venue.kennel-loop",
   "venue.scrapyard-run",
   "venue.the-pit",
+  "weapon.gun",
   "weapon.mine",
   "weapon.rocket"
 ]

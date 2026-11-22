@@ -130,6 +130,8 @@ export class Hud {
       'ARMOR',
     );
     bar(pad + 72 * u, P.nitro, '#4fb8ff', 'BOOST');
+    if (P.gun)
+      text(`AMMO ${P.rounds}`, left, pad + 90 * u, small, P.rounds > 0 ? '#fff' : '#ff7a6a');
 
     const m = this.mini;
     if (m) {

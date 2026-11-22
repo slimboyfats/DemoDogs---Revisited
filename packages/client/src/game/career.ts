@@ -323,6 +323,8 @@ export interface Outcome {
   /** Rivals the player wrecked, and whether none was left running. */
   wrecks: number;
   cleared: boolean;
+  /** Money picked up off the track. It is kept wherever the car finished, unless it was wrecked. */
+  cash?: number;
 }
 
 export interface Payout {
@@ -370,6 +372,7 @@ export function settle(k: Career, race: RaceId, o: Outcome): { career: Career; p
       else if (rng.next() < 0.3) d.points += 1;
     }
   }
+  if (!o.wrecked && (o.cash ?? 0) > 0) lines.push({ label: 'PICKED UP', cash: o.cash! });
   const gross = lines.reduce((s, l) => s + l.cash, 0);
   const cut = Math.min(k.debt, Math.round(gross * SHARK_CUT));
   if (cut > 0) lines.push({ label: 'LOAN SHARK', cash: -cut });
@@ -417,6 +420,7 @@ export function readOutcome(w: World): Outcome {
     damage: P.hp0 - P.hp,
     wrecks: P.wrecks,
     cleared: rivals.length > 0 && rivals.every((c) => c.wrecked),
+    cash: P.cash,
   };
 }
 

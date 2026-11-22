@@ -36,6 +36,8 @@ export interface Setup {
   fuel?: number;
   /** A weapon already loaded at the start. */
   weapon?: { id: string; ammo: number };
+  /** Rounds for the gun at the start, instead of the gun's own load. */
+  rounds?: number;
   /** A fixed driving skill for an AI driver, instead of one drawn from the AI's range. */
   skill?: number;
 }
@@ -100,6 +102,12 @@ export interface Car {
   smashed: number;
   weapon: WeaponManifest | null;
   ammo: number;
+  /** The gun every car carries, the rounds left in it, and seconds until it can fire again. */
+  gun: WeaponManifest | null;
+  rounds: number;
+  gunCd: number;
+  /** Money picked up off the track this race. */
+  cash: number;
   invuln: number;
   fireCd: number;
   hitCd: number;
