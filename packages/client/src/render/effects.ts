@@ -12,6 +12,7 @@ import {
   shards,
   stepVoxel,
   type Burst,
+  landing,
   stepHoming,
   type Homing,
   type Voxel,
@@ -110,6 +111,8 @@ export class Effects {
   readonly voxels: Voxel[] = [];
   /** Blocks flying back to rebuild something that fell (a flyover span). */
   readonly homing: Homing[] = [];
+  /** Scenery growing back from the bottom up as its blocks land: seconds in, and how long it takes. */
+  readonly rising = new Map<StaticProp, { t: number; dur: number }>();
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
@@ -857,13 +860,16 @@ export class Effects {
         case 'mend': {
           // it flies back together off the rubble, bottom layers first, and stands when they land
           const s = w.statics[e.prop]!;
-          const chips = sample(this.chipsOf(this.art.prop(s.def.id)), 320, Math.random);
+          const chips = sample(this.chipsOf(this.art.prop(s.def.id)), 700, Math.random);
+          this.rising.set(s, { t: 0, dur: e.in });
           const cs = Math.cos(s.rot);
           const sn = Math.sin(s.rot);
           const lift = s.lift ?? 0;
           let top = 1;
           for (const c of chips) top = Math.max(top, c.z);
           for (const c of chips) {
+            // each block lands just as the layer it belongs to grows back
+            const [wait, land] = landing(c.z / top, e.in);
             const x1 = s.x + c.x * cs - c.y * sn;
             const y1 = s.y + c.x * sn + c.y * cs;
             const a = rand(0, TAU);
@@ -882,8 +888,8 @@ export class Effects {
               rgb: c.rgb,
               s: c.s,
               t: 0,
-              wait: (c.z / top) * e.in * 0.45 + rand(0, 0.15),
-              dur: e.in,
+              wait: Math.max(0, wait - rand(0, 0.25)),
+              dur: land,
             });
           }
           for (let i = 0; i < 6; i++) this.puff(s.x + rand(-8, 8), s.y + rand(-8, 8), 1, 'dust');
@@ -891,6 +897,7 @@ export class Effects {
         }
         case 'stand': {
           const s = w.statics[e.prop]!;
+          this.rising.delete(s);
           for (let i = 0; i < 8; i++) this.spark(s.x, s.y, (s.lift ?? 0) + 2, 60);
           break;
         }
@@ -1201,6 +1208,7 @@ export class Effects {
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   afterStep(): void {
     const w = this.w;
+    for (const r of this.rising.values()) r.t += DT;
     for (let i = this.homing.length - 1; i >= 0; i--)
       if (stepHoming(this.homing[i]!, DT)) {
         this.homing[i] = this.homing[this.homing.length - 1]!;

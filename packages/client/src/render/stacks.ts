@@ -3,6 +3,7 @@ import type { Art } from './art';
 import type { Effects } from './effects';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
+import { rebuilt } from './voxels';
 
 const MINE_OFF = { minelit: 'black' };
 
@@ -43,6 +44,8 @@ export function queueStacks(
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
   for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
+  // fallen scenery growing back, layer by layer as its blocks land
+  for (const [s, r] of fx.rising) if (s.down) queueRising(R, art, s, rebuilt(r.t, r.dur));
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -114,6 +117,17 @@ function queueStatic(
     const o = wind * k * k * 1.8;
     R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
   }
+}
+
+/** The bottom share `f` of a fallen piece's layers, where it stands. */
+function queueRising(R: StackSink, art: Art, s: StaticProp, f: number): void {
+  const strip = art.prop(s.def.id);
+  const lift = s.lift ?? 0;
+  const n = Math.floor(strip.n * f);
+  if (n <= 0 || !R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
+  R.group(s.y);
+  const from = Math.max(0, Math.ceil(-lift * strip.res));
+  for (let i = from; i < n; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot);
 }
 
 /** How far the wind has a tree over, for its phase `seed`. */

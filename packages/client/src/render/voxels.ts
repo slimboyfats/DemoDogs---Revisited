@@ -183,6 +183,26 @@ export interface Homing {
   dur: number;
 }
 
+/** Seconds a block of something being rebuilt is in the air, at most. */
+const FLIGHT = 0.75;
+
+/**
+ * Something being rebuilt over `dur` seconds grows back from the bottom up: how much of its height
+ * stands `t` seconds in (0 to 1). Its blocks are in the air for the first FLIGHT seconds before the
+ * first layer is in place, then the rest go up steadily, each landing as its layer appears.
+ */
+export function rebuilt(t: number, dur: number): number {
+  const fly = Math.min(FLIGHT, dur * 0.4);
+  return Math.min(1, Math.max(0, (t - fly) / Math.max(0.01, dur - fly)));
+}
+
+/** When (seconds in) the layer a share `f` of the way up lands, and when its blocks take off. */
+export function landing(f: number, dur: number): [number, number] {
+  const fly = Math.min(FLIGHT, dur * 0.4);
+  const at = fly + f * (dur - fly);
+  return [at - fly, at];
+}
+
 /** Move a homing block on by dt; true once it has arrived. */
 export function stepHoming(h: Homing, dt: number): boolean {
   h.t += dt;

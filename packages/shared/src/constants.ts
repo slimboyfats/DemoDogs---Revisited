@@ -27,4 +27,4 @@ export const FIELD_SIZE = 6;
 export const DECK_SURFACE = 4;
 
 /** Seconds a rebuilding prop takes to fly back together before it stands again. */
-export const REBUILD_TIME = 1.6;
+export const REBUILD_TIME = 2.4;

@@ -6,6 +6,8 @@ import {
   shards,
   stepVoxel,
   stepHoming,
+  rebuilt,
+  landing,
   type Homing,
   launchTogether,
   type Burst,
@@ -129,5 +131,17 @@ describe('stepHoming', () => {
     expect(done).toBe(true);
     expect([h.x, h.y, h.z]).toEqual([10, 5, 20]);
     expect(top).toBeGreaterThan(20);
+  });
+});
+
+describe('rebuilt', () => {
+  it('grows from nothing to whole, each layer standing just as its blocks land', () => {
+    expect(rebuilt(0, 2.4)).toBe(0);
+    expect(rebuilt(2.4, 2.4)).toBe(1);
+    for (const f of [0, 0.3, 0.7, 1]) {
+      const [off, land] = landing(f, 2.4);
+      expect(off).toBeLessThan(land);
+      expect(rebuilt(land, 2.4)).toBeCloseTo(f, 6);
+    }
   });
 });
