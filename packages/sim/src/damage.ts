@@ -2,6 +2,8 @@ import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shar
 import type { Car, LooseProp, StaticProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
+import { settleFloors, topple } from './downtown';
+import { stand } from './scenery';
 import type { World } from './world';
 
 /** Damage a car at (px, py), credited to `by`. Scaled by the mode and the car's armour. */
@@ -489,6 +491,7 @@ export function batter(
   s.hp -= d;
   if (s.hp > 0) {
     w.emit({ t: 'chip', prop: s.index, x, y, amount: d, by });
+    settleFloors(w, s, x, y);
     return false;
   }
   fall(w, s, x, y);
@@ -500,6 +503,8 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   if (s.down) return;
   s.down = true;
   s.hp = 0;
+  if (s.def.topple)
+    topple(w, s, x, y, (d, px, py, r) => stand(w, d, px, py, r, w.rng.range(0, 10)));
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
   if (s.def.blast) {

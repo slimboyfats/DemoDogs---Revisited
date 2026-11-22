@@ -165,6 +165,50 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     items: z.array(ScatterItem).min(1),
     clear: z.number(),
   }),
+  /**
+   * Tower blocks beside the road along it: a grid of `column` props `cols` by `rows`, `step` art
+   * px apart, leaned towards the road (so a block that comes down falls across it). The first
+   * row, nearest the road, is `front` if given, and then it alone holds the block up: when half
+   * of it is down the whole block topples. Without a `front` every column holds it up.
+   */
+  z.strictObject({
+    rule: z.literal('towers'),
+    count: z.number().int().positive(),
+    column: z.array(id('prop')).min(1),
+    front: id('prop').optional(),
+    cols: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    rows: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    step: z.number().positive(),
+    clear: z.number(),
+    along: z.number().min(0),
+  }),
+  /**
+   * A raised road over the track at each of `at` (fractions of the way round): `pillar` props
+   * either side of the road, holding up `deck` props across it, all one structure. Cars pass
+   * under the deck; when the pillars go, it comes down on the road.
+   */
+  z.strictObject({
+    rule: z.literal('overpass'),
+    at: z.array(unit).min(1),
+    pillar: id('prop'),
+    deck: id('prop'),
+    step: z.number().positive(),
+    /** How far past the road's edge the pillars stand. */
+    out: z.number().min(0),
+    /** Lanes of deck side by side, along the road. */
+    width: z.number().int().min(1).default(2),
+  }),
+  /**
+   * Things along both kerbs: every `every` samples, a pick of `items` at `offset` art px past
+   * the road's edge, turned to run with the road. Lampposts, parked cars, bins.
+   */
+  z.strictObject({
+    rule: z.literal('kerb'),
+    every: z.number().int().positive(),
+    offset: z.number(),
+    chance: unit.default(1),
+    items: z.array(ScatterItem).min(1),
+  }),
 ]);
 export type SceneryRule = z.infer<typeof SceneryRuleSchema>;
 
@@ -339,6 +383,26 @@ export const PropSchema = z.strictObject({
   launch: z.number().min(0).default(0.25),
   /** Points for the car that breaks it. */
   points: z.number().int().min(0).default(0),
+  /**
+   * Static props: its height is this many floors. As it takes damage it loses them from the top,
+   * one at a time, and the client draws only the floors it has left.
+   */
+  storeys: z.number().int().min(2).max(24).optional(),
+  /**
+   * Static props: when it is brought down with floors still standing it falls over, the way the
+   * rule that put it up leans it (or where it stands), and lays `rubble` props along where it
+   * lands, `step` art px apart, as far as it was tall times `spread`. Cars it lands on are hurt.
+   */
+  topple: z
+    .strictObject({
+      rubble: id('prop'),
+      /** How tall one floor is, art px. */
+      floor: z.number().positive().default(4),
+      step: z.number().positive().default(7),
+      spread: z.number().positive().default(1),
+      crush: z.number().min(0).default(30),
+    })
+    .optional(),
 });
 export type PropManifest = z.infer<typeof PropSchema>;
 

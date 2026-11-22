@@ -1,0 +1,16 @@
+{
+  "id": "prop.shopfront",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Shopfront",
+    "description": "The street front of a block: a shop window under a striped awning, two floors of flats above. The glass goes first.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5.5,
+  "made": "material.concrete",
+  "integrity": 110,
+  "hardness": 1.1,
+  "storeys": 3,
+  "topple": { "rubble": "prop.rubble", "floor": 4, "step": 6, "spread": 2.4, "crush": 20 }
+}

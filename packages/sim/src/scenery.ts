@@ -1,6 +1,7 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
+import { buildDowntown } from './downtown';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -29,6 +30,7 @@ export function stand(
   };
   if (def.integrity !== undefined) s.hp = def.integrity;
   if (def.crown) s.leaves = 1;
+  if (def.storeys) s.storeys = def.storeys;
   w.statics.push(s);
   return s;
 }
@@ -80,6 +82,7 @@ function apply(
   const T = w.track;
   const half = w.road / 2;
   const O = w.oval;
+  if (buildDowntown(w, rng, rule, add)) return;
   switch (rule.rule) {
     case 'bend-wall': {
       if (!T || !w.grid) return;

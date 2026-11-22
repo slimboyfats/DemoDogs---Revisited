@@ -1,0 +1,14 @@
+{
+  "id": "prop.rubble",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rubble",
+    "description": "Broken concrete, steel and glass where a building came down. A fast car ploughs through it in a cloud of grit; a slow one is stopped.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4,
+  "hardness": 0.45,
+  "made": "material.concrete",
+  "integrity": 7
+}
