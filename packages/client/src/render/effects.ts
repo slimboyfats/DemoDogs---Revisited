@@ -12,6 +12,8 @@ import {
   shards,
   stepVoxel,
   type Burst,
+  stepHoming,
+  type Homing,
   type Voxel,
 } from './voxels';
 import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
@@ -106,6 +108,8 @@ export class Effects {
   readonly flashes: Flash[] = [];
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
+  /** Blocks flying back to rebuild something that fell (a flyover span). */
+  readonly homing: Homing[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
@@ -850,6 +854,46 @@ export class Effects {
           if (e.by === 'impact') for (let i = 0; i < 3; i++) this.puff(e.x, e.y, 2, 'dust');
           break;
         }
+        case 'mend': {
+          // it flies back together off the rubble, bottom layers first, and stands when they land
+          const s = w.statics[e.prop]!;
+          const chips = sample(this.chipsOf(this.art.prop(s.def.id)), 320, Math.random);
+          const cs = Math.cos(s.rot);
+          const sn = Math.sin(s.rot);
+          const lift = s.lift ?? 0;
+          let top = 1;
+          for (const c of chips) top = Math.max(top, c.z);
+          for (const c of chips) {
+            const x1 = s.x + c.x * cs - c.y * sn;
+            const y1 = s.y + c.x * sn + c.y * cs;
+            const a = rand(0, TAU);
+            const d = rand(2, s.def.radius + 12);
+            this.homing.push({
+              x0: x1 + Math.cos(a) * d,
+              y0: y1 + Math.sin(a) * d * 0.7 + lift * 0.3,
+              z0: 0,
+              x1,
+              y1,
+              z1: lift + c.z,
+              x: x1,
+              y: y1,
+              z: 0,
+              rot: s.rot + rand(-2, 2),
+              rgb: c.rgb,
+              s: c.s,
+              t: 0,
+              wait: (c.z / top) * e.in * 0.45 + rand(0, 0.15),
+              dur: e.in,
+            });
+          }
+          for (let i = 0; i < 6; i++) this.puff(s.x + rand(-8, 8), s.y + rand(-8, 8), 1, 'dust');
+          break;
+        }
+        case 'stand': {
+          const s = w.statics[e.prop]!;
+          for (let i = 0; i < 8; i++) this.spark(s.x, s.y, (s.lift ?? 0) + 2, 60);
+          break;
+        }
         case 'fall': {
           // it comes down: every voxel it still has flies apart, and rubble marks the spot
           const s = w.statics[e.prop]!;
@@ -1157,6 +1201,11 @@ export class Effects {
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   afterStep(): void {
     const w = this.w;
+    for (let i = this.homing.length - 1; i >= 0; i--)
+      if (stepHoming(this.homing[i]!, DT)) {
+        this.homing[i] = this.homing[this.homing.length - 1]!;
+        this.homing.pop();
+      }
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
     // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
     for (const p of w.props) {

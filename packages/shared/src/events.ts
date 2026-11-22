@@ -48,6 +48,10 @@ export type SimEvent =
     }
   /** That piece of scenery came down for good. */
   | { t: 'fall'; prop: number; x: number; y: number }
+  /** A fallen prop starts flying back together; it stands again `in` seconds from now. */
+  | { t: 'mend'; prop: number; in: number }
+  /** A rebuilt prop stands again. */
+  | { t: 'stand'; prop: number }
   /**
    * A tree lost `amount` of a full crown of leaves and has `left`: torn off by a blast at (x, y),
    * burnt off, or shaken loose by a ram there.

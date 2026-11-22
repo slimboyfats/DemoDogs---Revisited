@@ -5,6 +5,8 @@ import {
   sample,
   shards,
   stepVoxel,
+  stepHoming,
+  type Homing,
   launchTogether,
   type Burst,
   type Voxel,
@@ -109,5 +111,23 @@ describe('loose voxels', () => {
   it('sample keeps at most max items', () => {
     expect(sample([1, 2, 3, 4, 5], 3, mid)).toHaveLength(3);
     expect(sample([1, 2], 5, mid).sort()).toEqual([1, 2]);
+  });
+});
+
+describe('stepHoming', () => {
+  it('lifts a block off the ground and lands it exactly where it belongs, on time', () => {
+    const h: Homing = {
+      ...{ x0: 0, y0: 0, z0: 0, x1: 10, y1: 5, z1: 20, x: 0, y: 0, z: 0 },
+      ...{ rot: 1, rgb: 0, s: 1, t: 0, wait: 0.4, dur: 1.6 },
+    };
+    let done = false;
+    let top = 0;
+    for (let i = 0; i < 100 && !done; i++) {
+      done = stepHoming(h, 1 / 60);
+      top = Math.max(top, h.z);
+    }
+    expect(done).toBe(true);
+    expect([h.x, h.y, h.z]).toEqual([10, 5, 20]);
+    expect(top).toBeGreaterThan(20);
   });
 });

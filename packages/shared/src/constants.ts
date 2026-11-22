@@ -25,3 +25,6 @@ export const FIELD_SIZE = 6;
  * below the height cars ride at on it.
  */
 export const DECK_SURFACE = 4;
+
+/** Seconds a rebuilding prop takes to fly back together before it stands again. */
+export const REBUILD_TIME = 1.6;

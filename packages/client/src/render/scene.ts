@@ -151,7 +151,7 @@ export class Scene implements WorldRenderer {
     R.flush();
 
     // loose voxels (drawn over the stacks here; the pixel engine depth-tests them)
-    for (const v of fx.voxels) {
+    for (const v of [...fx.voxels, ...fx.homing.filter((h) => h.t > h.wait)]) {
       const sx = R.sx(v.x);
       const sy = R.sy(v.y, v.z);
       if (sx < 0 || sx > W || sy < 0 || sy > H) continue;

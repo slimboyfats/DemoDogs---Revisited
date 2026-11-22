@@ -1,4 +1,11 @@
-import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shared';
+import {
+  CAR_RADIUS,
+  DT,
+  GRAVITY,
+  REBUILD_TIME,
+  type CarPart,
+  type MaterialManifest,
+} from '@demodogs/shared';
 import type { Car, LooseProp, StaticProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
@@ -514,6 +521,10 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   s.hp = 0;
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
+  if (s.def.rebuild !== undefined) {
+    s.mendT = s.def.rebuild;
+    w.mending.push(s);
+  }
   if (s.lift !== undefined && s.lift > 6) drop(w, s);
   if (s.def.blast) {
     explode(w, s.x, s.y, s.def.blast, null);
@@ -529,6 +540,33 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
     }
   if (gone * 2 < walls) return;
   for (const o of w.statics) if (o.group === s.group && !o.down) fall(w, o, o.x, o.y);
+}
+
+/**
+ * Fallen props that are built again: the last REBUILD_TIME of the wait they fly back together
+ * (a 'mend' event for the client to show), then stand, whole. A solid one waits while a car is
+ * where it would stand.
+ */
+export function updateMending(w: World): void {
+  for (let i = w.mending.length - 1; i >= 0; i--) {
+    const s = w.mending[i]!;
+    s.mendT = Math.max(0, s.mendT! - DT);
+    if (!s.mending && s.mendT <= REBUILD_TIME) {
+      s.mending = true;
+      w.emit({ t: 'mend', prop: s.index, in: s.mendT });
+    }
+    if (s.mendT > 0) continue;
+    const r = s.def.radius + CAR_RADIUS + 4;
+    if (s.def.solid && w.cars.some((c) => Math.abs(c.x - s.x) < r && Math.abs(c.y - s.y) < r))
+      continue;
+    w.mending.splice(i, 1);
+    s.down = false;
+    s.mending = false;
+    delete s.mendT;
+    if (s.def.integrity !== undefined) s.hp = s.def.integrity;
+    if (s.def.crown) s.leaves = 1;
+    w.emit({ t: 'stand', prop: s.index });
+  }
 }
 
 /** Something up high comes down: it lands on the cars below it. */

@@ -324,6 +324,12 @@ export const PropSchema = z.strictObject({
       flash: z.number().min(0).max(1).default(0.15),
     })
     .optional(),
+  /**
+   * Static props that can be broken: seconds after it comes down that it is built again where it
+   * stood (a flyover span, so a race is never cut in two for good). The last `REBUILD_TIME` of
+   * that it is flying back together.
+   */
+  rebuild: z.number().positive().optional(),
   /** Sways in the wind (trees). */
   sway: z.boolean().default(false),
   /** Loose props: breaks into planks above this impact speed. */

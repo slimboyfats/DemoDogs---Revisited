@@ -9,5 +9,6 @@
   "body": "static",
   "radius": 4.5,
   "made": "material.concrete",
-  "integrity": 120
+  "integrity": 120,
+  "rebuild": 14
 }

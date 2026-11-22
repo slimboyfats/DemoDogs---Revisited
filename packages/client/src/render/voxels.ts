@@ -159,3 +159,45 @@ export function sample<T>(items: T[], max: number, rand: () => number): T[] {
   if (items.length > max) items.length = max;
   return items;
 }
+
+/**
+ * A block flying back to where it belongs in something being rebuilt: from (x0, y0, z0) on the
+ * ground up an arc to (x1, y1, z1), starting `wait` seconds in and landing at `dur`. `x, y, z`
+ * is where it is now.
+ */
+export interface Homing {
+  x0: number;
+  y0: number;
+  z0: number;
+  x1: number;
+  y1: number;
+  z1: number;
+  x: number;
+  y: number;
+  z: number;
+  rot: number;
+  rgb: number;
+  s: number;
+  t: number;
+  wait: number;
+  dur: number;
+}
+
+/** Move a homing block on by dt; true once it has arrived. */
+export function stepHoming(h: Homing, dt: number): boolean {
+  h.t += dt;
+  if (h.t >= h.dur - 1e-6) {
+    h.x = h.x1;
+    h.y = h.y1;
+    h.z = h.z1;
+    return true;
+  }
+  const u = Math.min(1, Math.max(0, (h.t - h.wait) / Math.max(0.01, h.dur - h.wait)));
+  const e = u * u * (3 - 2 * u);
+  const arc = 6 + Math.hypot(h.x1 - h.x0, h.y1 - h.y0) * 0.35;
+  h.x = h.x0 + (h.x1 - h.x0) * e;
+  h.y = h.y0 + (h.y1 - h.y0) * e;
+  h.z = h.z0 + (h.z1 - h.z0) * e + Math.sin(Math.PI * u) * arc;
+  h.rot *= 1 - e * 0.2;
+  return false;
+}

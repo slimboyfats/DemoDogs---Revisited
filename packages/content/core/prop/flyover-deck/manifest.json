@@ -10,5 +10,6 @@
   "radius": 10,
   "solid": false,
   "made": "material.concrete",
-  "integrity": 150
+  "integrity": 150,
+  "rebuild": 14
 }

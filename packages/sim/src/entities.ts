@@ -156,6 +156,9 @@ export interface StaticProp {
   hp?: number;
   /** It has come down: it is no longer in the way and no longer drawn. */
   down?: boolean;
+  /** Down, and to be built again (def.rebuild): seconds until it stands, and if it is on its way. */
+  mendT?: number;
+  mending?: boolean;
   /** The building it is a piece of, and whether it helps hold that building up. */
   group?: number;
   bears?: boolean;

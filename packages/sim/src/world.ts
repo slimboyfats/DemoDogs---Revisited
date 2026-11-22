@@ -30,7 +30,7 @@ import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn, updateEmbers } from './damage';
+import { respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -128,6 +128,8 @@ export class World {
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
   readonly blazes: Blaze[] = [];
+  /** Fallen scenery waiting to be built again. */
+  readonly mending: StaticProp[] = [];
   /** Pits blasts have dug in the ground. */
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
@@ -454,6 +456,7 @@ export class World {
     updateRockets(this);
     updateMines(this);
     updateEmbers(this);
+    if (this.mending.length) updateMending(this);
 
     if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
