@@ -1,7 +1,7 @@
 import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { damage, explode, light } from './damage';
+import { airburst, damage, explode, launch, light } from './damage';
 import type { World } from './world';
 
 // ---------------------------------------------------------------- scrap bots
@@ -148,10 +148,24 @@ export function updateProps(w: World): void {
     if (p.fuse > 0) {
       p.fuse -= DT;
       if (p.fuse <= 0) {
-        p.alive = false;
-        explode(w, p.x, p.y, p.def.blast ?? 1, p.owner >= 0 ? w.cars[p.owner]! : null);
-        continue;
+        if (p.def.rocket) launch(w, p);
+        else {
+          p.alive = false;
+          explode(w, p.x, p.y, p.def.blast ?? 1, p.owner >= 0 ? w.cars[p.owner]! : null);
+          continue;
+        }
       }
+    }
+    if (p.flying) {
+      // a burst drum climbs on its own fire, and blows apart at the top or on whatever it hits
+      p.x += p.vx * DT;
+      p.y += p.vy * DT;
+      p.rot += p.spin * DT;
+      p.vz -= GRAVITY * 0.55 * DT;
+      p.z += p.vz * DT;
+      const k = w.keepInside(p.x, p.y, p.def.radius);
+      if (p.vz <= 0 || p.z <= 0 || k[0] !== p.x || k[1] !== p.y) airburst(w, p);
+      continue;
     }
     p.x += p.vx * DT;
     p.y += p.vy * DT;

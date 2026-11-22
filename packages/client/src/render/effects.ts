@@ -204,8 +204,9 @@ export class Effects {
    * burn down through the fire ramp, firework stars, a ring of dust along the ground, and a patch
    * of fire left burning that feeds a smoke column.
    */
-  fireball(x: number, y: number, power: number): void {
+  fireball(x: number, y: number, power: number, z = 0): void {
     const k = Math.sqrt(power);
+    const high = z > 12;
     for (let i = 0; i < 30 * power; i++) {
       const a = rand(0, TAU);
       const up = rand(0, 1);
@@ -214,10 +215,11 @@ export class Effects {
         'flame',
         x + Math.cos(a) * rand(0, 3),
         y + Math.sin(a) * rand(0, 3),
-        rand(1, 6),
+        z + rand(1, 6),
         Math.cos(a) * v,
         Math.sin(a) * v,
-        up * 130 * k,
+        // in the air the ball is round: half of it is thrown downward
+        (high ? up * 2 - 1 : up) * 130 * k,
         rand(0.35, 0.85),
         rand(4, 8) * k,
       );
@@ -229,22 +231,24 @@ export class Effects {
         'glitter',
         x,
         y,
-        rand(2, 6),
+        z + rand(2, 6),
         Math.cos(a) * v,
         Math.sin(a) * v,
-        rand(60, 260),
+        rand(high ? -80 : 60, 260),
         rand(0.5, 1.1),
         1,
         Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
       );
     }
+    for (let i = 0; i < 8 * power; i++)
+      this.plume(x + rand(-6, 6), y + rand(-6, 6), z + rand(4, 14), rand(5, 8));
+    // a burst high in the air raises no dust and leaves no fire on the ground under it
+    if (high) return;
     for (let i = 0; i < 22; i++) {
       const a = (i / 22) * TAU + rand(-0.1, 0.1);
       const v = rand(90, 130) * k;
       this.emit('dust', x, y, 1, Math.cos(a) * v, Math.sin(a) * v, 4, rand(0.5, 0.9), 4, 0x9a8a70);
     }
-    for (let i = 0; i < 8 * power; i++)
-      this.plume(x + rand(-6, 6), y + rand(-6, 6), rand(4, 14), rand(5, 8));
     this.fires.push({ x, y, r: 7 * k, life: 1.1 * k, max: 1.1 * k });
   }
 
@@ -452,6 +456,35 @@ export class Effects {
           if (this.near(x, y, 160)) this.shake = Math.max(this.shake, 9 * power * v);
           break;
         }
+        case 'launch': {
+          for (let i = 0; i < 10; i++) this.spark(e.x, e.y, 3, 90);
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.whoosh(v);
+          break;
+        }
+        case 'airburst': {
+          const { x, y, z, power } = e;
+          this.fireball(x, y, power, z);
+          this.flashes.push({ x, y, r: 90 * power + 30, life: 0.5, max: 0.5, rgb: 0xffb050 });
+          const v = this.vol(x, y);
+          if (v > 0) S.boom(v * 0.8);
+          if (this.near(x, y, 160)) this.shake = Math.max(this.shake, 6 * power * v);
+          break;
+        }
+        case 'pop': {
+          for (let i = 0; i < 7; i++) this.spark(e.x, e.y, 2, 60);
+          for (let i = 0; i < 4; i++) this.flame(e.x, e.y, rand(1, 3), rand(2.5, 4));
+          this.scorch(e.x, e.y, 5);
+          this.flashes.push({ x: e.x, y: e.y, r: 22, life: 0.18, max: 0.18, rgb: 0xffc060 });
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.pop(v);
+          break;
+        }
+        case 'blaze':
+          // a pool of burning fuel: it burns for as long as the sim says it does
+          this.fires.push({ x: e.x, y: e.y, r: e.r, life: e.life, max: e.life * 0.6 });
+          this.scorch(e.x, e.y, e.r + 3);
+          break;
         case 'smash': {
           const b = w.bots[e.bot]!;
           const A = this.art.bot(b.def.id, b.paint);
@@ -668,6 +701,44 @@ export class Effects {
         }
       }
     });
+    // a burst drum climbs on a jet of fire and leaves a column of smoke under it
+    for (const p of w.props) {
+      if (!p.alive || !p.flying) continue;
+      for (let n = 0; n < 3; n++)
+        this.flame(
+          p.x + rand(-1.5, 1.5),
+          p.y + rand(-1.5, 1.5),
+          p.z - 2,
+          rand(3, 5.5),
+          0,
+          0,
+          -rand(30, 80),
+        );
+      this.emit('plume', p.x, p.y, p.z - 3, rand(-4, 4), rand(-4, 4), 4, rand(0.8, 1.4), 3.5, HAZE);
+      if (Math.random() < 0.5) this.spark(p.x, p.y, p.z, 30);
+    }
+    // burning bits falling out of a burst: stars glitter, fuel burns and smokes on its way down
+    for (const e of w.embers) {
+      if (e.kind === 'star') {
+        this.emit(
+          'glitter',
+          e.x,
+          e.y,
+          e.z,
+          rand(-6, 6),
+          rand(-6, 6),
+          rand(-10, 10),
+          rand(0.15, 0.35),
+          1,
+          Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
+        );
+        if (Math.random() < 0.35) this.flame(e.x, e.y, e.z, rand(1.5, 2.5), 0, 0, 0);
+      } else {
+        this.flame(e.x, e.y, e.z, rand(2.5, 4), 0, 0, 0);
+        if (Math.random() < 0.4)
+          this.emit('plume', e.x, e.y, e.z, 0, 0, 6, rand(0.5, 0.9), 2.5, SOOT);
+      }
+    }
     // a rocket rides a tail of fire and leaves a thin smoke trail
     for (const r of w.rockets) {
       const bx = r.x - Math.cos(r.h) * 5;

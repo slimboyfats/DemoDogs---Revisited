@@ -157,6 +157,31 @@ export interface LooseProp {
   /** Seconds until it explodes, once lit; 0 when not lit. */
   fuse: number;
   owner: number;
+  /** A burst fuel drum on its way up; it blows apart at the top of its climb. */
+  flying?: boolean;
+}
+
+/** A burning bit thrown out of a burst: a star (pops where it lands) or a glob of fuel. */
+export interface Ember {
+  kind: 'star' | 'glob';
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  owner: number;
+}
+
+/** A pool of fire on the ground: it burns cars that stand in it and sets off fuel drums. */
+export interface Blaze {
+  x: number;
+  y: number;
+  r: number;
+  /** Seconds left, and seconds until it next burns what is in it. */
+  t: number;
+  bite: number;
+  owner: number;
 }
 
 export interface Rocket {

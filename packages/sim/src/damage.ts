@@ -1,4 +1,4 @@
-import { GRAVITY, type CarPart } from '@demodogs/shared';
+import { DT, GRAVITY, type CarPart } from '@demodogs/shared';
 import type { Car, LooseProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
@@ -68,6 +68,8 @@ export function wreck(w: World, c: Car, by: Car | null): void {
   c.ammo = 0;
   w.emit({ t: 'wreck', car: c.index, by: by ? by.index : -1 });
   explode(w, c.x, c.y, 0.5, null);
+  // the fuel tank goes too: burning fuel and sparks rain down around the wreck
+  scatter(w, c.x, c.y, 5, 3, 2, by ? by.index : -1, c.vx * 0.4, c.vy * 0.4);
   if (by && by !== c) {
     by.wrecks++;
     by.score += 500;
@@ -107,7 +109,7 @@ export function respawn(w: World, c: Car): void {
 
 /** Light a prop's fuse (barrels). */
 export function light(p: LooseProp, owner: number, fuse: number): void {
-  if (p.fuse > 0 || !p.alive) return;
+  if (p.fuse > 0 || !p.alive || p.flying) return;
   p.fuse = fuse;
   p.owner = owner;
 }
@@ -181,4 +183,112 @@ export function explode(w: World, x: number, y: number, power: number, owner: Ca
     p.vz = Math.max(p.vz, (170 * k * GRAVITY) / 400);
     p.spin += w.rng.range(-10, 10);
   }
+}
+
+/** Throw burning stars and globs of fuel out from a point in the air. */
+export function scatter(
+  w: World,
+  x: number,
+  y: number,
+  z: number,
+  stars: number,
+  globs: number,
+  owner: number,
+  vx = 0,
+  vy = 0,
+): void {
+  for (let i = 0; i < stars + globs; i++) {
+    const star = i < stars;
+    const a = w.rng.range(0, Math.PI * 2);
+    const v = star ? w.rng.range(35, 95) : w.rng.range(20, 60);
+    w.embers.push({
+      kind: star ? 'star' : 'glob',
+      x,
+      y,
+      z,
+      vx: vx + Math.cos(a) * v,
+      vy: vy + Math.sin(a) * v,
+      vz: w.rng.range(40, star ? 130 : 90),
+      owner,
+    });
+  }
+}
+
+/** A fuel drum that has been broken open: a fireball where it stood, and the drum shoots up. */
+export function launch(w: World, p: LooseProp): void {
+  const R = p.def.rocket!;
+  const owner = p.owner >= 0 ? w.cars[p.owner]! : null;
+  p.flying = true;
+  p.fuse = 0;
+  explode(w, p.x, p.y, (p.def.blast ?? 1) * 0.6, owner);
+  p.z = Math.max(p.z, 1);
+  p.vz = R.up;
+  p.vx = w.rng.range(-35, 35);
+  p.vy = w.rng.range(-35, 35);
+  p.spin = w.rng.range(-9, 9);
+  w.emit({ t: 'launch', prop: p.index, x: p.x, y: p.y });
+}
+
+/** The flying drum blows apart: stars and burning fuel rain down, and it hurts what is near. */
+export function airburst(w: World, p: LooseProp): void {
+  const R = p.def.rocket!;
+  p.alive = false;
+  p.flying = false;
+  w.emit({ t: 'airburst', x: p.x, y: p.y, z: p.z, power: R.burst });
+  // high up it only rains fire; low down (it hit something on the way) it is a blast as well
+  if (p.z < 25) explode(w, p.x, p.y, R.burst, p.owner >= 0 ? w.cars[p.owner]! : null);
+  scatter(w, p.x, p.y, p.z, R.stars, R.globs, p.owner, p.vx, p.vy);
+}
+
+/** Burning bits in the air fall; a star pops where it lands, a glob becomes a pool of fire. */
+export function updateEmbers(w: World): void {
+  for (let i = w.embers.length - 1; i >= 0; i--) {
+    const e = w.embers[i]!;
+    const star = e.kind === 'star';
+    // stars drift down slowly, as a firework's do
+    e.vz -= GRAVITY * (star ? 0.4 : 0.9) * DT;
+    e.x += e.vx * DT;
+    e.y += e.vy * DT;
+    e.z += e.vz * DT;
+    if (star) {
+      e.vx *= 1 - 1.2 * DT;
+      e.vy *= 1 - 1.2 * DT;
+    }
+    if (e.z > 0) continue;
+    w.embers.splice(i, 1);
+    const [x, y] = w.keepInside(e.x, e.y, 2);
+    const owner = e.owner >= 0 ? w.cars[e.owner]! : null;
+    if (star) {
+      w.emit({ t: 'pop', x, y });
+      for (const c of w.cars)
+        if (Math.hypot(c.x - x, c.y - y) < 10)
+          damage(w, c, 5, owner && owner !== c ? owner : null, x, y);
+      for (const p of w.props)
+        if (p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 8)
+          light(p, e.owner, 0.15 + w.rng.next() * 0.2);
+    } else {
+      const life = w.rng.range(3.5, 5.5);
+      w.blazes.push({ x, y, r: 9, t: life, bite: 0.2, owner: e.owner });
+      w.emit({ t: 'blaze', x, y, r: 9, life });
+    }
+  }
+  for (let i = w.blazes.length - 1; i >= 0; i--) {
+    const b = w.blazes[i]!;
+    b.t -= DT;
+    if (b.t <= 0) {
+      w.blazes.splice(i, 1);
+      continue;
+    }
+    b.bite -= DT;
+    if (b.bite > 0) continue;
+    b.bite = 0.3;
+    const owner = b.owner >= 0 ? w.cars[b.owner]! : null;
+    for (const c of w.cars)
+      if (c.z < 4 && Math.hypot(c.x - b.x, c.y - b.y) < b.r + 4)
+        damage(w, c, 2.2, owner && owner !== c ? owner : null, c.x, c.y);
+    for (const p of w.props)
+      if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
+        light(p, b.owner, 0.3 + w.rng.next() * 0.5);
+  }
+  if (w.blazes.length > 40) w.blazes.splice(0, w.blazes.length - 40);
 }

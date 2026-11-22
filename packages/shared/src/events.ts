@@ -36,6 +36,14 @@ export type SimEvent =
   | { t: 'explode'; x: number; y: number; power: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }
   | { t: 'bot-spawn'; bot: number }
+  /** A fuel drum burst open and is rocketing up. */
+  | { t: 'launch'; prop: number; x: number; y: number }
+  /** Something blew apart in the air at height z. */
+  | { t: 'airburst'; x: number; y: number; z: number; power: number }
+  /** A burning star landed and popped. */
+  | { t: 'pop'; x: number; y: number }
+  /** A pool of fire started burning: radius r, for `life` seconds. */
+  | { t: 'blaze'; x: number; y: number; r: number; life: number }
   | { t: 'break'; prop: number; x: number; y: number; vx: number; vy: number }
   | { t: 'pickup'; car: number; x: number; y: number; label: string; kind: string }
   | { t: 'fire'; car: number; weapon: string }

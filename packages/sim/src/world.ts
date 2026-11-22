@@ -10,8 +10,10 @@ import {
 } from '@demodogs/shared';
 import type { Content } from './content';
 import type {
+  Blaze,
   Bot,
   Car,
+  Ember,
   Entrant,
   LooseProp,
   Mine,
@@ -25,7 +27,7 @@ import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn } from './damage';
+import { respawn, updateEmbers } from './damage';
 import {
   fire,
   makeBot,
@@ -114,6 +116,9 @@ export class World {
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
   readonly pickups: Pickup[] = [];
+  /** Burning bits in the air, and pools of fire on the ground. */
+  readonly embers: Ember[] = [];
+  readonly blazes: Blaze[] = [];
   readonly player: Car;
   /** Car indices in finishing order. */
   readonly finishers: number[] = [];
@@ -367,6 +372,7 @@ export class World {
     updatePickups(this);
     updateRockets(this);
     updateMines(this);
+    updateEmbers(this);
 
     if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
@@ -421,6 +427,7 @@ export class World {
         .num(p.y)
         .num(p.alive ? 1 : 0);
     H.num(this.rockets.length).num(this.mines.length);
+    H.num(this.embers.length).num(this.blazes.length);
     return H.hex();
   }
 

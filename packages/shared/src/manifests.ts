@@ -220,6 +220,20 @@ export const PropSchema = z.strictObject({
   /** Loose props: explodes above this impact speed, or when caught in a blast. */
   explodesAt: z.number().positive().optional(),
   blast: z.number().positive().optional(),
+  /**
+   * A drum of fuel under pressure: when it is broken open it bursts where it stands and shoots
+   * `up` (art px per second) into the air, then blows apart there with power `burst`, throwing
+   * out `stars` (burning sparks that pop where they land) and `globs` of burning fuel (each
+   * lands as a pool of fire).
+   */
+  rocket: z
+    .strictObject({
+      up: z.number().positive(),
+      burst: z.number().positive(),
+      stars: z.number().int().min(0),
+      globs: z.number().int().min(0),
+    })
+    .optional(),
   /** Loose props: how much of an impact sends it up in the air. */
   launch: z.number().min(0).default(0.25),
   /** Points for the car that breaks it. */

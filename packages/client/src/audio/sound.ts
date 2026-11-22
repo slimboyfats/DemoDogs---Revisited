@@ -184,6 +184,18 @@ export class Sound {
     this.tone(210, 0.04, 0.05 * v, 'square', 0.5);
   }
 
+  /** A fuel drum taking off: a rising rush of fire. */
+  whoosh(v = 1): void {
+    this.noise(0.7, 700, 0.6, 0.45 * v, 'bandpass');
+    this.tone(120, 0.6, 0.12 * v, 'sawtooth', 2.4);
+  }
+
+  /** A burning star landing: a small crack. */
+  pop(v = 1): void {
+    this.noise(0.12, 1400, 1, 0.22 * v);
+    this.tone(90, 0.1, 0.15 * v, 'sine', 0.5);
+  }
+
   drop(): void {
     this.tone(160, 0.12, 0.2, 'square', 0.6);
   }
