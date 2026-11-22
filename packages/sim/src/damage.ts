@@ -2,6 +2,7 @@ import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shar
 import type { Car, LooseProp, StaticProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
+import { tumble } from './rubble';
 import type { World } from './world';
 
 /** Damage a car at (px, py), credited to `by`. Scaled by the mode and the car's armour. */
@@ -502,6 +503,7 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   s.hp = 0;
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
+  tumble(w, s);
   if (s.def.blast) {
     explode(w, s.x, s.y, s.def.blast, null);
     throwOut(w, s);

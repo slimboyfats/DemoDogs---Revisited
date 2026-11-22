@@ -1,0 +1,15 @@
+{
+  "id": "material.sandstone",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sandstone",
+    "description": "Soft banded rock. A blast or a hard ram breaks it up far sooner than granite, and it does not burn.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 1.2,
+    "impact": 1.5,
+    "heat": 9
+  },
+  "colour": "#ad5f38"
+}

@@ -1,0 +1,160 @@
+{
+  "id": "venue.sunbake-canyon",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sunbake Canyon",
+    "description": "Race. A red rock canyon: stone arches over the road that come down in rockfalls, crumbling cliffs, drifts of sand, and a mining camp full of dynamite.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 7321,
+  "size": {
+    "w": 2200,
+    "h": 1400
+  },
+  "track": {
+    "road": 72,
+    "points": [
+      [320, 760],
+      [300, 420],
+      [520, 220],
+      [820, 300],
+      [960, 560],
+      [1180, 640],
+      [1380, 420],
+      [1640, 240],
+      [1900, 380],
+      [1920, 700],
+      [1700, 880],
+      [1820, 1120],
+      [1500, 1200],
+      [1220, 1020],
+      [960, 1160],
+      [660, 1180],
+      [480, 1020]
+    ]
+  },
+  "colors": {
+    "ground": "#d29a62",
+    "ground2": "#dca872",
+    "dirt": "#a86a40",
+    "outside": "#7a4026"
+  },
+  "scenery": [
+    {
+      "rule": "arch",
+      "every": 150,
+      "leg": "prop.sandstone-cliff",
+      "span": "prop.arch-span",
+      "step": 9,
+      "offset": 4
+    },
+    {
+      "rule": "patches",
+      "material": "material.sand",
+      "count": 12,
+      "r": [14, 24],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.sand",
+      "count": 26,
+      "r": [20, 40],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 70,
+      "clear": 6,
+      "along": 30,
+      "kinds": [
+        {
+          "shape": "wall",
+          "weight": 1,
+          "wall": "prop.sandstone-cliff",
+          "step": 16,
+          "long": [3, 7]
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.sandstone-cliff", "prop.rockfall"],
+      "offset": 22,
+      "minCurve": 0.25
+    },
+    {
+      "rule": "build",
+      "count": 14,
+      "clear": 16,
+      "along": 120,
+      "kinds": [
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.plank-fence",
+          "inside": [
+            "prop.dynamite-crate",
+            "prop.dynamite-crate",
+            "prop.dynamite-crate",
+            "prop.powder-keg",
+            "prop.crate",
+            "prop.water-butt"
+          ],
+          "long": [6, 8],
+          "deep": [5, 6]
+        },
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "roof": "prop.roof-tile",
+          "long": [3, 4],
+          "deep": [3, 3]
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0003,
+      "clear": 26,
+      "items": [
+        {
+          "prop": "prop.cactus",
+          "weight": 0.5
+        },
+        {
+          "prop": "prop.rockfall",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.sandstone-cliff",
+          "weight": 0.18
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.07
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 24,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.dynamite-crate",
+      "tanks": ["prop.water-butt"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

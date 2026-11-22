@@ -146,6 +146,20 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     gap: z.number().int().min(0).default(0),
   }),
   /**
+   * A stone arch over the road every `every` samples: a `leg` standing on each side, `offset`
+   * beyond the kerb, and `span` pieces `step` apart across the road between them (looks that
+   * stand high, so cars drive under). Bring down a leg and the whole arch comes down; a span
+   * piece that falls drops whatever rubble its manifest says onto the road below.
+   */
+  z.strictObject({
+    rule: z.literal('arch'),
+    every: z.number().int().positive(),
+    leg: id('prop'),
+    span: id('prop'),
+    step: z.number().positive().default(9),
+    offset: z.number().default(6),
+  }),
+  /**
    * Patches of a material the ground has from the start (mud, tar, ice): `count` of them, of a
    * radius between the two `r`, on the road, off it, or anywhere.
    */
@@ -333,6 +347,20 @@ export const PropSchema = z.strictObject({
       globs: z.number().int().min(0).default(0),
       drums: z.number().int().min(0).default(0),
       drum: id('prop').optional(),
+    })
+    .optional(),
+  /**
+   * Static props: what is left when it comes down. Up to `n` pieces of `prop` (a static), each
+   * with this `chance`, land within `spread` of a point `reach` art px from it towards the road:
+   * a cliff that crumbles drops a rockfall into the lane beside it.
+   */
+  rubble: z
+    .strictObject({
+      prop: id('prop'),
+      n: z.number().int().min(1).max(6),
+      chance: unit.default(1),
+      reach: z.number().min(0).default(0),
+      spread: z.number().min(0).default(4),
     })
     .optional(),
   /** Loose props: how much of an impact sends it up in the air. */

@@ -1,0 +1,20 @@
+{
+  "id": "prop.arch-span",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Arch span",
+    "description": "A block of a stone arch high over the road; cars drive under it. Knock out a leg and the arch comes down, dropping slabs across the road.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "solid": false,
+  "made": "material.sandstone",
+  "integrity": 60,
+  "rubble": {
+    "prop": "prop.rockfall",
+    "n": 1,
+    "chance": 0.55,
+    "spread": 3
+  }
+}
