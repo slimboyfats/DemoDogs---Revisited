@@ -156,6 +156,43 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     r: z.tuple([z.number().positive(), z.number().positive()]),
     on: z.enum(['road', 'off', 'any']).default('any'),
   }),
+  /**
+   * A river through the map, upstream end first, `width` art px across, of `material`. Nothing
+   * else the rules put up stands in it (list this rule last). Where it crosses the road a bridge
+   * goes over it, the `bridges` in turn: a flat `deck` a car drives over and a `rail` along each
+   * edge. A deck piece that comes down lets the river through. A `dam` of `wall` pieces holds a
+   * lake back `at` art px down the river; once any piece of it is down, a flood runs down the
+   * river at `flood.speed`, `flood.width` across, strikes what stands in it with `flood.force`, shoves cars along
+   * and leaves the banks `bank` (mud).
+   */
+  z.strictObject({
+    rule: z.literal('river'),
+    material: id('material'),
+    bank: id('material'),
+    width: z.number().positive(),
+    points: z.array(z.tuple([z.number(), z.number()])).min(2),
+    bridges: z.array(z.strictObject({ deck: id('prop'), rail: id('prop') })).min(1),
+    dam: z
+      .strictObject({
+        wall: id('prop'),
+        at: z.number().positive(),
+        span: z.number().positive(),
+        lake: z.number().min(1).default(3),
+      })
+      .optional(),
+    flood: z
+      .strictObject({
+        speed: z.number().positive(),
+        width: z.number().positive(),
+        /** The knock it gives everything standing in its way. */
+        force: z.number().positive().default(40),
+      })
+      .default({ speed: 120, width: 90, force: 40 }),
+    /** Props along both banks, about `every` art px apart (rocks, reeds). */
+    edge: z
+      .strictObject({ every: z.number().positive(), items: z.array(ScatterItem).min(1) })
+      .optional(),
+  }),
   /** Random props inside the oval between radii qMin and qMax (fractions of the oval). */
   z.strictObject({
     rule: z.literal('oval-scatter'),

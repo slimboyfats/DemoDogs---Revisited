@@ -1,0 +1,14 @@
+{
+  "id": "prop.rail-steel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Steel railing",
+    "description": "A length of a steel bridge's railing: posts and two rails. Keeps a car out of the river, until it doesn't.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.2,
+  "hardness": 0.9,
+  "made": "material.steel",
+  "integrity": 40
+}

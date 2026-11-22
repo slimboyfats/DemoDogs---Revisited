@@ -1,0 +1,15 @@
+{
+  "id": "prop.dam-wall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dam wall",
+    "description": "A block of the dam: thick cast concrete with a walkway on top. Breach one and the lake behind comes through.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.6,
+  "hardness": 1.2,
+  "made": "material.concrete",
+  "integrity": 95,
+  "points": 150
+}
