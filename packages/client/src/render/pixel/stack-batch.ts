@@ -1,11 +1,11 @@
-import type { Strip } from '../stack';
+import { sliceX, sliceY, type Strip } from '../stack';
 import { compile, uniforms } from './gl';
 import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
 import { STACK_FS, STACK_VS } from './stack-shaders';
 
-/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha. */
-const STRIDE = 10;
+/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res. */
+const STRIDE = 11;
 
 /** The view a frame of slices is drawn with. */
 export interface StackView {
@@ -70,6 +70,7 @@ export class StackBatch {
       [1, 1, 4],
       [2, 4, 5],
       [3, 1, 9],
+      [4, 1, 10],
     ];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
@@ -99,6 +100,7 @@ export class StackBatch {
     w: number,
     h: number,
     alpha: number,
+    res: number,
   ): void {
     if ((this.n + 1) * STRIDE > this.data.length) {
       const bigger = new Float32Array(this.data.length * 2);
@@ -117,10 +119,11 @@ export class StackBatch {
     d[o + 7] = w;
     d[o + 8] = h;
     d[o + 9] = alpha;
+    d[o + 10] = res;
     this.n++;
   }
 
-  /** Slice i of a strip, axis at (x, y), underside at height z, turned by rot. */
+  /** Slice i of a strip, axis at (x, y), underside at height z, turned by rot; thick in layers. */
   slice(
     s: Strip,
     i: number,
@@ -135,32 +138,34 @@ export class StackBatch {
     const zk = this.v.zk;
     const up = Math.round(z * zk);
     // a layer is drawn a row or two thick so stacks have no gaps between slices
-    const rows = Math.max(1, Math.ceil(zk * thick - 0.02));
+    const rows = Math.max(1, Math.ceil((zk * thick) / s.res - 0.02));
+    const u = a.x + sliceX(s, i);
+    const v = a.y + sliceY(s, i);
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, a.x + i * s.cw, a.y, s.cw, s.ch, alpha);
+      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, s.res);
   }
 
   /**
-   * One loose voxel: a 1 by 1 slice in a flat colour (0xRRGGBB), no texture. The colour rides in
-   * the texel-x slot with texel-y at -1, which the shader reads as "plain colour".
+   * One loose block: a cube `size` art pixels across in a flat colour (0xRRGGBB), no texture. The
+   * colour rides in the texel-x slot with texel-y at -1, which the shader reads as "plain colour".
    */
-  voxel(rgb: number, x: number, y: number, z: number, rot: number): void {
+  voxel(rgb: number, x: number, y: number, z: number, rot: number, size = 1): void {
     const zk = this.v.zk;
     const up = Math.round(z * zk);
-    const rows = Math.max(1, Math.ceil(zk - 0.02));
-    for (let k = 0; k < rows; k++) this.push(x, y, z + k / zk, up + k, rot, rgb, -1, 1, 1, 1);
+    const rows = Math.max(1, Math.ceil(zk * size - 0.02));
+    for (let k = 0; k < rows; k++)
+      this.push(x, y, z + k / zk, up + k, rot, rgb, -1, size, size, 1, 1);
   }
 
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
-    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i, rot, 1, alpha);
+    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / s.res, rot, 1, alpha);
   }
 
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
-      this.slice(
+      this.stack(
         s,
-        0,
         a[0]! + (b[0]! - a[0]!) * t,
         a[1]! + (b[1]! - a[1]!) * t,
         a[2]! + (b[2]! - a[2]!) * t - 0.5,

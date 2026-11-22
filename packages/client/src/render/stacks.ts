@@ -2,7 +2,7 @@ import type { Bot, Car, StaticProp, World } from '@demodogs/sim';
 import type { Art } from './art';
 import type { Effects } from './effects';
 import { pose } from './rig';
-import type { Strip } from './stack';
+import { tall, type Strip } from './stack';
 
 const MINE_OFF = { minelit: 'black' };
 
@@ -14,6 +14,7 @@ export interface StackSink {
   visible(x: number, y: number, rad: number, ht?: number): boolean;
   /** Start an object at ground depth `key` (the canvas renderer sorts by it; the GPU ignores it). */
   group(key: number): void;
+  /** One slice with its underside at height z (art px); `thick` in layers of the strip. */
   slice(
     s: Strip,
     i: number,
@@ -77,7 +78,7 @@ export function queueStacks(
 
 function queueStatic(R: StackSink, art: Art, w: World, s: StaticProp, still?: StaticHook): void {
   const strip = art.prop(s.def.id);
-  if (!R.visible(s.x, s.y, s.def.radius + 12, strip.n)) return;
+  if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip))) return;
   R.group(s.y);
   if (!s.def.sway) {
     if (!still?.(s, strip)) R.stack(strip, s.x, s.y, 0, s.rot);
@@ -89,7 +90,7 @@ function queueStatic(R: StackSink, art: Art, w: World, s: StaticProp, still?: St
   for (let i = 0; i < strip.n; i++) {
     const k = i / strip.n;
     const o = wind * k * k * 1.8;
-    R.slice(strip, i, s.x + o, s.y + o * 0.4, i, s.rot, 1);
+    R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
   }
 }
 
@@ -123,13 +124,13 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       i,
       c.x + rx * o + cs * l,
       c.y + ry * o + sn * l,
-      z + 0.6 + i + c.bounce,
+      z + 0.6 + i / body.res + c.bounce,
       c.h,
       1,
       alpha,
     );
   }
-  const a = D.body.halfLength + 0.6;
+  const a = D.body.halfLength - 0.1;
   const o = c.roll;
   const l = c.lurch;
   const bz = z + 1.4 + c.bounce;
@@ -161,7 +162,7 @@ function queueBot(R: StackSink, art: Art, fx: Effects, b: Bot): void {
   const z0 = P.pelvis[2] - 1;
   const a = P.heading + (P.hipsAngle - P.heading) * 0.6;
   R.stack(A.body, P.x, P.y, z0, a);
-  R.stack(A.aerial, P.x - Math.cos(a) * 1.4, P.y - Math.sin(a) * 1.4, z0 + A.body.n, a);
+  R.stack(A.aerial, P.x - Math.cos(a) * 1.4, P.y - Math.sin(a) * 1.4, z0 + tall(A.body), a);
 }
 
 /** A soft shadow on the ground: centre, radii (art px) along and across `rot`, opacity. */
@@ -184,7 +185,7 @@ export function queueShadows(
   for (const s of w.statics)
     if (s.def.sway && R.visible(s.x, s.y, 14)) {
       const st = art.prop(s.def.id);
-      shadow(s.x + 3, s.y + 2, st.cw * 0.45, st.ch * 0.4, 0, 0.22);
+      shadow(s.x + 3, s.y + 2, (st.cw / st.res) * 0.45, (st.ch / st.res) * 0.4, 0, 0.22);
     }
   for (const c of w.cars)
     if (R.visible(c.x, c.y, 20))

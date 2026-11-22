@@ -1,51 +1,58 @@
 import type { LookModule } from '@demodogs/shared';
-import { CAR_CELL, rr } from '../../../src/shapes';
+import { carBody } from '../../../src/carshape';
+import { CAR_CELL } from '../../../src/shapes';
 
 /** A wedge: a nose that starts at the road and climbs to a glass canopy, wide haunches behind. */
+const body = carBody({
+  a: 12.5,
+  b: 6,
+  r: 2.6,
+  taper: [1.3, 0.2],
+  deck: [
+    [-12.5, 4.3],
+    [-11, 4.8],
+    [-4.5, 4.7],
+    [1, 4.0],
+    [12.5, 2.1],
+  ],
+  round: 1.8,
+  arches: [
+    { x: 7.8, r: 3.2 },
+    { x: -7.6, r: 3.5 },
+  ],
+  cabin: { x0: -5.4, x1: 4.6, roof: 6.0, inset: 1.5, lean: 0.9, rakeF: 4.2, rakeR: 2.6 },
+  head: [2.6, 4.8, 1.5, 2.1],
+  tail: [0, 5.2, 3.4, 3.9],
+  gaps: [-5.8],
+  extra: (x, y, z, top) => {
+    const ay = Math.abs(y);
+    // air intakes in the flanks, ahead of the rear wheels
+    if (x > -4.6 && x < -2.2 && ay > 5.0 && z > 2.3 && z < 3.8) return 'grille';
+    // louvres over the engine
+    if (x < -6.2 && x > -10.6 && ay < 2.6 && z > top - 0.35 && z <= top)
+      return (((x * 1.6) | 0) & 1) === 0 ? 'grille' : undefined;
+    return undefined;
+  },
+  paint: (x, y, _z, skin) => (skin < 0.5 && Math.abs(y) < 0.5 && x > 4.8 ? 'trim' : undefined),
+});
+
 const look: LookModule = {
   id: 'car.wolfhound',
   look: {
     kind: 'car',
-    body: {
-      ...CAR_CELL,
-      fn: (x, y, z) => {
-        const a = 12.5;
-        const b = 6;
-        const ay = Math.abs(y);
-        if (z === 0) return rr(x, y, a - 1.5, b - 1.2, 1) ? 'under' : null;
-        // the wedge: each layer up starts further back from the nose
-        const nose = a - Math.max(0, z - 1) * 2.6;
-        if (z <= 3) {
-          if (x > nose) return null;
-          // waisted in the middle, wide at the wheels
-          const waist = Math.abs(x) < 3 ? 0.8 : 0;
-          if (!rr(x, y, a, b - waist, 2.6)) return null;
-          if (z === 1 && x > a - 1.6 && ay > 2.6 && ay < 4.8) return 'light';
-          if (z === 3 && x < -a + 1.2) return 'tail';
-          if (z === 1 && x < -a + 1.2) return 'bumper';
-          if (z === 3 && ay < 0.7 && x < -5) return 'trim';
-          return 'paint';
-        }
-        if (z <= 5 && x > -4.5 && x < 4 - (z - 4) * 1.6 && rr(x, y, 4.6, 3.7 - (z - 4) * 0.5, 1.6))
-          return z === 5 && Math.abs(x + 0.8) < 1.6 ? 'paint' : 'glass';
-        return null;
-      },
-    },
+    body: { ...CAR_CELL, smooth: true, fn: body },
     // an engine cover with an intake scoop
     top: {
       w: 7,
       h: 8,
       layers: 2,
+      smooth: true,
       fn: (x, y, z) =>
-        z === 0
-          ? Math.abs(x) < 3.2 && Math.abs(y) < 3.4
-            ? Math.abs(y) < 1.2
-              ? 'under'
-              : 'bumper'
-            : null
-          : Math.abs(x) < 2 && Math.abs(y) < 2
-            ? 'trim'
-            : null,
+        Math.abs(x) < 2.6 - z * 0.5 && Math.abs(y) < 2.2 - z * 0.4
+          ? x > 1.7 - z * 0.5
+            ? 'grille'
+            : 'paint2'
+          : null,
     },
   },
 };

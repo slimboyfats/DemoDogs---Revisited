@@ -5,7 +5,7 @@ import type { Input } from '../input/input';
 import type { Art } from '../render/art';
 import { Effects } from '../render/effects';
 import { makeGround, type Ground } from '../render/ground';
-import type { Camera } from '../render/scene';
+import { PITCH, type Camera } from '../render/scene';
 
 export interface SessionOptions {
   content: Content;
@@ -35,6 +35,8 @@ export class Session {
   readonly ground: Ground;
   readonly cam: Camera;
   private acc = 0;
+  private viewW = 360;
+  private viewH = 260;
   private overSeen = false;
 
   constructor(private readonly o: SessionOptions) {
@@ -54,6 +56,12 @@ export class Session {
     this.cam = { x: P.x, y: P.y, shake: 0 };
   }
 
+  /** How much of the world the screen shows, in art pixels across and down the ground. */
+  setView(w: number, h: number): void {
+    this.viewW = w;
+    this.viewH = h / Math.sin(PITCH);
+  }
+
   /** One fixed tick: read input, step the world, play its events, move the camera. */
   step(): void {
     const w = this.world;
@@ -63,9 +71,12 @@ export class Session {
     this.fx.afterStep();
     if (!P.ai) this.o.sound.engineSet(Math.abs(P.vf), P.throttle, P.boosting);
     // the camera looks ahead of the car, the way it is going
+    // never so far that the car leaves the middle third of the picture
     const lead = 0.42;
-    const tx = P.x + Math.max(-110, Math.min(110, P.vx * lead));
-    const ty = P.y + Math.max(-80, Math.min(80, P.vy * lead));
+    const mx = this.viewW * 0.3;
+    const my = this.viewH * 0.3;
+    const tx = P.x + Math.max(-mx, Math.min(mx, P.vx * lead));
+    const ty = P.y + Math.max(-my, Math.min(my, P.vy * lead));
     const k = Math.min(1, 4 * DT);
     this.cam.x += (tx - this.cam.x) * k;
     this.cam.y += (ty - this.cam.y) * k;

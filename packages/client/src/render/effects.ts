@@ -5,7 +5,15 @@ import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
 import { char, clone, dent, shatter, voxelsOf, type Chip } from './strips';
-import { launch, sample, stepVoxel, type Burst, type Voxel } from './voxels';
+import {
+  launch,
+  launchTogether,
+  sample,
+  shards,
+  stepVoxel,
+  type Burst,
+  type Voxel,
+} from './voxels';
 import { HAZE, SOOT, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import type { Sound } from '../audio/sound';
 
@@ -311,7 +319,7 @@ export class Effects {
       switch (e.t) {
         case 'hit': {
           const c = w.cars[e.car]!;
-          const chips = dent(
+          const broke = dent(
             this.bodies[e.car]!,
             e.lx * 0.9,
             e.ly * 0.85,
@@ -321,13 +329,10 @@ export class Effects {
             1,
           );
           this.changed.add(this.bodies[e.car]!);
-          // the pixels knocked off fly away from the hit
-          this.burst(chips, 70, {
-            ...this.carBurst(c),
-            ox: e.x,
-            oy: e.y,
-            speed: 30 + e.amount * 3,
-          });
+          // what the blow knocked off flies away from the hit; what it cut loose drops in a piece
+          const from = { ...this.carBurst(c), ox: e.x, oy: e.y };
+          this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
+          this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
           if (c.isPlayer && e.amount > 6)
             this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
           break;
@@ -363,8 +368,10 @@ export class Effects {
         case 'wreck': {
           const c = w.cars[e.car]!;
           // the car bursts: about half of what is left of the body flies off, the rest is a burnt hull
-          const chips = shatter(this.bodies[e.car]!, 0.5, Math.random);
-          this.burst(chips, 320, { ...this.carBurst(c), ox: c.x, oy: c.y, speed: 110 });
+          const broke = shatter(this.bodies[e.car]!, 0.5, Math.random);
+          const from = { ...this.carBurst(c), ox: c.x, oy: c.y };
+          this.burst(broke.chips, 260, { ...from, speed: 110 });
+          this.burst(broke.loose, 80, { ...from, speed: 60 }, true);
           char(this.bodies[e.car]!);
           this.changed.add(this.bodies[e.car]!);
           const A = this.carArt(c);
@@ -523,11 +530,15 @@ export class Effects {
     return { x: c.x, y: c.y, h: c.h, z: c.z + 0.6, vx: c.vx, vy: c.vy };
   }
 
-  /** Send up to `max` of these chips flying (the rest just vanish), within the overall budget. */
-  private burst(chips: Chip[], max: number, b: Burst): void {
+  /**
+   * Send up to `max` of these chips flying (the rest just vanish), within the overall budget.
+   * `asOne` throws them all the same way, so a piece cut loose travels as a piece until it lands.
+   */
+  private burst(chips: Chip[], max: number, b: Burst, asOne = false): void {
     const room = Math.max(0, MAX_VOXELS - this.voxels.length);
-    for (const c of sample(chips, Math.min(max, room), Math.random))
-      this.voxels.push(launch(c, b, Math.random));
+    const some = sample(chips, Math.min(max, room), Math.random);
+    if (asOne) this.voxels.push(...launchTogether(some, b, Math.random));
+    else for (const c of some) this.voxels.push(launch(c, b, Math.random));
   }
 
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
@@ -552,15 +563,28 @@ export class Effects {
       }
       this.propAlive[p.index] = p.alive;
     }
-    // loose voxels fly, bounce and settle: one that stops is painted into the ground for good
+    // loose blocks fly and bounce. One that lands hard breaks into smaller ones while there is
+    // room for them; one that stops is painted into the ground for good.
     const g = this.ground.g;
     for (let i = this.voxels.length - 1; i >= 0; i--) {
       const v = this.voxels[i]!;
-      if (!stepVoxel(v, DT)) continue;
+      const fate = stepVoxel(v, DT);
+      if (fate === 'fly') continue;
+      if (fate === 'split') {
+        if (this.voxels.length + 8 > MAX_VOXELS) continue;
+        const bits = shards(v, Math.random);
+        this.voxels[i] = bits[0]!;
+        for (let k = 1; k < bits.length; k++) this.voxels.push(bits[k]!);
+        continue;
+      }
       const [x, y] = w.keepInside(v.x, v.y, 1);
+      // a crumb leaves a faint speck, a block a mark its own size
+      const d = Math.max(1, Math.round(v.s));
+      g.globalAlpha = Math.min(1, 0.35 + v.s * 0.65);
       g.fillStyle = `rgb(${((v.rgb >> 16) & 255) * 0.8},${((v.rgb >> 8) & 255) * 0.8},${(v.rgb & 255) * 0.8})`;
-      g.fillRect(Math.floor(x), Math.floor(y), 1, 1);
-      markGround(this.ground, x, y, 1);
+      g.fillRect(Math.floor(x - d / 2 + 0.5), Math.floor(y - d / 2 + 0.5), d, d);
+      g.globalAlpha = 1;
+      markGround(this.ground, x, y, d);
       this.voxels[i] = this.voxels[this.voxels.length - 1]!;
       this.voxels.pop();
     }

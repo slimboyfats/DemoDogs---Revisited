@@ -1,7 +1,7 @@
 import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
 import { PALETTE, kit } from '@demodogs/content';
 import type { Strip } from './stack';
-import { build, tones } from './strips';
+import { build, hexRgb, tones } from './strips';
 
 export interface CarArt {
   body: Strip;
@@ -19,6 +19,14 @@ export interface BotArt {
 }
 
 const TRIM = '#f1ede2';
+const scale = (hex: string, k: number): string =>
+  `#${hexRgb(hex)
+    .map((v) =>
+      Math.round(v * k)
+        .toString(16)
+        .padStart(2, '0'),
+    )
+    .join('')}`;
 
 /**
  * Every strip the game draws, built from the content looks on first use and kept. Cars and bots
@@ -66,7 +74,15 @@ export class Art {
     let a = this.cars.get(key);
     if (!a) {
       const L = this.look(id, 'car');
-      const m = { ...PALETTE, paint: tones(paint), trim: tones(TRIM) };
+      const m = {
+        ...PALETTE,
+        paint: tones(paint),
+        trim: tones(TRIM),
+        // panel gaps and arch lips: the paint, much darker
+        gap: tones(scale(paint, 0.42)),
+        // a second, deeper shade of the paint for two-tone bodies
+        paint2: tones(scale(paint, 0.68)),
+      };
       a = {
         body: build(L.body, m),
         top: build(L.top, m),

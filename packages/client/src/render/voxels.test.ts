@@ -1,32 +1,41 @@
 import { describe, expect, it } from 'vitest';
-import { launch, sample, stepVoxel, type Burst, type Voxel } from './voxels';
+import {
+  CRUMB,
+  launch,
+  sample,
+  shards,
+  stepVoxel,
+  launchTogether,
+  type Burst,
+  type Voxel,
+} from './voxels';
 
 const mid = () => 0.5;
 const burst: Burst = { x: 100, y: 50, h: 0, z: 1, ox: 100, oy: 50, speed: 80, vx: 0, vy: 0 };
 
 describe('loose voxels', () => {
   it('fly away from the blast point', () => {
-    const v = launch({ x: 4, y: 0, z: 3, rgb: 0x112233 }, burst, mid);
+    const v = launch({ x: 4, y: 0, z: 3, rgb: 0x112233, s: 1 }, burst, mid);
     expect(v.x).toBe(104);
     expect(v.z).toBe(4);
     expect(v.vx).toBeGreaterThan(0);
     expect(v.vz).toBeGreaterThan(0);
     expect(v.rgb).toBe(0x112233);
-    const back = launch({ x: -4, y: 0, z: 0, rgb: 0 }, burst, mid);
+    const back = launch({ x: -4, y: 0, z: 0, rgb: 0, s: 1 }, burst, mid);
     expect(back.vx).toBeLessThan(0);
   });
 
   it('turn with the thing they came off', () => {
-    const v = launch({ x: 4, y: 0, z: 0, rgb: 0 }, { ...burst, h: Math.PI / 2 }, mid);
+    const v = launch({ x: 4, y: 0, z: 0, rgb: 0, s: 1 }, { ...burst, h: Math.PI / 2 }, mid);
     expect(v.x).toBeCloseTo(100);
     expect(v.y).toBeCloseTo(54);
   });
 
   it('fall, bounce and come to rest on the ground', () => {
-    const v: Voxel = launch({ x: 2, y: 1, z: 5, rgb: 0 }, burst, mid);
+    const v: Voxel = launch({ x: 2, y: 1, z: 5, rgb: 0, s: 1 }, burst, mid);
     let ticks = 0;
     let top = 0;
-    while (!stepVoxel(v, 1 / 60) && ticks < 1000) {
+    while (stepVoxel(v, 1 / 60) !== 'rest' && ticks < 1000) {
       top = Math.max(top, v.z);
       ticks++;
     }
@@ -36,10 +45,65 @@ describe('loose voxels', () => {
   });
 
   it('are laid to rest after a while even if they never stop', () => {
-    const v: Voxel = { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, rot: 0, spin: 0, rgb: 0, age: 5.99 };
+    const v: Voxel = {
+      x: 0,
+      y: 0,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      rot: 0,
+      spin: 0,
+      rgb: 0,
+      s: 1,
+      age: 5.99,
+    };
     v.vx = 1000;
     v.z = 900;
-    expect(stepVoxel(v, 1 / 60)).toBe(true);
+    expect(stepVoxel(v, 1 / 60)).toBe('rest');
+  });
+
+  it('a block that lands hard breaks into 2, 4 or 8 of half its size, down to a crumb', () => {
+    const fall = (vz: number, size: number): Voxel => ({
+      x: 5,
+      y: 5,
+      z: 0.1,
+      vx: 10,
+      vy: 0,
+      vz,
+      rot: 0,
+      spin: 0,
+      rgb: 0x808080,
+      s: size,
+      age: 0,
+    });
+    const hard = fall(-400, 2);
+    expect(stepVoxel(hard, 1 / 60)).toBe('split');
+    const bits = shards(hard, mid);
+    expect(bits).toHaveLength(8);
+    expect(bits.every((b) => b.s === 1 && b.vz > 0)).toBe(true);
+    const soft = fall(-100, 2);
+    expect(stepVoxel(soft, 1 / 60)).toBe('split');
+    expect(shards(soft, mid)).toHaveLength(2);
+    expect(stepVoxel(fall(-20, 2), 1 / 60)).not.toBe('split');
+    // a crumb is as small as it gets
+    expect(stepVoxel(fall(-400, CRUMB), 1 / 60)).not.toBe('split');
+    const small = fall(-400, CRUMB * 1.5);
+    stepVoxel(small, 1 / 60);
+    expect(shards(small, mid).every((b) => b.s === CRUMB)).toBe(true);
+  });
+
+  it('chips thrown together leave the same way', () => {
+    const [a, b] = launchTogether(
+      [
+        { x: 4, y: 0, z: 3, rgb: 0, s: 1 },
+        { x: -4, y: 2, z: 1, rgb: 0, s: 1 },
+      ],
+      burst,
+      Math.random,
+    );
+    expect([b!.vx, b!.vy, b!.vz]).toEqual([a!.vx, a!.vy, a!.vz]);
+    expect(b!.x).not.toBe(a!.x);
   });
 
   it('sample keeps at most max items', () => {

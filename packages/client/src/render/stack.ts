@@ -15,17 +15,34 @@
 //
 // World coordinates: x and y lie on the ground, z is height, all in art pixels.
 
+/**
+ * A stack's slices in one image. A slice is `cw` by `ch` texels and there are `n` of them, bottom
+ * first, laid out `cols` to a row. `res` is texels per art pixel, in all three directions: a strip
+ * at res 3 has slices three times finer and three times as many of them for the same size.
+ */
 export interface Strip {
   img: HTMLCanvasElement;
   cw: number;
   ch: number;
   n: number;
+  res: number;
+  cols: number;
 }
+
+/** How tall a strip stands, in art pixels. */
+export const tall = (s: Strip): number => s.n / s.res;
+/** The texel a slice starts at in its strip's image. */
+export const sliceX = (s: Strip, i: number): number => (i % s.cols) * s.cw;
+export const sliceY = (s: Strip, i: number): number => Math.floor(i / s.cols) * s.ch;
 
 interface Item {
   img: CanvasImageSource;
   cw: number;
   ch: number;
+  /** Source texel of the slice, and texels per art pixel. */
+  u: number;
+  v: number;
+  res: number;
   /** Slice index, or -1 for a pre-drawn image. */
   i: number;
   x: number;
@@ -102,6 +119,9 @@ export class StackRenderer {
         img: this.ctx.canvas,
         cw: 0,
         ch: 0,
+        u: 0,
+        v: 0,
+        res: 1,
         i: 0,
         x: 0,
         y: 0,
@@ -115,7 +135,10 @@ export class StackRenderer {
     return this.pool[this.count++]!;
   }
 
-  /** Queue slice i of a strip, axis at (x, y), underside at height z, turned by rot. */
+  /**
+   * Queue slice i of a strip, axis at (x, y), underside at height z, turned by rot. `thick` is in
+   * layers of this strip.
+   */
   slice(
     s: Strip,
     i: number,
@@ -129,12 +152,15 @@ export class StackRenderer {
     const sx = this.ox + Math.round((x - this.camX) * this.scale);
     const sy = this.oy + Math.round((y - this.camY) * this.scale * this.ys);
     const up = Math.round(z * this.zk);
-    const rows = Math.max(1, Math.ceil(this.zk * thick - 0.02));
+    const rows = Math.max(1, Math.ceil((this.zk * thick) / s.res - 0.02));
     for (let k = 0; k < rows; k++) {
       const it = this.take();
       it.img = s.img;
       it.cw = s.cw;
       it.ch = s.ch;
+      it.u = sliceX(s, i);
+      it.v = sliceY(s, i);
+      it.res = s.res;
       it.i = i;
       it.x = sx;
       it.y = sy - up - k;
@@ -149,16 +175,15 @@ export class StackRenderer {
 
   /** Queue a whole stack standing at (x, y, z). */
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
-    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i, rot, 1, alpha);
+    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / s.res, rot, 1, alpha);
   }
 
   /** One single-slice strip repeated n times along a bone from a to b. */
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     for (let i = 0; i < n; i++) {
       const t = (i + 0.5) / n;
-      this.slice(
+      this.stack(
         s,
-        0,
         a[0]! + (b[0]! - a[0]!) * t,
         a[1]! + (b[1]! - a[1]!) * t,
         a[2]! + (b[2]! - a[2]!) * t - 0.5,
@@ -207,16 +232,17 @@ export class StackRenderer {
       const s = Math.sin(it.rot);
       // translate(x, y) * scale(1, ys) * rotate(rot), in one call
       ctx.setTransform(c, this.ys * s, -s, this.ys * c, it.x, it.y);
+      const k = sc / it.res;
       ctx.drawImage(
         it.img,
-        it.i * it.cw,
-        0,
+        it.u,
+        it.v,
         it.cw,
         it.ch,
-        (-it.cw * sc) / 2,
-        (-it.ch * sc) / 2,
-        it.cw * sc,
-        it.ch * sc,
+        (-it.cw * k) / 2,
+        (-it.ch * k) / 2,
+        it.cw * k,
+        it.ch * k,
       );
     }
     ctx.setTransform(1, 0, 0, 1, 0, 0);

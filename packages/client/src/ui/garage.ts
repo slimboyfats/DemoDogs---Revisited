@@ -47,8 +47,8 @@ export class Garage {
     for (const w of car.wheels)
       for (const sg of [-1, 1])
         R.stack(wheel, cs * w[0] - sn * w[1] * sg, sn * w[0] + cs * w[1] * sg, 0, h);
-    for (let i = 0; i < A.body.n; i++) R.slice(A.body, i, 0, 0, 0.6 + i, h, 1);
-    const a = car.body.halfLength + 0.6;
+    for (let i = 0; i < A.body.n; i++) R.slice(A.body, i, 0, 0, 0.6 + i / A.body.res, h);
+    const a = car.body.halfLength - 0.1;
     R.stack(A.bumper, cs * a, sn * a, 1.4, h);
     R.stack(A.bumper, -cs * a, -sn * a, 1.4, h);
     R.stack(A.top, cs * car.top.x, sn * car.top.x, 0.6 + car.top.z, h);

@@ -17,6 +17,7 @@ layout(location = 0) in vec4 a_pos;   // x, y, z (art px), lift (whole device px
 layout(location = 1) in float a_rot;
 layout(location = 2) in vec4 a_uv;    // slice texel x, y, width, height
 layout(location = 3) in float a_alpha;
+layout(location = 4) in float a_res;   // texels per art px
 uniform vec2 u_view;
 uniform vec2 u_origin;   // device px of the world origin on the ground (whole pixels)
 uniform float u_scale;
@@ -30,7 +31,7 @@ flat out float v_alpha;
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
-  vec2 local = (corner - 0.5) * a_uv.zw;
+  vec2 local = (corner - 0.5) * a_uv.zw / a_res;
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5) - vec2(0.0, a_pos.w);
@@ -72,7 +73,8 @@ void main() {
     c = texelFetch(u_atlas, t, 0);
     if (c.a < 0.5) discard;
   }
-  ivec2 cell = ivec2(floor(v_world.xy)) + ivec2(0, int(floor(v_world.z)));
+  // the dither and the light bands step on a grid three to the art pixel, as fine as the art
+  ivec2 cell = ivec2(floor(v_world.xy * 3.0)) + ivec2(0, int(floor(v_world.z * 3.0)));
   float b = bayer(cell);
   if (v_alpha < 1.0 && b >= v_alpha) discard;
   vec3 l = vec3(0.0);

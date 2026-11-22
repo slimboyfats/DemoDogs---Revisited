@@ -3,17 +3,27 @@ import { disc } from './shapes';
 
 /** Looks shared by many items: wheels, bumpers, pickup boxes, splinters, car chunks. */
 
-/** A wheel; `frame` (0-2) shifts the tread so it rolls. */
+/** A wheel: a tyre with tread blocks and a hub on each face; `frame` (0-2) turns it. */
 export function wheel(frame: number): Part {
   return {
     w: 6,
     h: 3,
     layers: 5,
-    fn: (x, _y, z) => {
-      const zc = z + 0.5 - 2.5;
-      if (x * x + zc * zc > 2.75 * 2.75) return null;
-      const ang = Math.atan2(zc, x) / (Math.PI * 2) + 0.5;
-      return Math.floor(ang * 10 + frame / 3) % 2 ? 'tread' : 'tire';
+    smooth: true,
+    fn: (x, y, z) => {
+      const zc = z - 2.5;
+      const r = Math.hypot(x, zc);
+      const ay = Math.abs(y);
+      // a rounded shoulder where the tread meets the sidewall
+      if (r > 2.8 - Math.max(0, ay - 0.9) * 0.9) return null;
+      const turn = Math.atan2(zc, x) / (Math.PI * 2) + 0.5 + frame / 30;
+      if (ay > 1.0 && r < 1.6) {
+        if (r < 0.5) return 'chrome';
+        // five spokes
+        return (((turn * 5) % 1) + 1) % 1 < 0.5 ? 'hub' : 'grille';
+      }
+      if (r < 2.15) return 'tire';
+      return (((turn * 10) % 1) + 1) % 1 < 0.5 ? 'tread' : 'tire';
     },
   };
 }
@@ -22,7 +32,14 @@ export const BUMPER: Part = {
   w: 3,
   h: 14,
   layers: 2,
-  fn: (x, y) => (Math.abs(y) < 5.6 && Math.abs(x) < 1 ? 'bumper' : null),
+  smooth: true,
+  fn: (x, y, z) => {
+    const ay = Math.abs(y);
+    // a slim bar with rounded ends and a rounded face, over-riders near each end
+    if (ay > 4.6 || Math.hypot(Math.max(0, ay - 4.0), x) > 0.7) return null;
+    if (Math.abs(ay - 2.9) < 0.35 && Math.abs(x) < 0.9 && z < 1.5) return 'bumper';
+    return Math.hypot(x, (z - 0.7) * 0.9) < 0.65 ? 'bumper' : null;
+  },
 };
 
 /** The glowing box every pickup sits in. */

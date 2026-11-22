@@ -102,6 +102,7 @@ let lastCareer = false;
 let W = 0;
 let H = 0;
 let DPR = 1;
+let scale = 4;
 
 function resize(): void {
   DPR = Math.min(2, devicePixelRatio || 1);
@@ -113,8 +114,13 @@ function resize(): void {
   overlay.height = H;
   const short = Math.min(W, H);
   const long = Math.max(W, H);
-  scene.setScale(Math.max(2, Math.round(Math.min(short / 180, long / 300) * 2) / 2));
-  if (session) hud.layout(session.world, DPR);
+  // close enough to see what the cars are made of: about 130 art pixels up the short side
+  scale = Math.max(2, Math.round(Math.min(short / 130, long / 230) * 2) / 2);
+  scene.setScale(scale);
+  if (session) {
+    session.setView(W / scale, H / scale);
+    hud.layout(session.world, DPR);
+  }
 }
 
 function show(id: string | null): void {
@@ -177,6 +183,7 @@ function startCareerRace(race: RaceId): void {
     player: s.player,
     knockout: true,
   });
+  session.setView(W / scale, H / scale);
   hud.layout(session.world, DPR);
   paused = false;
   setScreen('game');
@@ -200,6 +207,7 @@ function startGame(venue: string): void {
     seed,
     autopilot: params.has('autoplay'),
   });
+  session.setView(W / scale, H / scale);
   hud.layout(session.world, DPR);
   paused = false;
   setScreen('game');

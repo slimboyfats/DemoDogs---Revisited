@@ -11,10 +11,17 @@ export const RUST = {
   tail: PALETTE.rust2!,
   trim: PALETTE.rust2!,
   bumper: PALETTE.rust2!,
+  glasshi: PALETTE.under!,
+  gap: PALETTE.black!,
+  paint2: PALETTE.rust2!,
+  chrome: PALETTE.rust2!,
+  grille: PALETTE.black!,
+  seat: PALETTE.black!,
+  cone: PALETTE.rust2!,
 };
 
 const look: LookModule = {
   id: 'prop.husk',
-  look: { kind: 'prop', part: { ...CAR_CELL, fn: muttBody }, materials: RUST },
+  look: { kind: 'prop', part: { ...CAR_CELL, smooth: true, fn: muttBody }, materials: RUST },
 };
 export default look;

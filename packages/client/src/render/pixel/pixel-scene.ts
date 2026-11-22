@@ -10,6 +10,7 @@ import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { Lights } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
+import { DETAIL } from '../strips';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 
@@ -199,25 +200,27 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.gatherLights(w, fx);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
-    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 
-    // particles: mudders' pixel blobs, snapped to whole cells of the projected picture. Smoke
-    // first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
+    // particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art
+    // pixel) so smoke and fire have the same grain as what they come off. Smoke first, fire over
+    // it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
-    const cell = (v: number) => Math.floor(v) + 0.5;
+    const G = DETAIL;
+    const cell = (v: number) => Math.floor(v * G) + 0.5;
     const normal: Put = (x, y, z, d, rgb, a, shape) =>
-      this.quads.push(cell(x), cell(this.my(y, z)), d, d, rgb, a, shape);
+      this.quads.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, shape);
     const glow: Put = (x, y, z, d, rgb, a) =>
-      this.glow.push(cell(x), cell(this.my(y, z)), d, d, rgb, a, Shape.Rect);
+      this.glow.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, Shape.Rect);
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
     for (const f of fx.fx)
       if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
-    this.quads.flush(quadView, quadOrigin, S);
+    this.quads.flush(quadView, quadOrigin, S / G);
     gl.blendFunc(gl.ONE, gl.ONE);
-    this.glow.flush(quadView, quadOrigin, S);
+    this.glow.flush(quadView, quadOrigin, S / G);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
   }

@@ -1,6 +1,6 @@
 import type { Chip } from './strips';
 
-/** One loose voxel in the air: a single art pixel with a colour, tumbling. */
+/** One loose block in the air: a cube with a colour, tumbling. */
 export interface Voxel {
   x: number;
   y: number;
@@ -11,6 +11,8 @@ export interface Voxel {
   rot: number;
   spin: number;
   rgb: number;
+  /** How big it is, art px a side. */
+  s: number;
   /** Seconds it has been flying; it is laid to rest after `MAX_AGE` wherever it is. */
   age: number;
 }
@@ -20,11 +22,20 @@ const MAX_AGE = 6;
 /** Slower than this on the ground, a voxel stops and becomes part of the ground. */
 const REST_SPEED = 14;
 
+/** The smallest a block breaks down to: one texel of the art. */
+export const CRUMB = 1 / 3;
+/** A block that lands faster than this breaks up. */
+const BREAK_SPEED = 80;
+
+/** What a step did to a block: still flying, come to rest, or broken on the ground. */
+export type Fate = 'fly' | 'rest' | 'split';
+
 /**
- * Move a voxel one step: gravity, a bounce that loses most of its speed, friction on the ground.
- * Returns true when it has come to rest (the caller paints it into the ground and drops it).
+ * Move a block one step: gravity, a bounce that loses most of its speed, friction on the ground.
+ * 'rest' means it has stopped (the caller paints it into the ground and drops it); 'split' that it
+ * landed hard enough to break (the caller swaps it for its `shards`, if there is room for them).
  */
-export function stepVoxel(v: Voxel, dt: number): boolean {
+export function stepVoxel(v: Voxel, dt: number): Fate {
   v.age += dt;
   v.x += v.vx * dt;
   v.y += v.vy * dt;
@@ -32,14 +43,45 @@ export function stepVoxel(v: Voxel, dt: number): boolean {
   v.vz -= GRAVITY * dt;
   v.z += v.vz * dt;
   if (v.z <= 0) {
+    const hit = -v.vz;
     v.z = 0;
-    v.vz = v.vz < -50 ? -v.vz * 0.32 : 0;
+    v.vz = hit > 50 ? hit * 0.32 : 0;
     v.vx *= 0.6;
     v.vy *= 0.6;
     v.spin *= 0.5;
-    if (v.vz === 0 && Math.hypot(v.vx, v.vy) < REST_SPEED) return true;
+    if (hit > BREAK_SPEED && v.s > CRUMB * 1.2) return 'split';
+    if (v.vz === 0 && Math.hypot(v.vx, v.vy) < REST_SPEED) return 'rest';
   }
-  return v.age > MAX_AGE;
+  return v.age > MAX_AGE ? 'rest' : 'fly';
+}
+
+/**
+ * The pieces a block breaks into when it lands: 2, 4 or 8 of half its size (the harder it lands,
+ * the more), each a shade off its colour and thrown a little apart. Call it right after a 'split'.
+ */
+export function shards(v: Voxel, rand: () => number): Voxel[] {
+  const up = v.vz;
+  const n = up > 80 ? 8 : up > 45 ? 4 : 2;
+  const out: Voxel[] = [];
+  const kick = 20 + up * 0.5;
+  for (let i = 0; i < n; i++) {
+    const k = 0.88 + rand() * 0.24;
+    const ch = (sh: number) => Math.min(255, Math.round(((v.rgb >> sh) & 255) * k));
+    out.push({
+      x: v.x + ((i & 1) - 0.5) * v.s * 0.5,
+      y: v.y + (((i >> 1) & 1) - 0.5) * v.s * 0.5,
+      z: (i >> 2) * v.s * 0.5,
+      vx: v.vx + (rand() - 0.5) * kick,
+      vy: v.vy + (rand() - 0.5) * kick,
+      vz: up * (0.5 + rand() * 0.8),
+      rot: v.rot,
+      spin: (rand() - 0.5) * 24,
+      rgb: (ch(16) << 16) | (ch(8) << 8) | ch(0),
+      s: Math.max(CRUMB, v.s / 2),
+      age: v.age,
+    });
+  }
+  return out;
 }
 
 /** Where a burst comes from and how hard it throws. */
@@ -87,8 +129,23 @@ export function launch(c: Chip, b: Burst, rand: () => number): Voxel {
     rot: b.h,
     spin: (rand() - 0.5) * 24,
     rgb: c.rgb,
+    s: c.s,
     age: 0,
   };
+}
+
+/** Throw several chips as one piece: they all leave with the same velocity and spin. */
+export function launchTogether(chips: Chip[], b: Burst, rand: () => number): Voxel[] {
+  const out = chips.map((c) => launch(c, b, rand));
+  const lead = out[0];
+  if (lead)
+    for (const v of out) {
+      v.vx = lead.vx;
+      v.vy = lead.vy;
+      v.vz = lead.vz;
+      v.spin = 0;
+    }
+  return out;
 }
 
 /** Pick at most `max` items at random, in place (the rest are dropped). */
