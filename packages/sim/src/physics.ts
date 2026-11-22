@@ -268,7 +268,7 @@ export function collideWorld(w: World, c: Car): void {
       }
     }
   }
-  for (const s of w.statics) {
+  for (const s of w.near(c.x, c.y, 20)) {
     const r = s.def.radius;
     if (s.down || !s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16)
       continue;
@@ -284,7 +284,7 @@ export function collideWorld(w: World, c: Car): void {
       const px = s.x + (dx / d) * r;
       const py = s.y + (dy / d) * r;
       if (
-        vn > 45 &&
+        vn > 22 + 23 * s.def.hardness &&
         c.z < 6 &&
         batter(w, s, (vn - 35) * 0.5 * c.def.stats.mass, 'impact', px, py)
       ) {

@@ -1,0 +1,120 @@
+{
+  "id": "venue.splinter-ridge",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Splinter Ridge",
+    "description": "Race. A timber yard in the woods: board fences across the road, and everything burns.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 2207,
+  "size": {
+    "w": 1800,
+    "h": 1300
+  },
+  "track": {
+    "road": 70,
+    "points": [
+      [240, 640],
+      [360, 300],
+      [700, 220],
+      [900, 460],
+      [1160, 220],
+      [1540, 300],
+      [1580, 640],
+      [1300, 760],
+      [1500, 1040],
+      [1100, 1120],
+      [820, 900],
+      [560, 1100],
+      [300, 980]
+    ]
+  },
+  "colors": {
+    "ground": "#4a5e36",
+    "ground2": "#556a3e",
+    "dirt": "#6e5536",
+    "outside": "#1f2a1a"
+  },
+  "scenery": [
+    {
+      "rule": "barricade",
+      "every": 55,
+      "prop": "prop.plank-fence",
+      "step": 8,
+      "gap": 2
+    },
+    {
+      "rule": "build",
+      "count": 60,
+      "clear": 10,
+      "kinds": [
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.plank-fence",
+          "inside": ["prop.crate", "prop.crate", "prop.barrel", "prop.oil-drum"],
+          "long": [5, 9],
+          "deep": [4, 6]
+        },
+        {
+          "shape": "wall",
+          "weight": 3,
+          "wall": "prop.plank-fence",
+          "long": [4, 10]
+        },
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "window": "prop.window-wall",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        }
+      ],
+      "along": 90
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0004,
+      "clear": 30,
+      "items": [
+        {
+          "prop": "prop.pine",
+          "weight": 0.75
+        },
+        {
+          "prop": "prop.tree",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.07
+        },
+        {
+          "prop": "prop.water-tower",
+          "weight": 0.03
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 21,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 12
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

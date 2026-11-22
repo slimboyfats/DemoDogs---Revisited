@@ -144,7 +144,8 @@ export function resolveContent(src: ContentSource): Content {
         for (const p of r.props) need(v.id, 'prop', p);
       if (r.rule === 'scatter' || r.rule === 'oval-scatter')
         for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'border' || r.rule === 'oval-wall') need(v.id, 'prop', r.prop);
+      if (r.rule === 'border' || r.rule === 'oval-wall' || r.rule === 'barricade')
+        need(v.id, 'prop', r.prop);
       if (r.rule === 'build')
         for (const k of r.kinds)
           for (const p of [k.wall, k.window, k.post, k.roof, ...k.inside])

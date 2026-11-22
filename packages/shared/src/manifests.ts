@@ -115,6 +115,8 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     rule: z.literal('build'),
     count: z.number().int().positive(),
     clear: z.number(),
+    /** On a track: stand in a band this wide beside the road, squared up to it, as on a street. */
+    along: z.number().positive().optional(),
     kinds: z
       .array(
         z.strictObject({
@@ -131,6 +133,17 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
         }),
       )
       .min(1),
+  }),
+  /**
+   * A barricade right across the road every `every` samples: `prop` pieces `step` apart from
+   * edge to edge, with `gap` of them left out somewhere. Meant for pieces a car can ram through.
+   */
+  z.strictObject({
+    rule: z.literal('barricade'),
+    every: z.number().int().positive(),
+    prop: id('prop'),
+    step: z.number().positive().default(8),
+    gap: z.number().int().min(0).default(0),
   }),
   /** Random props inside the oval between radii qMin and qMax (fractions of the oval). */
   z.strictObject({

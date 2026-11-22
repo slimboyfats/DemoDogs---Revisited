@@ -169,7 +169,7 @@ export function explode(w: World, x: number, y: number, power: number, owner: Ca
       owner.smashed++;
     }
   }
-  for (const s of w.statics) {
+  for (const s of w.near(x, y, rad)) {
     if (s.down || s.hp === undefined) continue;
     const r = s.def.radius;
     if (Math.abs(s.x - x) > rad + r || Math.abs(s.y - y) > rad + r) continue;
@@ -282,7 +282,7 @@ export function updateEmbers(w: World): void {
         if (p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 8)
           light(p, e.owner, 0.15 + w.rng.next() * 0.2);
       ignite(w, x, y, 6, e.owner);
-      for (const s of w.statics)
+      for (const s of w.near(x, y, 6))
         if (!s.down && s.hp !== undefined && Math.hypot(s.x - x, s.y - y) < 6 + s.def.radius)
           batter(w, s, 6, 'blast', x, y);
     } else if (wet(w, x, y)) {
@@ -310,7 +310,7 @@ export function updateEmbers(w: World): void {
     for (const p of w.props)
       if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
         light(p, b.owner, 0.3 + w.rng.next() * 0.5);
-    for (const s of w.statics)
+    for (const s of w.near(b.x, b.y, b.r))
       if (!s.down && s.hp !== undefined && Math.hypot(s.x - b.x, s.y - b.y) < b.r + s.def.radius)
         batter(w, s, 3, 'heat', s.x, s.y);
     // fire runs on through any pool that touches this one

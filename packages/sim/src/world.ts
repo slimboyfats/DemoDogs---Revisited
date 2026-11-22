@@ -308,9 +308,43 @@ export class World {
     return [O.cx + ((x - O.cx) * lim) / q, O.cy + ((y - O.cy) * lim) / q];
   }
 
+  private readonly cells = new Map<number, StaticProp[]>();
+  private celled = 0;
+
+  /**
+   * The static props that could be within r of (x, y): those in the grid cells round it, in a
+   * fixed order. A town has thousands of pieces, and nothing should look at all of them.
+   */
+  near(x: number, y: number, r: number): StaticProp[] {
+    const S = this.statics;
+    if (S.length < this.celled) {
+      this.cells.clear();
+      this.celled = 0;
+    }
+    for (; this.celled < S.length; this.celled++) {
+      const s = S[this.celled]!;
+      const k = Math.floor(s.x / 64) * 4096 + Math.floor(s.y / 64);
+      const c = this.cells.get(k);
+      if (c) c.push(s);
+      else this.cells.set(k, [s]);
+    }
+    // 12: the widest static's radius
+    const x0 = Math.floor((x - r - 12) / 64);
+    const x1 = Math.floor((x + r + 12) / 64);
+    const y0 = Math.floor((y - r - 12) / 64);
+    const y1 = Math.floor((y + r + 12) / 64);
+    const out: StaticProp[] = [];
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cy = y0; cy <= y1; cy++) {
+        const c = this.cells.get(cx * 4096 + cy);
+        if (c) for (const s of c) out.push(s);
+      }
+    return out;
+  }
+
   /** Is there no static prop within d of (x, y)? */
   free(x: number, y: number, d: number): boolean {
-    for (const s of this.statics) {
+    for (const s of this.near(x, y, d)) {
       const r = s.def.radius;
       if (
         !s.down &&

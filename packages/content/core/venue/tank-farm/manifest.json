@@ -1,0 +1,105 @@
+{
+  "id": "venue.tank-farm",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tank Farm",
+    "description": "Derby. A fuel depot: tanks, drums and oil everywhere, concrete pens to hide in, water towers to put it out.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.derby",
+  "seed": 733,
+  "size": {
+    "w": 1160,
+    "h": 900
+  },
+  "oval": {
+    "cx": 580,
+    "cy": 450,
+    "rx": 520,
+    "ry": 390
+  },
+  "colors": {
+    "ground": "#5e5d58",
+    "ground2": "#696863",
+    "dirt": "#4c4b47",
+    "outside": "#2a2a2c"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.block",
+      "spacing": 12
+    },
+    {
+      "rule": "ring",
+      "props": ["prop.water-tower", "prop.fuel-tank"],
+      "count": 8,
+      "rx": 250,
+      "ry": 185
+    },
+    {
+      "rule": "build",
+      "count": 16,
+      "clear": 0,
+      "kinds": [
+        {
+          "wall": "prop.concrete-wall",
+          "shape": "yard",
+          "weight": 3,
+          "inside": ["prop.fuel-tank", "prop.barrel", "prop.barrel", "prop.oil-drum"],
+          "long": [5, 7],
+          "deep": [4, 5]
+        },
+        {
+          "wall": "prop.concrete-wall",
+          "shape": "wall",
+          "weight": 2,
+          "long": [3, 6]
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 10,
+      "qMin": 0.2,
+      "qMax": 0.85,
+      "clear": 14,
+      "items": [
+        {
+          "prop": "prop.fuel-tank",
+          "weight": 2
+        },
+        {
+          "prop": "prop.water-butt",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 40,
+      "qMin": 0.15,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.barrel",
+          "weight": 3
+        },
+        {
+          "prop": "prop.oil-drum",
+          "weight": 2
+        },
+        {
+          "prop": "prop.crate",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+}

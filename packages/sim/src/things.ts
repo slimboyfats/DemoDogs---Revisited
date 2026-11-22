@@ -97,7 +97,7 @@ export function updateBot(w: World, b: Bot): void {
   b.h += clamp(angDiff(want, b.h), -5 * DT, 5 * DT);
   let nx = b.x + Math.cos(b.h) * b.speed * DT;
   let ny = b.y + Math.sin(b.h) * b.speed * DT;
-  for (const s of w.statics) {
+  for (const s of w.near(nx, ny, 6)) {
     const r = s.def.radius;
     if (s.down || !s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4)
       continue;
@@ -194,7 +194,7 @@ export function updateProps(w: World): void {
       p.vx *= -0.4;
       p.vy *= -0.4;
     }
-    for (const s of w.statics) {
+    for (const s of w.near(p.x, p.y, p.def.radius)) {
       if (s.down || !s.def.solid) continue;
       const m = s.def.radius + p.def.radius;
       if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
@@ -360,9 +360,9 @@ export function updateRockets(w: World): void {
         (c) => c.index !== r.owner && c.z < 10 && Math.hypot(c.x - r.x, c.y - r.y) < 10,
       );
     if (!hit)
-      hit = w.statics.some(
-        (s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2,
-      );
+      hit = w
+        .near(r.x, r.y, 4)
+        .some((s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2);
     if (!hit)
       hit = w.props.some(
         (p) => p.alive && p.def.radius > 3 && Math.hypot(p.x - r.x, p.y - r.y) < p.def.radius + 2,

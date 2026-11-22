@@ -102,15 +102,26 @@ function apply(
         const K = rule.kinds.find((k) => (pick -= k.weight) < 0) ?? rule.kinds[0]!;
         const L = rng.int(K.long[1] - K.long[0] + 1) + K.long[0];
         const Dp = K.shape === 'wall' ? 1 : rng.int(K.deep[1] - K.deep[0] + 1) + K.deep[0];
-        const cx = 60 + rng.next() * (w.w - 120);
-        const cy = 60 + rng.next() * (w.h - 120);
-        const rot = rng.next() * TAU;
+        const st = K.step;
+        const reach = (Math.hypot(L, Dp) * st) / 2 + 6;
+        let cx = 60 + rng.next() * (w.w - 120);
+        let cy = 60 + rng.next() * (w.h - 120);
+        let rot = rng.next() * TAU;
+        if (T && rule.along !== undefined) {
+          // on a street: beside the road somewhere along it, its long side to the kerb
+          const i = rng.int(T.n);
+          const side = rng.next() < 0.5 ? -1 : 1;
+          const off = half + rule.clear + (Dp * st) / 2 + rng.next() * rule.along;
+          rot = T.a[i]! + (side > 0 ? Math.PI : 0);
+          cx = T.x[i]! - Math.sin(T.a[i]!) * side * off;
+          cy = T.y[i]! + Math.cos(T.a[i]!) * side * off;
+          if (cx < 40 + reach || cy < 40 + reach || cx > w.w - 40 - reach || cy > w.h - 40 - reach)
+            continue;
+        }
         const cs = Math.cos(rot);
         const sn = Math.sin(rot);
-        const st = K.step;
         // the ground it would stand on must be clear of the road and of everything else
-        const reach = (Math.hypot(L, Dp) * st) / 2 + 6;
-        if (w.grid && w.grid.at(cx, cy) < half + rule.clear + reach) continue;
+        if (w.grid && w.grid.at(cx, cy) < half + rule.clear + (Dp * st) / 2) continue;
         if (O && Math.hypot((cx - O.cx) / O.rx, (cy - O.cy) / O.ry) > 1 - (reach + 20) / O.rx)
           continue;
         if (!w.free(cx, cy, reach + 6)) continue;
@@ -120,6 +131,15 @@ function apply(
           const ly = (j - (Dp - 1) / 2) * st;
           return [cx + lx * cs - ly * sn, cy + lx * sn + ly * cs];
         };
+        // no corner of it may reach the road (the inside of a bend comes closer than its middle)
+        const corners: [number, number][] = [
+          at(0, 0),
+          at(L - 1, 0),
+          at(0, Dp - 1),
+          at(L - 1, Dp - 1),
+        ];
+        if (w.grid && corners.some(([x, y]) => w.grid!.at(x, y) < half + Math.max(8, rule.clear)))
+          continue;
         const piece = (id: string, i: number, j: number, r: number, bears: boolean) => {
           const s = add(id, ...at(i, j), r);
           if (s) {
@@ -155,6 +175,22 @@ function apply(
         }
         group++;
         n++;
+      }
+      return;
+    }
+    case 'barricade': {
+      if (!T) return;
+      // never on the starting grid: the first one stands half a gap down the road
+      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every) {
+        const nx = -Math.sin(T.a[i]!);
+        const ny = Math.cos(T.a[i]!);
+        const n = Math.max(1, Math.floor((half * 2) / rule.step));
+        const open = rule.gap > 0 ? rng.int(n - rule.gap + 1) : -1;
+        for (let k = 0; k < n; k++) {
+          if (open >= 0 && k >= open && k < open + rule.gap) continue;
+          const o = (k - (n - 1) / 2) * rule.step;
+          add(rule.prop, T.x[i]! + nx * o, T.y[i]! + ny * o, T.a[i]! + Math.PI / 2);
+        }
       }
       return;
     }
