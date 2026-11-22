@@ -16,6 +16,24 @@ function mulberry(seed: number): () => number {
 export interface Ground {
   cv: HTMLCanvasElement;
   g: CanvasRenderingContext2D;
+  /** The box painted since a renderer last copied the ground (x0, y0, x1, y1), or null. */
+  dirty: [number, number, number, number] | null;
+}
+
+/** Note that the box around (x, y) with half-size r was painted. */
+export function markGround(g: Ground, x: number, y: number, r: number): void {
+  const d = g.dirty;
+  const x0 = Math.floor(x - r);
+  const y0 = Math.floor(y - r);
+  const x1 = Math.ceil(x + r);
+  const y1 = Math.ceil(y + r);
+  if (!d) g.dirty = [x0, y0, x1, y1];
+  else {
+    d[0] = Math.min(d[0], x0);
+    d[1] = Math.min(d[1], y0);
+    d[2] = Math.max(d[2], x1);
+    d[3] = Math.max(d[3], y1);
+  }
 }
 
 /**
@@ -137,5 +155,5 @@ export function makeGround(w: World): Ground {
     px[i + 2] = px[i + 2]! + n;
   }
   g.putImageData(id, 0, 0);
-  return { cv, g };
+  return { cv, g, dirty: null };
 }

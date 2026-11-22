@@ -55,14 +55,21 @@ await page.waitForTimeout(600);
 await page.screenshot({ path: 'captures/menu.png' });
 if ((await page.locator('#venues button').count()) < 3) fail('menu lists fewer than 3 venues');
 
-for (const [venue, car] of [
-  ['kennel-loop', 'mutt'],
-  ['scrapyard-run', 'whippet'],
-  ['the-pit', 'bruiser'],
-]) {
-  await page.goto(`${base}?start=${venue}&car=${car}&autoplay&seed=7`);
+// the pixel engine (WebGL2) on every venue, and the canvas fallback once
+const runs = [
+  ['kennel-loop', 'mutt', 'pixel'],
+  ['scrapyard-run', 'whippet', 'pixel'],
+  ['the-pit', 'bruiser', 'pixel'],
+  ['kennel-loop', 'pug', 'canvas'],
+];
+for (const [venue, car, renderer] of runs) {
+  const extra = renderer === 'canvas' ? '&renderer=canvas' : '';
+  await page.goto(`${base}?start=${venue}&car=${car}&autoplay&seed=7${extra}`);
   await page.waitForTimeout(6500);
-  await page.screenshot({ path: `captures/${venue}.png` });
+  const got = await page.evaluate(() => window.__dd.renderer);
+  if (got !== renderer) fail(`${venue}: wanted the ${renderer} renderer, got ${got}`);
+  const name = `${venue}-${renderer}`;
+  await page.screenshot({ path: `captures/${name}.png` });
   // run the rest of the race at full speed and check it reaches the results screen
   const end = await page.evaluate(() => {
     const dd = window.__dd;
@@ -76,9 +83,9 @@ for (const [venue, car] of [
     };
   });
   if (end.phase !== 'over' || end.screen !== 'results' || end.rows < 2)
-    fail(`${venue} did not finish: ${JSON.stringify(end)}`);
+    fail(`${name} did not finish: ${JSON.stringify(end)}`);
   await page.waitForTimeout(200);
-  await page.screenshot({ path: `captures/${venue}-results.png` });
+  await page.screenshot({ path: `captures/${name}-results.png` });
 }
 
 if (errors.length) fail(`page errors:\n  ${errors.join('\n  ')}`);

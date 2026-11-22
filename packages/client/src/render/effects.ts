@@ -2,7 +2,7 @@ import { DT, type SimEvent } from '@demodogs/shared';
 import type { Car, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
-import type { Ground } from './ground';
+import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
 import { char, clone, dent } from './strips';
 import type { Sound } from '../audio/sound';
@@ -36,6 +36,14 @@ export interface Debris {
   rot: number;
   spin: number;
   life: number;
+}
+export interface Flash {
+  x: number;
+  y: number;
+  r: number;
+  life: number;
+  max: number;
+  rgb: number;
 }
 export interface FloatText {
   x: number;
@@ -73,6 +81,10 @@ export class Effects {
   readonly debris: Debris[] = [];
   readonly texts: FloatText[] = [];
   readonly bodies: Strip[] = [];
+  /** Short bursts of light (explosions, muzzle flashes) for renderers that light the world. */
+  readonly flashes: Flash[] = [];
+  /** Strips redrawn since a renderer last looked (dents, charring, a fresh body). */
+  readonly changed = new Set<Strip>();
   readonly walkers: Walker[] = [];
   shake = 0;
   msg = '';
@@ -156,12 +168,18 @@ export class Effects {
     this.debris.push({ strip, x, y, z, vx, vy, vz, rot, spin: rand(-14, 14), life });
   }
 
-  private paintGround(fn: (g: CanvasRenderingContext2D) => void): void {
+  private paintGround(
+    x: number,
+    y: number,
+    r: number,
+    fn: (g: CanvasRenderingContext2D) => void,
+  ): void {
     fn(this.ground.g);
+    markGround(this.ground, x, y, r);
   }
 
   private splat(x: number, y: number): void {
-    this.paintGround((g) => {
+    this.paintGround(x, y, 10, (g) => {
       g.fillStyle = 'rgba(16,14,20,0.55)';
       for (let i = 0; i < 9; i++) {
         g.beginPath();
@@ -176,7 +194,7 @@ export class Effects {
   }
 
   private scorch(x: number, y: number, r: number): void {
-    this.paintGround((g) => {
+    this.paintGround(x, y, r + 1, (g) => {
       const gr = g.createRadialGradient(x, y, 0, x, y, r);
       gr.addColorStop(0, 'rgba(10,8,6,0.6)');
       gr.addColorStop(1, 'rgba(10,8,6,0)');
@@ -216,6 +234,7 @@ export class Effects {
             Math.random,
             1,
           );
+          this.changed.add(this.bodies[e.car]!);
           if (c.isPlayer && e.amount > 6)
             this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
           break;
@@ -251,6 +270,7 @@ export class Effects {
         case 'wreck': {
           const c = w.cars[e.car]!;
           char(this.bodies[e.car]!);
+          this.changed.add(this.bodies[e.car]!);
           const A = this.carArt(c);
           for (let i = 0; i < 4; i++)
             this.fling(
@@ -272,7 +292,12 @@ export class Effects {
         }
         case 'respawn': {
           const c = w.cars[e.car]!;
-          this.bodies[e.car] = clone(this.carArt(c).body);
+          // paint the fresh body back into the same strip, so renderers keep their copy of it
+          const body = this.bodies[e.car]!;
+          const g = body.img.getContext('2d')!;
+          g.clearRect(0, 0, body.img.width, body.img.height);
+          g.drawImage(this.carArt(c).body.img, 0, 0);
+          this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
           break;
         }
@@ -287,6 +312,7 @@ export class Effects {
             this.puff(x, y, rand(2, 10), 'smoke', rand(-25, 25), rand(-25, 25));
           for (let i = 0; i < 16; i++) this.spark(x, y, 4, 120);
           this.scorch(x, y, 16 * power);
+          this.flashes.push({ x, y, r: 70 * power + 20, life: 0.45, max: 0.45, rgb: 0xffa040 });
           const v = this.vol(x, y);
           if (v > 0) S.boom(v);
           if (this.near(x, y, 160)) this.shake = Math.max(this.shake, 9 * power * v);
@@ -421,12 +447,10 @@ export class Effects {
           const wx = -7;
           const wy = 5.4 * sgn;
           this.ground.g.fillStyle = c.offroad ? 'rgba(60,40,20,0.3)' : 'rgba(18,16,14,0.3)';
-          this.ground.g.fillRect(
-            Math.round(c.x + cs * wx - sn * wy) - 1,
-            Math.round(c.y + sn * wx + cs * wy) - 1,
-            2,
-            2,
-          );
+          const mx = Math.round(c.x + cs * wx - sn * wy);
+          const my = Math.round(c.y + sn * wx + cs * wy);
+          this.ground.g.fillRect(mx - 1, my - 1, 2, 2);
+          markGround(this.ground, mx, my, 1);
         }
       if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
@@ -490,6 +514,11 @@ export class Effects {
       t.life -= DT;
       t.z += 14 * DT;
       if (t.life <= 0) this.texts.splice(i, 1);
+    }
+    for (let i = this.flashes.length - 1; i >= 0; i--) {
+      const f = this.flashes[i]!;
+      f.life -= DT;
+      if (f.life <= 0) this.flashes.splice(i, 1);
     }
     this.msgT -= DT;
     this.shake *= Math.exp(-8 * DT);

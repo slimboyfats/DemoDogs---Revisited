@@ -59,3 +59,23 @@ Every item is a folder found by `import.meta.glob`, so adding a folder registers
 | `ui/`               | garage turntable and results                                          |
 | `audio/sound.ts`    | Web Audio synth                                                       |
 | `main.ts`           | screens, menus and the frame loop                                     |
+
+## Renderers
+
+`main.ts` picks one renderer per page load. Both draw the same `queueStacks` list (`render/stacks.ts`),
+and words and the HUD go on a flat overlay canvas above either one.
+
+- **Pixel engine (default):** `render/pixel/`. Its core comes from mudders' pixel engine: `gl.ts`, `batch.ts`
+  (`QuadBatch`), the quad shaders and `Lights` are copied from `mudders/packages/client/src/render/pixel/`.
+  On top of that, these sprite-stack addons make it a fake-3D engine:
+  - `stack-atlas.ts` packs every slice strip into one texture. A redrawn strip (a dent, charring) is uploaded again
+    in place.
+  - `stack-batch.ts` and `stack-shaders.ts` draw every slice as one instanced quad in a single draw call. Each
+    corner gets its true depth along the view direction (`y·cos(pitch) + z·sin(pitch)`), so the depth buffer
+    replaces sorting. Slices are lit by the frame's point lights in dithered bands, and fade with screen-door
+    dither.
+  - `ground-layer.ts` draws the ground canvas as a texture and uploads only the box painted that frame.
+  - `pixel-scene.ts` puts it together: ground, shadows (`QuadBatch` discs), stacks, then particles with
+    mudders' stipple and solid pixel-blob shapes.
+- **Canvas (fallback):** `render/scene.ts` and `render/stack.ts`. This is 2D canvas drawing with a per-frame sort
+  and baked static props. It is used when WebGL2 is missing or with `?renderer=canvas`.

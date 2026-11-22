@@ -6,6 +6,8 @@ import { Session } from './game/session';
 import { Input } from './input/input';
 import { Art } from './render/art';
 import { Hud } from './render/hud';
+import { drawOverlay, type WorldRenderer } from './render/overlay';
+import { PixelScene } from './render/pixel/pixel-scene';
 import { Scene } from './render/scene';
 import { Garage } from './ui/garage';
 import { results } from './ui/results';
@@ -23,9 +25,15 @@ const art = new Art(loadLooks());
 const sound = new Sound();
 const input = new Input(() => sound.init());
 const canvas = $<HTMLCanvasElement>('game');
-const ctx = canvas.getContext('2d')!;
-const scene = new Scene(ctx, art);
-const hud = new Hud(ctx);
+const overlay = $<HTMLCanvasElement>('overlay');
+const octx = overlay.getContext('2d')!;
+// mudders' pixel engine with the sprite-stack addon; ?renderer=canvas (or no WebGL2) uses the 2D canvas
+const useCanvas = params.get('renderer') === 'canvas' || !PixelScene.supported();
+const scene: WorldRenderer = useCanvas
+  ? new Scene(canvas.getContext('2d')!, art)
+  : new PixelScene(canvas, art);
+const rendererName = useCanvas ? 'canvas' : 'pixel';
+const hud = new Hud(octx);
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);
 
 const cars: CarManifest[] = [...content.car.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -48,6 +56,8 @@ function resize(): void {
   H = Math.round(innerHeight * DPR);
   canvas.width = W;
   canvas.height = H;
+  overlay.width = W;
+  overlay.height = H;
   const short = Math.min(W, H);
   const long = Math.max(W, H);
   scene.setScale(Math.max(2, Math.round(Math.min(short / 180, long / 300) * 2) / 2));
@@ -203,6 +213,9 @@ function frame(t: number): void {
       return;
     }
     scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
+    octx.setTransform(1, 0, 0, 1, 0, 0);
+    octx.clearRect(0, 0, W, H);
+    drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
   } else if (screen === 'menu') garage.draw(cars[carIdx]!, dt);
@@ -252,6 +265,7 @@ function boot(): void {
   }
   Object.assign(window, {
     __dd: {
+      renderer: rendererName,
       get session() {
         return session;
       },

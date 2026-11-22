@@ -16,12 +16,12 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 
 ## Packages
 
-| Package   | Owns                                                                       | May import  |
-| --------- | -------------------------------------------------------------------------- | ----------- |
-| `shared`  | schemas, `Controls`, `SimEvent`, look types, constants                     | zod         |
-| `sim`     | `World`, physics, damage, bots, weapons, race rules, scenery rules, AI kit | shared      |
-| `content` | the `core` pack (one folder per item), palette, shared parts, test helpers | shared, sim |
-| `client`  | renderer, effects, HUD, input, audio, menus, game loop                     | all         |
+| Package   | Owns                                                                                     | May import  |
+| --------- | ---------------------------------------------------------------------------------------- | ----------- |
+| `shared`  | schemas, `Controls`, `SimEvent`, look types, constants                                   | zod         |
+| `sim`     | `World`, physics, damage, bots, weapons, race rules, scenery rules, AI kit               | shared      |
+| `content` | the `core` pack (one folder per item), palette, shared parts, test helpers               | shared, sim |
+| `client`  | pixel engine (WebGL2, from mudders) + canvas fallback, effects, HUD, input, audio, menus | all         |
 
 ## Hard rules
 
