@@ -15,6 +15,7 @@ import {
   type Voxel,
 } from './voxels';
 import { HAZE, SOOT, stepParticle, type FxKind, type Particle } from './pixel/particles';
+import { CKind, Cells } from './pixel/cells';
 import type { Sound } from '../audio/sound';
 
 const TAU = Math.PI * 2;
@@ -67,6 +68,8 @@ export interface FloatText {
 const MAX_VOXELS = 2400;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
+/** mudders' soot tones: what a blast's smoke is made of. */
+const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -101,6 +104,22 @@ export class Effects {
   readonly voxels: Voxel[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
+  /** Single cells of fire and smoke, and the rolling air that carries them. */
+  readonly cells = new Cells(26000);
+  /** How much of the full effect to draw: 1 everything, less on a slow device. */
+  quality = 1;
+  /** Blasts still letting go of their burning gas. */
+  private readonly burning: {
+    x: number;
+    y: number;
+    z: number;
+    r: number;
+    left: number;
+    ticks: number;
+    /** Ticks it goes on smoking into the turning air after the fire. */
+    smoke: number;
+    high: boolean;
+  }[] = [];
   /** Fires still burning where something blew up. */
   readonly fires: Fire[] = [];
   private readonly propAlive: boolean[] = [];
@@ -185,14 +204,42 @@ export class Effects {
     );
   }
 
-  /** One lick of flame rising from (x, y, z). */
+  /**
+   * A lick of flame rising from (x, y, z): a clutch of burning cells, about `size` across.
+   * (vx, vy, vz) is the way the fire is thrown.
+   */
   flame(x: number, y: number, z: number, size: number, vx = 0, vy = 0, vz = rand(20, 45)): void {
-    this.emit('flame', x, y, z, vx, vy, vz, rand(0.3, 0.6), size);
+    const n = Math.max(1, Math.round(size * size * 0.45 * this.quality));
+    const r = size * 0.5;
+    for (let i = 0; i < n; i++)
+      this.cells.add(
+        CKind.Bang,
+        x + rand(-r, r),
+        y + rand(-r, r),
+        z + rand(0, r),
+        vx + rand(-8, 8),
+        vy + rand(-8, 8),
+        vz + rand(-10, 10),
+        rand(0.25, 0.6),
+      );
   }
 
-  /** One puff of a smoke column. */
+  /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
-    this.emit('plume', x, y, z, rand(-5, 5), rand(-5, 5), vz, rand(1.5, 2.6), size, rgb);
+    const n = Math.max(1, Math.round(size * size * 0.3 * this.quality));
+    const r = size * 0.5;
+    for (let i = 0; i < n; i++)
+      this.cells.add(
+        CKind.Wisp,
+        x + rand(-r, r),
+        y + rand(-r, r),
+        z + rand(0, r),
+        rand(-6, 6),
+        rand(-6, 6),
+        vz + rand(-8, 8),
+        rand(1.2, 2.6),
+        rgb,
+      );
   }
 
   ember(x: number, y: number, z: number): void {
@@ -200,33 +247,60 @@ export class Effects {
   }
 
   /**
-   * An explosion, mudders' way: a ball of fire cells thrown out and up that brake in the air and
-   * burn down through the fire ramp, firework stars, a ring of dust along the ground, and a patch
-   * of fire left burning that feeds a smoke column.
+   * An explosion, mudders' way. Nothing is a drawn shape: the blast lets go a packed ball of
+   * white-hot cells in every direction the ground allows, sets a ring of air rolling (up through
+   * the middle, out over the top, back in along the ground) and then feeds burning gas into that
+   * roll for a quarter of a second, so the fire curls over into a cap and burns out into soot
+   * that is still turning. Round it: firework stars, a ring of sparks racing out with the shock,
+   * dust along the ground and a patch left burning.
    */
   fireball(x: number, y: number, power: number, z = 0): void {
-    const k = Math.sqrt(power);
     const high = z > 12;
-    for (let i = 0; i < 30 * power; i++) {
+    const r = 20 * Math.sqrt(power);
+    const q = this.quality;
+    const C = this.cells;
+    C.ring({
+      x,
+      y,
+      z: z + r * 0.3,
+      vz: high ? 8 : 24 + r * 0.9,
+      R: r * 0.5,
+      r: r * 0.55,
+      spin: 34 + r * 1.1,
+      grow: r * 0.45,
+      life: 2.2,
+    });
+    // the bang: it fills the blast radius in a few ticks and burns out fast
+    const nBang = Math.min(4200, Math.round(r * r * 4.2 * q));
+    const vMax = (0.5 + r * 0.13) * 38;
+    for (let i = 0; i < nBang; i++) {
       const a = rand(0, TAU);
-      const up = rand(0, 1);
-      const v = rand(30, 150) * k * Math.sqrt(1 - up * up * 0.7);
-      this.emit(
-        'flame',
-        x + Math.cos(a) * rand(0, 3),
-        y + Math.sin(a) * rand(0, 3),
-        z + rand(1, 6),
-        Math.cos(a) * v,
-        Math.sin(a) * v,
-        // in the air the ball is round: half of it is thrown downward
-        (high ? up * 2 - 1 : up) * 130 * k,
-        rand(0.35, 0.85),
-        rand(4, 8) * k,
+      const u = high ? rand(-1, 1) : rand(0, 1);
+      const flat = Math.sqrt(1 - u * u);
+      const sp = Math.sqrt(Math.random()) * vMax;
+      const d = rand(0, r * 0.2);
+      C.add(
+        CKind.Bang,
+        x + Math.cos(a) * flat * d,
+        y + Math.sin(a) * flat * d,
+        z + 1 + Math.abs(u) * d,
+        Math.cos(a) * flat * sp,
+        Math.sin(a) * flat * sp,
+        u * sp * 0.75,
+        rand(0.23, 0.73),
       );
     }
+    this.burning.push({ x, y, z, r, left: Math.round(r * r * 8 * q), ticks: 22, smoke: 50, high });
+    // the shock front: a ring of sparks racing out along the ground
+    if (!high)
+      for (let i = 0; i < 40; i++) {
+        const a = (i / 40) * TAU;
+        const v = vMax * 1.5;
+        this.emit('spark', x, y, 2, Math.cos(a) * v, Math.sin(a) * v, 20, 0.22, 1, 0xfff6c0);
+      }
     for (let i = 0; i < 20 * power; i++) {
       const a = rand(0, TAU);
-      const v = rand(120, 300) * k;
+      const v = rand(120, 300) * Math.sqrt(power);
       this.emit(
         'glitter',
         x,
@@ -240,16 +314,95 @@ export class Effects {
         Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
       );
     }
-    for (let i = 0; i < 8 * power; i++)
-      this.plume(x + rand(-6, 6), y + rand(-6, 6), z + rand(4, 14), rand(5, 8));
     // a burst high in the air raises no dust and leaves no fire on the ground under it
     if (high) return;
-    for (let i = 0; i < 22; i++) {
-      const a = (i / 22) * TAU + rand(-0.1, 0.1);
-      const v = rand(90, 130) * k;
-      this.emit('dust', x, y, 1, Math.cos(a) * v, Math.sin(a) * v, 4, rand(0.5, 0.9), 4, 0x9a8a70);
+    for (let i = 0; i < 90 * q; i++) {
+      const a = rand(0, TAU);
+      const v = rand(40, 130) * Math.sqrt(power);
+      C.add(
+        CKind.Wisp,
+        x,
+        y,
+        rand(0, 2),
+        Math.cos(a) * v,
+        Math.sin(a) * v,
+        4,
+        rand(0.5, 1.1),
+        0x9a8a70,
+      );
     }
-    this.fires.push({ x, y, r: 7 * k, life: 1.1 * k, max: 1.1 * k });
+    this.fires.push({
+      x,
+      y,
+      r: 7 * Math.sqrt(power),
+      life: 1.1 * Math.sqrt(power),
+      max: 1.1 * Math.sqrt(power),
+    });
+  }
+
+  /** Let go this tick's share of each blast's burning gas: a heart over the impact, and the roll. */
+  private feed(): void {
+    const C = this.cells;
+    for (let i = this.burning.length - 1; i >= 0; i--) {
+      const b = this.burning[i]!;
+      const r = b.r;
+      if (b.ticks <= 0) {
+        // the fire is out: the crater goes on smoking into the air that is still turning
+        if (--b.smoke <= 0) this.burning.splice(i, 1);
+        for (let k = 0; k < r * 1.6 * this.quality; k++) {
+          const a = rand(0, TAU);
+          const d = Math.sqrt(Math.random()) * r * 0.5;
+          C.add(
+            CKind.Wisp,
+            b.x + Math.cos(a) * d,
+            b.y + Math.sin(a) * d,
+            b.z + rand(0, r * 0.4),
+            rand(-6, 6),
+            rand(-6, 6),
+            rand(10, 40),
+            rand(1.4, 3.2),
+            SMOKE_TONES[(Math.random() * 4) | 0]!,
+          );
+        }
+        continue;
+      }
+      const n = Math.ceil(b.left / b.ticks);
+      b.left -= n;
+      b.ticks--;
+      const up = (0.55 + r * 0.03) * 45;
+      const heart = Math.round(n * 0.45);
+      for (let k = 0; k < n; k++) {
+        const a = rand(0, TAU);
+        if (k < heart) {
+          // packed over the impact and thrown up: the air rolls it as it climbs
+          const d = Math.sqrt(Math.random()) * r * 0.42;
+          C.add(
+            CKind.Fire,
+            b.x + Math.cos(a) * d,
+            b.y + Math.sin(a) * d,
+            b.z + rand(0, r * 0.5),
+            rand(-10, 10),
+            rand(-10, 10),
+            (b.high ? rand(-0.5, 0.5) : rand(0.4, 1)) * up,
+            rand(1.3, 3),
+          );
+        } else {
+          // thrown out along the ground into the underside of the roll
+          const d = r * rand(0.25, 0.6);
+          const v = rand(0.5, 1) * r * 1.5;
+          C.add(
+            CKind.Fire,
+            b.x + Math.cos(a) * d,
+            b.y + Math.sin(a) * d,
+            b.z + rand(0, 3),
+            Math.cos(a) * v,
+            Math.sin(a) * v,
+            rand(0, 12),
+            rand(1.2, 2.6),
+          );
+        }
+      }
+    }
   }
 
   text(x: number, y: number, text: string, col = '#fff', big = false): void {
@@ -837,7 +990,7 @@ export class Effects {
           0,
           -rand(30, 80),
         );
-      this.emit('plume', p.x, p.y, p.z - 3, rand(-4, 4), rand(-4, 4), 4, rand(0.8, 1.4), 3.5, HAZE);
+      this.plume(p.x, p.y, p.z - 3, 3.5, HAZE, 4);
       if (Math.random() < 0.5) this.spark(p.x, p.y, p.z, 30);
     }
     // burning bits falling out of a burst: stars glitter, fuel burns and smokes on its way down
@@ -858,8 +1011,7 @@ export class Effects {
         if (Math.random() < 0.35) this.flame(e.x, e.y, e.z, rand(1.5, 2.5), 0, 0, 0);
       } else {
         this.flame(e.x, e.y, e.z, rand(2.5, 4), 0, 0, 0);
-        if (Math.random() < 0.4)
-          this.emit('plume', e.x, e.y, e.z, 0, 0, 6, rand(0.5, 0.9), 2.5, SOOT);
+        if (Math.random() < 0.4) this.plume(e.x, e.y, e.z, 2.5, SOOT, 6);
       }
     }
     // a rocket rides a tail of fire and leaves a thin smoke trail
@@ -867,7 +1019,7 @@ export class Effects {
       const bx = r.x - Math.cos(r.h) * 5;
       const by = r.y - Math.sin(r.h) * 5;
       this.flame(bx, by, 5, rand(2, 3.5), 0, 0, 0);
-      if (Math.random() < 0.6) this.emit('plume', bx, by, 5, 0, 0, 6, rand(0.5, 0.9), 2.5, HAZE);
+      if (Math.random() < 0.6) this.plume(bx, by, 5, 2.5, HAZE, 6);
     }
     // fires left by explosions burn down: flames, then mostly smoke
     for (let i = this.fires.length - 1; i >= 0; i--) {
@@ -888,6 +1040,8 @@ export class Effects {
       if (Math.random() < 0.45) this.plume(x, y, rand(5, 10), rand(4, 7));
       if (Math.random() < 0.2) this.ember(x, y, 5);
     }
+    this.feed();
+    this.cells.step(DT);
     for (let i = this.fx.length - 1; i >= 0; i--) {
       if (stepParticle(this.fx[i]!, DT)) continue;
       this.fx[i] = this.fx[this.fx.length - 1]!;
