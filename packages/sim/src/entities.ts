@@ -2,6 +2,7 @@ import type {
   BotManifest,
   CarManifest,
   MaterialManifest,
+  PickupManifest,
   PropManifest,
   WeaponManifest,
 } from '@demodogs/shared';
@@ -123,6 +124,11 @@ export interface Car {
   has: { front: boolean; rear: boolean; top: boolean };
   aiSpeed: number;
   smokeT: number;
+  /** A blade bolted to the nose (see movers.ts): seconds left, and seconds until its next bite. */
+  blade: { def: PickupManifest; t: number; cd: number } | null;
+  /** Springs under the car: leaps left. `hop` is seconds into a sprung leap, -1 when not in one. */
+  springs: { def: PickupManifest; n: number } | null;
+  hop: number;
 }
 
 export interface Bot {

@@ -132,6 +132,14 @@ export class Hud {
     bar(pad + 72 * u, P.nitro, '#4fb8ff', 'BOOST');
     if (P.gun)
       text(`AMMO ${P.rounds}`, left, pad + 90 * u, small, P.rounds > 0 ? '#fff' : '#ff7a6a');
+    // what is bolted on: the blade's seconds left, the leaps left in the springs
+    const fitted = [
+      P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
+      P.springs && P.springs.n > 0 ? `SPRINGS x${P.springs.n}` : '',
+    ]
+      .filter(Boolean)
+      .join('  ');
+    if (fitted) text(fitted, left, pad + (P.gun ? 106 : 90) * u, small, '#ffd84a');
 
     const m = this.mini;
     if (m) {

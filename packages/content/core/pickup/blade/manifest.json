@@ -1,0 +1,14 @@
+{
+  "id": "pickup.blade",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bulldog blade",
+    "description": "A plough blade on the nose for a few seconds: it grinds through walls and shoves rivals aside, biting pieces off whatever it pushes.",
+    "since": "core@0.4.0"
+  },
+  "kind": "blade",
+  "weight": 0.1,
+  "hurtWeight": 0.06,
+  "seconds": 8,
+  "bite": 90
+}

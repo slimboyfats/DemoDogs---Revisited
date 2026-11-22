@@ -1,5 +1,6 @@
 import {
   rangeBlast,
+  rangeGive,
   rangeHit,
   rangeMend,
   rangeMine,
@@ -7,6 +8,7 @@ import {
   rangeProp,
   rangeRocket,
   rangeWreck,
+  dig,
   type Car,
   type Content,
 } from '@demodogs/sim';
@@ -14,7 +16,18 @@ import type { Session } from '../game/session';
 import { PITCH } from '../render/scene';
 
 export type Tool =
-  'drive' | 'rocket' | 'mine' | 'blast' | 'hit' | 'wreck' | 'mend' | 'car' | 'prop' | 'pan';
+  | 'drive'
+  | 'rocket'
+  | 'mine'
+  | 'blast'
+  | 'hit'
+  | 'wreck'
+  | 'mend'
+  | 'car'
+  | 'prop'
+  | 'give'
+  | 'crater'
+  | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
@@ -26,6 +39,8 @@ const TOOLS: [Tool, string, string][] = [
   ['mend', 'MEND', 'Tap a car: make it whole again'],
   ['car', 'MOVE CAR', 'Tap: the next parked car is put there'],
   ['prop', 'PROP', 'Tap: put the chosen prop there'],
+  ['give', 'GIVE', 'Tap a car (or anywhere for yours): hand it the chosen pickup'],
+  ['crater', 'CRATER', 'Tap: dig a pit there, to try leaps and blades over rough ground'],
   ['pan', 'PAN', 'Drag to move the camera'],
 ];
 const RATES: [number, string][] = [
@@ -62,6 +77,7 @@ export class DevPanel {
   private readonly rateBtns: HTMLButtonElement[] = [];
   private readonly propSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
+  readonly pickupSel = document.createElement('select');
   private fps = 60;
 
   constructor(
@@ -88,6 +104,9 @@ export class DevPanel {
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
+    for (const p of [...content.pickup.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
+      this.pickupSel.append(new Option(p.meta.name, p.id));
+    root.append(this.pickupSel);
     gap();
     const power = Object.assign(document.createElement('input'), {
       type: 'range',
@@ -246,6 +265,14 @@ export class DevPanel {
         if (def) rangeProp(w, def, x, y);
         break;
       }
+      case 'give': {
+        const def = this.content.pickup.get(this.pickupSel.value);
+        if (def) rangeGive(w, this.carAt(x, y) ?? P, def);
+        break;
+      }
+      case 'crater':
+        dig(w, x, y, 2 + this.power * 4);
+        break;
       default:
         break;
     }

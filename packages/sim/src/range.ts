@@ -1,7 +1,8 @@
 import { stand } from './scenery';
-import type { PropManifest, WeaponManifest } from '@demodogs/shared';
+import type { PickupManifest, PropManifest, WeaponManifest } from '@demodogs/shared';
 import { damage, explode, wreck } from './damage';
 import type { Car } from './entities';
+import { grant } from './things';
 import type { World } from './world';
 
 /**
@@ -79,4 +80,10 @@ export function rangeProp(w: World, def: PropManifest, x: number, y: number, rot
       fuse: 0,
       owner: -1,
     });
+}
+
+/** Hand a car what a pickup holds, as if it had driven over one that rolled `def`. */
+export function rangeGive(w: World, c: Car, def: PickupManifest): void {
+  const label = grant(w, c, def);
+  w.emit({ t: 'pickup', car: c.index, x: c.x, y: c.y, label, kind: def.kind });
 }

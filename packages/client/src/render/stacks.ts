@@ -145,6 +145,21 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
     R.stack(A.bumper, c.x + cs * a + rx * o * 0.15, c.y + sn * a + ry * o * 0.15, bz, c.h, alpha);
   if (c.has.rear)
     R.stack(A.bumper, c.x - cs * a + rx * o * 0.15, c.y - sn * a + ry * o * 0.15, bz, c.h, alpha);
+  // a blade on the nose, and coil springs under the wheels through a sprung leap
+  if (c.blade) {
+    const b = D.body.halfLength + 1.4;
+    R.stack(art.prop(c.blade.def.id), c.x + cs * b, c.y + sn * b, z + 0.4 + c.bounce, c.h, alpha);
+  }
+  if (c.springs && c.hop >= 0 && c.hop < 0.4) {
+    const coil = art.prop(c.springs.def.id);
+    const cz = Math.max(0, z - 4);
+    for (const wh of D.wheels)
+      for (const sg of [-1, 1]) {
+        const wx = wh[0];
+        const wy = wh[1] * sg * 0.7;
+        R.stack(coil, c.x + cs * wx - sn * wy, c.y + sn * wx + cs * wy, cz, c.h, alpha);
+      }
+  }
   if (c.has.top)
     R.stack(
       A.top,

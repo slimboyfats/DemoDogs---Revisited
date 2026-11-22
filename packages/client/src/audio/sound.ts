@@ -211,4 +211,23 @@ export class Sound {
   nitro(): void {
     this.noise(0.5, 600, 0.5, 0.2, 'lowpass');
   }
+
+  /** Springs letting go: a rising twang. */
+  boing(v = 1): void {
+    this.tone(150, 0.32, 0.16 * v, 'triangle', 3.2);
+    this.tone(300, 0.2, 0.05 * v, 'square', 2.2);
+  }
+
+  /** A heavy car coming down on its wheels. */
+  thud(v = 1): void {
+    this.noise(0.22, 320, 0.8, 0.35 * v, 'lowpass');
+    this.tone(70, 0.16, 0.18 * v, 'sine', 0.6);
+  }
+
+  /** A blade bolted on or falling off: a clang of steel. */
+  clang(v = 1): void {
+    this.tone(620, 0.25, 0.1 * v, 'square', 0.92);
+    this.tone(930, 0.18, 0.06 * v, 'triangle', 0.9);
+    this.noise(0.1, 2600, 1.2, 0.12 * v, 'highpass');
+  }
 }

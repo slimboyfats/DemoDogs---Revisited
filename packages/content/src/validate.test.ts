@@ -33,7 +33,11 @@ describe('content validate', () => {
     const shown = [...C.weapon.values()]
       .filter((w) => w.kind !== 'gun' && w.kind !== 'slick')
       .map((w) => w.id);
-    const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown];
+    // pickups that bolt something onto the car draw it
+    const fitted = [...C.pickup.values()]
+      .filter((p) => p.kind === 'blade' || p.kind === 'springs')
+      .map((p) => p.id);
+    const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown, ...fitted];
     expect(drawn.filter((id) => !looks.has(id))).toEqual([]);
     for (const id of looks.keys()) expect(drawn).toContain(id);
   });

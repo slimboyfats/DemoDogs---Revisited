@@ -29,6 +29,7 @@ import { Hasher, TAU, angDiff, clamp } from './math';
 import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
+import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { respawn, updateEmbers } from './damage';
 import {
@@ -404,6 +405,7 @@ export class World {
         c.roll *= 0.9;
         c.bounce = c.isPlayer && c.throttle > 0 ? this.rng.range(0, 0.4) : 0;
       }
+      updateMovers(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }

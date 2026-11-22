@@ -249,7 +249,7 @@ export type WeaponManifest = z.infer<typeof WeaponSchema>;
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
-  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash']),
+  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash', 'blade', 'springs']),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
@@ -257,6 +257,12 @@ export const PickupSchema = z.strictObject({
   amount: z.number().positive().optional(),
   /** Arms: weapons to pick from. */
   weapons: z.array(id('weapon')).min(1).optional(),
+  /** Blade: seconds it stays bolted on, and the armour it chews off what it ploughs, per second. */
+  seconds: z.number().positive().optional(),
+  bite: z.number().positive().optional(),
+  /** Springs: leaps it holds, and how hard each one throws the car up (art px/s). */
+  charges: z.number().int().positive().optional(),
+  lift: z.number().positive().optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 
