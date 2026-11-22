@@ -74,19 +74,6 @@
     },
     {
       "rule": "oval-scatter",
-      "count": 6,
-      "qMin": 0.3,
-      "qMax": 0.85,
-      "clear": 14,
-      "items": [
-        {
-          "prop": "prop.fuel-tank",
-          "weight": 1
-        }
-      ]
-    },
-    {
-      "rule": "oval-scatter",
       "count": 34,
       "qMin": 0.12,
       "qMax": 0.92,
