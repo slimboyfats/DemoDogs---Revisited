@@ -1,4 +1,5 @@
 import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shared';
+import { absorb } from './defence';
 import type { Car, LooseProp, StaticProp } from './entities';
 import { clamp } from './math';
 import { toLocal } from './physics';
@@ -14,7 +15,8 @@ export function damage(
   py: number,
 ): void {
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
-  const dealt = (amount * w.mode.damageScale) / c.stats.armor;
+  const dealt = absorb(w, c, (amount * w.mode.damageScale) / c.stats.armor, px, py);
+  if (dealt <= 0) return;
   c.hp -= dealt;
   const L = toLocal(c, px, py);
   const lx = clamp(L[0], -12, 12);

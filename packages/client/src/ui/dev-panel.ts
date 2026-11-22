@@ -1,5 +1,6 @@
 import {
   rangeBlast,
+  rangeGive,
   rangeHit,
   rangeMend,
   rangeMine,
@@ -14,7 +15,17 @@ import type { Session } from '../game/session';
 import { PITCH } from '../render/scene';
 
 export type Tool =
-  'drive' | 'rocket' | 'mine' | 'blast' | 'hit' | 'wreck' | 'mend' | 'car' | 'prop' | 'pan';
+  | 'drive'
+  | 'rocket'
+  | 'mine'
+  | 'blast'
+  | 'hit'
+  | 'wreck'
+  | 'mend'
+  | 'give'
+  | 'car'
+  | 'prop'
+  | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
@@ -24,6 +35,7 @@ const TOOLS: [Tool, string, string][] = [
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
   ['wreck', 'WRECK', 'Tap a car: wreck it'],
   ['mend', 'MEND', 'Tap a car: make it whole again'],
+  ['give', 'GIVE', 'Tap a car: hand it the chosen pickup'],
   ['car', 'MOVE CAR', 'Tap: the next parked car is put there'],
   ['prop', 'PROP', 'Tap: put the chosen prop there'],
   ['pan', 'PAN', 'Drag to move the camera'],
@@ -61,6 +73,7 @@ export class DevPanel {
   private readonly toolBtns = new Map<Tool, HTMLButtonElement>();
   private readonly rateBtns: HTMLButtonElement[] = [];
   private readonly propSel = document.createElement('select');
+  readonly pickupSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
   private fps = 60;
 
@@ -88,6 +101,9 @@ export class DevPanel {
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
+    for (const p of [...content.pickup.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
+      this.pickupSel.append(new Option(p.meta.name, p.id));
+    root.append(this.pickupSel);
     gap();
     const power = Object.assign(document.createElement('input'), {
       type: 'range',
@@ -235,6 +251,12 @@ export class DevPanel {
         if (c) rangeMend(w, c);
         break;
       }
+      case 'give': {
+        const c = this.carAt(x, y);
+        const def = this.content.pickup.get(this.pickupSel.value);
+        if (c && def) rangeGive(w, c, def);
+        break;
+      }
       case 'car': {
         const others = w.cars.filter((c) => c !== P);
         const c = others[this.nextCar++ % others.length];
@@ -257,7 +279,12 @@ export class DevPanel {
     if (!s) return;
     if (dt > 0) this.fps += (1 / dt - this.fps) * 0.05;
     const hp = s.world.cars
-      .map((c) => `${c.def.meta.name} ${c.wrecked ? 'wrecked' : Math.ceil(c.hp)}`)
+      .map(
+        (c) =>
+          `${c.def.meta.name} ${c.wrecked ? 'wrecked' : Math.ceil(c.hp)}` +
+          (c.shield > 0 ? ` shield ${Math.ceil(c.shield)}` : '') +
+          (c.weldT > 0 ? ' welding' : ''),
+      )
       .join('  ');
     this.statsEl.textContent =
       `${this.fps.toFixed(0)} fps  ${this.hooks.stats()}  loose blocks ${s.fx.voxels.length}  ` +

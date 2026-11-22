@@ -76,6 +76,21 @@ export type SimEvent =
   | { t: 'blaze'; x: number; y: number; r: number; life: number }
   | { t: 'break'; prop: number; x: number; y: number; vx: number; vy: number }
   | { t: 'pickup'; car: number; x: number; y: number; label: string; kind: string }
+  /**
+   * A car's shield bubble: put `up`, struck at (x, y) (`hit`, `amount` soaked up), burst by one
+   * blow too many (`pop`, at the blow) or run out of time (`fade`). `left` is the share it has left.
+   */
+  | {
+      t: 'shield';
+      car: number;
+      what: 'up' | 'hit' | 'pop' | 'fade';
+      x: number;
+      y: number;
+      amount: number;
+      left: number;
+    }
+  /** A car's welding: under way (`start`), a lost `part` put back on, or finished (`done`). */
+  | { t: 'weld'; car: number; what: 'start' | 'part' | 'done'; part?: CarPart }
   | { t: 'fire'; car: number; weapon: string }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }

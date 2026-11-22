@@ -1,3 +1,4 @@
+import { updateDefence } from './defence';
 import {
   DT,
   FIELD_SIZE,
@@ -418,6 +419,7 @@ export class World {
     for (const b of this.bots) updateBot(this, b);
     updateProps(this);
     updatePickups(this);
+    updateDefence(this);
     updateRockets(this);
     updateMines(this);
     updateEmbers(this);

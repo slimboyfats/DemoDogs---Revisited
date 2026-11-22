@@ -227,6 +227,7 @@ export class PixelScene implements WorldRenderer, StackSink {
     for (const f of fx.fx)
       if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
     fx.cells.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
+    fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
     this.quads.flush(quadView, quadOrigin, S / G);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / G);

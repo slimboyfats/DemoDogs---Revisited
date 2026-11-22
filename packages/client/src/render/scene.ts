@@ -178,6 +178,7 @@ export class Scene implements WorldRenderer {
     for (const f of fx.fx) if (!overSmoke(f)) drawParticle(f, normal, glow);
     for (const f of fx.fx) if (overSmoke(f)) drawParticle(f, normal, glow);
     fx.cells.draw(normal, glow, () => true);
+    fx.defence.draw(glow, () => true);
     ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }

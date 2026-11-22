@@ -138,5 +138,13 @@
     "bot": "bot.scrap",
     "count": 12
   },
-  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms", "pickup.ammo", "pickup.cash"]
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.dome",
+    "pickup.welder"
+  ]
 }

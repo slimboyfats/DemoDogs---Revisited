@@ -1,6 +1,7 @@
 import { NO_CONTROLS } from '@demodogs/shared';
 import {
   rangeBlast,
+  rangeGive,
   rangeHit,
   rangeMend,
   rangeMine,
@@ -10,6 +11,7 @@ import {
   rangeWreck,
 } from '@demodogs/sim';
 import { describe, expect, it } from 'vitest';
+import { loadContent } from './index';
 import { makeWorld } from './testing';
 
 const range = () => makeWorld({ venue: 'venue.the-pit', sandbox: true, rivals: 2 });
@@ -68,5 +70,16 @@ describe('the test range', () => {
     expect(w.statics.length).toBeGreaterThan(s);
     expect(w.props.length).toBeGreaterThan(p);
     expect(w.props.at(-1)!.index).toBe(w.props.length - 1);
+  });
+
+  it('hands a car any pickup, shields and welders too', () => {
+    const w = range();
+    const t = w.cars.find((c) => c !== w.player)!;
+    for (const p of loadContent().pickup.values()) rangeGive(w, t, p);
+    expect(t.shield).toBeGreaterThan(0);
+    expect(w.takeEvents().filter((e) => e.t === 'pickup').length).toBe(loadContent().pickup.size);
+    rangeWreck(w, t);
+    rangeGive(w, t, loadContent().pickup.get('pickup.dome')!);
+    expect(w.takeEvents().some((e) => e.t === 'pickup')).toBe(false);
   });
 });

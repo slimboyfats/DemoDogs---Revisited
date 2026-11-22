@@ -1,4 +1,5 @@
-import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
+import { DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { grantDefence } from './defence';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
@@ -239,29 +240,37 @@ export function updatePickups(w: World): void {
           break;
         }
       }
-      let label: string;
-      if (got.kind === 'repair') {
-        c.hp = Math.min(100, c.hp + (got.amount ?? 40));
-        label = `REPAIR +${got.amount ?? 40}`;
-      } else if (got.kind === 'nitro') {
-        c.nitro = 1;
-        label = 'BOOST REFILL';
-      } else if (got.kind === 'ammo') {
-        c.rounds += got.amount ?? 30;
-        label = `AMMO +${got.amount ?? 30}`;
-      } else if (got.kind === 'cash') {
-        c.cash += got.amount ?? 100;
-        label = `+${got.amount ?? 100} CASH`;
-      } else {
-        const wpn = w.content.weapon.get(w.rng.pick(got.weapons ?? []))!;
-        c.weapon = wpn;
-        c.ammo = wpn.ammo;
-        label = `${wpn.meta.name.toUpperCase()} x${wpn.ammo}`;
-      }
+      const label = applyPickup(w, c, got);
       w.emit({ t: 'pickup', car: c.index, x: p.x, y: p.y, label, kind: got.kind });
       break;
     }
   }
+}
+
+/** What a car gets from a pickup of kind `got`; returns the words to float over it. */
+export function applyPickup(w: World, c: Car, got: PickupManifest): string {
+  let label: string;
+  const d = grantDefence(w, c, got);
+  if (d) label = d;
+  else if (got.kind === 'repair') {
+    c.hp = Math.min(100, c.hp + (got.amount ?? 40));
+    label = `REPAIR +${got.amount ?? 40}`;
+  } else if (got.kind === 'nitro') {
+    c.nitro = 1;
+    label = 'BOOST REFILL';
+  } else if (got.kind === 'ammo') {
+    c.rounds += got.amount ?? 30;
+    label = `AMMO +${got.amount ?? 30}`;
+  } else if (got.kind === 'cash') {
+    c.cash += got.amount ?? 100;
+    label = `+${got.amount ?? 100} CASH`;
+  } else {
+    const wpn = w.content.weapon.get(w.rng.pick(got.weapons ?? []))!;
+    c.weapon = wpn;
+    c.ammo = wpn.ammo;
+    label = `${wpn.meta.name.toUpperCase()} x${wpn.ammo}`;
+  }
+  return label;
 }
 
 export function fire(w: World, c: Car): void {
