@@ -5,6 +5,7 @@ import {
   rangeMine,
   rangeMove,
   rangeProp,
+  rangePulse,
   rangeRocket,
   rangeWreck,
   type Car,
@@ -14,12 +15,23 @@ import type { Session } from '../game/session';
 import { PITCH } from '../render/scene';
 
 export type Tool =
-  'drive' | 'rocket' | 'mine' | 'blast' | 'hit' | 'wreck' | 'mend' | 'car' | 'prop' | 'pan';
+  | 'drive'
+  | 'rocket'
+  | 'mine'
+  | 'shock'
+  | 'blast'
+  | 'hit'
+  | 'wreck'
+  | 'mend'
+  | 'car'
+  | 'prop'
+  | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
   ['rocket', 'ROCKET', 'Tap: a rocket flies from your car to that spot'],
   ['mine', 'MINE', 'Tap: lay a mine there'],
+  ['shock', 'SHOCK', 'Tap: your car jumps there and lets off a shock pulse'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
   ['wreck', 'WRECK', 'Tap a car: wreck it'],
@@ -215,6 +227,14 @@ export class DevPanel {
       case 'mine': {
         const def = weapon('mine');
         if (def) rangeMine(w, def, P, x, y);
+        break;
+      }
+      case 'shock': {
+        const def = weapon('pulse');
+        if (def) {
+          rangeMove(P, x, y);
+          rangePulse(w, def, P);
+        }
         break;
       }
       case 'blast':

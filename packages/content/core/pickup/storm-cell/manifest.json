@@ -1,0 +1,13 @@
+{
+  "id": "pickup.storm-cell",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Storm cell",
+    "description": "A crackling battery crate: two shock pulses.",
+    "since": "core@0.4.0"
+  },
+  "kind": "arms",
+  "weight": 0.12,
+  "hurtWeight": 0.08,
+  "weapons": ["weapon.shock-pulse"]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "weapon.shock-pulse",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Shock pulse",
+    "description": "A ring of charge bursts out round the car and cuts the engines of rivals it crosses. It arcs on through steel and water, and sets fuel alight.",
+    "since": "core@0.4.0"
+  },
+  "kind": "pulse",
+  "label": "SHOCK",
+  "ammo": 2,
+  "power": 0.3,
+  "cooldown": 0.9,
+  "speed": 260,
+  "radius": 72,
+  "damage": 6,
+  "stall": 1.1,
+  "chain": 3,
+  "reach": 58
+}

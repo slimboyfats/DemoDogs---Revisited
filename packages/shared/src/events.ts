@@ -77,6 +77,12 @@ export type SimEvent =
   | { t: 'break'; prop: number; x: number; y: number; vx: number; vy: number }
   | { t: 'pickup'; car: number; x: number; y: number; label: string; kind: string }
   | { t: 'fire'; car: number; weapon: string }
+  /** A shock pulse went out from (x, y), spreading to radius r over `life` seconds. */
+  | { t: 'pulse'; car: number; x: number; y: number; r: number; life: number }
+  /** A bolt of charge jumped from (x, y, z) to (tx, ty, tz). */
+  | { t: 'arc'; x: number; y: number; z: number; tx: number; ty: number; tz: number }
+  /** A car's engine was cut by a shock for `time` seconds. */
+  | { t: 'stall'; car: number; by: number; time: number }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }

@@ -17,6 +17,7 @@ import {
 import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
 import type { Sound } from '../audio/sound';
+import { ShockFx } from './shock-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -133,6 +134,8 @@ export class Effects {
   private readonly bits = new WeakMap<Strip, Chip[]>();
   readonly walkers: Walker[] = [];
   shake = 0;
+  /** Shock pulses: the crackling rings, bolts and dead engines, as single spark cells. */
+  readonly shock: ShockFx;
   msg = '';
   msgT = 0;
   private readonly smokeT: number[] = [];
@@ -149,6 +152,13 @@ export class Effects {
       place(wk, b.x, b.y, b.h);
       this.walkers.push(wk);
     }
+    this.shock = new ShockFx(
+      w,
+      this.flashes,
+      sound,
+      (x, y) => this.vol(x, y),
+      (k) => (this.shake = Math.max(this.shake, k)),
+    );
     // the pools the map starts with
     for (const s of w.spills) if (s.fixed) this.pool(s.def, s.x, s.y, s.r);
   }
@@ -1085,7 +1095,7 @@ export class Effects {
           const wpn = w.content.weapon.get(e.weapon);
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
-          } else if (c.isPlayer) S.drop();
+          } else if (c.isPlayer && wpn?.kind !== 'pulse') S.drop();
           break;
         }
         case 'score':
@@ -1093,6 +1103,11 @@ export class Effects {
             const big = e.label.startsWith('WRECKED');
             this.text(e.x, e.y, e.label, big ? '#ff6a3d' : '#ffd24a', big);
           }
+          break;
+        case 'pulse':
+        case 'arc':
+        case 'stall':
+          this.shock.handle(e);
           break;
         case 'countdown':
           S.beep(false);
@@ -1282,6 +1297,7 @@ export class Effects {
     }
     this.feed();
     this.cells.step(DT);
+    this.shock.step(DT);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

@@ -123,6 +123,8 @@ export interface Car {
   has: { front: boolean; rear: boolean; top: boolean };
   aiSpeed: number;
   smokeT: number;
+  /** Seconds its engine stays dead after a shock; absent or 0 when it runs. */
+  stall?: number;
 }
 
 export interface Bot {

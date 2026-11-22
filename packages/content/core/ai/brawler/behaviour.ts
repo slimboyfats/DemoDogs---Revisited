@@ -1,5 +1,5 @@
 import { DT, type Controls } from '@demodogs/shared';
-import { defineAi, steerTo, unstick } from '@demodogs/sim';
+import { defineAi, nearestCar, steerTo, unstick } from '@demodogs/sim';
 
 /**
  * ai.brawler: pick a car (the player a little more often), aim where it is going and ram it.
@@ -75,6 +75,12 @@ export default defineAi({
     }
     if (c.weapon?.kind === 'rocket' && t && Math.abs(d) < 0.2) out.fire = true;
     if ((c.weapon?.kind === 'mine' || c.weapon?.kind === 'slick') && w.rng.next() < 0.01)
+      out.fire = true;
+    // a shock pulse goes off when a rival is well inside its ring
+    if (
+      c.weapon?.kind === 'pulse' &&
+      nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
+    )
       out.fire = true;
     if (!c.isPlayer) c.aiSpeed = ai.skill * 0.95;
     return unstick(c, out);
