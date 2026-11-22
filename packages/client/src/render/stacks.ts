@@ -3,7 +3,7 @@ import type { Art } from './art';
 import type { Effects } from './effects';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
-import { grownTo, rebuilt, type Rising } from './voxels';
+import { leanAt } from './rubble';
 
 const MINE_OFF = { minelit: 'black' };
 
@@ -25,8 +25,6 @@ export interface StackSink {
     rot: number,
     thick?: number,
     alpha?: number,
-    /** Draw only what lies west of this world x (a rebuild sweeping in); the canvas draws it all. */
-    wipe?: number,
   ): void;
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha?: number): void;
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void;
@@ -46,8 +44,25 @@ export function queueStacks(
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
   for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
-  // fallen scenery growing back, layer by layer as its blocks land
-  for (const [s, r] of fx.rising) if (s.down) queueRising(R, art, s, r);
+  // what has just come down, whole for the moment before it cracks apart
+  for (const f of fx.wreck.falling) {
+    const { o, strip } = f;
+    const lift = o.lift ?? 0;
+    if (!R.visible(o.x, o.y, 40, tall(strip) + lift)) continue;
+    R.group(o.y);
+    for (let i = Math.max(0, Math.ceil(-lift * strip.res)); i < strip.n; i++)
+      R.slice(strip, i, o.x, o.y, lift + i / strip.res, o.rot);
+  }
+  // its pieces: falling, lying in the rubble (leaning as they came to rest), or flying home
+  for (const p of fx.wreck.pieces) {
+    if (!R.visible(p.x, p.y, p.r + 8, p.z + p.tall)) continue;
+    R.group(p.y);
+    const strip = p.strip;
+    for (let i = 0; i < strip.n; i++) {
+      const [x, y, z] = leanAt(p, i / strip.res);
+      R.slice(strip, i, x, y, z, p.rot);
+    }
+  }
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -118,22 +133,6 @@ function queueStatic(
     const k = i / strip.n;
     const o = wind * k * k * 1.8;
     R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
-  }
-}
-
-/** The bottom share `f` of a fallen piece's layers, where it stands. */
-function queueRising(R: StackSink, art: Art, s: StaticProp, r: Rising): void {
-  const strip = art.prop(s.def.id);
-  const lift = s.lift ?? 0;
-  if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
-  const g = rebuilt(r.t, r.dur);
-  R.group(s.y);
-  const from = Math.max(0, Math.ceil(-lift * strip.res));
-  for (let i = from; i < strip.n; i++) {
-    // each layer is grown back as far across as the sweep has reached it
-    const x = grownTo(r, g, i / strip.n);
-    if (x === -Infinity) break;
-    R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot, 1, 1, x === Infinity ? undefined : x);
   }
 }
 

@@ -436,6 +436,36 @@ export const MaterialSchema = z.strictObject({
       heat: z.number().positive().default(1),
     })
     .default({ blast: 1, impact: 1, heat: 1 }),
+  /**
+   * As something scenery is made of: how it comes apart when it falls. The client's rubble reads
+   * this; nothing in the race depends on it.
+   */
+  breaks: z
+    .strictObject({
+      /** About how big the pieces it cracks into are, art px. */
+      piece: z.number().min(2).max(30).default(7),
+      /** How wide the cracks are, art px: what was in them goes as grit. */
+      grit: z.number().min(0).max(3).default(0.45),
+      /** How much of its speed a piece keeps when it lands (0 dead, 0.9 rubber). */
+      bounce: z.number().min(0).max(0.9).default(0.22),
+      /** The chance a piece that lands hard splits again. */
+      brittle: z.number().min(0).max(1).default(0.6),
+      /** How much dust it throws up: 0 none, 1 ordinary. */
+      dust: z.number().min(0).max(3).default(1),
+      /** How much the wind carries its grit while it is in the air: 0 not at all, 1 like a leaf. */
+      drift: z.number().min(0).max(1).default(0),
+      /** It strikes sparks where it lands. */
+      sparks: z.boolean().default(false),
+    })
+    .default({
+      piece: 7,
+      grit: 0.45,
+      bounce: 0.22,
+      brittle: 0.6,
+      dust: 1,
+      drift: 0,
+      sparks: false,
+    }),
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),

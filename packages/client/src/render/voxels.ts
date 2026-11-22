@@ -15,6 +15,23 @@ export interface Voxel {
   s: number;
   /** Seconds it has been flying; it is laid to rest after `MAX_AGE` wherever it is. */
   age: number;
+  /** It is rubble: where it stops it stays, piled on what is there, instead of soaking in. */
+  pile?: boolean;
+  /** Where it belongs in something that can be rebuilt. */
+  home?: Home;
+  /** How much the wind carries it while it is in the air (0 to 1). */
+  drift?: number;
+}
+
+/**
+ * A place in a piece of scenery (`owner`): art px from its middle, x forward and y across, z up
+ * from its foot. Rubble that has one flies back there when the piece is rebuilt.
+ */
+export interface Home {
+  owner: object;
+  x: number;
+  y: number;
+  z: number;
 }
 
 const GRAVITY = 420;
@@ -35,16 +52,16 @@ export type Fate = 'fly' | 'rest' | 'split';
  * 'rest' means it has stopped (the caller paints it into the ground and drops it); 'split' that it
  * landed hard enough to break (the caller swaps it for its `shards`, if there is room for them).
  */
-export function stepVoxel(v: Voxel, dt: number): Fate {
+export function stepVoxel(v: Voxel, dt: number, floor = 0): Fate {
   v.age += dt;
   v.x += v.vx * dt;
   v.y += v.vy * dt;
   v.rot += v.spin * dt;
   v.vz -= GRAVITY * dt;
   v.z += v.vz * dt;
-  if (v.z <= 0) {
+  if (v.z <= floor) {
     const hit = -v.vz;
-    v.z = 0;
+    v.z = floor;
     v.vz = hit > 50 ? hit * 0.32 : 0;
     v.vx *= 0.6;
     v.vy *= 0.6;
@@ -181,48 +198,22 @@ export interface Homing {
   t: number;
   wait: number;
   dur: number;
+  /** What it is flying back into, and whether it has got there (it then sits until that stands). */
+  owner?: object;
+  done?: boolean;
 }
 
 /** Seconds a block of something being rebuilt is in the air, at most. */
 const FLIGHT = 0.75;
 
-/**
- * Something being rebuilt over `dur` seconds grows back from the bottom up: how much of its height
- * stands `t` seconds in (0 to 1). Its blocks are in the air for the first FLIGHT seconds before the
- * first layer is in place, then the rest go up steadily, each landing as its layer appears.
- */
-export function rebuilt(t: number, dur: number): number {
-  const fly = Math.min(FLIGHT, dur * 0.4);
-  return Math.min(1, Math.max(0, (t - fly) / Math.max(0.01, dur - fly)));
-}
-
 /** How far a rebuild runs left to right rather than bottom up (0 to 1). */
 export const SWEEP = 0.6;
 
-/** A fallen piece growing back: `t` of `dur` seconds in, sweeping across world x from x0 to x1. */
-export interface Rising {
-  t: number;
-  dur: number;
-  x0: number;
-  x1: number;
-}
-
 /**
- * Where a point `fx` of the way across (left to right) and `fz` of the way up comes in the rebuild,
+ * Where a point `fx` of the way across (left to right) and `fz` of the way up comes in a rebuild,
  * 0 to 1: the front sweeps mostly left to right, tilted so lower parts come a little sooner.
  */
 export const front = (fx: number, fz: number): number => SWEEP * fx + (1 - SWEEP) * fz;
-
-/**
- * How far across (world x) a layer `fz` of the way up has grown back, `g` of the way through
- * the rebuild: -Infinity before it starts, Infinity once it is whole.
- */
-export function grownTo(r: Rising, g: number, fz: number): number {
-  const f = (g - (1 - SWEEP) * fz) / SWEEP;
-  if (f <= 0) return -Infinity;
-  if (f >= 1) return Infinity;
-  return r.x0 + f * (r.x1 - r.x0);
-}
 
 /** When (seconds in) the layer a share `f` of the way up lands, and when its blocks take off. */
 export function landing(f: number, dur: number): [number, number] {

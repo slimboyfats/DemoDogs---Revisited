@@ -11,5 +11,12 @@
     "impact": 2.4,
     "heat": 8
   },
+  "breaks": {
+    "piece": 8,
+    "grit": 0.5,
+    "bounce": 0.18,
+    "brittle": 0.7,
+    "dust": 1.6
+  },
   "colour": "#8f8c85"
 }

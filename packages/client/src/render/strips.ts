@@ -36,7 +36,7 @@ export const DETAIL = 3;
 /** Texels per art pixel for cars: twice as fine again, eight times the voxels. */
 export const CAR_DETAIL = 6;
 /** The widest a strip's image may be; longer strips wrap onto more rows. */
-const MAX_W = 2040;
+export const MAX_W = 2040;
 
 /**
  * How lit a voxel is, 0 (deep shade) to 1 (full light), in a few hard steps. The light comes from
@@ -562,7 +562,7 @@ export function allVoxels(v: Voxels, block = 1): Chip[] {
   return out.chips();
 }
 
-const voxels = (s: Strip, px: Uint8ClampedArray): Voxels => ({
+export const voxels = (s: Strip, px: Uint8ClampedArray): Voxels => ({
   px,
   W: s.img.width,
   cw: s.cw,
@@ -624,46 +624,12 @@ export function voxelsOf(s: Strip, block = s.res * 2): Chip[] {
   return allVoxels(voxels(s, pixels(s)), block);
 }
 
-/** Every filled texel of a strip, packed as (z·4096 + y)·4096 + x: where fine chips come from. */
-export function filled(s: Strip): Float64Array {
-  const v = voxels(s, pixels(s));
-  const out: number[] = [];
-  for (let z = 0; z < v.n; z++)
-    for (let y = 0; y < v.ch; y++)
-      for (let x = 0; x < v.cw; x++)
-        if (v.px[at(v, x, y, z) + 3]) out.push((z * 4096 + y) * 4096 + x);
-  return Float64Array.from(out);
-}
-
-/**
- * `count` small chips, `block` texels a side, from random filled texels of a strip (`from` is its
- * `filled`). Far finer than `voxelsOf` for the same cost, since nothing big is ever gathered.
- */
-export function finesOf(
-  s: Strip,
-  from: Float64Array,
-  count: number,
-  block: number,
-  rand: () => number,
-): Chip[] {
-  const v = voxels(s, pixels(s));
-  const out: Chip[] = [];
-  if (!from.length) return out;
-  for (let i = 0; i < count; i++) {
-    const k = from[Math.floor(rand() * from.length)]!;
-    const x = k % 4096;
-    const y = Math.floor(k / 4096) % 4096;
-    const z = Math.floor(k / 16777216);
-    const j = at(v, x, y, z);
-    out.push({
-      x: (x + 0.5 - v.cw / 2) / v.res,
-      y: (y + 0.5 - v.ch / 2) / v.res,
-      z: z / v.res,
-      s: block / v.res,
-      rgb: (v.px[j]! << 16) | (v.px[j + 1]! << 8) | v.px[j + 2]!,
-    });
-  }
-  return out;
+/** Voxels of its own (a piece cracked off something) as a strip that can be drawn. */
+export function stripOf(v: Voxels): Strip {
+  const cv = document.createElement('canvas');
+  cv.width = v.W;
+  cv.height = v.px.length / 4 / v.W;
+  return { img: cv, cw: v.cw, ch: v.ch, n: v.n, res: v.res, cols: v.cols, px: v.px, stale: true };
 }
 
 /** A burnt-out shell: everything charred dark. */

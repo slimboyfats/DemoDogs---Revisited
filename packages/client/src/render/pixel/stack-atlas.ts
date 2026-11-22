@@ -5,6 +5,32 @@ import { texture } from './gl';
 export interface AtlasSlot {
   x: number;
   y: number;
+  /** The room it was given, when that is more than the strip needs (a slot used again). */
+  w?: number;
+  h?: number;
+}
+
+/**
+ * The spare slot that fits a `w` by `h` strip most snugly, taken out of `spare`; none if every
+ * one is too small or would waste more than the strip's own size again. Pure.
+ */
+export function takeSpare(spare: AtlasSlot[], w: number, h: number): AtlasSlot | null {
+  let best = -1;
+  let waste = w * h;
+  for (let i = 0; i < spare.length; i++) {
+    const s = spare[i]!;
+    if (s.w! < w || s.h! < h) continue;
+    const over = s.w! * s.h! - w * h;
+    if (over <= waste) {
+      waste = over;
+      best = i;
+    }
+  }
+  if (best < 0) return null;
+  const s = spare[best]!;
+  spare[best] = spare[spare.length - 1]!;
+  spare.pop();
+  return s;
 }
 
 /** Shelf position for a strip of width w and height h, or null when the atlas is full. Pure. */
@@ -37,8 +63,8 @@ export class StackAtlas {
   readonly tex: WebGLTexture;
   private readonly slots = new Map<Strip, AtlasSlot>();
   private readonly shelf = { x: 0, y: 0, row: 0 };
-  /** Slots given back, by size: the next strip of that size takes one instead of new room. */
-  private readonly spare = new Map<number, AtlasSlot[]>();
+  /** Slots given back: the next strip that fits one takes it instead of new room. */
+  private readonly spare: AtlasSlot[] = [];
   /** How many times the atlas filled up and was started again. */
   flushes = 0;
   readonly size: number;
@@ -68,7 +94,7 @@ export class StackAtlas {
     if (had) return had;
     const w = s.img.width;
     const h = s.img.height;
-    let a = this.spare.get(w * 65536 + h)?.pop() ?? shelfPack(this.shelf, this.size, w, h);
+    let a = takeSpare(this.spare, w, h) ?? shelfPack(this.shelf, this.size, w, h);
     if (!a) {
       // full: forget everything and pack again from what is drawn from here on. Strips already
       // placed this frame may show the wrong pixels until the next one.
@@ -93,16 +119,15 @@ export class StackAtlas {
     const a = this.slots.get(s);
     if (!a) return;
     this.slots.delete(s);
-    const k = s.img.width * 65536 + s.img.height;
-    const list = this.spare.get(k);
-    if (list) list.push(a);
-    else this.spare.set(k, [a]);
+    a.w ??= s.img.width;
+    a.h ??= s.img.height;
+    this.spare.push(a);
   }
 
   /** Empty the atlas: every strip is packed and uploaded afresh the next time it is drawn. */
   reset(): void {
     this.slots.clear();
-    this.spare.clear();
+    this.spare.length = 0;
     this.shelf.x = this.shelf.y = this.shelf.row = 0;
   }
 

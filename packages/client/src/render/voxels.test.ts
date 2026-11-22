@@ -6,7 +6,7 @@ import {
   shards,
   stepVoxel,
   stepHoming,
-  rebuilt,
+  front,
   landing,
   type Homing,
   launchTogether,
@@ -134,14 +134,39 @@ describe('stepHoming', () => {
   });
 });
 
-describe('rebuilt', () => {
-  it('grows from nothing to whole, each layer standing just as its blocks land', () => {
-    expect(rebuilt(0, 2.4)).toBe(0);
-    expect(rebuilt(2.4, 2.4)).toBe(1);
+describe('a rebuild', () => {
+  it('lands what is further left and lower first, and everything by the end', () => {
+    expect(front(0, 0)).toBe(0);
+    expect(front(1, 1)).toBe(1);
+    expect(front(0.2, 0.5)).toBeLessThan(front(0.8, 0.5));
+    expect(front(0.5, 0.1)).toBeLessThan(front(0.5, 0.9));
+    // across counts for more than up
+    expect(front(1, 0)).toBeGreaterThan(front(0, 1));
     for (const f of [0, 0.3, 0.7, 1]) {
       const [off, land] = landing(f, 2.4);
       expect(off).toBeLessThan(land);
-      expect(rebuilt(land, 2.4)).toBeCloseTo(f, 6);
+      expect(land).toBeLessThanOrEqual(2.4 + 1e-9);
     }
+    expect(landing(1, 2.4)[1]).toBeCloseTo(2.4, 6);
+  });
+
+  it('a block on rubble stops on top of it', () => {
+    const v: Voxel = {
+      x: 0,
+      y: 0,
+      z: 9,
+      vx: 0,
+      vy: 0,
+      vz: -10,
+      rot: 0,
+      spin: 0,
+      rgb: 0,
+      s: 1,
+      age: 0,
+    };
+    let fate = stepVoxel(v, 1 / 60, 5);
+    for (let i = 0; i < 400 && fate === 'fly'; i++) fate = stepVoxel(v, 1 / 60, 5);
+    expect(fate).toBe('rest');
+    expect(v.z).toBe(5);
   });
 });

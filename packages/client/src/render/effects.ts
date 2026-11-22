@@ -8,8 +8,8 @@ import {
   char,
   clone,
   dent,
-  filled,
-  finesOf,
+  pixels,
+  stripOf,
   restore,
   shatter,
   stripCrown,
@@ -23,15 +23,19 @@ import {
   shards,
   stepVoxel,
   type Burst,
-  front,
-  landing,
-  type Rising,
-  stepHoming,
-  type Homing,
   type Voxel,
 } from './voxels';
-import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
+import {
+  HAZE,
+  SOOT,
+  WIND,
+  shade,
+  stepParticle,
+  type FxKind,
+  type Particle,
+} from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
+import { PLAIN, Wreckage } from './wreckage';
 import type { Sound } from '../audio/sound';
 
 const TAU = Math.PI * 2;
@@ -83,8 +87,6 @@ export interface FloatText {
 
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 4000;
-/** How many fine chips fly back to rebuild a piece. */
-const MEND_CHIPS = 1800;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
 /** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
@@ -124,10 +126,25 @@ export class Effects {
   readonly flashes: Flash[] = [];
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
-  /** Blocks flying back to rebuild something that fell (a flyover span). */
-  readonly homing: Homing[] = [];
-  /** Scenery growing back from the bottom up as its blocks land: seconds in, and how long it takes. */
-  readonly rising = new Map<StaticProp, Rising>();
+  /** What is left of scenery that came down: pieces, heaps of grit, and all of it flying home. */
+  readonly wreck: Wreckage = new Wreckage(
+    {
+      voxels: this.voxels,
+      room: () => Math.max(0, MAX_VOXELS - this.voxels.length),
+      strip: stripOf,
+      changed: (s) => this.changed.add(s),
+      dropped: (s) => this.dropped.push(s),
+      dust: (x, y, z) => this.puff(x, y, z, 'dust'),
+      spark: (x, y, z) => this.spark(x, y, z, 60),
+      thud: (x, y, hit) => {
+        const v = this.vol(x, y);
+        if (v > 0 && hit > 110) this.sound.crash(hit * 0.02 * v);
+        if (this.near(x, y, 140)) this.shake = Math.max(this.shake, Math.min(5, hit * 0.02));
+      },
+      soak: (g) => this.soak(g.x, g.y, g.s, g.rgb),
+    },
+    Math.random,
+  );
   /** Pieces told to mend this step: they rebuild as one, so the sweep runs across them all. */
   private mends: { s: StaticProp; in: number }[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
@@ -158,7 +175,6 @@ export class Effects {
   readonly dropped: Strip[] = [];
   /** What each piece of shared art breaks into, worked out once. */
   private readonly bits = new WeakMap<Strip, Map<number, Chip[]>>();
-  private readonly where = new WeakMap<Strip, Float64Array>();
   readonly walkers: Walker[] = [];
   shake = 0;
   msg = '';
@@ -564,60 +580,12 @@ export class Effects {
     L.length = 0;
   }
 
-  /**
-   * Fly back together everything told to mend this step, as one: each fine chip lands as a front
-   * sweeping left to right (and a little bottom up) reaches it, and the art grows in behind that
-   * front (see `queueRising`), so the pieces stand when the last chips land.
-   */
+  /** Rebuild everything told to mend this step as one: its rubble flies home (see `Wreckage`). */
   private mendAll(): void {
-    const all = this.mends.map(({ s, in: dur }) => {
-      const art = this.art.prop(s.def.id);
-      const cs = Math.cos(s.rot);
-      const sn = Math.sin(s.rot);
-      const chips = this.finesOf(art, MEND_CHIPS, true).map((c) => ({
-        c,
-        x: s.x + c.x * cs - c.y * sn,
-        y: s.y + c.x * sn + c.y * cs,
-      }));
-      return { s, dur, art, chips };
-    });
+    this.wreck.mend(
+      this.mends.map(({ s, in: dur }) => ({ o: s, dur, tall: tall(this.art.prop(s.def.id)) })),
+    );
     this.mends = [];
-    let x0 = Infinity;
-    let x1 = -Infinity;
-    for (const p of all)
-      for (const q of p.chips) {
-        x0 = Math.min(x0, q.x);
-        x1 = Math.max(x1, q.x);
-      }
-    const wide = Math.max(1, x1 - x0);
-    for (const { s, dur, art, chips } of all) {
-      this.rising.set(s, { t: 0, dur, x0, x1 });
-      const lift = s.lift ?? 0;
-      const top = tall(art);
-      for (const { c, x, y } of chips) {
-        const [wait, land] = landing(front((x - x0) / wide, c.z / top), dur);
-        const a = rand(0, TAU);
-        const d = rand(2, s.def.radius + 12);
-        this.homing.push({
-          x0: x + Math.cos(a) * d,
-          y0: y + Math.sin(a) * d * 0.7 + lift * 0.3,
-          z0: 0,
-          x1: x,
-          y1: y,
-          z1: lift + c.z,
-          x,
-          y,
-          z: 0,
-          rot: s.rot + rand(-2, 2),
-          rgb: c.rgb,
-          s: c.s,
-          t: 0,
-          wait: Math.max(0, wait - rand(0, 0.25)),
-          dur: land,
-        });
-      }
-      for (let i = 0; i < 6; i++) this.puff(s.x + rand(-8, 8), s.y + rand(-8, 8), 1, 'dust');
-    }
   }
 
   /** A piece of shared art as blocks, kept: many of a kind burst the same way. */
@@ -629,19 +597,6 @@ export class Effects {
     if (!c) byBlock.set(block, (c = voxelsOf(art, block)));
     // a copy: `sample` shuffles and trims what it is given
     return c.slice();
-  }
-
-  /**
-   * `count` fine chips, a third the size of `chipsOf`'s, from anywhere in a strip. Shared art keeps
-   * where its texels are; a scarred copy changes, so it is looked over afresh.
-   */
-  private finesOf(art: Strip, count: number, shared: boolean): Chip[] {
-    let at = shared ? this.where.get(art) : undefined;
-    if (!at) {
-      at = filled(art);
-      if (shared) this.where.set(art, at);
-    }
-    return finesOf(art, at, count, Math.max(1, Math.round((art.res * 2) / 3)), Math.random);
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
@@ -959,7 +914,7 @@ export class Effects {
           break;
         case 'stand': {
           const s = w.statics[e.prop]!;
-          this.rising.delete(s);
+          this.wreck.stand(s);
           for (let i = 0; i < 8; i++) this.spark(s.x, s.y, (s.lift ?? 0) + 2, 60);
           break;
         }
@@ -973,15 +928,36 @@ export class Effects {
             const C = s.def.crown;
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
-          // chunky first: big lumps thrown hard break into smaller ones each time they land,
-          // then mid-sized bits, then a spray of fine grit
-          const shared = strip === this.art.prop(s.def.id);
-          const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
-          const k = big(strip) ? 1 : 0.4;
-          this.burst(this.chipsOf(strip, shared, strip.res * 4), 160 * k, { ...from, speed: 120 });
-          this.burst(this.chipsOf(strip, shared, strip.res * 2), 320 * k, { ...from, speed: 95 });
-          this.burst(this.finesOf(strip, 900 * k, shared), 900 * k, { ...from, speed: 75 });
-          if (this.scarred.delete(s)) this.dropped.push(strip);
+          const own = this.scarred.delete(s) || strip !== this.art.prop(s.def.id);
+          if (Wreckage.cracks(strip)) {
+            // it cracks into pieces that keep their own pixels, and grit from the cracks
+            pixels(strip);
+            this.wreck.fall({
+              o: s,
+              strip,
+              own,
+              mat: s.made?.breaks ?? PLAIN,
+              rebuilds: s.def.rebuild !== undefined,
+              ox: e.x,
+              oy: e.y,
+            });
+          } else {
+            // something small: lumps that break smaller as they land, and bits
+            const from = {
+              x: s.x,
+              y: s.y,
+              h: s.rot,
+              z: s.lift ?? 0,
+              ox: e.x,
+              oy: e.y,
+              vx: 0,
+              vy: 0,
+            };
+            this.burst(this.chipsOf(strip, !own, strip.res * 4), 60, { ...from, speed: 110 });
+            this.burst(this.chipsOf(strip, !own, strip.res * 2), 130, { ...from, speed: 85 });
+            this.burst(this.chipsOf(strip, !own, strip.res), 200, { ...from, speed: 65 });
+            if (own) this.dropped.push(strip);
+          }
           const col = s.made?.colour ?? '#6a6660';
           const r = s.def.radius;
           this.paintGround(s.x, s.y, r + 3, (g) => {
@@ -1000,8 +976,7 @@ export class Effects {
             }
             g.globalAlpha = 1;
           });
-          for (let i = 0; i < 8; i++)
-            this.puff(s.x + rand(-r, r), s.y + rand(-r, r), rand(1, 6), 'dust');
+          this.puff(s.x + rand(-r, r), s.y + rand(-r, r), rand(1, 6), 'dust');
           const v = this.vol(s.x, s.y);
           if (v > 0) S.crash(6 * v);
           break;
@@ -1260,15 +1235,22 @@ export class Effects {
     else for (const c of some) this.voxels.push(launch(c, b, Math.random));
   }
 
+  /** A loose block that has stopped becomes a mark on the ground: a crumb a speck, a block its own size. */
+  private soak(vx: number, vy: number, size: number, rgb: number): void {
+    const g = this.ground.g;
+    const [x, y] = this.w.keepInside(vx, vy, 1);
+    const d = Math.max(1, Math.round(size));
+    g.globalAlpha = Math.min(1, 0.35 + size * 0.65);
+    g.fillStyle = `rgb(${((rgb >> 16) & 255) * 0.8},${((rgb >> 8) & 255) * 0.8},${(rgb & 255) * 0.8})`;
+    g.fillRect(Math.floor(x - d / 2 + 0.5), Math.floor(y - d / 2 + 0.5), d, d);
+    g.globalAlpha = 1;
+    markGround(this.ground, x, y, d);
+  }
+
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   afterStep(): void {
     const w = this.w;
-    for (const r of this.rising.values()) r.t += DT;
-    for (let i = this.homing.length - 1; i >= 0; i--)
-      if (stepHoming(this.homing[i]!, DT)) {
-        this.homing[i] = this.homing[this.homing.length - 1]!;
-        this.homing.pop();
-      }
+    this.wreck.step(DT, w.cars);
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
     // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
     for (const p of w.props) {
@@ -1290,26 +1272,32 @@ export class Effects {
     }
     // loose blocks fly and bounce. One that lands hard breaks into smaller ones while there is
     // room for them; one that stops is painted into the ground for good.
-    const g = this.ground.g;
+    const W = this.wreck;
     for (let i = this.voxels.length - 1; i >= 0; i--) {
       const v = this.voxels[i]!;
-      const fate = stepVoxel(v, DT);
+      // rubble lands on the rubble that is there, and light grit rides the wind on the way down
+      const floor = v.pile && v.z < 48 ? W.floor(v.x, v.y) : 0;
+      if (v.drift && v.z > floor + 0.5) {
+        v.vx += (WIND[0] * 2.5 - v.vx) * v.drift * DT * 1.2;
+        v.vy += (WIND[1] * 2.5 - v.vy) * v.drift * DT * 1.2;
+      }
+      const fate = stepVoxel(v, DT, floor);
       if (fate === 'fly') continue;
       if (fate === 'split') {
         if (this.voxels.length + 8 > MAX_VOXELS) continue;
         const bits = shards(v, Math.random);
+        for (const b of bits) {
+          b.z += floor;
+          if (v.pile) b.pile = true;
+          if (v.home) b.home = v.home;
+          if (v.drift) b.drift = v.drift;
+        }
         this.voxels[i] = bits[0]!;
         for (let k = 1; k < bits.length; k++) this.voxels.push(bits[k]!);
         continue;
       }
-      const [x, y] = w.keepInside(v.x, v.y, 1);
-      // a crumb leaves a faint speck, a block a mark its own size
-      const d = Math.max(1, Math.round(v.s));
-      g.globalAlpha = Math.min(1, 0.35 + v.s * 0.65);
-      g.fillStyle = `rgb(${((v.rgb >> 16) & 255) * 0.8},${((v.rgb >> 8) & 255) * 0.8},${(v.rgb & 255) * 0.8})`;
-      g.fillRect(Math.floor(x - d / 2 + 0.5), Math.floor(y - d / 2 + 0.5), d, d);
-      g.globalAlpha = 1;
-      markGround(this.ground, x, y, d);
+      // it has stopped: rubble stays as a grain on the heap, anything else soaks into the ground
+      if (!W.settle(v)) this.soak(v.x, v.y, v.s, v.rgb);
       this.voxels[i] = this.voxels[this.voxels.length - 1]!;
       this.voxels.pop();
     }

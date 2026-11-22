@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Strip } from '../stack';
-import { StackAtlas, shelfPack } from './stack-atlas';
+import { StackAtlas, shelfPack, takeSpare } from './stack-atlas';
 
 describe('shelfPack', () => {
   it('packs strips left to right with a texel of padding, then starts a new shelf', () => {
@@ -16,6 +16,24 @@ describe('shelfPack', () => {
     expect(shelfPack(st, 32, 40, 4)).toBeNull();
     expect(shelfPack(st, 32, 32, 30)).toEqual({ x: 0, y: 0 });
     expect(shelfPack(st, 32, 32, 4)).toBeNull();
+  });
+});
+
+describe('takeSpare', () => {
+  it('gives the snuggest slot that fits, and none that is too small or far too big', () => {
+    const spare = [
+      { x: 0, y: 0, w: 100, h: 30 },
+      { x: 0, y: 40, w: 64, h: 24 },
+      { x: 0, y: 80, w: 40, h: 40 },
+    ];
+    expect(takeSpare(spare, 60, 20)).toMatchObject({ y: 40 });
+    expect(spare.length).toBe(2);
+    // nothing left is both wide and tall enough
+    expect(takeSpare(spare, 60, 36)).toBeNull();
+    // fits, but would waste more than the strip's own size again
+    expect(takeSpare(spare, 20, 10)).toBeNull();
+    expect(takeSpare(spare, 90, 28)).toMatchObject({ y: 0 });
+    expect(spare.length).toBe(1);
   });
 });
 
