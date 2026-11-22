@@ -45,6 +45,7 @@ export function makeCar(
     name,
     paint,
     isPlayer,
+    seat: -1,
     ai:
       ai && behaviour
         ? {
@@ -240,11 +241,11 @@ function bump(
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
       damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
-      w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c.isPlayer });
+      w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c === w.player });
     }
   } else if (impact > 8 && c.scrapeCd <= 0) {
     c.scrapeCd = 0.12;
-    w.emit({ t: 'scrape', x: px, y: py, player: c.isPlayer });
+    w.emit({ t: 'scrape', x: px, y: py, player: c === w.player });
   }
 }
 
@@ -295,7 +296,7 @@ export function collideWorld(w: World, c: Car): void {
         c.vx *= 0.72;
         c.vy *= 0.72;
         damage(w, c, (vn - 28) * 0.1 * s.def.hardness, null, px, py);
-        w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c.isPlayer });
+        w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c === w.player });
         break;
       }
       bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
@@ -345,9 +346,10 @@ export function collideCars(w: World, a: Car, b: Car): void {
   a.spin += clamp(((-ra[1] * j * 0.0016) / ma) * Math.sign(ra[0] + 0.01), -5, 5);
   b.spin += clamp(((rb[1] * j * 0.0016) / mb) * Math.sign(rb[0] + 0.01), -5, 5);
   const impact = -vrel;
-  const player = a.isPlayer || b.isPlayer;
+  // `player` is only what the events say (the screen's own car); the rules use isPlayer
+  const player = a === w.player || b === w.player;
   if (impact < 20) {
-    if (impact > 8 && player && a.scrapeCd <= 0) {
+    if (impact > 8 && (a.isPlayer || b.isPlayer) && a.scrapeCd <= 0) {
       a.scrapeCd = 0.1;
       w.emit({ t: 'scrape', x: best.px, y: best.py, player });
     }
@@ -399,7 +401,7 @@ export function collideProps(w: World, c: Car): void {
       }
       if (p.def.explodesAt !== undefined && impact > p.def.explodesAt) light(p, c.index, 0.05);
       p.vz = Math.max(p.vz, impact * p.def.launch);
-      if (impact > 40) w.emit({ t: 'scrape', x: p.x, y: p.y, player: c.isPlayer });
+      if (impact > 40) w.emit({ t: 'scrape', x: p.x, y: p.y, player: c === w.player });
     }
   }
 }

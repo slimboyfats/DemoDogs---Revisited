@@ -64,7 +64,10 @@ export interface Car {
   fuel: number;
   name: string;
   paint: string;
+  /** Driven by a human (the player, or another driver in online play). */
   isPlayer: boolean;
+  /** Which human seat drives it (0 = the player), or -1 for a rival. */
+  seat: number;
   ai: AiState | null;
   x: number;
   y: number;

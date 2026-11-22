@@ -58,6 +58,16 @@ export interface WorldOptions {
   field?: Entrant[];
   /** The player's upgrades and extras. */
   player?: Setup;
+  /**
+   * Online play: the other human drivers, seats 1, 2, ... (the player is seat 0). Each peer builds
+   * the same world from the same options; only `you` differs.
+   */
+  humans?: Entrant[];
+  /**
+   * Which seat `player` points at (default 0): the car this screen follows. It is a viewpoint
+   * only: no rule reads `player`, so every peer simulates the same race whatever its `you`.
+   */
+  you?: number;
   /** A wrecked car is out for good, and the race ends when the player is. */
   knockout?: boolean;
   /** Laps, instead of the mode's. */
@@ -128,7 +138,13 @@ export class World {
   readonly spills: Spill[] = [];
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
+  /**
+   * The car this screen follows (seat `you`). Rules never read it: in online play it differs
+   * between peers. Rules use `humans`.
+   */
   readonly player: Car;
+  /** Human-driven cars by seat: the player first, then any online drivers. */
+  readonly humans: Car[] = [];
   /** Car indices in finishing order. */
   readonly finishers: number[] = [];
   phase: Phase = 'countdown';
@@ -138,6 +154,8 @@ export class World {
   timeLeft = 0;
   /** Seconds until the result screen, once the end is decided; -1 before. */
   endT = -1;
+  /** Online race: once one human has finished, the race ends at this race time; 0 before. */
+  finishBy = 0;
   private events: SimEvent[] = [];
   private lastBeep = 4;
 
@@ -189,13 +207,23 @@ export class World {
       opts.autopilot ? aiDef : null,
       opts.player,
     );
+    player.seat = 0;
+    this.humans.push(player);
+    for (const e of opts.humans ?? []) {
+      const def = C.car.get(e.car);
+      if (!def) throw new Error(`no car ${e.car}`);
+      const h = makeCar(this, def, e.paint, e.name, true, null, e);
+      h.seat = this.humans.length;
+      this.humans.push(h);
+    }
+    const others = this.humans.slice(1);
     const rivals: Car[] = [];
     for (const e of opts.field ?? []) {
       const def = C.car.get(e.car);
       if (!def) throw new Error(`no car ${e.car}`);
       rivals.push(makeCar(this, def, e.paint, e.name, false, this.sandbox ? null : aiDef, e));
     }
-    const count = opts.field ? 0 : (opts.rivals ?? FIELD_SIZE - 1);
+    const count = opts.field ? 0 : (opts.rivals ?? Math.max(0, FIELD_SIZE - this.humans.length));
     for (let i = 0; i < count; i++) {
       const t = types[(types.indexOf(opts.car) + 1 + i) % types.length]!;
       rivals.push(
@@ -210,7 +238,7 @@ export class World {
       );
     }
     if (mode.kind === 'race' && this.track) {
-      const order = [...rivals.slice(0, 3), player, ...rivals.slice(3)];
+      const order = [...rivals.slice(0, 3), player, ...others, ...rivals.slice(3)];
       order.forEach((c, k) => this.placeOnTrack(c, this.gridSlot(k), k % 2 ? 1 : -1));
       this.cars.push(...order);
       for (let q = 1; q <= 4; q++) {
@@ -227,7 +255,7 @@ export class World {
       }
     } else if (this.oval) {
       const O = this.oval;
-      const all = [player, ...rivals];
+      const all = [player, ...others, ...rivals];
       all.forEach((c, k) => {
         const t = (k / all.length) * TAU + 0.3;
         c.x = O.cx + Math.cos(t) * O.rx * 0.7;
@@ -247,7 +275,7 @@ export class World {
       }
     }
     this.cars.forEach((c, i) => (c.index = i));
-    this.player = player;
+    this.player = this.humans[opts.you ?? 0] ?? player;
     const botDef = C.bot.get(venue.bots.bot)!;
     for (let i = 0; i < venue.bots.count; i++) {
       const b = makeBot(this, botDef, i);
@@ -360,12 +388,29 @@ export class World {
     return true;
   }
 
+  /** The furthest any human has got round the track (rivals rubber-band to it). */
+  humanProgress(): number {
+    let best = -Infinity;
+    for (const c of this.humans) best = Math.max(best, c.progress);
+    return best;
+  }
+
   standings(): Car[] {
     return standings(this);
   }
 
-  /** Advance one tick. `player` is ignored when the player's car is on autopilot. */
+  /** Advance one tick. `player` drives the car this screen follows (ignored on autopilot). */
   step(player: Controls = NO_CONTROLS): void {
+    if (this.humans.length === 1) this.stepSeats([player]);
+    else {
+      const all = this.humans.map(() => NO_CONTROLS);
+      all[this.player.seat] = player;
+      this.stepSeats(all);
+    }
+  }
+
+  /** Advance one tick with each human seat's controls (online play: seat order, not `you`). */
+  stepSeats(seats: readonly Controls[]): void {
     this.tick++;
     if (this.phase === 'countdown') {
       this.countdown -= DT;
@@ -396,9 +441,13 @@ export class World {
         )
           respawn(this, c);
       } else if (live) {
-        ctl = c.ai ? c.ai.behaviour.drive(this, c) : c.isPlayer ? player : NO_CONTROLS;
+        ctl = c.ai
+          ? c.ai.behaviour.drive(this, c)
+          : c.isPlayer
+            ? (seats[c.seat] ?? NO_CONTROLS)
+            : NO_CONTROLS;
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
-      } else if (c.isPlayer) c.throttle = player.throttle;
+      } else if (c.isPlayer) c.throttle = (seats[c.seat] ?? NO_CONTROLS).throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
         c.roll *= 0.9;
@@ -424,25 +473,30 @@ export class World {
 
     if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
-      // the race is over for a wrecked player, and won when no rival is left running
-      const P = this.player;
-      if (P.wrecked) this.endT = 2.6;
-      else if (this.cars.length > 1 && this.cars.every((c) => c === P || c.wrecked)) {
-        if (!P.finished) {
-          P.finished = true;
-          P.finishTime = this.raceTime;
-          this.finishers.push(P.index);
-          this.emit({ t: 'finish', car: P.index, place: this.finishers.length });
+      // the race is over once every human is wrecked, and won when no rival is left running
+      const H = this.humans;
+      const running = H.filter((c) => !c.wrecked);
+      if (running.length === 0) this.endT = 2.6;
+      else if (this.cars.length > 1 && this.cars.every((c) => c.isPlayer || c.wrecked)) {
+        if (running.length === 1) {
+          const P = running[0]!;
+          if (!P.finished) {
+            P.finished = true;
+            P.finishTime = this.raceTime;
+            this.finishers.push(P.index);
+            this.emit({ t: 'finish', car: P.index, place: this.finishers.length });
+          }
+          this.endT = 2.8;
         }
-        this.endT = 2.8;
       }
     }
     if (this.kind === 'derby' && live) {
       this.timeLeft -= DT;
       const alive = this.cars.filter((c) => !c.wrecked).length;
-      if (this.endT < 0 && (alive <= 1 || this.player.wrecked || this.timeLeft <= 0))
-        this.endT = this.player.wrecked ? 2.6 : 2;
+      const out = this.humans.every((c) => c.wrecked);
+      if (this.endT < 0 && (alive <= 1 || out || this.timeLeft <= 0)) this.endT = out ? 2.6 : 2;
     }
+    if (this.endT < 0 && this.finishBy > 0 && this.raceTime >= this.finishBy) this.endT = 0.5;
     if (this.endT > 0) {
       this.endT -= DT;
       if (this.endT <= 0) {

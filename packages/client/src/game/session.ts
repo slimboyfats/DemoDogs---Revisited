@@ -1,8 +1,9 @@
-import { DT } from '@demodogs/shared';
+import { DT, type Controls } from '@demodogs/shared';
 import { World, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Input } from '../input/input';
 import type { Art } from '../render/art';
+import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
 import { makeGround, type Ground } from '../render/ground';
 import { PITCH, type Camera } from '../render/scene';
@@ -22,6 +23,9 @@ export interface SessionOptions {
   knockout?: boolean;
   /** A test range: parked targets, no countdown, no end. */
   sandbox?: boolean;
+  /** Online: the other drivers (seats 1, 2, ...) and which seat this screen drives. */
+  humans?: Entrant[];
+  you?: number;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -38,6 +42,8 @@ function makeWorld(o: SessionOptions): World {
     ...(o.player ? { player: o.player } : {}),
     ...(o.knockout ? { knockout: true } : {}),
     ...(o.sandbox ? { sandbox: true } : {}),
+    ...(o.humans ? { humans: o.humans } : {}),
+    ...(o.you !== undefined ? { you: o.you } : {}),
   });
 }
 
@@ -62,6 +68,8 @@ export class Session {
   rate = 1;
   /** The camera follows the player's car; off, it stays where it is put. */
   follow = true;
+  /** Online: the race driver decides when ticks run and with whose controls. */
+  net: NetRace | null = null;
 
   constructor(
     private readonly o: SessionOptions,
@@ -118,10 +126,19 @@ export class Session {
 
   /** One fixed tick: read input, step the world, play its events, move the camera. */
   step(): void {
+    this.tickWith(() => this.world.step(this.o.input.read(this.world.player.h)));
+  }
+
+  /** One online tick with every seat's controls. */
+  stepSeats(seats: Controls[]): void {
+    this.tickWith(() => this.world.stepSeats(seats));
+  }
+
+  private tickWith(run: () => void): void {
     const w = this.world;
     const P = w.player;
     const t0 = performance.now();
-    w.step(this.o.input.read(P.h));
+    run();
     const t1 = performance.now();
     this.fx.handle(w.takeEvents());
     this.fx.afterStep();
@@ -151,6 +168,11 @@ export class Session {
 
   /** Advance by dt seconds of real time. Returns true once the race is over (the first time). */
   advance(dt: number): boolean {
+    if (this.net) {
+      this.net.local(this.o.input.read(this.world.player.h));
+      this.net.pump(dt, { step: (seats) => this.stepSeats(seats), hash: () => this.world.hash() });
+      return this.over();
+    }
     this.acc += dt * this.rate;
     let n = 0;
     while (this.acc >= DT && n < MAX_STEPS) {
@@ -159,6 +181,10 @@ export class Session {
       n++;
     }
     if (n === MAX_STEPS) this.acc = 0;
+    return this.over();
+  }
+
+  private over(): boolean {
     if (this.world.phase === 'over' && !this.overSeen) {
       this.overSeen = true;
       return true;

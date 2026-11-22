@@ -667,7 +667,7 @@ export class Effects {
           const from = { ...this.carBurst(c), ox: e.x, oy: e.y };
           this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
           this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
-          if (c.isPlayer && e.amount > 6)
+          if (c === w.player && e.amount > 6)
             this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
           break;
         }
@@ -721,7 +721,7 @@ export class Effects {
               rand(0, TAU),
               7,
             );
-          if (c.isPlayer)
+          if (c === w.player)
             this.setMsg(w.kind === 'race' ? 'TOTALLED! TOWING YOU BACK' : 'YOU ARE SCRAP', 2.4);
           else if (w.kind === 'derby' && this.near(c.x, c.y, 300) && e.by !== w.player.index)
             this.text(c.x, c.y, `${c.name} IS OUT`, '#ffb08a');
@@ -1085,7 +1085,7 @@ export class Effects {
           const wpn = w.content.weapon.get(e.weapon);
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
-          } else if (c.isPlayer) S.drop();
+          } else if (c === w.player) S.drop();
           break;
         }
         case 'score':
