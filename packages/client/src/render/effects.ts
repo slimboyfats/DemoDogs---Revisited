@@ -127,6 +127,10 @@ export class Effects {
   private readonly propAlive: boolean[] = [];
   /** Strips redrawn since a renderer last looked (dents, charring, a fresh body). */
   readonly changed = new Set<Strip>();
+  /** Strips of its own that will not be drawn again (the renderer gives their room back). */
+  readonly dropped: Strip[] = [];
+  /** What each piece of shared art breaks into, worked out once. */
+  private readonly bits = new WeakMap<Strip, Chip[]>();
   readonly walkers: Walker[] = [];
   shake = 0;
   msg = '';
@@ -532,6 +536,13 @@ export class Effects {
     L.length = 0;
   }
 
+  /** A piece of shared art as blocks, kept: many of a kind burst the same way. */
+  private chipsOf(art: Strip): Chip[] {
+    let c = this.bits.get(art);
+    if (!c) this.bits.set(art, (c = voxelsOf(art)));
+    return c;
+  }
+
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
   private pool(m: MaterialManifest, x: number, y: number, r: number): void {
     const rgb = parseInt(m.colour.slice(1), 16);
@@ -832,18 +843,22 @@ export class Effects {
             const C = s.def.crown;
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
-          this.burst(voxelsOf(strip), 220, {
-            x: s.x,
-            y: s.y,
-            h: s.rot,
-            z: 0,
-            ox: e.x,
-            oy: e.y,
-            speed: 55,
-            vx: 0,
-            vy: 0,
-          });
-          this.scarred.delete(s);
+          this.burst(
+            this.scarred.has(s) || s.def.crown ? voxelsOf(strip) : this.chipsOf(strip),
+            220,
+            {
+              x: s.x,
+              y: s.y,
+              h: s.rot,
+              z: 0,
+              ox: e.x,
+              oy: e.y,
+              speed: 55,
+              vx: 0,
+              vy: 0,
+            },
+          );
+          if (this.scarred.delete(s)) this.dropped.push(strip);
           const col = s.made?.colour ?? '#6a6660';
           const r = s.def.radius;
           this.paintGround(s.x, s.y, r + 3, (g) => {
@@ -1130,7 +1145,7 @@ export class Effects {
     for (const p of w.props) {
       if (!p.alive && this.propAlive[p.index] !== false) {
         const boom = p.def.explodesAt !== undefined;
-        this.burst(voxelsOf(this.art.prop(p.def.id)), boom ? 260 : 200, {
+        this.burst(this.chipsOf(this.art.prop(p.def.id)), boom ? 260 : 200, {
           x: p.x,
           y: p.y,
           h: p.rot,

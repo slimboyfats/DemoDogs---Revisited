@@ -26,6 +26,7 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
 export class PixelScene implements WorldRenderer, StackSink {
   readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
+  private fx: Effects | null = null;
   private readonly stacks: StackBatch;
   private readonly quads: QuadBatch;
   private readonly glow: QuadBatch;
@@ -142,6 +143,13 @@ export class PixelScene implements WorldRenderer, StackSink {
       this.groundLayer = new GroundLayer(gl, ground);
       this.ground = ground;
     }
+    // a new race: nothing of the last one's damaged art will be drawn again
+    if (fx !== this.fx) {
+      this.atlas.reset();
+      this.fx = fx;
+    }
+    for (const s of fx.dropped) this.atlas.release(s);
+    fx.dropped.length = 0;
     for (const s of fx.changed) this.atlas.refresh(s);
     fx.changed.clear();
     this.groundLayer!.sync();
@@ -227,6 +235,11 @@ export class PixelScene implements WorldRenderer, StackSink {
   }
 
   /** Slices drawn last frame (for the perf readout and tests). */
+  /** The sprite atlas: how full it is, and how often it filled up and was started again. */
+  get atlasState(): { fill: number; flushes: number } {
+    return { fill: this.atlas.fill, flushes: this.atlas.flushes };
+  }
+
   get instances(): number {
     return this.stacks.count;
   }

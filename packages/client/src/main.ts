@@ -407,7 +407,7 @@ function perfContext(): PerfContext {
     fires: s.fx.fires.length,
     pools: w.spills.length,
     fallen: w.statics.reduce((n, p) => n + (p.down ? 1 : 0), 0),
-    note: `${w.venue.id} ${w.player.def.id}`,
+    note: `${w.venue.id} ${w.player.def.id}${scene instanceof PixelScene ? ` atlas ${Math.round(scene.atlasState.fill * 100)}% x${scene.atlasState.flushes}` : ''}`,
     heap: mem ? mem.usedJSHeapSize / 1048576 : 0,
   };
 }
@@ -598,6 +598,9 @@ function boot(): void {
       setCareer(k: Career) {
         saveCareer(k);
         if (screen === 'career') openCareer();
+      },
+      get atlas() {
+        return scene instanceof PixelScene ? scene.atlasState : null;
       },
       get screen() {
         return screen;

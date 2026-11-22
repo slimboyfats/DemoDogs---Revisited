@@ -37,6 +37,10 @@ export class StackAtlas {
   readonly tex: WebGLTexture;
   private readonly slots = new Map<Strip, AtlasSlot>();
   private readonly shelf = { x: 0, y: 0, row: 0 };
+  /** Slots given back, by size: the next strip of that size takes one instead of new room. */
+  private readonly spare = new Map<number, AtlasSlot[]>();
+  /** How many times the atlas filled up and was started again. */
+  flushes = 0;
   readonly size: number;
 
   constructor(
@@ -62,11 +66,44 @@ export class StackAtlas {
   slot(s: Strip): AtlasSlot {
     const had = this.slots.get(s);
     if (had) return had;
-    const a = shelfPack(this.shelf, this.size, s.img.width, s.img.height);
-    if (!a) throw new Error('stack atlas is full');
+    const w = s.img.width;
+    const h = s.img.height;
+    let a = this.spare.get(w * 65536 + h)?.pop() ?? shelfPack(this.shelf, this.size, w, h);
+    if (!a) {
+      // full: forget everything and pack again from what is drawn from here on. Strips already
+      // placed this frame may show the wrong pixels until the next one.
+      this.reset();
+      this.flushes++;
+      a = shelfPack(this.shelf, this.size, w, h);
+      // a strip bigger than the whole atlas: draw it from the corner rather than stop the game
+      if (!a) return { x: 0, y: 0 };
+    }
     this.slots.set(s, a);
     this.upload(s, a);
     return a;
+  }
+
+  /** How much of the atlas's height is taken, 0 to 1. */
+  get fill(): number {
+    return (this.shelf.y + this.shelf.row) / this.size;
+  }
+
+  /** A strip that will not be drawn again gives its room back. */
+  release(s: Strip): void {
+    const a = this.slots.get(s);
+    if (!a) return;
+    this.slots.delete(s);
+    const k = s.img.width * 65536 + s.img.height;
+    const list = this.spare.get(k);
+    if (list) list.push(a);
+    else this.spare.set(k, [a]);
+  }
+
+  /** Empty the atlas: every strip is packed and uploaded afresh the next time it is drawn. */
+  reset(): void {
+    this.slots.clear();
+    this.spare.clear();
+    this.shelf.x = this.shelf.y = this.shelf.row = 0;
   }
 
   /** Upload a redrawn strip again (no-op for a strip never drawn). */

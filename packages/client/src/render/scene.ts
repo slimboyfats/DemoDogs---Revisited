@@ -105,6 +105,7 @@ export class Scene implements WorldRenderer {
       if (id) for (let q = 0; q < 32; q++) this.bakes.delete(`${id}:${q}`);
     }
     fx.changed.clear();
+    fx.dropped.length = 0;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.fillStyle = w.venue.colors.outside;
