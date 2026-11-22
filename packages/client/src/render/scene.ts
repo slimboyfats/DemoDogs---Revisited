@@ -3,6 +3,7 @@ import type { Art } from './art';
 import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { WorldRenderer } from './overlay';
+import { drawParticle, overSmoke, type Put } from './pixel/particles';
 import { queueShadows, queueStacks } from './stacks';
 import { StackRenderer, type Strip } from './stack';
 
@@ -151,31 +152,24 @@ export class Scene implements WorldRenderer {
       ctx.fillRect(Math.round(sx - S / 2), Math.round(sy - S / 2), S, S);
     }
 
-    // particles
-    for (const f of fx.fx) {
-      const sx = R.sx(f.x);
-      const sy = R.sy(f.y, f.z);
-      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
-      const k = f.life / f.max;
-      let s = f.size * S;
-      if (f.kind === 'smoke') {
-        s *= 1 + (1 - k) * 1.8;
-        ctx.globalAlpha = 0.45 * k;
-        ctx.fillStyle = '#3a3836';
-      } else if (f.kind === 'dust') {
-        s *= 1 + (1 - k) * 1.5;
-        ctx.globalAlpha = 0.4 * k;
-        ctx.fillStyle = '#9a8460';
-      } else if (f.kind === 'fire') {
-        ctx.globalAlpha = Math.min(1, k * 1.5);
-        ctx.fillStyle = k > 0.6 ? '#ffe27a' : k > 0.3 ? '#ff8a2a' : '#c0321c';
-      } else {
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = k > 0.5 ? '#fff6c0' : '#ffb03a';
-        s = Math.max(2, S * 0.8);
-      }
-      ctx.fillRect(sx - s / 2, sy - s / 2, s, s);
-    }
+    // particles: the same blobs as the pixel engine, drawn here as plain squares
+    const put =
+      (lighter: boolean): Put =>
+      (x, y, z, d, rgb, a) => {
+        const sx = R.sx(x);
+        const sy = R.sy(y, z);
+        if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return;
+        const s = Math.max(lighter ? 2 : 1, d * S);
+        ctx.globalCompositeOperation = lighter ? 'lighter' : 'source-over';
+        ctx.globalAlpha = a;
+        ctx.fillStyle = `#${rgb.toString(16).padStart(6, '0')}`;
+        ctx.fillRect(Math.round(sx - s / 2), Math.round(sy - s / 2), Math.round(s), Math.round(s));
+      };
+    const normal = put(false);
+    const glow = put(true);
+    for (const f of fx.fx) if (!overSmoke(f)) drawParticle(f, normal, glow);
+    for (const f of fx.fx) if (overSmoke(f)) drawParticle(f, normal, glow);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
 }

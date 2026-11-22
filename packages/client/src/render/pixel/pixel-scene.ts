@@ -9,24 +9,25 @@ import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { Lights } from './lighting';
+import { drawParticle, overSmoke, type Put } from './particles';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
-const FIRE = [0xffe27a, 0xff8a2a, 0xc0321c] as const;
 
 /**
  * The world drawn by mudders' pixel engine with the sprite-stack addon: WebGL2, one instanced
  * draw for every slice on screen, depth-tested on the GPU, lit by the frame's point lights.
  *
  * Frame order: ground quad, shadows (QuadBatch), stacks (StackBatch, depth on), particles
- * (QuadBatch with mudders' pixel-blob and stipple shapes). Words and the HUD go on the overlay.
+ * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
 export class PixelScene implements WorldRenderer, StackSink {
   private readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
   private readonly stacks: StackBatch;
   private readonly quads: QuadBatch;
+  private readonly glow: QuadBatch;
   private readonly lights = new Lights();
   private groundLayer: GroundLayer | null = null;
   private ground: Ground | null = null;
@@ -53,6 +54,7 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.atlas = new StackAtlas(gl);
     this.stacks = new StackBatch(gl, this.atlas);
     this.quads = new QuadBatch(gl);
+    this.glow = new QuadBatch(gl, 1024);
   }
 
   /** Can this browser run the pixel engine? */
@@ -117,6 +119,14 @@ export class PixelScene implements WorldRenderer, StackSink {
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    for (const f of fx.fires)
+      L.add(
+        f.x,
+        f.y,
+        30 + f.r * 3,
+        (0.5 + Math.sin(t * 31 + f.x) * 0.2) * (f.life / f.max) + 0.3,
+        0xff8a30,
+      );
     for (const m of w.mines)
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
@@ -193,26 +203,22 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 
-    // particles: mudders' pixel shapes (stippled smoke, solid fire blobs, single-pixel sparks)
+    // particles: mudders' pixel blobs, snapped to whole cells of the projected picture. Smoke
+    // first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
-    for (const f of fx.fx) {
-      const k = f.life / f.max;
-      const x = f.x;
-      const y = this.my(f.y, f.z);
-      if (f.kind === 'smoke') {
-        const d = f.size * (1 + (1 - k) * 1.8) * 1.6;
-        this.quads.push(x, y, d, d, 0x3a3836, 0.7 * k, Shape.Stipple);
-      } else if (f.kind === 'dust') {
-        const d = f.size * (1 + (1 - k) * 1.5) * 1.6;
-        this.quads.push(x, y, d, d, 0x9a8460, 0.6 * k, Shape.Stipple);
-      } else if (f.kind === 'fire') {
-        const col = FIRE[k > 0.6 ? 0 : k > 0.3 ? 1 : 2];
-        this.quads.push(x, y, f.size * 1.4, f.size * 1.4, col, 1, Shape.Solid);
-      } else {
-        this.quads.push(x, y, 0.9, 0.9, k > 0.5 ? 0xfff6c0 : 0xffb03a, 1, Shape.Rect);
-      }
-    }
+    const cell = (v: number) => Math.floor(v) + 0.5;
+    const normal: Put = (x, y, z, d, rgb, a, shape) =>
+      this.quads.push(cell(x), cell(this.my(y, z)), d, d, rgb, a, shape);
+    const glow: Put = (x, y, z, d, rgb, a) =>
+      this.glow.push(cell(x), cell(this.my(y, z)), d, d, rgb, a, Shape.Rect);
+    for (const f of fx.fx)
+      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
+    for (const f of fx.fx)
+      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
     this.quads.flush(quadView, quadOrigin, S);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    this.glow.flush(quadView, quadOrigin, S);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
   }
 

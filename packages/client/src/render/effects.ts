@@ -6,6 +6,7 @@ import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
 import { char, clone, dent, shatter, voxelsOf, type Chip } from './strips';
 import { launch, sample, stepVoxel, type Burst, type Voxel } from './voxels';
+import { HAZE, SOOT, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import type { Sound } from '../audio/sound';
 
 const TAU = Math.PI * 2;
@@ -13,19 +14,7 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]!;
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 
-export type FxKind = 'spark' | 'smoke' | 'dust' | 'fire';
-export interface Particle {
-  kind: FxKind;
-  x: number;
-  y: number;
-  z: number;
-  vx: number;
-  vy: number;
-  vz: number;
-  life: number;
-  max: number;
-  size: number;
-}
+export type { FxKind, Particle };
 export interface Debris {
   strip: Strip;
   x: number;
@@ -46,6 +35,15 @@ export interface Flash {
   max: number;
   rgb: number;
 }
+/** A patch of fire left burning for a moment: it feeds flames, a smoke column and embers. */
+export interface Fire {
+  x: number;
+  y: number;
+  /** Radius of the burning patch, art px. */
+  r: number;
+  life: number;
+  max: number;
+}
 export interface FloatText {
   x: number;
   y: number;
@@ -59,6 +57,8 @@ export interface FloatText {
 
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 2400;
+/** The most particles alive at once. */
+const MAX_FX = 1800;
 
 const BOT_RIG = {
   thigh: 3.4,
@@ -89,6 +89,8 @@ export class Effects {
   readonly flashes: Flash[] = [];
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
+  /** Fires still burning where something blew up. */
+  readonly fires: Fire[] = [];
   private readonly propAlive: boolean[] = [];
   /** Strips redrawn since a renderer last looked (dents, charring, a fresh body). */
   readonly changed = new Set<Strip>();
@@ -122,39 +124,116 @@ export class Effects {
   }
 
   // ------------------------------------------------------------ helpers
+  private emit(
+    kind: FxKind,
+    x: number,
+    y: number,
+    z: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    life: number,
+    size: number,
+    rgb = 0,
+  ): void {
+    if (this.fx.length >= MAX_FX) return;
+    this.fx.push({ kind, x, y, z, vx, vy, vz, life, max: life, size, rgb });
+  }
+
   spark(x: number, y: number, z: number, sp = 0): void {
-    if (this.fx.length > 700) return;
     const a = rand(0, TAU);
     const v = rand(20, 60) + sp * Math.random();
-    this.fx.push({
-      kind: 'spark',
+    this.emit(
+      'spark',
       x,
       y,
       z,
-      vx: Math.cos(a) * v,
-      vy: Math.sin(a) * v,
-      vz: rand(30, 110),
-      life: rand(0.25, 0.55),
-      max: 0.55,
-      size: 1,
-    });
+      Math.cos(a) * v,
+      Math.sin(a) * v,
+      rand(30, 110),
+      rand(0.25, 0.55),
+      1,
+      Math.random() < 0.5 ? 0xfff6c0 : 0xffb03a,
+    );
   }
 
-  puff(x: number, y: number, z: number, kind: FxKind, vx = 0, vy = 0): void {
-    if (this.fx.length > 700) return;
-    const fire = kind === 'fire';
-    this.fx.push({
+  /** A thin stippled puff: tyre smoke, or dust off the dirt. */
+  puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
+    this.emit(
       kind,
-      x: x + rand(-2, 2),
-      y: y + rand(-2, 2),
+      x + rand(-2, 2),
+      y + rand(-2, 2),
       z,
-      vx: vx + rand(-8, 8),
-      vy: vy + rand(-8, 8),
-      vz: fire ? rand(18, 36) : rand(8, 20),
-      life: fire ? rand(0.3, 0.6) : rand(0.8, 1.6),
-      max: fire ? 0.6 : 1.6,
-      size: fire ? rand(1.5, 3) : rand(2, 3.5),
-    });
+      vx + rand(-8, 8),
+      vy + rand(-8, 8),
+      rand(8, 20),
+      rand(0.8, 1.6),
+      rand(3, 5.5),
+      kind === 'smoke' ? 0x8a8680 : 0x9a8460,
+    );
+  }
+
+  /** One lick of flame rising from (x, y, z). */
+  flame(x: number, y: number, z: number, size: number, vx = 0, vy = 0, vz = rand(20, 45)): void {
+    this.emit('flame', x, y, z, vx, vy, vz, rand(0.3, 0.6), size);
+  }
+
+  /** One puff of a smoke column. */
+  plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
+    this.emit('plume', x, y, z, rand(-5, 5), rand(-5, 5), vz, rand(1.5, 2.6), size, rgb);
+  }
+
+  ember(x: number, y: number, z: number): void {
+    this.emit('ember', x, y, z, rand(-14, 14), rand(-14, 14), rand(25, 60), rand(0.8, 1.8), 1);
+  }
+
+  /**
+   * An explosion, mudders' way: a ball of fire cells thrown out and up that brake in the air and
+   * burn down through the fire ramp, firework stars, a ring of dust along the ground, and a patch
+   * of fire left burning that feeds a smoke column.
+   */
+  fireball(x: number, y: number, power: number): void {
+    const k = Math.sqrt(power);
+    for (let i = 0; i < 30 * power; i++) {
+      const a = rand(0, TAU);
+      const up = rand(0, 1);
+      const v = rand(30, 150) * k * Math.sqrt(1 - up * up * 0.7);
+      this.emit(
+        'flame',
+        x + Math.cos(a) * rand(0, 3),
+        y + Math.sin(a) * rand(0, 3),
+        rand(1, 6),
+        Math.cos(a) * v,
+        Math.sin(a) * v,
+        up * 130 * k,
+        rand(0.35, 0.85),
+        rand(4, 8) * k,
+      );
+    }
+    for (let i = 0; i < 20 * power; i++) {
+      const a = rand(0, TAU);
+      const v = rand(120, 300) * k;
+      this.emit(
+        'glitter',
+        x,
+        y,
+        rand(2, 6),
+        Math.cos(a) * v,
+        Math.sin(a) * v,
+        rand(60, 260),
+        rand(0.5, 1.1),
+        1,
+        Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
+      );
+    }
+    for (let i = 0; i < 22; i++) {
+      const a = (i / 22) * TAU + rand(-0.1, 0.1);
+      const v = rand(90, 130) * k;
+      this.emit('dust', x, y, 1, Math.cos(a) * v, Math.sin(a) * v, 4, rand(0.5, 0.9), 4, 0x9a8a70);
+    }
+    for (let i = 0; i < 8 * power; i++)
+      this.plume(x + rand(-6, 6), y + rand(-6, 6), rand(4, 14), rand(5, 8));
+    this.fires.push({ x, y, r: 7 * k, life: 1.1 * k, max: 1.1 * k });
   }
 
   text(x: number, y: number, text: string, col = '#fff', big = false): void {
@@ -316,6 +395,7 @@ export class Effects {
           g.drawImage(this.carArt(c).body.img, 0, 0);
           this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
+          this.smokeT[e.car] = 0;
           break;
         }
         case 'land':
@@ -323,10 +403,7 @@ export class Effects {
           break;
         case 'explode': {
           const { x, y, power } = e;
-          for (let i = 0; i < 18 * power; i++)
-            this.puff(x, y, rand(1, 8), 'fire', rand(-40, 40), rand(-40, 40));
-          for (let i = 0; i < 12 * power; i++)
-            this.puff(x, y, rand(2, 10), 'smoke', rand(-25, 25), rand(-25, 25));
+          this.fireball(x, y, power);
           for (let i = 0; i < 16; i++) this.spark(x, y, 4, 120);
           this.scorch(x, y, 16 * power);
           this.flashes.push({ x, y, r: 70 * power + 20, life: 0.45, max: 0.45, rgb: 0xffa040 });
@@ -508,31 +585,48 @@ export class Effects {
         this.smokeT[i] = t;
         if (t <= 0) {
           this.smokeT[i] = c.wrecked ? 0.05 : c.hp < 25 ? 0.07 : 0.16;
-          this.puff(c.x + cs * 6, c.y + sn * 6, 6, 'smoke');
-          if (c.wrecked || c.hp < 20) this.puff(c.x + cs * 6, c.y + sn * 6, 5, 'fire');
+          // the engine: a hurt one trails grey smoke, a dying one burns under a black column
+          const ex = c.x + cs * 6 + rand(-2, 2);
+          const ey = c.y + sn * 6 + rand(-2, 2);
+          const burning = c.wrecked || c.hp < 20;
+          this.plume(ex, ey, c.z + 6, burning ? rand(4, 6) : rand(2.5, 4), burning ? SOOT : HAZE);
+          if (burning) {
+            this.flame(ex, ey, c.z + 5, rand(3, 5.5), c.vx * 0.5, c.vy * 0.5);
+            if (Math.random() < 0.25) this.ember(ex, ey, c.z + 7);
+          }
         }
       }
     });
-    for (let i = this.fx.length - 1; i >= 0; i--) {
-      const f = this.fx[i]!;
+    // a rocket rides a tail of fire and leaves a thin smoke trail
+    for (const r of w.rockets) {
+      const bx = r.x - Math.cos(r.h) * 5;
+      const by = r.y - Math.sin(r.h) * 5;
+      this.flame(bx, by, 5, rand(2, 3.5), 0, 0, 0);
+      if (Math.random() < 0.6) this.emit('plume', bx, by, 5, 0, 0, 6, rand(0.5, 0.9), 2.5, HAZE);
+    }
+    // fires left by explosions burn down: flames, then mostly smoke
+    for (let i = this.fires.length - 1; i >= 0; i--) {
+      const f = this.fires[i]!;
       f.life -= DT;
       if (f.life <= 0) {
-        this.fx.splice(i, 1);
+        this.fires.splice(i, 1);
         continue;
       }
-      f.x += f.vx * DT;
-      f.y += f.vy * DT;
-      f.z += f.vz * DT;
-      if (f.kind === 'spark') {
-        f.vz -= 300 * DT;
-        if (f.z < 0) {
-          f.z = 0;
-          f.vz *= -0.4;
-        }
-      } else {
-        f.vx *= 0.96;
-        f.vy *= 0.96;
-      }
+      const k = f.life / f.max;
+      const a = rand(0, TAU);
+      const d = rand(0, f.r);
+      const x = f.x + Math.cos(a) * d;
+      const y = f.y + Math.sin(a) * d;
+      for (let n = 0; n < 2; n++)
+        if (Math.random() < k + 0.2)
+          this.flame(x + rand(-2, 2), y + rand(-2, 2), rand(1, 4), rand(4, 7) * (0.5 + k * 0.5));
+      if (Math.random() < 0.45) this.plume(x, y, rand(5, 10), rand(4, 7));
+      if (Math.random() < 0.2) this.ember(x, y, 5);
+    }
+    for (let i = this.fx.length - 1; i >= 0; i--) {
+      if (stepParticle(this.fx[i]!, DT)) continue;
+      this.fx[i] = this.fx[this.fx.length - 1]!;
+      this.fx.pop();
     }
     for (let i = this.debris.length - 1; i >= 0; i--) {
       const d = this.debris[i]!;
