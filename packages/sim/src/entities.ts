@@ -232,6 +232,10 @@ export interface Rocket {
   owner: number;
   life: number;
   def: WeaponManifest;
+  /** The car it has locked onto (see `WeaponManifest.lock`), if any. */
+  target?: number;
+  /** Seconds in the air. */
+  age?: number;
 }
 
 export interface Mine {

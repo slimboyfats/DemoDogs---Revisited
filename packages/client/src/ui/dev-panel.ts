@@ -18,7 +18,7 @@ export type Tool =
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
-  ['rocket', 'ROCKET', 'Tap: a rocket flies from your car to that spot'],
+  ['rocket', 'ROCKET', 'Tap: the chosen rocket flies from your car towards that spot'],
   ['mine', 'MINE', 'Tap: lay a mine there'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
@@ -61,6 +61,8 @@ export class DevPanel {
   private readonly toolBtns = new Map<Tool, HTMLButtonElement>();
   private readonly rateBtns: HTMLButtonElement[] = [];
   private readonly propSel = document.createElement('select');
+  /** Which rocket the ROCKET tool fires (seekers, clusters). */
+  readonly rocketSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
   private fps = 60;
 
@@ -85,6 +87,9 @@ export class DevPanel {
         t,
         btn(label, title, () => this.pick(t)),
       );
+    for (const r of [...content.weapon.values()].filter((d) => d.kind === 'rocket'))
+      this.rocketSel.append(new Option(r.meta.name, r.id));
+    root.append(this.rocketSel);
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
@@ -207,7 +212,7 @@ export class DevPanel {
     const weapon = (kind: string) => [...this.content.weapon.values()].find((d) => d.kind === kind);
     switch (tool) {
       case 'rocket': {
-        const def = weapon('rocket');
+        const def = this.content.weapon.get(this.rocketSel.value) ?? weapon('rocket');
         const h = Math.atan2(y - P.y, x - P.x);
         if (def) rangeRocket(w, def, P, P.x + Math.cos(h) * 15, P.y + Math.sin(h) * 15, h);
         break;

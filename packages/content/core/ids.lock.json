@@ -71,7 +71,10 @@
   "venue.tar-flats",
   "venue.the-pit",
   "weapon.gun",
+  "weapon.litter",
   "weapon.mine",
   "weapon.oil-can",
-  "weapon.rocket"
+  "weapon.pup",
+  "weapon.rocket",
+  "weapon.sniffer"
 ]

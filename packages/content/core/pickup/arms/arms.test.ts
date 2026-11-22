@@ -11,8 +11,8 @@ describe('pickup.arms', () => {
     w.pickups[0]!.on = true;
     put(c, w.pickups[0]!.x, w.pickups[0]!.y, 0);
     w.step();
-    expect(['weapon.rocket', 'weapon.mine', 'weapon.oil-can']).toContain(c.weapon?.id);
-    expect(c.ammo).toBe(3);
+    expect(w.content.pickup.get('pickup.arms')!.weapons).toContain(c.weapon?.id);
+    expect(c.ammo).toBe(c.weapon!.ammo);
     expect(w.pickups[0]!.on).toBe(false);
   });
 
