@@ -79,7 +79,8 @@ export class OnlineRoom {
   ) {
     this.venue = venue;
     this.net = new RoomNet(signal, role);
-    this.net.onLink = (link, peer, path) => (role === 'host' ? this.hostLink(link, peer) : this.guestLink(link, path));
+    this.net.onLink = (link, peer, path) =>
+      role === 'host' ? this.hostLink(link, peer) : this.guestLink(link, path);
     this.offs.push(
       signal.on('roomUpdate', (m) => this.roomUpdate(m)),
       signal.on('error', (m) => {
@@ -90,7 +91,14 @@ export class OnlineRoom {
   }
 
   /** Open a room on the lobby server; guests join with its code. */
-  static async host(signal: SignalClient, me: Me, hash: string, venue: string, hooks: RoomHooks, summary: string): Promise<OnlineRoom> {
+  static async host(
+    signal: SignalClient,
+    me: Me,
+    hash: string,
+    venue: string,
+    hooks: RoomHooks,
+    summary: string,
+  ): Promise<OnlineRoom> {
     await signal.connect();
     const r = new OnlineRoom('host', signal, me, hash, hooks, venue);
     r.seats = [{ name: me.name, car: me.car, paint: SEAT_PAINTS[0]!, connected: true }];
@@ -108,7 +116,13 @@ export class OnlineRoom {
     return r;
   }
 
-  static async join(signal: SignalClient, me: Me, hash: string, code: string, hooks: RoomHooks): Promise<OnlineRoom> {
+  static async join(
+    signal: SignalClient,
+    me: Me,
+    hash: string,
+    code: string,
+    hooks: RoomHooks,
+  ): Promise<OnlineRoom> {
     await signal.connect();
     const r = new OnlineRoom('guest', signal, me, hash, hooks, '');
     let rejoin = false;
@@ -148,7 +162,13 @@ export class OnlineRoom {
   setVenue(v: string, summary: string): void {
     if (this.role !== 'host' || this.race) return;
     this.venue = v;
-    this.signal.send({ type: 'roomSettings', name: `${this.me.name}'s room`, public: false, maxPlayers: MAX_HUMANS, summary });
+    this.signal.send({
+      type: 'roomSettings',
+      name: `${this.me.name}'s room`,
+      public: false,
+      maxPlayers: MAX_HUMANS,
+      summary,
+    });
     this.broadcastLobby();
   }
 
@@ -202,7 +222,8 @@ export class OnlineRoom {
 
   leave(): void {
     if (this.role === 'host')
-      for (const { link } of this.links.values()) link.send({ type: 'bye', reason: 'the host closed the room' });
+      for (const { link } of this.links.values())
+        link.send({ type: 'bye', reason: 'the host closed the room' });
     else this.link?.send({ type: 'bye', reason: 'left' });
     try {
       sessionStorage.removeItem('dd-room');
@@ -314,7 +335,12 @@ export class OnlineRoom {
           }
           seat = this.seats.length;
           this.seatPeer.push(peer);
-          this.seats.push({ name: m.name, car: m.car, paint: SEAT_PAINTS[seat % SEAT_PAINTS.length]!, connected: true });
+          this.seats.push({
+            name: m.name,
+            car: m.car,
+            paint: SEAT_PAINTS[seat % SEAT_PAINTS.length]!,
+            connected: true,
+          });
         } else {
           this.seats[seat] = { ...this.seats[seat]!, connected: true };
           if (!this.race) this.seats[seat] = { ...this.seats[seat]!, name: m.name, car: m.car };
@@ -368,7 +394,8 @@ export class OnlineRoom {
       this.link = null;
       this.hooks.change();
       // ask the host to dial again (the server keeps our seat for a while)
-      if (!this.closedWith) setTimeout(() => !this.closedWith && this.net.requestLink(this.hostId), 1000);
+      if (!this.closedWith)
+        setTimeout(() => !this.closedWith && this.net.requestLink(this.hostId), 1000);
     };
     link.send({
       type: 'join',

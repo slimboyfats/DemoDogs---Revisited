@@ -28,7 +28,8 @@ describe('deterministic maths', () => {
       close(datan2(y, x), Math.atan2(y, x));
     }
     for (const y of [0, -0, 1, -1, Infinity, -Infinity])
-      for (const x of [0, -0, 1, -1, Infinity, -Infinity]) expect(datan2(y, x)).toBe(Math.atan2(y, x));
+      for (const x of [0, -0, 1, -1, Infinity, -Infinity])
+        expect(datan2(y, x)).toBe(Math.atan2(y, x));
   });
 
   it('exp and hypot match', () => {

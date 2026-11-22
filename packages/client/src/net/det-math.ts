@@ -23,7 +23,17 @@ export function installDeterministicMath(): void {
 /** FNV-1a over the resolved manifests and the AI code: peers with different content can't race. */
 export function contentHash(c: Content): string {
   const parts: string[] = [JSON.stringify(c.packs)];
-  for (const k of ['car', 'venue', 'mode', 'weapon', 'pickup', 'prop', 'material', 'bot', 'ai'] as const)
+  for (const k of [
+    'car',
+    'venue',
+    'mode',
+    'weapon',
+    'pickup',
+    'prop',
+    'material',
+    'bot',
+    'ai',
+  ] as const)
     parts.push(JSON.stringify([...c[k].entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))));
   for (const [id, b] of [...c.behaviours.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)))
     parts.push(id, String(b.drive));

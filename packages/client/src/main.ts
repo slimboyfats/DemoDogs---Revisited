@@ -32,6 +32,8 @@ import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { results } from './ui/results';
+import { signalUrl } from './net/config';
+import { OnlineScreen } from './ui/online';
 
 /**
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
@@ -67,7 +69,7 @@ let carIdx = Math.max(
 );
 let session: Session | null = null;
 let lastVenue = venues[0]!.id;
-let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' = 'menu';
+let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' = 'menu';
 /** The game on screen is the test range. */
 let devMode = false;
 const SAVE = 'dd-career-v1';
@@ -115,6 +117,44 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   record: () => (perf ? stopPerf() : startPerf()),
   stats: () => (scene instanceof PixelScene ? `slices ${scene.instances}` : 'canvas'),
 });
+// online races: the lobby screen, and the room it holds while racing
+const online = new OnlineScreen(
+  $('onlinePanel'),
+  content,
+  cars,
+  venues,
+  signalUrl(import.meta.env.VITE_SIGNAL_URL, import.meta.env.DEV, location),
+  {
+    race: (s, race) => {
+      careerRace = null;
+      const host = s.seats[0]!;
+      void launch(
+        {
+          venue: s.venue,
+          car: host.car,
+          seed: s.seed,
+          autopilot: false,
+          humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
+          you: s.you,
+        },
+        `ONLINE · ${content.venue.get(s.venue)?.meta.name.toUpperCase() ?? ''}`,
+        (made) => {
+          made.net = race;
+          document.body.classList.add('online');
+        },
+      );
+    },
+    back: () => setScreen('menu'),
+    show: () => {
+      document.body.classList.remove('online');
+      if (screen !== 'online') setScreen('online');
+    },
+  },
+);
+function openOnline(join?: string): void {
+  setScreen('online');
+  online.open(cars[carIdx]!.id, join);
+}
 let paused = false;
 /** The results on screen are a career race's: CONTINUE goes back to the career. */
 let lastCareer = false;
@@ -143,7 +183,7 @@ function resize(): void {
 }
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader'])
+  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online'])
     $(k).classList.toggle('hidden', k !== id);
 }
 
@@ -288,6 +328,11 @@ function finish(gaveUp = false): void {
   pay.replaceChildren();
   $('again').textContent = careerRace ? 'CONTINUE' : 'GO AGAIN';
   $('toMenu').classList.toggle('hidden', careerRace !== null);
+  $('toMenu').textContent = 'MENU';
+  if (online.room) {
+    $('again').textContent = online.isHost ? 'BACK TO THE ROOM' : 'WAITING FOR THE HOST…';
+    $('toMenu').textContent = 'LEAVE ROOM';
+  }
   if (careerRace) {
     // settle once: the race is spent, so leaving the results cannot pay twice
     const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
@@ -348,8 +393,12 @@ function togglePause(): void {
   if (screen !== 'game') return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
-  $('restart').classList.toggle('hidden', careerRace !== null || devMode);
-  $('quit').textContent = careerRace ? 'GIVE UP THE RACE' : 'QUIT TO MENU';
+  $('restart').classList.toggle('hidden', careerRace !== null || devMode || online.room !== null);
+  $('quit').textContent = careerRace
+    ? 'GIVE UP THE RACE'
+    : online.room
+      ? 'LEAVE THE ONLINE RACE'
+      : 'QUIT TO MENU';
   if (paused) sound.engineStop();
   else {
     sound.engineStart();
@@ -486,7 +535,8 @@ function frame(t: number): void {
     const f0 = performance.now();
     if (input.takePause()) togglePause();
     session.ticks = session.simMs = session.stepMs = 0;
-    if (!paused && session.advance(dt)) {
+    // an online race never stops for one player's pause menu
+    if ((!paused || online.racing) && session.advance(dt)) {
       finish();
       return;
     }
@@ -499,6 +549,7 @@ function frame(t: number): void {
     if (devMode) dev.frame(dt);
     else hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
+    if (online.racing) $('netDot').textContent = online.status();
     // a device that keeps falling behind gets thinner fire and smoke, by itself
     if (!paused && slow.frame(t, wall) && session.fx.quality > 0.3) {
       session.fx.quality = Math.max(0.3, session.fx.quality * 0.65);
@@ -541,15 +592,29 @@ function boot(): void {
     carIdx = (carIdx + 1) % cars.length;
     showCar();
   };
-  $('again').onclick = () => (lastCareer ? openCareer() : startGame(lastVenue));
+  $('again').onclick = () => {
+    if (online.room) {
+      if (online.isHost) online.backToLobby();
+    } else if (lastCareer) openCareer();
+    else startGame(lastVenue);
+  };
+  $('toOnline').onclick = () => openOnline();
   $('toCareer').onclick = openCareer;
   $('toDev').onclick = () => startDev(cars[carIdx]!.id);
-  $('toMenu').onclick = () => setScreen('menu');
+  $('toMenu').onclick = () => {
+    if (online.room) online.leave();
+    document.body.classList.remove('online');
+    setScreen('menu');
+  };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
   $('restart').onclick = () => startGame(lastVenue);
   $('quit').onclick = () => {
     paused = false;
+    if (online.room) {
+      online.leave();
+      document.body.classList.remove('online');
+    }
     // walking out of a career race is a last place, not a free retry
     if (careerRace) finish(true);
     else setScreen('menu');
@@ -560,7 +625,7 @@ function boot(): void {
   muteBtns.forEach((b) => (b.onclick = () => (sound.toggle(), label())));
   label();
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && screen === 'game' && !paused) togglePause();
+    if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
   });
   showCar();
   setScreen('menu');
@@ -579,6 +644,7 @@ function boot(): void {
     const c = params.get('car');
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
+  if (params.has('room')) openOnline(params.get('room') ?? '');
   if (params.has('career')) {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
@@ -606,6 +672,7 @@ function boot(): void {
         return screen;
       },
       dev,
+      online,
     },
   });
   requestAnimationFrame(frame);

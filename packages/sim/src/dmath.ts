@@ -88,7 +88,8 @@ export function datan(x: number): number {
   if (Number.isNaN(x)) return NaN;
   const neg = x < 0;
   let a = Math.abs(x);
-  if (a >= 7.37869762948382e19) return neg ? -(ATAN_HI[3]! + ATAN_LO[3]!) : ATAN_HI[3]! + ATAN_LO[3]!;
+  if (a >= 7.37869762948382e19)
+    return neg ? -(ATAN_HI[3]! + ATAN_LO[3]!) : ATAN_HI[3]! + ATAN_LO[3]!;
   let id: number;
   if (a < 0.4375) {
     if (a < 1.862645149230957e-9) return x;
@@ -117,8 +118,8 @@ export function datan(x: number): number {
   return neg ? -r : r;
 }
 
-const PI = 3.141592653589793116;
-const PI_LO = 1.2246467991473531772e-16;
+const PI = 3.141592653589793;
+const PI_LO = 1.2246467991473532e-16;
 
 export function datan2(y: number, x: number): number {
   if (Number.isNaN(x) || Number.isNaN(y)) return NaN;

@@ -28,7 +28,15 @@ describe('online lockstep', () => {
     const [hl, gl] = linkPair('local', true);
     const toGuest: PeerMessage[] = [];
     gl.onMessage = (m) => toGuest.push(m);
-    const host = new HostRace(2, () => ({ type: 'start', seed: 11, venue: 'v', seats: [], you: 1, log: [], upTo: 0 }));
+    const host = new HostRace(2, () => ({
+      type: 'start',
+      seed: 11,
+      venue: 'v',
+      seats: [],
+      you: 1,
+      log: [],
+      upTo: 0,
+    }));
     const sent: PeerMessage[] = [];
     const guest = new GuestRace(1, 2, [], 0, (m) => sent.push(m));
     host.attach(1, hl, 0);
@@ -47,7 +55,9 @@ describe('online lockstep', () => {
     expect(guest.t).toBe(host.t);
     expect(gw.hash()).toBe(hw.hash());
     expect(host.desyncs).toBe(0);
-    expect(hw.cars.map((c) => Math.round(c.progress))).toEqual(gw.cars.map((c) => Math.round(c.progress)));
+    expect(hw.cars.map((c) => Math.round(c.progress))).toEqual(
+      gw.cars.map((c) => Math.round(c.progress)),
+    );
     // both humans actually drove
     expect(hw.humans[1]!.progress).toBeGreaterThan(500);
   });
@@ -57,7 +67,11 @@ describe('online lockstep', () => {
     const guest = new GuestRace(1, 2, [], 0, () => {});
     guest.pump(1, stepper(gw));
     expect(guest.t).toBe(0);
-    guest.receive(200, [5, 0, packControls({ steer: 0, throttle: 1, brake: false, boost: false, fire: false })]);
+    guest.receive(200, [
+      5,
+      0,
+      packControls({ steer: 0, throttle: 1, brake: false, boost: false, fire: false }),
+    ]);
     guest.pump(1 / 60, stepper(gw));
     expect(guest.t).toBe(60);
   });
@@ -71,7 +85,15 @@ describe('online lockstep', () => {
     const [hl, gl] = linkPair('local', true);
     const got: PeerMessage[] = [];
     gl.onMessage = (m) => got.push(m);
-    const host = new HostRace(2, () => ({ type: 'start', seed: 1, venue: 'v', seats: [], you: 1, log: [], upTo: 0 }));
+    const host = new HostRace(2, () => ({
+      type: 'start',
+      seed: 1,
+      venue: 'v',
+      seats: [],
+      you: 1,
+      log: [],
+      upTo: 0,
+    }));
     host.attach(1, hl, -1);
     expect(got.at(-1)?.type).toBe('start');
     host.handle(1, { type: 'hash', t: HASH_EVERY, h: RESYNC });

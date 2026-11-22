@@ -71,7 +71,11 @@ const ToIce = z.object({
   to: IdSchema,
   candidate: z.string().max(2_000).nullable(),
 });
-const ToRelay = z.object({ type: z.literal('relay'), to: IdSchema, data: z.string().max(RELAY_MAX) });
+const ToRelay = z.object({
+  type: z.literal('relay'),
+  to: IdSchema,
+  data: z.string().max(RELAY_MAX),
+});
 /** Which path a link took and how long it took to open, for the server's /stats. */
 export const PathReportSchema = z.object({
   type: z.literal('path'),
@@ -133,7 +137,11 @@ export const ServerErrorSchema = z.object({
 });
 const FromOffer = z.object({ type: z.literal('offer'), from: IdSchema, sdp: SdpSchema });
 const FromAnswer = z.object({ type: z.literal('answer'), from: IdSchema, sdp: SdpSchema });
-const FromIce = z.object({ type: z.literal('ice'), from: IdSchema, candidate: z.string().nullable() });
+const FromIce = z.object({
+  type: z.literal('ice'),
+  from: IdSchema,
+  candidate: z.string().nullable(),
+});
 const FromRelay = z.object({ type: z.literal('relay'), from: IdSchema, data: z.string() });
 
 export const ServerMessageSchema = z.discriminatedUnion('type', [
