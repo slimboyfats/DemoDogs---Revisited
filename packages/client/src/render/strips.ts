@@ -291,7 +291,7 @@ class Blocks {
 
 /**
  * Punch a crater at (lx, ly) (art px from the middle, x forward), `r` art px across: deepest in
- * the middle, shallower towards the rim, with the paint around it chipped and scuffed darker. The
+ * the middle (`power` of the part's height, down from its surface there), shallower towards the rim, with the paint around it chipped and scuffed darker. The
  * bottom `keep` art px of the part always stay. Returns what was knocked off, as blocks of up to
  * `block` texels a side.
  */
@@ -323,19 +323,31 @@ export function dentVoxels(
       if (d > 1) continue;
       const q = d / 0.6;
       const deep = q < 1 ? crush * (1 - q * q * 0.7) : 0;
-      const k = 0.62 + 0.3 * d;
+      const k = 0.8 + 0.2 * d;
       const col = (y * v.W + x) * 4;
-      for (let z = 0; z < v.n; z++) {
+      // the crater is measured down from the surface here, not from the top of the part's box:
+      // a low bonnet loses as much as a tall roof
+      let top = v.n - 1;
+      while (top >= 0 && !px[zo[top]! + col + 3]) top--;
+      for (let z = top; z >= 0; z--) {
         const j = zo[z]! + col;
         if (!px[j + 3]) continue;
-        if (z >= floor && (v.n - 1 - z < deep || (d < 0.9 && rand() < 0.3 * power))) {
+        const under = top - z;
+        if (
+          z >= floor &&
+          (under < deep || (d < 0.9 && under < deep + v.res && rand() < 0.3 * power))
+        ) {
           out.add(x, y, z, j);
           px[j + 3] = 0;
           continue;
         }
-        px[j] = px[j]! * k;
-        px[j + 1] = px[j + 1]! * k;
-        px[j + 2] = px[j + 2]! * k;
+        // near the surface only: the rim is scuffed darker, and the floor of the hole, which was
+        // buried and so drawn in its darkest tone, comes up to what bare material looks like
+        if (under > deep + v.res * 2) break;
+        const m = deep > 0 ? 1.45 : k;
+        px[j] = px[j]! * m;
+        px[j + 1] = px[j + 1]! * m;
+        px[j + 2] = px[j + 2]! * m;
       }
     }
   return out.chips();

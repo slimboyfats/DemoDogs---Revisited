@@ -94,11 +94,32 @@ describe('breaking voxels off', () => {
     expect(vol(coarse)).toBeCloseTo(vol(fine));
   });
 
-  it('a dent scuffs the paint it leaves behind', () => {
+  it('a dent scuffs the rim and bares the floor of the hole', () => {
     const v = block(12, 8, 6);
-    dentVoxels(v, 0, 0, 4, 0.1, () => 1);
-    const mid = allVoxels(v).find((c) => c.z === 0 && Math.abs(c.x) < 1 && Math.abs(c.y) < 1)!;
-    expect(mid.rgb >> 16).toBeLessThan(200);
+    dentVoxels(v, 0, 0, 4, 0.4, () => 1);
+    const all = allVoxels(v);
+    // on the rim nothing is removed, and the top is darker than it was
+    const rim = all.find((c) => c.z === 5 && Math.abs(c.x - 3) < 1 && Math.abs(c.y) < 1)!;
+    expect(rim.rgb >> 16).toBeLessThan(200);
+    // in the middle the top is gone, and what is now on show is lighter than buried paint
+    const mid = all.filter((c) => Math.abs(c.x) < 1 && Math.abs(c.y) < 1);
+    const top = Math.max(...mid.map((c) => c.z));
+    expect(top).toBeLessThan(5);
+    expect(mid.find((c) => c.z === top)!.rgb >> 16).toBeGreaterThan(200);
+  });
+
+  it('a crater is measured from the surface, so a low part loses as much as a tall one', () => {
+    const tall = block(12, 8, 12);
+    const low = block(12, 8, 12);
+    // the low part is the same block with its top half missing
+    for (let z = 6; z < 12; z++)
+      for (let y = 0; y < 8; y++) for (let x = 0; x < 12; x++) low.px[at(low, x, y, z) + 3] = 0;
+    const a = count(tall);
+    const b = count(low);
+    dentVoxels(tall, 0, 0, 4, 0.2, () => 1);
+    dentVoxels(low, 0, 0, 4, 0.2, () => 1);
+    expect(b - count(low)).toBe(a - count(tall));
+    expect(b - count(low)).toBeGreaterThan(0);
   });
 
   it('shattering takes whole blocks from above the floor', () => {

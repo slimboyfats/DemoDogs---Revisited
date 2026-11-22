@@ -357,7 +357,7 @@ export class Effects {
             this.bodies[e.car]!,
             e.lx * 0.9,
             e.ly * 0.85,
-            clamp(3 + e.amount * 0.14, 3, 7),
+            clamp(1.3 + e.amount * 0.2, 1.3, 7),
             clamp(e.amount / 45, 0.05, 0.6),
             Math.random,
             1,
