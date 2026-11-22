@@ -37,13 +37,25 @@ export class StackAtlas {
   readonly tex: WebGLTexture;
   private readonly slots = new Map<Strip, AtlasSlot>();
   private readonly shelf = { x: 0, y: 0, row: 0 };
+  readonly size: number;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
-    readonly size = 2048,
+    size = 4096,
   ) {
+    this.size = Math.min(size, gl.getParameter(gl.MAX_TEXTURE_SIZE) as number);
     this.tex = texture(gl);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, size, size, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA8,
+      this.size,
+      this.size,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      null,
+    );
   }
 
   /** The strip's slot, packing and uploading it on first use. */
@@ -66,7 +78,22 @@ export class StackAtlas {
   private upload(s: Strip, a: AtlasSlot): void {
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, a.x, a.y, gl.RGBA, gl.UNSIGNED_BYTE, s.img);
+    const w = s.img.width;
+    const h = s.img.height;
+    // a strip that keeps its pixels is uploaded from them: no canvas read-back, just a copy
+    if (s.px)
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        a.x,
+        a.y,
+        w,
+        h,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array(s.px.buffer, s.px.byteOffset, s.px.byteLength),
+      );
+    else gl.texSubImage2D(gl.TEXTURE_2D, 0, a.x, a.y, gl.RGBA, gl.UNSIGNED_BYTE, s.img);
   }
 
   dispose(): void {

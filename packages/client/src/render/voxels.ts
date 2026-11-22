@@ -22,8 +22,8 @@ const MAX_AGE = 6;
 /** Slower than this on the ground, a voxel stops and becomes part of the ground. */
 const REST_SPEED = 14;
 
-/** The smallest a block breaks down to: one texel of the art. */
-export const CRUMB = 1 / 3;
+/** The smallest a block breaks down to: one texel of a car. */
+export const CRUMB = 1 / 6;
 /** A block that lands faster than this breaks up. */
 const BREAK_SPEED = 80;
 

@@ -1,7 +1,7 @@
 import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
 import { PALETTE, kit } from '@demodogs/content';
 import type { Strip } from './stack';
-import { build, hexRgb, tones } from './strips';
+import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
 export interface CarArt {
   body: Strip;
@@ -41,7 +41,7 @@ export class Art {
   private readonly bots = new Map<string, BotArt>();
 
   constructor(private readonly looks: Map<string, LookModule>) {
-    this.wheels = [0, 1, 2].map((f) => build(kit.wheel(f), PALETTE));
+    this.wheels = [0, 1, 2].map((f) => build(kit.wheel(f), PALETTE, CAR_DETAIL));
     this.pickup = build(kit.PICKUP_BOX, PALETTE);
     this.plank = build(kit.PLANK, PALETTE);
   }
@@ -84,9 +84,9 @@ export class Art {
         paint2: tones(scale(paint, 0.68)),
       };
       a = {
-        body: build(L.body, m),
-        top: build(L.top, m),
-        bumper: build(kit.BUMPER, m),
+        body: build(L.body, m, CAR_DETAIL),
+        top: build(L.top, m, CAR_DETAIL),
+        bumper: build(kit.BUMPER, m, CAR_DETAIL),
         chunk: build(kit.CHUNK, m),
       };
       this.cars.set(key, a);

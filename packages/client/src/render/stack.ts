@@ -15,6 +15,8 @@
 //
 // World coordinates: x and y lie on the ground, z is height, all in art pixels.
 
+import { settle } from './strips';
+
 /**
  * A stack's slices in one image. A slice is `cw` by `ch` texels and there are `n` of them, bottom
  * first, laid out `cols` to a row. `res` is texels per art pixel, in all three directions: a strip
@@ -27,6 +29,12 @@ export interface Strip {
   n: number;
   res: number;
   cols: number;
+  /**
+   * The image's pixels (RGBA), when something keeps them: they are then what is true, and `img`
+   * is behind them while `stale` is set (see `settle` in strips.ts).
+   */
+  px?: Uint8ClampedArray;
+  stale?: boolean;
 }
 
 /** How tall a strip stands, in art pixels. */
@@ -155,7 +163,7 @@ export class StackRenderer {
     const rows = Math.max(1, Math.ceil((this.zk * thick) / s.res - 0.02));
     for (let k = 0; k < rows; k++) {
       const it = this.take();
-      it.img = s.img;
+      it.img = s.stale ? settle(s) : s.img;
       it.cw = s.cw;
       it.ch = s.ch;
       it.u = sliceX(s, i);

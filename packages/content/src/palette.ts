@@ -12,6 +12,8 @@ export const PALETTE: Record<string, Tones> = {
   grille: ['#0c0d10', '#16181c', '#23262c'],
   chrome: ['#7d828c', '#b4b9c2', '#f0f3f7'],
   hub: ['#5a5e68', '#8e939d', '#c9cdd4'],
+  amber: ['#a85a10', '#e8891c', '#ffc050'],
+  plate: ['#a9a698', '#d8d5c8', '#f6f4ea'],
   light: ['#c79f2c', '#f1cf52', '#fff2ae'],
   tail: ['#7c1a1f', '#b8262d', '#ff5b5b'],
   tire: ['#111113', '#1b1c1f', '#2a2b2f'],

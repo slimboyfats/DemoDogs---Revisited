@@ -4,7 +4,7 @@ import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import type { Strip } from './stack';
-import { char, clone, dent, shatter, voxelsOf, type Chip } from './strips';
+import { char, clone, dent, restore, shatter, voxelsOf, type Chip } from './strips';
 import {
   launch,
   launchTogether,
@@ -431,9 +431,7 @@ export class Effects {
           const c = w.cars[e.car]!;
           // paint the fresh body back into the same strip, so renderers keep their copy of it
           const body = this.bodies[e.car]!;
-          const g = body.img.getContext('2d')!;
-          g.clearRect(0, 0, body.img.width, body.img.height);
-          g.drawImage(this.carArt(c).body.img, 0, 0);
+          restore(body, this.carArt(c).body);
           this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
           this.smokeT[e.car] = 0;

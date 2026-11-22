@@ -3,6 +3,7 @@ import {
   allVoxels,
   at,
   dentVoxels,
+  detachNear,
   detachVoxels,
   hexRgb,
   lightOf,
@@ -119,5 +120,29 @@ describe('breaking voxels off', () => {
     expect(loose.every((c) => c.x > 0 && c.z >= 2)).toBe(true);
     expect(count(v)).toBe(9 * 3 + 4 * 3 * 5);
     expect(detachVoxels(v)).toHaveLength(0);
+  });
+});
+
+describe('breaking off near a blow', () => {
+  it('takes only the piece the blow cut loose, and leaves the body', () => {
+    const v = block(12, 6, 10, 2);
+    // saw a slab off the top at one end: cut through layer 6 for x < 5, and down the side at x = 5
+    for (let y = 0; y < 6; y++) {
+      for (let x = 0; x < 5; x++) v.px[at(v, x, y, 6) + 3] = 0;
+      for (let z = 6; z < 10; z++) v.px[at(v, 5, y, z) + 3] = 0;
+    }
+    const before = count(v);
+    const loose = detachNear(v, 0, 0, 6, 5, 1, 1);
+    expect(loose.length).toBe(5 * 6 * 3);
+    expect(count(v)).toBe(before - 5 * 6 * 3);
+    // nothing else is loose
+    expect(detachVoxels(v, 1).length).toBe(0);
+  });
+
+  it('a piece too big to be debris stays', () => {
+    const v = block(12, 6, 10, 2);
+    for (let y = 0; y < 6; y++) for (let x = 0; x < 12; x++) v.px[at(v, x, y, 4) + 3] = 0;
+    expect(detachNear(v, 0, 0, 11, 5, 1, 1, 50).length).toBe(0);
+    expect(detachNear(v, 0, 0, 11, 5, 1, 1).length).toBe(12 * 6 * 5);
   });
 });
