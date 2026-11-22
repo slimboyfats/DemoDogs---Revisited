@@ -13,7 +13,7 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const FOG = [0x5d6066, 0x777a80, 0x8d9096, 0xa4a6aa, 0xb8babd];
 
 /** Cells a cloud lets go each tick per square art px of its area, and how long each lasts. */
-const DENSITY = 0.0075;
+const DENSITY = 0.016;
 const CELL_LIFE: [number, number] = [1.6, 2.6];
 
 export interface DropFxHost {
@@ -25,15 +25,17 @@ export interface DropFxHost {
 
 /** Once a tick: keep every smoke cloud fed with fog so that it stays thick until it goes. */
 export function feedClouds(fx: DropFxHost, w: World): void {
+  // several clouds at once share the cells rather than crowding out fire and leaves
+  const share = Math.min(1, 2 / Math.max(1, w.clouds.length));
   for (const c of w.clouds) {
     const r = cloudReach(c);
     if (r < 1) continue;
     // the first moment it billows out of the pot: a burst, thrown outwards
     const fresh = c.t < 0.35;
-    const n = Math.round(Math.PI * r * r * DENSITY * fx.quality * (fresh ? 3 : 1));
+    const n = Math.round(Math.PI * r * r * DENSITY * fx.quality * share * (fresh ? 2 : 1));
     for (let i = 0; i < n; i++) {
       const a = rand(0, Math.PI * 2);
-      const d = Math.sqrt(Math.random()) * r;
+      const d = Math.sqrt(Math.random()) * r * 0.9;
       const out = fresh ? rand(20, 50) : rand(0, 6);
       fx.cells.add(
         CKind.Fog,
