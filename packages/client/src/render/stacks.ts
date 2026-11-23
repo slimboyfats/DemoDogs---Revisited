@@ -10,11 +10,13 @@ import {
 import type { Art } from './art';
 import { queueToppling } from './collapse';
 import type { Effects } from './effects';
+import { queueRig, rigTall, tickBones } from './bones';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
 import { queueArsenal } from './arsenal-fx';
 import { leanAt } from './rubble';
+import { Builder } from './slice-fx';
 import { queueDecoys, queueGuards } from './guard-mounts';
 import { BREEZE, WIND } from './pixel/particles';
 
@@ -60,6 +62,18 @@ export interface StackSink {
 /** A static prop that never moves or sways: the canvas renderer draws it as one baked image. */
 export type StaticHook = (s: StaticProp, strip: Strip) => boolean;
 
+/** How solid a thing is drawn when it hides your car: a crown, a deck, anything tall in front of it. */
+const THROUGH = 0.4;
+
+/** What is being built slice by slice goes through this on its way to the sink. */
+const builder = new Builder();
+
+/** `R`, or the builder in front of it while `o` (`height` art px tall) is being built. */
+function built(R: StackSink, fx: Effects, o: object, height: number): StackSink {
+  const b = fx.slices.building(o, height);
+  return b ? builder.into(R, b, fx.slices.now - b.t0) : R;
+}
+
 /** Every stack in the world, in a fixed order, into `R`. */
 export function queueStacks(
   R: StackSink,
@@ -70,6 +84,7 @@ export function queueStacks(
 ): void {
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
+  tickBones(w.time);
   for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
   queueToppling(R, fx.toppling);
   // what has just come down, whole for the moment before it cracks apart
@@ -94,13 +109,24 @@ export function queueStacks(
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10 + p.z)) {
       R.group(p.y);
-      R.stack(art.prop(p.def.id), p.x, p.y, p.z, p.rot);
+      const strip = art.prop(p.def.id);
+      built(R, fx, p, tall(strip)).stack(strip, p.x, p.y, p.z, p.rot);
     }
   const t = w.time;
   for (const p of w.pickups)
     if (p.on && R.visible(p.x, p.y, 8, 12 + p.z)) {
       R.group(p.y);
-      R.stack(art.pickup, p.x, p.y, p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5, t * 1.8 + p.y);
+      // one that has just come back is built where it floats, slice by slice
+      const B = fx.slices.building(p, tall(art.pickup));
+      const z = p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5;
+      if (B) B.base = z;
+      (B ? builder.into(R, B, fx.slices.now - B.t0) : R).stack(
+        art.pickup,
+        p.x,
+        p.y,
+        z,
+        t * 1.8 + p.y,
+      );
     }
   for (const m of w.mines)
     if (R.visible(m.x, m.y, 6)) {
@@ -126,7 +152,7 @@ export function queueStacks(
   queueArms(R, art, w);
   queueDecoys(R, art, w);
   queueArsenal(R, art, w);
-  for (const b of w.bots) queueBot(R, art, fx, b);
+  for (const b of w.bots) queueBot(built(R, fx, b, 16), art, fx, b);
   for (const k of w.critters) queueCritter(R, art, w, k);
   for (const d of fx.debris)
     if (R.visible(d.x, d.y, 8, 10)) {
@@ -134,7 +160,7 @@ export function queueStacks(
       R.stack(d.strip, d.x, d.y, d.z, d.rot, d.life < 1.5 ? d.life / 1.5 : 1);
     }
   R.warm?.(true);
-  for (const c of w.cars) queueCar(R, art, w, fx, c);
+  for (const c of w.cars) queueCar(built(R, fx, c, 16 * c.size), art, w, fx, c);
   R.warm?.(false);
 }
 
@@ -167,18 +193,35 @@ function queueStatic(
   // bridge deck with nothing under it sinks and shudders before it goes
   const sag = s.sagT === undefined ? 0 : sagDip(s.sag ?? 0);
   const lift = (s.lift ?? 0) - sag;
+  // something with moving parts, while it is whole: once it is hurt it is one piece, and stops
+  const rig = lift === 0 && strip === art.prop(s.def.id) ? art.rig(s.def.id) : null;
+  if (rig) {
+    const r = Math.max(s.def.radius + 12, Math.hypot(strip.cw, strip.ch) / strip.res / 2 + 2);
+    if (!R.visible(s.x, s.y, r, rigTall(rig))) return;
+    R.group(s.y);
+    queueRig(R, rig, s.x, s.y, 0, s.rot, 1, w.time, s.seed, s, w.cars);
+    return;
+  }
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
   R.group(s.y);
+  // just put down (the track creator, the test range): it goes up slice by slice
+  const B = fx.slices.building(s, tall(strip));
+  if (B) {
+    B.base = lift;
+    R = builder.into(R, B, fx.slices.now - B.t0);
+    still = undefined;
+  }
   const lost = standing(s, strip);
   if (lost < strip.n) {
     // a building that has lost floors: only what still stands
-    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot);
+    const a = lift === 0 && fx.slices.hides(s, strip, lost, P) ? THROUGH : 1;
+    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot, 1, a);
     return;
   }
   if (lift !== 0) {
     // stood up off the ground: a deck piece or a crown up in a tree. Slices that would be under
     // the ground (the foot of a ramp) are left out.
-    const alpha = over(s, strip, lift, P) ? 0.4 : 1;
+    const alpha = over(s, strip, lift, P) ? THROUGH : 1;
     const from = Math.max(0, Math.ceil(-lift * strip.res));
     const [wx, wy] = s.def.sway
       ? sway(w.time, s.seed)
@@ -189,6 +232,17 @@ function queueStatic(
       const o = (0.5 + (0.5 * i) / strip.n) * 1.6;
       R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot, 1, alpha);
     }
+    return;
+  }
+  // tall, and your car is behind it: seen through, the way a crown or a deck over the car is
+  if (fx.slices.hides(s, strip, strip.n, P)) {
+    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
+    for (let i = 0; i < strip.n; i++) {
+      const k = i / strip.n;
+      const o = k * k * 1.8;
+      R.slice(strip, i, s.x + wx * o, s.y + wy * o, i / strip.res, s.rot, 1, THROUGH);
+    }
+    if (s.def.press) queuePress(R, art, w, s);
     return;
   }
   if (!s.def.sway) {
@@ -231,23 +285,32 @@ function queueCritter(R: StackSink, art: Art, w: World, k: Critter): void {
   const D = k.def.critter!;
   const id = k.def.id;
   const flier = D.kind === 'bird';
+  // a walker's poses are the steps of one stride, in order; a bird's are standing, wings up, down
+  const n = art.poses(id);
   let pose = 0;
   let z = k.z;
   let rot = k.h;
   if (k.state === 'fly') pose = 1 + (Math.floor(w.time * 9 + k.index * 0.37) & 1);
   else if (k.state === 'air') {
     rot += w.time * 17 + k.index;
-    pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 14) & 1;
+    pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 7 * n) % n;
   } else if (k.state === 'wind') {
     // pawing the ground: stamping from foot to foot, shuddering, head down
-    pose = Math.floor(w.time * 10) & 1;
+    pose = (Math.floor(w.time * 10) & 1) * Math.max(1, n >> 2);
     rot += Math.sin(w.time * 40) * 0.06;
   } else if (k.state !== 'idle') {
-    // one step each time it has gone about its own length
+    // one step each time it has gone about its own length, a stride every two
     const ph = k.gait / Math.max(1.6, k.def.radius * 1.5);
-    pose = flier ? 0 : Math.floor(ph) & 1;
+    pose = flier ? 0 : Math.floor((ph * n) / 2) % n;
     z += Math.abs(Math.sin(ph * Math.PI)) * D.step;
   } else if (!flier && Math.sin(w.time * 1.7 + k.index * 2.4) > 0.86) pose = 1;
+  const rig = art.rig(id);
+  if (rig) {
+    // thrown through the air it has other things on its mind than watching the cars
+    const seen = k.state === 'air' ? null : w.cars;
+    queueRig(R, rig, k.x, k.y, z, rot, 1, w.time, k.index, k, seen, pose);
+    return;
+  }
   R.stack(art.prop(id, undefined, pose), k.x, k.y, z, rot);
 }
 

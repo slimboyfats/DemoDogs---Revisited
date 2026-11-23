@@ -1,6 +1,15 @@
-import { sizeOfId } from '@demodogs/shared';
-import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
+import {
+  rolled,
+  sizeOfId,
+  type BotLook,
+  type CarLook,
+  type LookModule,
+  type Part,
+  type PropLook,
+  type Tones,
+} from '@demodogs/shared';
 import { GLOWS, PALETTE, kit } from '@demodogs/content';
+import type { RigArt } from './bones';
 import type { Strip } from './stack';
 import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
@@ -44,6 +53,7 @@ export class Art {
   /** One link of a chain: a dark block a little over an art pixel across. */
   readonly link: Strip;
   private readonly props = new Map<string, Strip>();
+  private readonly rigs = new Map<string, RigArt | null>();
   private readonly cars = new Map<string, CarArt>();
   private readonly bots = new Map<string, BotArt>();
   /** How many pixels (voxels of art) have been built so far, for the loader's readout. */
@@ -137,6 +147,49 @@ export class Art {
       this.props.set(key, s);
     }
     return s;
+  }
+
+  /**
+   * A prop's moving parts, if its look has any: the bare part in every pose and each bone, a
+   * rolling bone in every step of its turn. Null for a look with no rig.
+   */
+  rig(id: string): RigArt | null {
+    let a = this.rigs.get(id);
+    if (a === undefined) {
+      const L = this.look(id, 'prop');
+      const G = L.rig;
+      if (!G) a = null;
+      else {
+        const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
+        // at another size it is the same thing with bigger or smaller pixels, its bones as far apart
+        const size = this.looks.has(id) ? 1 : sizeOfId(id)[1];
+        a = {
+          size,
+          bare: [G.bare, ...(G.alts ?? [])].map((p) => this.make(p, mats)),
+          bones: G.bones.map((bone) => {
+            const M = bone.move;
+            if (M?.kind !== 'roll') return { bone, poses: [this.make(bone.part, mats)] };
+            const poses: Strip[] = [];
+            for (let k = 0; k < M.steps; k++)
+              poses.push(
+                this.make(rolled(bone.part, (k / M.steps) * ((Math.PI * 2) / (M.fold ?? 1))), mats),
+              );
+            return { bone, poses };
+          }),
+        };
+      }
+      if (a && a.size !== 1)
+        for (const st of [...a.bare, ...a.bones.flatMap((b) => b.poses)]) st.res /= a.size;
+      this.rigs.set(id, a);
+    }
+    return a;
+  }
+
+  /** Build everything a prop may be drawn as before it is needed: its poses and its rig. */
+  warm(id: string): void {
+    this.prop(id);
+    if (this.rig(id)) return;
+    for (let p = 1; p < this.poses(id); p++) this.prop(id, undefined, p);
   }
 
   car(id: string, paint: string): CarArt {

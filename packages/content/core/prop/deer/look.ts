@@ -1,5 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
-import { beast, type Beast } from '../../../src/beasts';
+import { beastLook, type Beast } from '../../../src/beasts';
 
 const B: Beast = {
   len: 9,
@@ -18,6 +18,6 @@ const B: Beast = {
 /** A deer: fawn, long legs, a white tail, small antlers. */
 const look: LookModule = {
   id: 'prop.deer',
-  look: { kind: 'prop', part: beast(B, 0), alts: [beast(B, 1)] },
+  look: beastLook(B),
 };
 export default look;

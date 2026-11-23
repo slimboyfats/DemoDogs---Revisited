@@ -1,5 +1,6 @@
 import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
+import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
@@ -234,6 +235,8 @@ export class Effects {
   readonly guards = new GuardState();
   /** Catch-up items: size bursts, the gale, the lead ball. */
   readonly catchup = new CatchupFx();
+  /** Things going up slice by slice, and tall scenery seen through to your car (slice-fx.ts). */
+  readonly slices = new SliceFx();
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
   readonly life = new LifeFx();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
@@ -1014,6 +1017,8 @@ export class Effects {
           this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
           this.smokeT[e.car] = 0;
+          // the fresh car is put together where it stands, slice by slice
+          this.slices.start(c, c.z);
           break;
         }
         case 'land':
@@ -1405,6 +1410,7 @@ export class Effects {
         case 'bot-spawn': {
           const b = w.bots[e.bot]!;
           place(this.walkers[e.bot]!, b.x, b.y, b.h);
+          this.slices.start(b);
           break;
         }
         case 'break':
