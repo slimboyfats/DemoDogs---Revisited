@@ -83,13 +83,34 @@
       "perArea": 0.0004,
       "clear": 30,
       "items": [
-        { "prop": "prop.tree", "weight": 0.3 },
-        { "prop": "prop.maple", "weight": 0.2 },
-        { "prop": "prop.pine", "weight": 0.25 },
-        { "prop": "prop.bush", "weight": 0.4 },
-        { "prop": "prop.rock", "weight": 0.12 },
-        { "prop": "prop.log-pile", "weight": 0.08 },
-        { "prop": "prop.snag", "weight": 0.05 }
+        {
+          "prop": "prop.tree",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.4
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.12
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 0.08
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.05
+        }
       ]
     },
     {
@@ -104,6 +125,181 @@
       "rule": "border",
       "prop": "prop.fence-tyres",
       "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.turbo-pad"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.12
+      },
+      "items": [
+        {
+          "prop": "prop.ramp"
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 2,
+        "apart": 0.1
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 2,
+          "gap": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 6,
+        "apart": 0.05
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.08, 0.3, 0.55, 0.88],
+      "items": [
+        {
+          "prop": "prop.deer",
+          "lane": 2.0,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.17, 0.42, 0.67],
+      "items": [
+        {
+          "prop": "prop.rabbits",
+          "lane": 1.6,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.25, 0.62, 0.93],
+      "items": [
+        {
+          "prop": "prop.crows",
+          "lane": 0.2,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0006,
+      "clear": 7,
+      "items": [
+        {
+          "prop": "prop.mushrooms",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.tall-grass",
+          "weight": 1.2
+        },
+        {
+          "prop": "prop.flowers",
+          "weight": 0.5
+        }
+      ]
     }
   ],
   "bots": {

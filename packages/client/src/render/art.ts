@@ -112,15 +112,24 @@ export class Art {
     return x;
   }
 
-  /** A prop or weapon strip. `swap` replaces materials (a mine's light switched off). */
-  prop(id: string, swap?: Record<string, string>): Strip {
-    const key = swap ? `${id}|${JSON.stringify(swap)}` : id;
+  /** How many poses a prop's look has: 1, plus its `alts`. */
+  poses(id: string): number {
+    return 1 + (this.look(id, 'prop').alts?.length ?? 0);
+  }
+
+  /**
+   * A prop or weapon strip. `swap` replaces materials (a mine's light switched off). `pose`
+   * picks one of the look's other poses (1 is the first of `alts`); a look without it gives
+   * the one it has.
+   */
+  prop(id: string, swap?: Record<string, string>, pose = 0): Strip {
+    const key = (swap ? `${id}|${JSON.stringify(swap)}` : id) + (pose ? `#${pose}` : '');
     let s = this.props.get(key);
     if (!s) {
       const L = this.look(id, 'prop');
       const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
       for (const [from, to] of Object.entries(swap ?? {})) mats[from] = mats[to]!;
-      s = this.make(L.part, mats);
+      s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
       this.props.set(key, s);
     }
     return s;

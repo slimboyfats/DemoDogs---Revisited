@@ -198,6 +198,35 @@ export type SimEvent =
   | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
+  /**
+   * A car drove onto a track tile (world.statics[prop]) at (x, y): a boost tile kicked it on, or
+   * a ramp threw it up. `power` is the push, or the speed it left the ramp at.
+   */
+  | {
+      t: 'pad';
+      kind: 'boost' | 'jump';
+      car: number;
+      prop: number;
+      x: number;
+      y: number;
+      power: number;
+    }
+  /**
+   * An animal (world.critters[critter]) at (x, y): a car (or a blast, car -1) knocked it flying
+   * (`flung`), a car ran into one too heavy to move (`bump`, with the closing speed as `power`),
+   * or a bird took off (`up`) or came down (`down`).
+   */
+  | {
+      t: 'critter';
+      what: 'flung' | 'bump' | 'up' | 'down';
+      critter: number;
+      car: number;
+      x: number;
+      y: number;
+      power: number;
+    }
+  /** A car flattened a plant (world.statics[prop]) it drove over. */
+  | { t: 'trample'; prop: number; car: number; x: number; y: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }
   | { t: 'countdown'; n: number }
   | { t: 'go' }

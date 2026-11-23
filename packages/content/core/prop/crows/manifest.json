@@ -1,0 +1,23 @@
+{
+  "id": "prop.crows",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crows",
+    "description": "Crows picking at the road. They go up in a clatter when a car comes, wheel overhead and come down again nearby.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 1.6,
+  "critter": {
+    "kind": "bird",
+    "group": [3, 7],
+    "roam": 60,
+    "walk": 7,
+    "run": 74,
+    "scare": 80,
+    "cry": "caw",
+    "shy": 20,
+    "height": 30,
+    "step": 0.7
+  }
+}

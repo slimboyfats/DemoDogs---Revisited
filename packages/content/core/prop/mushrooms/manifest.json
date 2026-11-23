@@ -1,0 +1,13 @@
+{
+  "id": "prop.mushrooms",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Toadstools",
+    "description": "Three red toadstools with white spots.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 2.4,
+  "solid": false,
+  "trample": true
+}

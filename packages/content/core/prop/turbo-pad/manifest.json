@@ -1,0 +1,20 @@
+{
+  "id": "prop.turbo-pad",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Turbo tile",
+    "description": "A longer, bluer boost tile with a harder kick that lasts longer. For the long straights.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 12,
+  "solid": false,
+  "pad": {
+    "kind": "boost",
+    "long": 28,
+    "wide": 22,
+    "push": 115,
+    "pace": 1.6,
+    "seconds": 2.2
+  }
+}

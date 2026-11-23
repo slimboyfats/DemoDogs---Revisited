@@ -31,6 +31,8 @@ import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
+import { updatePads } from './pads';
+import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { explode, respawn, updateEmbers, updateMending } from './damage';
 import {
@@ -151,6 +153,10 @@ export class World {
   readonly cars: Car[] = [];
   readonly bots: Bot[] = [];
   readonly statics: StaticProp[] = [];
+  /** The statics that are track tiles (boost tiles, ramps): see pads.ts. */
+  readonly pads: StaticProp[] = [];
+  /** Animals: see critters.ts. */
+  readonly critters: Critter[] = [];
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
@@ -527,6 +533,7 @@ export class World {
         c.bounce = c.isPlayer && c.throttle > 0 ? this.rng.range(0, 0.4) : 0;
       }
       updateMovers(this, c);
+      updatePads(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
@@ -539,6 +546,7 @@ export class World {
       if (this.track) trackIndex(this, c);
     }
     for (const b of this.bots) updateBot(this, b);
+    if (this.critters.length) updateCritters(this);
     updateProps(this);
     updatePresses(this);
     updatePickups(this);
@@ -628,6 +636,7 @@ export class World {
     H.num(K.sticks.length).num(K.toys.length).num(K.hooks.length).num(K.tethers.length);
     H.num(K.strikes.length).num(K.moles.length).num(K.sentries.length).num(K.fleas.length);
     H.num(K.beams.length).num(K.bolts.length).num(K.trails.length);
+    for (const k of this.critters) H.num(k.x).num(k.y).num(k.z);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

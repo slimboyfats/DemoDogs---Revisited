@@ -277,4 +277,52 @@ export class Sound {
     this.tone(930, 0.18, 0.06 * v, 'triangle', 0.9);
     this.noise(0.1, 2600, 1.2, 0.12 * v, 'highpass');
   }
+
+  /** A boost tile's kick: a rush of air and a rising whine; the turbo's is longer and higher. */
+  surge(turbo: boolean): void {
+    this.noise(turbo ? 0.8 : 0.5, 900, 0.5, 0.3, 'bandpass');
+    this.tone(turbo ? 260 : 190, turbo ? 0.6 : 0.4, 0.12, 'sawtooth', turbo ? 3.2 : 2.6);
+    this.tone(turbo ? 520 : 380, 0.25, 0.05, 'square', 2);
+  }
+
+  /** Wings beating: a few quick puffs of air. */
+  flap(v = 1): void {
+    for (let i = 0; i < 4; i++) this.noise(0.06, 500, 0.7, 0.12 * v, 'lowpass', i * 0.07);
+  }
+
+  /** Something driven through long grass. */
+  rustle(v = 1): void {
+    this.noise(0.14, 3200, 0.6, 0.07 * v, 'highpass');
+  }
+
+  /** An animal's cry. */
+  cry(kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak', v = 1): void {
+    switch (kind) {
+      case 'cluck':
+        // three short clucks and a squawk
+        for (let i = 0; i < 3; i++)
+          this.tone(620 + i * 40, 0.05, 0.09 * v, 'square', 0.7, i * 0.08);
+        this.tone(900, 0.22, 0.1 * v, 'sawtooth', 1.7, 0.26);
+        break;
+      case 'baa':
+        // a wavering bleat
+        for (let i = 0; i < 6; i++)
+          this.tone(i % 2 ? 330 : 300, 0.09, 0.09 * v, 'sawtooth', 0.97, i * 0.075);
+        break;
+      case 'moo':
+        this.tone(125, 0.9, 0.2 * v, 'sawtooth', 0.72);
+        this.tone(250, 0.8, 0.07 * v, 'square', 0.72, 0.02);
+        this.noise(0.6, 260, 2, 0.08 * v, 'bandpass');
+        break;
+      case 'caw':
+        for (let i = 0; i < 2; i++) {
+          this.tone(520, 0.16, 0.08 * v, 'sawtooth', 0.8, i * 0.2);
+          this.noise(0.16, 1500, 3, 0.1 * v, 'bandpass', i * 0.2);
+        }
+        break;
+      case 'squeak':
+        this.squeak(v);
+        break;
+    }
+  }
 }

@@ -60,6 +60,33 @@ export const PALETTE: Record<string, Tones> = {
   birch: ['#a9aaa2', '#d6d7cf', '#f4f4ec'],
   dead: ['#4a4038', '#655a50', '#857a6e'],
   moss: ['#3a5a2a', '#4f7a38', '#6f9c4c'],
+  // track tiles: the plate, and an arrow's three states as the light runs along it
+  padbase: ['#17181c', '#22242a', '#2e3038'],
+  padrim: ['#8f7a12', '#d1b11c', '#f6d93b'],
+  paddim: ['#6a3a08', '#8a4c0c', '#a85f12'],
+  padwarm: ['#b86a10', '#e8911c', '#ffb637'],
+  padhot: ['#ffd24a', '#ffe98a', '#fffbd6'],
+  turbodim: ['#0c3f6a', '#12588f', '#1970b0'],
+  turbowarm: ['#1a8fd0', '#32b4f0', '#6fd6ff'],
+  turbohot: ['#8fe9ff', '#c8f6ff', '#ffffff'],
+  // animals and what grows
+  wool: ['#b9b4a6', '#dedace', '#f7f4ea'],
+  feather: ['#c9c4b8', '#e9e5da', '#fbf9f2'],
+  hide: ['#5a3a22', '#7c5230', '#9c6c42'],
+  hide2: ['#2a2420', '#3a332d', '#4c443c'],
+  fawn: ['#7a5a36', '#a47c4c', '#c69c66'],
+  fur: ['#6e6252', '#93846e', '#b4a68e'],
+  crow: ['#0e0f14', '#191b22', '#2a2d38'],
+  beak: ['#b8780c', '#e8a21c', '#ffc84a'],
+  comb: ['#8a1616', '#c22222', '#ee4444'],
+  straw: ['#a8832c', '#d1a83c', '#eccb60'],
+  straw2: ['#8a6a20', '#b08a2e', '#cfa846'],
+  petalr: ['#a81c2c', '#e03048', '#ff6a7c'],
+  petaly: ['#c89a10', '#f2c81e', '#ffe866'],
+  petalw: ['#c4c4d0', '#e8e8f0', '#ffffff'],
+  petalv: ['#5a2c9a', '#8448d0', '#b684f4'],
+  pumpkin: ['#a84c0c', '#e0701a', '#ff9a3c'],
+  snow: ['#b4c4d4', '#dce8f2', '#ffffff'],
 };
 
 /**
@@ -72,4 +99,8 @@ export const GLOWS: Readonly<Record<string, number>> = {
   glow: 6,
   boteye: 7,
   minelit: 7,
+  padwarm: 3,
+  padhot: 6,
+  turbowarm: 3,
+  turbohot: 7,
 };

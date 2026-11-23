@@ -1,0 +1,14 @@
+{
+  "id": "prop.snowman",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Snowman",
+    "description": "A snowman with a carrot nose. It does not stop a car.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 2.8,
+  "hardness": 0.2,
+  "made": "material.ice",
+  "integrity": 4
+}

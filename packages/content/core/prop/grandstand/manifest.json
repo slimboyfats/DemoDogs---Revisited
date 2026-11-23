@@ -1,0 +1,13 @@
+{
+  "id": "prop.grandstand",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Grandstand",
+    "description": "A stand of benches full of spectators. It is made of planks, and it is next to a race.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 6.5,
+  "made": "material.wood",
+  "integrity": 70
+}

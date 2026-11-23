@@ -1,0 +1,23 @@
+{
+  "id": "prop.gulls",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Gulls",
+    "description": "Gulls on the quay. Up and screaming at the first engine, round over the water and back.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 1.6,
+  "critter": {
+    "kind": "bird",
+    "group": [3, 6],
+    "roam": 80,
+    "walk": 7,
+    "run": 80,
+    "scare": 90,
+    "cry": "caw",
+    "shy": 20,
+    "height": 38,
+    "step": 0.6
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "prop.hay-bale",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hay bale",
+    "description": "A round bale of hay. It rolls when it is hit and bursts into straw when it is hit hard.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 3.8,
+  "mass": 0.4,
+  "breaksAt": 105,
+  "launch": 0.45,
+  "points": 10
+}

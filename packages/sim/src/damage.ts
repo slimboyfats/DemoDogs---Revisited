@@ -7,6 +7,7 @@ import {
   type MaterialManifest,
 } from '@demodogs/shared';
 import { absorb } from './defence';
+import { blastCritters } from './critters';
 import type { Car, LooseProp, StaticProp } from './entities';
 import { topple } from './hazards';
 import { clamp } from './math';
@@ -189,6 +190,7 @@ export function explode(
     c.spin += w.rng.range(-6, 6) * k * hold;
     damage(w, c, 36 * k * power, owner && owner !== c ? owner : null, x, y);
   }
+  if (w.critters.length && z < 4) blastCritters(w, x, y, rad);
   for (const b of w.bots) {
     if (!b.alive || Math.hypot(b.x - x, b.y - y) >= rad) continue;
     b.alive = false;

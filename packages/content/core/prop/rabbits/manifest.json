@@ -1,0 +1,24 @@
+{
+  "id": "prop.rabbits",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rabbits",
+    "description": "Rabbits out on the verge. Quick, and off in long hops the moment a car comes near.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 1.8,
+  "critter": {
+    "kind": "ground",
+    "group": [2, 4],
+    "roam": 44,
+    "walk": 14,
+    "run": 96,
+    "scare": 60,
+    "cry": "squeak",
+    "mass": 0.04,
+    "shy": 25,
+    "step": 2.2,
+    "points": 10
+  }
+}

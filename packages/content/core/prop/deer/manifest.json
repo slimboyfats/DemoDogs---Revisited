@@ -1,0 +1,23 @@
+{
+  "id": "prop.deer",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Deer",
+    "description": "Deer at the edge of the trees. They bolt across the road in front of the pack, and a car that meets one comes off worse.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 4,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 3],
+    "roam": 70,
+    "walk": 8,
+    "run": 120,
+    "scare": 84,
+    "cry": "squeak",
+    "mass": 1.4,
+    "shy": 30,
+    "step": 1.5
+  }
+}

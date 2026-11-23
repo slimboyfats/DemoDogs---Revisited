@@ -158,6 +158,8 @@ export function resolveContent(src: ContentSource): Content {
         for (const i of r.edge?.items ?? []) need(v.id, 'prop', i.prop);
       }
       if (r.rule === 'place') for (const i of r.items) need(v.id, 'prop', i.prop);
+      if (r.rule === 'along') for (const i of r.items) need(v.id, 'prop', i.prop);
+      if (r.rule === 'field') need(v.id, 'prop', r.prop);
       if (r.rule === 'harbour') {
         need(v.id, 'material', r.material);
         for (const p of [r.piers.deck, r.piers.post, r.bollard, r.barges?.prop])
@@ -173,6 +175,10 @@ export function resolveContent(src: ContentSource): Content {
   for (const p of out.prop.values()) {
     if (p.spills) need(p.id, 'material', p.spills.material);
     if (p.made) need(p.id, 'material', p.made);
+    if (p.pad && (p.body !== 'static' || p.solid))
+      problems.push(`${p.id}: a pad must be a static prop that is not solid`);
+    if (p.trample && (p.body !== 'static' || p.solid))
+      problems.push(`${p.id}: only a static prop that is not solid can be trampled`);
     if (p.topples) {
       if (p.body !== 'static') problems.push(`${p.id}: only static props topple`);
       if (out.prop.get(p.topples.into)?.body !== 'loose')

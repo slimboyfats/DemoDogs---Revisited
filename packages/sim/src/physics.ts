@@ -11,7 +11,7 @@ import {
   type CarManifest,
   type Controls,
 } from '@demodogs/shared';
-import type { Car, Setup } from './entities';
+import type { Car, Setup, StaticProp } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
@@ -67,6 +67,9 @@ export function makeCar(
     y: 0,
     z: 0,
     vz: 0,
+    surge: 0,
+    surgeK: 1,
+    pad: -1,
     deck: 0,
     h: 0,
     vx: 0,
@@ -209,14 +212,15 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     (off ? 0.56 : 1) *
     (boost ? 1.33 * c.fuel : 1) *
     c.aiSpeed *
-    c.pace;
+    c.pace *
+    (c.surge > 0 ? c.surgeK : 1);
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
       if (vf > 15) vf -= 330 * DT;
       else vf = Math.max(-72, vf - 150 * DT);
     } else if (ctl.throttle > 0 && vf < maxS) {
-      const acc = 240 * S.accel * (boost ? 1.8 : 1) * Math.max(1, c.pace);
+      const acc = 240 * S.accel * (boost || c.surge > 0 ? 1.8 : 1) * Math.max(1, c.pace);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
     vf -= vf * ((off ? 1.4 : 0.42) + bog) * DT;
@@ -327,7 +331,13 @@ export function collideWorld(w: World, c: Car): void {
   for (const s of w.near(c.x, c.y, 20 * big)) {
     const r = s.def.radius;
     const far = r + 16 * big;
-    if (s.down || !s.def.solid || Math.abs(s.x - c.x) > far || Math.abs(s.y - c.y) > far) continue;
+    if (s.down || Math.abs(s.x - c.x) > far || Math.abs(s.y - c.y) > far) continue;
+    if (!s.def.solid) {
+      if (s.def.trample) trample(w, c, s, R);
+      continue;
+    }
+    // high enough in the air, a car sails over what is low
+    if (s.def.low !== undefined && c.z > s.def.low) continue;
     for (const p of circles(c)) {
       const dx = p[0] - s.x;
       const dy = p[1] - s.y;
@@ -354,6 +364,19 @@ export function collideWorld(w: World, c: Car): void {
       }
       bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
     }
+  }
+}
+
+/** Long grass, corn and flowers go down under a car that drives over them, and stay down. */
+function trample(w: World, c: Car, s: StaticProp, R: number): void {
+  if (c.z > 2 || c.vx * c.vx + c.vy * c.vy < 64) return;
+  const m = s.def.radius + R * 0.8;
+  for (const p of circles(c)) {
+    if (Math.abs(p[0] - s.x) > m || Math.abs(p[1] - s.y) > m) continue;
+    if (Math.hypot(p[0] - s.x, p[1] - s.y) > m) continue;
+    s.down = true;
+    w.emit({ t: 'trample', prop: s.index, car: c.index, x: s.x, y: s.y });
+    return;
   }
 }
 
