@@ -16,5 +16,6 @@
     "prop": "prop.sky-scrap",
     "chance": 0.6,
     "max": 10
-  }
+  },
+  "tint": "#ffd8c0"
 }

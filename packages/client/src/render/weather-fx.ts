@@ -421,15 +421,15 @@ export class WeatherFx {
       for (let i = 0; i < C.length; i += 2) {
         const main = i < b.main;
         // a blue halo round the main channel, the channel itself, and a white core at its brightest
-        if (main && (i & 2) === 0) d.glow(b.x + C[i]!, b.y, C[i + 1]!, 7, 0x4060d0, k * 0.35);
-        d.glow(b.x + C[i]!, b.y, C[i + 1]!, main ? 3 : 2, 0xc8d8ff, main ? k : k * 0.7);
-        if (main && k > 0.8) d.cell(b.x + C[i]!, b.y, C[i + 1]!, 2, 0xffffff, 1);
+        if (main && (i & 2) === 0) d.glow(b.x + C[i]!, b.y, C[i + 1]!, 22, 0x4060d0, k * 0.5);
+        d.glow(b.x + C[i]!, b.y, C[i + 1]!, main ? 8 : 4, 0xc8d8ff, main ? k : k * 0.8);
+        if (main && k > 0.6) d.cell(b.x + C[i]!, b.y, C[i + 1]!, 4, 0xffffff, 1);
       }
     }
 
     // rain: streaks that fall to a point on the ground and splash there
     if (this.rain > 0.02) {
-      const n = Math.round(900 * this.rain * (0.4 + 0.6 * q));
+      const n = Math.round(1700 * this.rain * (0.4 + 0.6 * q));
       const lx = WIND[0] * 0.012;
       const ly = WIND[1] * 0.012;
       const rot = Math.atan2(lx, d.cosP + ly * d.ys);
@@ -443,13 +443,17 @@ export class WeatherFx {
         if (Math.abs(gx - d.cx) > d.hw + 30 || Math.abs(gy - d.cy) > d.hh + 30) continue;
         if (u < 0.74) {
           const z = 72 * (1 - u / 0.74);
-          d.bar(gx - lx * z, gy - ly * z, z, 1, 6, 0xc4d8f0, 0.7, rot);
+          d.bar(gx - lx * z, gy - ly * z, z, i % 4 ? 1 : 2, 10, 0xd4e4f8, 0.85, rot);
         } else {
           // the splash: two cells hopping apart
           const s = (u - 0.74) / 0.26;
           const a = 0.9 * (1 - s);
-          d.cell(gx - 0.4 - s * 1.4, gy, s * (1 - s) * 5, 1, 0xd0e2f4, a);
-          d.cell(gx + 0.4 + s * 1.4, gy, s * (1 - s) * 5, 1, 0xd0e2f4, a);
+          const hop = s * (1 - s) * 7;
+          d.cell(gx - 0.5 - s * 2.4, gy, hop, 2, 0xe4f0ff, a);
+          d.cell(gx + 0.5 + s * 2.4, gy, hop, 2, 0xe4f0ff, a);
+          d.cell(gx, gy - 0.5 - s * 1.6, hop * 0.6, 1, 0xe4f0ff, a);
+          // and the ring it leaves on the wet ground
+          d.bar(gx, gy, 0.1, 3 + Math.round(s * 5), 1, 0xb8cce4, a * 0.55, 0);
         }
       }
     }
@@ -457,7 +461,7 @@ export class WeatherFx {
     // wind: grit and scraps streaming low over the ground, the way it blows
     const wv = Math.hypot(w.wind[0], w.wind[1]);
     if (wv > 18) {
-      const n = Math.round(Math.min(150, wv * 1.2) * (0.4 + 0.6 * q));
+      const n = Math.round(Math.min(420, wv * 3.2) * (0.4 + 0.6 * q));
       const dx = w.wind[0] / wv;
       const dy = w.wind[1] / wv;
       const rot = Math.atan2(dy * d.ys, dx);
@@ -473,14 +477,23 @@ export class WeatherFx {
         const gy = wrap(h01(i, cyc * 2 + 14) * TILE + dy * run, d.cy);
         if (Math.abs(gx - d.cx) > d.hw + 20 || Math.abs(gy - d.cy) > d.hh + 20) continue;
         const z = 1 + h01(i, 15) * 12 + Math.sin(u * 9 + i) * 1.5;
-        const a = Math.sin(u * Math.PI) * 0.55;
-        d.bar(gx, gy, z, 3 + Math.round(wv / 30), 1, i % 3 ? dirt : 0xe8e4d8, a, rot);
+        const a = Math.sin(u * Math.PI) * 0.85;
+        if (i % 7 === 0) {
+          // a streak of the wind itself, high up: long, pale and quick
+          d.bar(gx, gy, 18 + h01(i, 16) * 26, 60 + Math.round(wv * 0.8), 2, 0xf4f4ec, a * 0.7, rot);
+        } else if (i % 7 === 1) {
+          // something torn loose and tumbling: a leaf, a scrap of paper
+          const tum = Math.sin(t * 14 + i) > 0;
+          const rgb = i % 3 ? (tum ? 0x8fd04a : 0x4c8a2a) : tum ? 0xf0ead8 : 0xb8b09c;
+          d.cell(gx, gy, z + 4 + Math.sin(u * 14 + i) * 4, tum ? 5 : 4, rgb, Math.min(1, a * 2));
+        } else
+          d.bar(gx, gy, z, 16 + Math.round(wv / 5), i % 3 ? 2 : 3, i % 3 ? dirt : 0xe8e4d8, a, rot);
       }
     }
 
     // heat: embers riding the hot air up off the ground
     if (this.heat > 0.02) {
-      const n = Math.round(70 * this.heat * (0.4 + 0.6 * q));
+      const n = Math.round(280 * this.heat * (0.4 + 0.6 * q));
       for (let i = 0; i < n; i++) {
         const per = 2.2 + h01(i, 21) * 2;
         const ph = t / per + h01(i, 22);
@@ -493,7 +506,63 @@ export class WeatherFx {
         const gy = wrap(h01(i, cyc * 2 + 24) * TILE + WIND[1] * u, d.cy);
         if (Math.abs(gx - d.cx) > d.hw + 10 || Math.abs(gy - d.cy) > d.hh + 40) continue;
         const hot = h01(i, Math.floor(t * 10)) > 0.5;
-        d.glow(gx, gy, 2 + u * 46, 1, hot ? 0xffd070 : 0xff8030, Math.sin(u * Math.PI) * 0.9);
+        const ea = Math.sin(u * Math.PI);
+        d.cell(gx, gy, 2 + u * 46, i % 3 ? 2 : 4, hot ? 0xffb040 : 0xe05818, ea);
+        d.glow(gx, gy, 2 + u * 46, i % 3 ? 4 : 7, hot ? 0xffd070 : 0xff8030, ea * 0.9);
+      }
+    }
+
+    // low gravity: grit and pebbles that have come loose of the ground and hang there, turning
+    if (PULL.g < 0.75) {
+      const n = Math.round(240 * (0.4 + 0.6 * q));
+      const stone = shade(parseInt(w.venue.colors.dirt.slice(1), 16), 1.25);
+      for (let i = 0; i < n; i++) {
+        const per = 5 + h01(i, 41) * 5;
+        const ph = t / per + h01(i, 42);
+        const cyc = Math.floor(ph);
+        const u = ph - cyc;
+        const gx = wrap(h01(i, cyc * 2 + 43) * TILE + Math.sin(t * 0.5 + i) * 5, d.cx);
+        const gy = wrap(h01(i, cyc * 2 + 44) * TILE + Math.cos(t * 0.4 + i * 1.7) * 5, d.cy);
+        if (Math.abs(gx - d.cx) > d.hw + 10 || Math.abs(gy - d.cy) > d.hh + 50) continue;
+        const z = 3 + Math.sin(u * Math.PI) * (10 + h01(i, 45) * 34);
+        const a = Math.min(1, Math.sin(u * Math.PI) * 3);
+        if (i % 5 === 0) {
+          // a pebble, with its shadow left behind on the ground
+          const big = 6 + (i % 4) * 2;
+          d.shade(gx, gy, 7, 0.4 * a);
+          d.cell(gx, gy, z, big, shade(stone, 0.7), a);
+          d.cell(gx - 0.4, gy - 0.4, z + 0.6, big - 3, shade(stone, 1.35), a);
+        } else {
+          d.cell(gx, gy, z, 3 + (i % 3), i % 3 ? 0xe0d4ff : stone, a);
+          d.glow(gx, gy, z, 5 + (i % 3), 0xb39ddb, a * 0.6);
+        }
+      }
+    }
+
+    // oil on the road: the colours sliding about on each slick in view
+    for (const m of w.mods) {
+      if (m.def.kind !== 'slick' || !m.def.pools) continue;
+      for (const p of w.spills) {
+        if (p.def.id !== m.def.pools.material) continue;
+        if (Math.abs(p.x - d.cx) > d.hw + p.r || Math.abs(p.y - d.cy) > d.hh + p.r) continue;
+        const n = Math.min(36, Math.ceil(p.r * 1.4 * q));
+        const id = Math.floor(p.x * 5 + p.y * 11);
+        for (let i = 0; i < n; i++) {
+          const a = h01(i + id, 51) * TAU + Math.sin(t * 0.7 + i) * 0.5;
+          const rr = Math.sqrt(h01(i + id, 52)) * p.r * 0.85;
+          const hue = (h01(i + id, 53) + t * 0.25) % 1;
+          const rgb = hue < 0.33 ? 0xff5ac8 : hue < 0.66 ? 0x4fe0ff : 0xf2e85a;
+          d.bar(
+            p.x + Math.cos(a) * rr,
+            p.y + Math.sin(a) * rr,
+            0.2,
+            5 + (i % 3) * 3,
+            2,
+            rgb,
+            0.6 + 0.3 * Math.sin(t * 2 + i),
+            0,
+          );
+        }
       }
     }
 
@@ -501,7 +570,7 @@ export class WeatherFx {
     for (const m of w.mods)
       for (const p of m.pools) {
         if (Math.abs(p.x - d.cx) > d.hw + p.r || Math.abs(p.y - d.cy) > d.hh + p.r) continue;
-        const n = Math.min(40, Math.ceil(p.r * 0.5 * q));
+        const n = Math.min(70, Math.ceil(p.r * 1.1 * q));
         const id = Math.floor(p.x * 7 + p.y * 13);
         for (let i = 0; i < n; i++) {
           const per = 0.6 + h01(i + id, 31) * 0.8;
@@ -514,10 +583,10 @@ export class WeatherFx {
             p.x + Math.cos(a) * rr,
             p.y + Math.sin(a) * rr,
             0.2,
-            2 + Math.floor(h01(i + id, 35) * 3),
-            1,
+            5 + Math.floor(h01(i + id, 35) * 6),
+            2,
             0xcfeaff,
-            Math.sin(u * Math.PI) * 0.5,
+            Math.sin(u * Math.PI) * 0.8,
             0,
           );
         }

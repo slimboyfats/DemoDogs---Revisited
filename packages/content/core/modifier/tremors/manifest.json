@@ -13,5 +13,6 @@
   "warn": 1.4,
   "power": 1,
   "reach": 190,
-  "time": 2.6
+  "time": 2.6,
+  "tint": "#ead8c4"
 }

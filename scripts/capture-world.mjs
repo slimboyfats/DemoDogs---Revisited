@@ -32,8 +32,8 @@ await mkdir(out, { recursive: true });
 // car P, the modifier m, near(x, y, d) and the weather effects fx), and how many ticks later to take the shot
 const ALL = {
   downpour: ['kennel-loop', 'w.spills.some((p) => !p.fixed && near(p.x, p.y, 90))', 0],
-  gale: ['knotwood', 'm.gusting && m.gustT > 1.5 && w.time > 6', 30],
-  thunderheads: ['pinewood-sprint', 'fx.bolts.some((b) => b.age < 2 && near(b.x, b.y, 110))', 2],
+  gale: ['knotwood', 'm.gusting && m.gustT > 1.5 && w.time > 12', 30],
+  thunderheads: ['pinewood-sprint', 'fx.bolts.some((b) => b.age < 2 && near(b.x, b.y, 60))', 2],
   'lights-out': ['kennel-loop', 'w.time > 9', 0],
   'moon-bounce': ['gravel-gulch', 'w.cars.some((c) => c.z > 2 && near(c.x, c.y, 90))', 0],
   tremors: ['brickworks', 'm.shakeT > 0 && near(m.qx, m.qy, 120)', 30],

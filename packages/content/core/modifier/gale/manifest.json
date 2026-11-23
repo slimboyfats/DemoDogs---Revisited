@@ -13,5 +13,6 @@
     "steady": 26,
     "gust": 110
   },
-  "every": [5, 9]
+  "every": [5, 9],
+  "tint": "#e6dfc6"
 }
