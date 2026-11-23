@@ -1,3 +1,4 @@
+import { NO_CONTROLS, type Controls, type SimEvent } from '@demodogs/shared';
 import { World, stand, type WorldOptions } from '@demodogs/sim';
 import { loadContent } from './index';
 
@@ -112,4 +113,29 @@ export function flatBench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): Wo
   r.ai = null;
   put(r, w.oval!.cx + 250, w.oval!.cy + 250, 0);
   return w;
+}
+
+/**
+ * The flat bench with `n` rivals nobody drives beside the one parked out of the way, the player
+ * holding weapon `id` fully loaded, and the middle of the ground. A place to try a weapon.
+ */
+export function armed(id: string, n = 1) {
+  const w = flatBench({ rivals: n + 1 });
+  const me = w.player;
+  const far = w.cars.find((c) => !c.isPlayer)!;
+  const rivals = w.cars.filter((c) => c !== me && c !== far);
+  for (const c of rivals) c.ai = null;
+  const def = loadContent().weapon.get(id)!;
+  me.weapon = def;
+  me.ammo = def.ammo;
+  /** Step `n` ticks (pressing `ctl`) and gather the events by type. */
+  const run = (ticks: number, ctl: Controls = NO_CONTROLS): SimEvent[] => {
+    const out: SimEvent[] = [];
+    for (let i = 0; i < ticks; i++) {
+      w.step(ctl);
+      out.push(...w.takeEvents());
+    }
+    return out;
+  };
+  return { w, me, rivals, def, x: w.oval!.cx, y: w.oval!.cy, run };
 }

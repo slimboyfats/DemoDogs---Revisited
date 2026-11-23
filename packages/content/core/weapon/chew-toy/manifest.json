@@ -1,0 +1,17 @@
+{
+  "id": "weapon.chew-toy",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Chew Toy",
+    "description": "A rubber bomb that skips down the road ahead of the car: four bounces, and a blast at every one.",
+    "since": "core@0.7.0"
+  },
+  "kind": "skip",
+  "label": "CHEW TOY",
+  "ammo": 2,
+  "power": 0.6,
+  "cooldown": 1.2,
+  "speed": 240,
+  "count": 4,
+  "fuse": 0.45
+}

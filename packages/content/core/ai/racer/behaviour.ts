@@ -2,6 +2,7 @@ import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
 import {
   angDiff,
   armsWants,
+  arsenalWants,
   howlWants,
   defineAi,
   dropsBehind,
@@ -60,7 +61,7 @@ export default defineAi({
       ai.boostT -= DT;
       out.boost = true;
     } else if (curv < 0.15 && c.nitro > 0.5 && w.rng.next() < 0.006) ai.boostT = 1.3;
-    if (armsWants(w, c)) out.fire = true;
+    if (armsWants(w, c) || arsenalWants(w, c)) out.fire = true;
     if (c.weapon?.kind === 'rocket' && prey && pd < 200 && Math.abs(d) < 0.2) out.fire = true;
     if (dropsBehind(c.weapon?.kind)) {
       const [behind] = nearestCar(

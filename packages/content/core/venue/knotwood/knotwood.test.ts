@@ -12,7 +12,7 @@ describe('venue.knotwood', () => {
   });
 
   it('cars climb onto the flyover on one pass and go under it on the other', () => {
-    const w = makeWorld({ venue: 'venue.knotwood', autopilot: true });
+    const w = makeWorld({ venue: 'venue.knotwood', autopilot: true, seed: 4 });
     const P = w.player;
     let top = 0;
     let under = 0;

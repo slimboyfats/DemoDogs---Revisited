@@ -12,6 +12,7 @@ import type { World } from './world';
 import { drop, inSmoke } from './drops';
 import { firePulse } from './shock';
 import { fireHowl } from './howl';
+import { fireArsenal, isArsenal } from './arsenal';
 import { fireArms, isArms } from './arms';
 import { land } from './hazards';
 
@@ -332,6 +333,7 @@ export function fire(w: World, c: Car): void {
     drop(w, wpn, c.index, c.x - cs * 18, c.y - sn * 18, c.h);
   else if (wpn.kind === 'pulse') firePulse(w, c, wpn);
   else if (wpn.kind === 'howl') fireHowl(w, c, wpn);
+  else if (isArsenal(wpn.kind)) fireArsenal(w, c, wpn);
   else if (isArms(wpn.kind)) fireArms(w, c, wpn);
   else
     w.mines.push({

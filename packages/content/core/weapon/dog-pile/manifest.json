@@ -1,0 +1,19 @@
+{
+  "id": "weapon.dog-pile",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dog Pile",
+    "description": "A row of six shells called down out of the sky onto the road ahead. Each one is marked on the ground before it lands.",
+    "since": "core@0.7.0"
+  },
+  "kind": "barrage",
+  "label": "DOG PILE",
+  "ammo": 1,
+  "power": 0.75,
+  "cooldown": 1.5,
+  "range": 230,
+  "count": 6,
+  "arm": 0.9,
+  "fuse": 0.22,
+  "spread": 12
+}

@@ -11,6 +11,8 @@ import {
   rangeMove,
   rangeProp,
   rangeHowl,
+  rangeArsenal,
+  isArsenal,
   rangePulse,
   rangeRocket,
   rangeWreck,
@@ -133,7 +135,7 @@ export class DevPanel {
       this.rocketSel.append(new Option(r.meta.name, r.id));
     root.append(this.rocketSel);
     for (const d of [...content.weapon.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
-      if (isArms(d.kind)) this.armsSel.append(new Option(d.meta.name, d.id));
+      if (isArms(d.kind) || isArsenal(d.kind)) this.armsSel.append(new Option(d.meta.name, d.id));
     this.armsSel.onchange = () => this.pick('arms');
     root.append(this.armsSel);
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
@@ -296,7 +298,8 @@ export class DevPanel {
       }
       case 'arms': {
         const def = this.content.weapon.get(this.armsSel.value);
-        if (def) rangeArms(w, def, P, x, y);
+        if (def && isArsenal(def.kind)) rangeArsenal(w, def, P, x, y);
+        else if (def) rangeArms(w, def, P, x, y);
         break;
       }
       case 'blast':
