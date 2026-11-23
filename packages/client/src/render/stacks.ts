@@ -15,6 +15,7 @@ import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
 import { queueArsenal } from './arsenal-fx';
 import { leanAt } from './rubble';
+import { Builder } from './slice-fx';
 import { queueDecoys, queueGuards } from './guard-mounts';
 import { BREEZE, WIND } from './pixel/particles';
 
@@ -60,6 +61,15 @@ export interface StackSink {
 /** A static prop that never moves or sways: the canvas renderer draws it as one baked image. */
 export type StaticHook = (s: StaticProp, strip: Strip) => boolean;
 
+/** What is being built slice by slice goes through this on its way to the sink. */
+const builder = new Builder();
+
+/** `R`, or the builder in front of it while `o` (`height` art px tall) is being built. */
+function built(R: StackSink, fx: Effects, o: object, height: number): StackSink {
+  const b = fx.slices.building(o, height);
+  return b ? builder.into(R, b, fx.slices.now - b.t0) : R;
+}
+
 /** Every stack in the world, in a fixed order, into `R`. */
 export function queueStacks(
   R: StackSink,
@@ -94,13 +104,24 @@ export function queueStacks(
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10 + p.z)) {
       R.group(p.y);
-      R.stack(art.prop(p.def.id), p.x, p.y, p.z, p.rot);
+      const strip = art.prop(p.def.id);
+      built(R, fx, p, tall(strip)).stack(strip, p.x, p.y, p.z, p.rot);
     }
   const t = w.time;
   for (const p of w.pickups)
     if (p.on && R.visible(p.x, p.y, 8, 12 + p.z)) {
       R.group(p.y);
-      R.stack(art.pickup, p.x, p.y, p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5, t * 1.8 + p.y);
+      // one that has just come back is built where it floats, slice by slice
+      const B = fx.slices.building(p, tall(art.pickup));
+      const z = p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5;
+      if (B) B.base = z;
+      (B ? builder.into(R, B, fx.slices.now - B.t0) : R).stack(
+        art.pickup,
+        p.x,
+        p.y,
+        z,
+        t * 1.8 + p.y,
+      );
     }
   for (const m of w.mines)
     if (R.visible(m.x, m.y, 6)) {
@@ -126,7 +147,7 @@ export function queueStacks(
   queueArms(R, art, w);
   queueDecoys(R, art, w);
   queueArsenal(R, art, w);
-  for (const b of w.bots) queueBot(R, art, fx, b);
+  for (const b of w.bots) queueBot(built(R, fx, b, 16), art, fx, b);
   for (const k of w.critters) queueCritter(R, art, w, k);
   for (const d of fx.debris)
     if (R.visible(d.x, d.y, 8, 10)) {
@@ -134,7 +155,7 @@ export function queueStacks(
       R.stack(d.strip, d.x, d.y, d.z, d.rot, d.life < 1.5 ? d.life / 1.5 : 1);
     }
   R.warm?.(true);
-  for (const c of w.cars) queueCar(R, art, w, fx, c);
+  for (const c of w.cars) queueCar(built(R, fx, c, 16 * c.size), art, w, fx, c);
   R.warm?.(false);
 }
 
@@ -162,6 +183,13 @@ function queueStatic(
   const lift = s.lift ?? 0;
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
   R.group(s.y);
+  // just put down (the track creator, the test range): it goes up slice by slice
+  const B = fx.slices.building(s, tall(strip));
+  if (B) {
+    B.base = lift;
+    R = builder.into(R, B, fx.slices.now - B.t0);
+    still = undefined;
+  }
   const lost = standing(s, strip);
   if (lost < strip.n) {
     // a building that has lost floors: only what still stands

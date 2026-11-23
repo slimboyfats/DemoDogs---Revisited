@@ -32,7 +32,9 @@ The overdraw meter (`packages/client/src/render/pixel/overdraw.ts`, the counting
 `packages/client/src/render/pixel/gl.ts` and the front-to-back order in `stack-batch.ts`) and shell stacks
 (`packages/client/src/render/pixel/shell.ts`) follow the count pass, hidden-surface removal and shell stacks of
 https://github.com/loktar00/sprite-stack-engine (`js/engine.js`, `js/art.js`), rewritten in TypeScript for this
-renderer, under this licence:
+renderer. The resolution steps (`packages/client/src/game/resolution.ts`) and the slice effects
+(`packages/client/src/render/slice-fx.ts`: things built slice by slice) follow the internal resolution and the
+build effect of the same project (`js/main.js`), written anew for this game. All under this licence:
 
 ```
 MIT License
