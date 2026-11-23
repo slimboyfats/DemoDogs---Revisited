@@ -235,7 +235,7 @@ export class Effects {
   readonly guards = new GuardState();
   /** Catch-up items: size bursts, the gale, the lead ball. */
   readonly catchup = new CatchupFx();
-  /** Things going up slice by slice, and tall scenery cut down to show your car (slice-fx.ts). */
+  /** Things going up slice by slice (slice-fx.ts). */
   readonly slices = new SliceFx();
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
   readonly life = new LifeFx();

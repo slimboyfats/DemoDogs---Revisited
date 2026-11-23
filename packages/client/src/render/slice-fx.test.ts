@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { Car, StaticProp, World } from '@demodogs/sim';
+import type { StaticProp, World } from '@demodogs/sim';
 import type { Strip } from './stack';
 import type { StackSink } from './stacks';
-import { Builder, SliceFx, buildSlice, buildTime, cutHeight, footprint } from './slice-fx';
+import { Builder, SliceFx, buildSlice, buildTime } from './slice-fx';
 
 describe('building slice by slice', () => {
   it('starts with nothing, the lowest slice first, and ends with everything in place', () => {
@@ -49,43 +49,9 @@ describe('building slice by slice', () => {
   });
 });
 
-describe('cutting tall scenery down', () => {
-  // a tower 20 wide, 20 deep, 60 tall at (100, 100)
-  const cut = (cx: number, cy: number, cz = 0, height = 60): number =>
-    cutHeight(100, 100, 10, 10, height, cx, cy, cz);
-
-  it('leaves alone what hides nothing', () => {
-    expect(cut(100, 130)).toBe(60); // the car is in front
-    expect(cut(140, 80)).toBe(60); // off to one side
-    expect(cut(100, 20)).toBe(60); // far behind, clear of the top
-    expect(cut(100, 80, 0, 10)).toBe(10); // too low to hide a car
-    expect(cut(100, 80, 70)).toBe(60); // the car is above it
-  });
-
-  it('cuts just far enough to show the car behind, and never below waist height', () => {
-    const near = cut(100, 85);
-    const far = cut(100, 65);
-    expect(near).toBeLessThan(60);
-    expect(near).toBeGreaterThanOrEqual(7);
-    expect(far).toBeGreaterThan(near);
-    expect(far).toBeLessThan(60);
-  });
-
-  it('measures a turned footprint', () => {
-    const s = { cw: 40, ch: 10, res: 1 } as Strip;
-    expect(footprint(s, 0)).toEqual([20, 5]);
-    const [w, d] = footprint(s, Math.PI / 2);
-    expect(w).toBeCloseTo(5);
-    expect(d).toBeCloseTo(20);
-  });
-});
-
 describe('SliceFx', () => {
   const world = (): World =>
     ({ statics: [], props: [], pickups: [{ on: true }, { on: false }] }) as unknown as World;
-  const strip = { n: 60, res: 1, cw: 20, ch: 20 } as Strip;
-  const tower = { x: 100, y: 100, rot: 0 } as StaticProp;
-  const car = (x: number, y: number): Car => ({ x, y, z: 0 }) as Car;
 
   it('builds what is put down after the start and pickups that come back, not what was there', () => {
     const fx = new SliceFx();
@@ -108,35 +74,10 @@ describe('SliceFx', () => {
     expect(fx.busy).toBe(0);
   });
 
-  it('a wall sinks while the car is behind it and rises again when it has gone', () => {
-    const fx = new SliceFx();
-    const w = world();
-    fx.frame(w, 0);
-    expect(fx.keep(tower, strip, 60, car(100, 85))).toBe(60);
-    let n = 60;
-    for (let i = 0; i < 60; i++) {
-      fx.frame(w, 1 / 60);
-      const k = fx.keep(tower, strip, 60, car(100, 85));
-      expect(k).toBeLessThanOrEqual(n);
-      n = k;
-    }
-    expect(n).toBeLessThan(20);
-    for (let i = 0; i < 90; i++) {
-      fx.frame(w, 1 / 60);
-      const k = fx.keep(tower, strip, 60, car(100, 200));
-      expect(k).toBeGreaterThanOrEqual(n);
-      n = k;
-    }
-    expect(n).toBe(60);
-    expect(fx.busy).toBe(0);
-  });
-
-  it('does nothing when switched off or with nobody to watch', () => {
+  it('does nothing when switched off', () => {
     const fx = new SliceFx();
     fx.on = false;
     fx.start({});
     expect(fx.busy).toBe(0);
-    expect(fx.keep(tower, strip, 60, car(100, 85))).toBe(60);
-    expect(new SliceFx().keep(tower, strip, 60, null)).toBe(60);
   });
 });

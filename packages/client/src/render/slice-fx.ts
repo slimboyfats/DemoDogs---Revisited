@@ -1,14 +1,12 @@
-import type { Car, StaticProp, World } from '@demodogs/sim';
+import type { World } from '@demodogs/sim';
 import type { Strip } from './stack';
 import type { StackSink } from './stacks';
 
 /**
  * Slice effects: what only a stack of slices can do, because every slice is its own thing (after
- * the build and "lower the walls" effects of loktar00/sprite-stack-engine). A thing that appears
- * is BUILT, its slices dropping in from above, the lowest first, each turning as it settles. And
- * tall scenery standing between the camera and your car is CUT DOWN: the slices above a height
- * are left out, and the height slides, so a wall sinks just far enough to show the car behind it
- * and rises again when the car has gone by. Client only: the sim knows nothing of either.
+ * the build effect of loktar00/sprite-stack-engine). A thing that appears is BUILT, its slices
+ * dropping in from above, the lowest first, each turning as it settles. Client only: the sim
+ * knows nothing of it.
  */
 
 /** Seconds a slice takes to fall into place, and how far up it starts (art px). */
@@ -46,58 +44,14 @@ const LANDED = { dz: 0, turn: 0 };
 /** Seconds a thing `height` art px tall takes to build. */
 export const buildTime = (height: number): number => Math.max(0, height) / RISE + FALL;
 
-/** cot of the camera pitch: how far north on the ground a thing at height 1 is drawn over. */
-const OVER = 0.67;
-/** Scenery lower than this (art px) hides nothing worth cutting. */
-const TALL = 13;
-/** The lowest a cut goes: about as high as a car, so the wall still reads as a wall. */
-const WAIST = 7;
-/** Art px of height the cut moves a second. */
-const SLIDE = 70;
-
-/**
- * How high (art px) a standing thing may be drawn so the car behind it shows: its whole height
- * when it hides nothing. The thing stands at (x, y), `hw` wide and `hd` deep either side of that
- * (art px, as seen from the south) and `height` tall; the car is at (cx, cy), `cz` up.
- */
-export function cutHeight(
-  x: number,
-  y: number,
-  hw: number,
-  hd: number,
-  height: number,
-  cx: number,
-  cy: number,
-  cz: number,
-): number {
-  if (height < TALL || cz >= height) return height;
-  // a car in front of the thing (south of its middle) is never hidden by it
-  const north = y - cy;
-  if (north < hd * 0.25 || Math.abs(cx - x) > hw + 7) return height;
-  // the slice at height h is drawn h * OVER further north: it hides the car when it reaches it
-  const reach = north - hd - 11;
-  if (reach > height * OVER) return height;
-  return Math.min(height, Math.max(WAIST, cz + reach / OVER));
-}
-
-/** Half the width and depth of a strip's footprint on the ground, turned by `rot`. */
-export function footprint(strip: Strip, rot: number): [number, number] {
-  const a = strip.cw / strip.res / 2;
-  const b = strip.ch / strip.res / 2;
-  const c = Math.abs(Math.cos(rot));
-  const s = Math.abs(Math.sin(rot));
-  return [a * c + b * s, a * s + b * c];
-}
-
-/** The slice effects' state for one race: what is being built and how far each wall is cut. */
+/** The slice effects' state for one race: what is being built. */
 export class SliceFx {
   /** The slice clock, seconds: moved by the frame, not the sim (the track creator stops the sim). */
   now = 0;
-  /** Off: nothing is built or cut (`?slices=0` clears `enabled` for every race of the visit). */
+  /** Off: nothing is built (`?slices=0` clears `enabled` for every race of the visit). */
   static enabled = true;
   on = SliceFx.enabled;
   private readonly builds = new Map<object, Build>();
-  private readonly cuts = new Map<StaticProp, number>();
   private statics = -1;
   private props = -1;
   private pickups: boolean[] = [];
@@ -119,7 +73,7 @@ export class SliceFx {
   }
 
   /**
-   * Once a frame: move the clock and the cuts, and start a build for whatever has appeared since
+   * Once a frame: move the clock, and start a build for whatever has appeared since
    * the last look: scenery and props put down after the start (the track creator, the test
    * range), and pickups that have come back.
    */
@@ -142,43 +96,11 @@ export class SliceFx {
     }
     // a build nobody asked after (it went up out of sight) is over all the same
     for (const [o, b] of this.builds) if (this.now - b.t0 > STALE) this.builds.delete(o);
-    // every cut slides toward where it is wanted; one that is back at full height is forgotten
-    for (const [s, at] of this.cuts) {
-      const want = this.want.get(s) ?? Infinity;
-      const full = this.full.get(s) ?? 0;
-      const to = Math.min(want, full);
-      const next = at > to ? Math.max(to, at - SLIDE * dt) : Math.min(to, at + SLIDE * dt);
-      if (next >= full && want >= full) {
-        this.cuts.delete(s);
-        this.full.delete(s);
-      } else this.cuts.set(s, next);
-    }
-    this.want.clear();
-  }
-  private readonly want = new Map<StaticProp, number>();
-  private readonly full = new Map<StaticProp, number>();
-
-  /**
-   * How many of a standing thing's slices to draw this frame, for the car `P` to show behind it:
-   * all `n` of them unless it is being cut down. Asking is what keeps a cut going.
-   */
-  keep(s: StaticProp, strip: Strip, n: number, P: Car | null | undefined): number {
-    if (!this.on || !P) return n;
-    const height = n / strip.res;
-    const [hw, hd] = footprint(strip, s.rot);
-    const h = cutHeight(s.x, s.y, hw, hd, height, P.x, P.y, P.z);
-    if (h < height) {
-      this.want.set(s, h);
-      this.full.set(s, height);
-      if (!this.cuts.has(s)) this.cuts.set(s, height);
-    }
-    const at = this.cuts.get(s);
-    return at === undefined ? n : Math.max(1, Math.min(n, Math.ceil(at * strip.res)));
   }
 
-  /** Things with a cut or a build under way (for tests and the counters). */
+  /** Things with a build under way (for tests and the counters). */
   get busy(): number {
-    return this.builds.size + this.cuts.size;
+    return this.builds.size;
   }
 }
 

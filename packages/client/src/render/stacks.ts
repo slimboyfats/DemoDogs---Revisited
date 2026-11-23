@@ -190,17 +190,10 @@ function queueStatic(
     R = builder.into(R, B, fx.slices.now - B.t0);
     still = undefined;
   }
-  // what still stands: a building short of floors, or anything tall cut down because your car
-  // is behind it
-  const stands = standing(s, strip);
-  const lost = lift === 0 ? fx.slices.keep(s, strip, stands, P) : stands;
+  const lost = standing(s, strip);
   if (lost < strip.n) {
-    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
-    for (let i = 0; i < lost; i++) {
-      const k = i / strip.n;
-      const o = k * k * 1.8;
-      R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot);
-    }
+    // a building that has lost floors: only what still stands
+    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot);
     return;
   }
   if (lift !== 0) {

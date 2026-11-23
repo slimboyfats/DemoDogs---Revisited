@@ -33,9 +33,8 @@ The overdraw meter (`packages/client/src/render/pixel/overdraw.ts`, the counting
 (`packages/client/src/render/pixel/shell.ts`) follow the count pass, hidden-surface removal and shell stacks of
 https://github.com/loktar00/sprite-stack-engine (`js/engine.js`, `js/art.js`), rewritten in TypeScript for this
 renderer. The resolution steps (`packages/client/src/game/resolution.ts`) and the slice effects
-(`packages/client/src/render/slice-fx.ts`: build slice by slice, cut tall scenery down) follow the internal
-resolution and the build and "lower the walls" effects of the same project (`js/main.js`), written anew for this
-game. All under this licence:
+(`packages/client/src/render/slice-fx.ts`: things built slice by slice) follow the internal resolution and the
+build effect of the same project (`js/main.js`), written anew for this game. All under this licence:
 
 ```
 MIT License
