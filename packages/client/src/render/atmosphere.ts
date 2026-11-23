@@ -13,11 +13,15 @@ import { SUN } from './cast';
 
 type Rgb = readonly [number, number, number];
 
-/** The light at three times: [ambient, sun or moon, how high the sun is (z of its direction)]. */
+/**
+ * The light at three times: ambient, sun or moon, and how high the sun is (z of its direction).
+ * The heights are whole fifths so a flat top lands on one of the shader's five steps of sun and
+ * is not dithered between two.
+ */
 const KEYS: readonly { at: number; amb: Rgb; sun: Rgb; high: number; glow: number }[] = [
-  { at: 0, amb: [0.68, 0.7, 0.74], sun: [0.47, 0.45, 0.4], high: 0.68, glow: 0.12 },
+  { at: 0, amb: [0.64, 0.66, 0.72], sun: [0.6, 0.57, 0.48], high: 0.6, glow: 0.12 },
   { at: 0.5, amb: [0.5, 0.43, 0.52], sun: [0.7, 0.42, 0.2], high: 0.4, glow: 0.7 },
-  { at: 1, amb: [0.2, 0.25, 0.4], sun: [0.16, 0.2, 0.32], high: 0.62, glow: 1 },
+  { at: 1, amb: [0.2, 0.25, 0.4], sun: [0.16, 0.2, 0.32], high: 0.6, glow: 1 },
 ];
 
 /** How dark it must be before cars put their headlamps on. */

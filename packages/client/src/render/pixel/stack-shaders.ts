@@ -216,8 +216,15 @@ void main() {
     }
   }
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
-  float q = clamp(floor(dot(n, u_sdir) * 5.0 + b) / 5.0, 0.0, 1.0);
+  float ndl = dot(n, u_sdir);
+  float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0);
   vec3 base = u_amb + u_sun * q;
+  // what is square to the sun catches a bright edge; what faces away takes a little of the
+  // sky's blue instead, so shade is cool and never dead
+  if (known > 0.5) {
+    if (ndl > 0.9) base += u_sun * 0.22;
+    else if (ndl < 0.0) base += vec3(-0.03, 0.0, 0.05) * dot(u_sun, vec3(0.6));
+  }
   vec3 l = vec3(0.0);
   for (int i = 0; i < ${MAX_LIGHTS}; i++) {
     if (i >= u_lcount) break;
