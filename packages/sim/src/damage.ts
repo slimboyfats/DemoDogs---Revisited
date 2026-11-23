@@ -1,6 +1,7 @@
 import { DT, GRAVITY, type CarPart, type MaterialManifest } from '@demodogs/shared';
 import { absorb } from './defence';
 import type { Car, LooseProp, StaticProp } from './entities';
+import { topple } from './hazards';
 import { clamp } from './math';
 import { toLocal } from './physics';
 import { tumble } from './rubble';
@@ -506,6 +507,7 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
   tumble(w, s);
+  if (s.def.topple) topple(w, s, x, y);
   if (s.def.blast) {
     explode(w, s.x, s.y, s.def.blast, null);
     throwOut(w, s);

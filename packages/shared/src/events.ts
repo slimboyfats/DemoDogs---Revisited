@@ -60,6 +60,8 @@ export type SimEvent =
       left: number;
       by: 'blast' | 'heat' | 'shake';
     }
+  /** A press (world.statics[prop]) slammed shut at (x, y); `caught` cars were under it. */
+  | { t: 'press'; prop: number; x: number; y: number; caught: number }
   /** A blast dug a pit of radius r in the ground (or widened one that was there). */
   | { t: 'crater'; x: number; y: number; r: number }
   /** A pool of a material poured out on the ground. */

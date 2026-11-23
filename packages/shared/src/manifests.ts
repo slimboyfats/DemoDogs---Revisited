@@ -493,6 +493,42 @@ export const PropSchema = z.strictObject({
       spread: z.number().min(0).default(4),
     })
     .optional(),
+  /**
+   * Static props: a stack of something heavy. When it comes down, `n` loose props of kind `prop`
+   * drop from as high as `height` (art px) and tumble out away from what knocked it, at up to
+   * `spread` art px per second.
+   */
+  topple: z
+    .strictObject({
+      prop: id('prop'),
+      n: z.number().int().min(1).max(8),
+      height: z.number().positive(),
+      spread: z.number().min(0),
+    })
+    .optional(),
+  /**
+   * Loose props: so heavy that landing on something hurts it. A car it comes down on takes this
+   * much damage per 100 art px per second of fall, and scenery under it takes twice that.
+   */
+  crush: z.number().positive().optional(),
+  /**
+   * Static props: a press over a bed that cars can drive across. Every `period` seconds it slams
+   * down and stays down `shut` seconds, then rises again to `lift` art px. Everything within
+   * `reach` of the middle when it lands takes `hurt`. `plate` is the prop drawn as the moving
+   * ram (it is never placed itself), and `warn` the seconds it shudders before it drops.
+   */
+  press: z
+    .strictObject({
+      period: z.number().positive(),
+      shut: z.number().positive(),
+      rise: z.number().positive().default(1),
+      warn: z.number().min(0).default(0.6),
+      lift: z.number().positive(),
+      reach: z.number().positive(),
+      hurt: z.number().positive(),
+      plate: id('prop'),
+    })
+    .optional(),
   /** Loose props: how much of an impact sends it up in the air. */
   launch: z.number().min(0).default(0.25),
   /** Points for the car that breaks it. */

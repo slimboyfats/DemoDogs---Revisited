@@ -1,0 +1,13 @@
+{
+  "id": "prop.crusher-post",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crusher post",
+    "description": "A tall steel upright of the car crusher, with its hydraulic cylinder and a warning lamp on top.",
+    "since": "core@0.5.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "made": "material.steel",
+  "integrity": 400
+}

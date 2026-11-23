@@ -49,6 +49,7 @@ import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
+import { updatePresses } from './hazards';
 
 export interface WorldOptions {
   content: Content;
@@ -433,6 +434,7 @@ export class World {
     }
     for (const b of this.bots) updateBot(this, b);
     updateProps(this);
+    updatePresses(this);
     updatePickups(this);
     updateDefence(this);
     updateRockets(this);

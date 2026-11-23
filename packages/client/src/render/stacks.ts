@@ -1,4 +1,11 @@
-import type { Bot, Car, StaticProp, World } from '@demodogs/sim';
+import {
+  pressOpen,
+  pressWarning,
+  type Bot,
+  type Car,
+  type StaticProp,
+  type World,
+} from '@demodogs/sim';
 import type { Art } from './art';
 import type { Effects } from './effects';
 import { pose } from './rig';
@@ -97,6 +104,7 @@ function queueStatic(
   R.group(s.y);
   if (!s.def.sway) {
     if (!still?.(s, strip)) R.stack(strip, s.x, s.y, 0, s.rot);
+    if (s.def.press) queuePress(R, art, w, s);
     return;
   }
   // trees sway: the higher the slice, the further it moves
@@ -107,6 +115,14 @@ function queueStatic(
     const o = wind * k * k * 1.8;
     R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
   }
+}
+
+/** A press's ram, as high as the sim says it is, shuddering just before it drops. */
+function queuePress(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  const P = s.def.press!;
+  const t = w.time;
+  const shake = pressWarning(w, s) ? Math.sin(t * 90) * 0.5 : 0;
+  R.stack(art.prop(P.plate), s.x + shake, s.y, 1 + P.lift * pressOpen(w, s), s.rot);
 }
 
 function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {

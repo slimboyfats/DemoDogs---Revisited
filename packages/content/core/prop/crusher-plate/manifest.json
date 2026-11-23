@@ -1,0 +1,12 @@
+{
+  "id": "prop.crusher-plate",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crusher ram",
+    "description": "The car crusher's moving ram: a thick plate on a hydraulic rod. Drawn by the crusher, never placed.",
+    "since": "core@0.5.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "solid": false
+}
