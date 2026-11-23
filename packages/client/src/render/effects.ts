@@ -1133,8 +1133,12 @@ export class Effects {
           break;
         }
         case 'storey':
-        case 'topple':
           this.collapse(e);
+          break;
+        case 'topple':
+          // a tower tips over. A thing without floors (a span of road) just drops: its 'fall',
+          // next, cracks it into slabs and grit where it hung
+          if (w.statics[e.prop]!.def.storeys) this.collapse(e);
           break;
         case 'sag': {
           // a bridge gives way: it cracks like a shot, the ground jumps, grit rains off the deck
