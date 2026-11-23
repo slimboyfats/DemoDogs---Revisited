@@ -6,8 +6,8 @@ import type { StackSink } from './stacks';
  * Slice effects: what only a stack of slices can do, because every slice is its own thing (after
  * the build effect of loktar00/sprite-stack-engine). A thing that appears is BUILT, its slices
  * dropping in from above, the lowest first, each turning as it settles. And tall scenery standing
- * between the camera and your car is SEEN THROUGH: its slices above the car are thinned to a
- * dither, so the car shows behind it. Client only: the sim knows nothing of either.
+ * between the camera and your car is SEEN THROUGH, the whole of it thinned to a dither at once,
+ * as a tree crown or a bridge deck over your car is. Client only: the sim knows nothing of either.
  */
 
 /** Seconds a slice takes to fall into place, and how far up it starts (art px). */
@@ -49,12 +49,8 @@ export const buildTime = (height: number): number => Math.max(0, height) / RISE 
 const OVER = 0.67;
 /** Scenery lower than this (art px) hides nothing worth seeing through. */
 const TALL = 13;
-/** The lowest the see-through part starts: about as high as a car, so the foot stays solid. */
+/** The lowest height counted as hiding: about as high as a car. */
 const WAIST = 7;
-/** How much of a see-through slice is still drawn, and the seconds it takes to thin out or fill in. */
-export const THIN = 0.34;
-const FADE = 0.18;
-
 /**
  * The height (art px) above which a standing thing hides the car behind it: its whole height when
  * it hides nothing. The thing stands at (x, y), `hw` wide and `hd` deep either side of that (art
@@ -89,14 +85,7 @@ export function footprint(strip: Strip, rot: number): [number, number] {
   return [a * c + b * s, a * s + b * c];
 }
 
-/** A thing seen through: from which height up, how far it has thinned (0 to 1), and if it was asked for this frame. */
-interface Through {
-  h: number;
-  k: number;
-  asked: boolean;
-}
-
-/** The slice effects' state for one race: what is being built, and what is seen through. */
+/** The slice effects' state for one race: what is being built. */
 export class SliceFx {
   /** The slice clock, seconds: moved by the frame, not the sim (the track creator stops the sim). */
   now = 0;
@@ -146,47 +135,24 @@ export class SliceFx {
       if (p.on && this.pickups[i] === false) this.start(p);
       this.pickups[i] = p.on;
     }
-    // what is seen through thins out while a car is behind it and fills in again after
-    for (const [o, t] of this.thin) {
-      t.k = Math.max(0, Math.min(1, t.k + ((t.asked ? 1 : -1) * dt) / FADE));
-      if (!t.asked && t.k <= 0) this.thin.delete(o);
-      t.asked = false;
-    }
     // a build nobody asked after (it went up out of sight) is over all the same
     for (const [o, b] of this.builds) if (this.now - b.t0 > STALE) this.builds.delete(o);
   }
 
-  private readonly thin = new Map<StaticProp, Through>();
-
   /**
-   * Tall scenery standing between the camera and the car `P` is seen through: its slices from
-   * `from` up are drawn `alpha` solid (a dither, as a tree crown over your car already is), so
-   * the car shows behind it; the foot stays solid. Null when it is drawn whole. Asking is what
-   * keeps it thin: it fills in again once nobody is behind it.
+   * Does this tall standing thing hide the car `P` from the camera? Then it is drawn see-through,
+   * the whole of it at once, the way a tree crown or a bridge deck over your car is.
    */
-  through(
-    s: StaticProp,
-    strip: Strip,
-    n: number,
-    P: Car | null | undefined,
-  ): { from: number; alpha: number } | null {
-    if (!this.on || !P) return null;
+  hides(s: StaticProp, strip: Strip, n: number, P: Car | null | undefined): boolean {
+    if (!this.on || !P) return false;
     const height = n / strip.res;
     const [hw, hd] = footprint(strip, s.rot);
-    const h = hidesFrom(s.x, s.y, hw, hd, height, P.x, P.y, P.z);
-    let t = this.thin.get(s);
-    if (h < height) {
-      if (!t) this.thin.set(s, (t = { h, k: 0, asked: true }));
-      t.h = h;
-      t.asked = true;
-    }
-    if (!t || t.k <= 0) return null;
-    return { from: Math.max(1, Math.ceil(t.h * strip.res)), alpha: 1 - (1 - THIN) * t.k };
+    return hidesFrom(s.x, s.y, hw, hd, height, P.x, P.y, P.z) < height;
   }
 
-  /** Things with a build under way or seen through (for tests and the counters). */
+  /** Things with a build under way (for tests and the counters). */
   get busy(): number {
-    return this.builds.size + this.thin.size;
+    return this.builds.size;
   }
 }
 

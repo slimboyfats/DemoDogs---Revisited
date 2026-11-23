@@ -138,7 +138,7 @@ if (!only || only === 'build') {
     await copyFile(`${out}/build/${String(i).padStart(3, '0')}.png`, `${out}/${name}.png`);
 }
 
-// driving past behind three tall things: each turns see-through above the car, then fills in.
+// driving past behind three tall things: each turns see-through while the car is behind it.
 // `through-off.png` is the same moment with the effect off (`?slices=0`).
 if (!only || only === 'through') {
   for (const [name, query] of [

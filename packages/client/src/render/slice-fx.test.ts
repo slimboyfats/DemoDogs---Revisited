@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Car, StaticProp, World } from '@demodogs/sim';
 import type { Strip } from './stack';
 import type { StackSink } from './stacks';
-import { Builder, SliceFx, THIN, buildSlice, buildTime, footprint, hidesFrom } from './slice-fx';
+import { Builder, SliceFx, buildSlice, buildTime, footprint, hidesFrom } from './slice-fx';
 
 describe('building slice by slice', () => {
   it('starts with nothing, the lowest slice first, and ends with everything in place', () => {
@@ -62,7 +62,7 @@ describe('seeing through tall scenery', () => {
     expect(from(100, 80, 70)).toBe(60); // the car is above it
   });
 
-  it('starts just above what does not hide the car, and never below waist height', () => {
+  it('finds the height from which the car is hidden, never below waist height', () => {
     const near = from(100, 85);
     const far = from(100, 65);
     expect(near).toBeLessThan(60);
@@ -79,37 +79,16 @@ describe('seeing through tall scenery', () => {
     expect(d).toBeCloseTo(20);
   });
 
-  it('thins out while the car is behind and fills in again when it has gone', () => {
+  it('says when a tower hides the car, and never when switched off or with nobody to watch', () => {
     const fx = new SliceFx();
-    const w = { statics: [], props: [], pickups: [] } as unknown as World;
     const strip = { n: 60, res: 1, cw: 20, ch: 20 } as Strip;
     const tower = { x: 100, y: 100, rot: 0 } as StaticProp;
     const car = (x: number, y: number): Car => ({ x, y, z: 0 }) as Car;
-    fx.frame(w, 0);
-    // the first frame it is still whole
-    expect(fx.through(tower, strip, 60, car(100, 85))).toBeNull();
-    let last = 1;
-    for (let i = 0; i < 30; i++) {
-      fx.frame(w, 1 / 60);
-      const t = fx.through(tower, strip, 60, car(100, 85))!;
-      expect(t.alpha).toBeLessThanOrEqual(last);
-      expect(t.from).toBeGreaterThanOrEqual(7);
-      expect(t.from).toBeLessThan(60);
-      last = t.alpha;
-    }
-    expect(last).toBeCloseTo(THIN);
-    for (let i = 0; i < 30; i++) {
-      fx.frame(w, 1 / 60);
-      const t = fx.through(tower, strip, 60, car(100, 200));
-      if (t) expect(t.alpha).toBeGreaterThanOrEqual(last);
-      last = t?.alpha ?? 1;
-    }
-    expect(last).toBe(1);
-    expect(fx.busy).toBe(0);
-    // nobody to watch, or switched off: whole
-    expect(fx.through(tower, strip, 60, null)).toBeNull();
+    expect(fx.hides(tower, strip, 60, car(100, 85))).toBe(true);
+    expect(fx.hides(tower, strip, 60, car(100, 200))).toBe(false);
+    expect(fx.hides(tower, strip, 60, null)).toBe(false);
     fx.on = false;
-    expect(fx.through(tower, strip, 60, car(100, 85))).toBeNull();
+    expect(fx.hides(tower, strip, 60, car(100, 85))).toBe(false);
   });
 });
 
