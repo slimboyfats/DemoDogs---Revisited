@@ -4,6 +4,7 @@ import { spill } from './damage';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
+import { layRiver } from './river';
 
 /**
  * Lays out a venue's scenery from its rules, using the venue's own seed so a venue always looks the
@@ -305,6 +306,9 @@ function apply(
       for (const i of rule.items) add(i.prop, cx + i.x, cy + i.y, i.rot);
       return;
     }
+    case 'river':
+      layRiver(w, rng, rule, add);
+      return;
     case 'oval-scatter': {
       if (!O) return;
       for (let k = 0; k < rule.count; k++) {

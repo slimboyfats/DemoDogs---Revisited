@@ -1,0 +1,14 @@
+{
+  "id": "material.river",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "River",
+    "description": "Deep running water. A car wades through it at a crawl and slides about; nothing burns on it.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.45,
+  "drag": 2.6,
+  "quenches": true,
+  "colour": "#2b4f63",
+  "alpha": 0.8
+}

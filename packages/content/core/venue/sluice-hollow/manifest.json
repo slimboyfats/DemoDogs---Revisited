@@ -1,0 +1,174 @@
+{
+  "id": "venue.sluice-hollow",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sluice Hollow",
+    "description": "Race. A river valley under an old concrete dam: a plank bridge and a steel one, both of which can be blown out, and a dam that floods the valley when its wall gives.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 4417,
+  "size": {
+    "w": 2000,
+    "h": 1400
+  },
+  "track": {
+    "road": 66,
+    "points": [
+      [300, 560],
+      [560, 470],
+      [820, 520],
+      [1010, 540],
+      [1200, 520],
+      [1460, 450],
+      [1720, 560],
+      [1760, 860],
+      [1500, 1080],
+      [1220, 1060],
+      [1020, 1080],
+      [800, 1110],
+      [560, 1170],
+      [300, 1040],
+      [210, 800]
+    ]
+  },
+  "colors": {
+    "ground": "#556b3c",
+    "ground2": "#5f7644",
+    "dirt": "#6a5a3c",
+    "outside": "#22301c"
+  },
+  "scenery": [
+    {
+      "rule": "build",
+      "count": 16,
+      "clear": 12,
+      "along": 70,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "window": "prop.window-wall",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "yard",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "inside": ["prop.crate", "prop.barrel", "prop.log-pile"],
+          "long": [4, 7],
+          "deep": [4, 5]
+        },
+        {
+          "shape": "wall",
+          "weight": 1,
+          "wall": "prop.brick-wall",
+          "post": "prop.brick-post",
+          "long": [3, 6]
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        { "prop": "prop.powder-keg", "x": -40, "y": -310, "rot": 0 },
+        { "prop": "prop.powder-keg", "x": -52, "y": -306, "rot": 1 },
+        { "prop": "prop.powder-keg", "x": 40, "y": -309, "rot": 2 },
+        { "prop": "prop.oil-drum", "x": 64, "y": -306, "rot": 0 },
+        { "prop": "prop.powder-keg", "x": 52, "y": -304, "rot": 0.5 }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0005,
+      "clear": 28,
+      "items": [
+        { "prop": "prop.pine", "weight": 0.6 },
+        { "prop": "prop.poplar", "weight": 0.3 },
+        { "prop": "prop.birch", "weight": 0.3 },
+        { "prop": "prop.bush", "weight": 0.3 },
+        { "prop": "prop.rock", "weight": 0.15 },
+        { "prop": "prop.snag", "weight": 0.05 }
+      ]
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 6,
+      "r": [14, 24],
+      "on": "off"
+    },
+    {
+      "rule": "roadside",
+      "every": 24,
+      "pair": "prop.cone",
+      "stack": "prop.tyres",
+      "drum": "prop.barrel",
+      "tanks": ["prop.water-butt", "prop.oil-drum"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "river",
+      "material": "material.river",
+      "bank": "material.mud",
+      "width": 40,
+      "points": [
+        [960, -30],
+        [1000, 180],
+        [990, 330],
+        [1010, 430],
+        [1000, 600],
+        [1070, 760],
+        [990, 900],
+        [1030, 1080],
+        [990, 1250],
+        [1020, 1440]
+      ],
+      "bridges": [
+        { "deck": "prop.deck-plank", "rail": "prop.plank-fence" },
+        { "deck": "prop.deck-steel", "rail": "prop.rail-steel" }
+      ],
+      "dam": {
+        "wall": "prop.dam-wall",
+        "at": 410,
+        "span": 150,
+        "lake": 3.2
+      },
+      "flood": {
+        "speed": 130,
+        "width": 96
+      },
+      "edge": {
+        "every": 26,
+        "items": [
+          { "prop": "prop.rock", "weight": 2 },
+          { "prop": "prop.bush", "weight": 2 },
+          { "prop": "prop.log-pile", "weight": 0.5 }
+        ]
+      }
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

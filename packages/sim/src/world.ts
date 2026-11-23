@@ -48,6 +48,7 @@ import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { newArms, updateArms, type Arms } from './arms';
+import { updateRivers } from './river';
 
 export interface WorldOptions {
   content: Content;
@@ -440,6 +441,7 @@ export class World {
     updatePulses(this);
     updateArms(this);
     updateEmbers(this);
+    updateRivers(this);
 
     if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {

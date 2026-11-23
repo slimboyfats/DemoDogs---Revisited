@@ -1,0 +1,14 @@
+{
+  "id": "prop.deck-steel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Steel deck",
+    "description": "A square of a steel bridge's deck: chequer plate on girders. Fire cannot touch it and a flood cannot shift it; it takes rockets.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 3.6,
+  "solid": false,
+  "made": "material.steel",
+  "integrity": 60
+}
