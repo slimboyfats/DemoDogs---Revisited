@@ -4,6 +4,9 @@ import {
   TRACK_MARGIN,
   TRACK_VERSION,
   VenueSchema,
+  sizeStep,
+  sizedId,
+  type PropManifest,
   type SceneryRule,
   type TrackFile,
   type VenueManifest,
@@ -148,6 +151,25 @@ export function clampPoint(t: TrackFile, x: number, y: number): [number, number]
   ];
 }
 
+/**
+ * A prop at `k` times its size: as wide, as heavy and as hard to break as that makes it. The
+ * client draws it from the same look with pixels `k` times as big.
+ */
+export function sizedProp(def: PropManifest, id: string, k: number): PropManifest {
+  return {
+    ...def,
+    id,
+    radius: def.radius * k,
+    ...(def.mass !== undefined ? { mass: def.mass * k * k } : {}),
+    ...(def.integrity !== undefined ? { integrity: def.integrity * k } : {}),
+    ...(def.low !== undefined ? { low: def.low * k } : {}),
+    ...(def.crown
+      ? { crown: { ...def.crown, trunk: def.crown.trunk * k, top: def.crown.top * k } }
+      : {}),
+    ...(def.pad ? { pad: { ...def.pad, long: def.pad.long * k, wide: def.pad.wide * k } } : {}),
+  };
+}
+
 export interface Installed {
   /** The content with the track in it as a venue: what to build the world from. */
   content: Content;
@@ -227,11 +249,18 @@ export function installTrack(content: Content, t: TrackFile): Installed {
   const weather = t.areas.filter((a) => a.sky).map(({ x, y, r, sky }) => ({ x, y, r, sky }));
   // the place rule counts from the middle of the map
   const items = t.items.filter((i) => content.prop.has(i.prop) || !dropped.add(i.prop));
+  // a thing at another size is a prop of the track's own, made here from the one it names
+  const props = new Map(content.prop);
+  for (const i of items) {
+    const id = sizedId(i.prop, i.size);
+    if (!props.has(id))
+      props.set(id, sizedProp(content.prop.get(i.prop)!, id, sizeStep(i.size ?? 1)));
+  }
   if (items.length)
     scenery.push({
       rule: 'place',
       items: items.map((i) => ({
-        prop: i.prop,
+        prop: sizedId(i.prop, i.size),
         x: i.x - t.size.w / 2,
         y: i.y - t.size.h / 2,
         rot: i.rot,
@@ -283,7 +312,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     pickups,
   });
   return {
-    content: { ...content, venue: new Map(content.venue).set(id, venue) },
+    content: { ...content, prop: props, venue: new Map(content.venue).set(id, venue) },
     venue: id,
     laps: t.laps,
     dropped: [...dropped].sort(),

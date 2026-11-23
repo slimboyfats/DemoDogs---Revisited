@@ -1,3 +1,4 @@
+import { sizeOfId } from '@demodogs/shared';
 import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
 import { GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { Strip } from './stack';
@@ -66,7 +67,8 @@ export class Art {
     id: string,
     kind: K,
   ): Extract<CarLook | PropLook | BotLook, { kind: K }> {
-    const m = this.looks.get(id);
+    // a prop at another size (a custom track's) has the look of the prop it was made from
+    const m = this.looks.get(id) ?? this.looks.get(sizeOfId(id)[0]);
     if (!m || m.look.kind !== kind) throw new Error(`no ${kind} look for ${id}`);
     return m.look as Extract<CarLook | PropLook | BotLook, { kind: K }>;
   }
@@ -130,6 +132,8 @@ export class Art {
       const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
       for (const [from, to] of Object.entries(swap ?? {})) mats[from] = mats[to]!;
       s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
+      // at another size it is the same thing with bigger or smaller pixels
+      if (!this.looks.has(id)) s.res /= sizeOfId(id)[1];
       this.props.set(key, s);
     }
     return s;
