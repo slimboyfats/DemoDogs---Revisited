@@ -47,6 +47,7 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
+import { newArms, updateArms, type Arms } from './arms';
 
 export interface WorldOptions {
   content: Content;
@@ -135,6 +136,8 @@ export class World {
   /** Smoke clouds and spikes dropped behind cars. */
   readonly clouds: Cloud[] = [];
   readonly spikes: Spike[] = [];
+  /** Sprays, rail slugs, wrecking balls, fire shells and sticky bombs in play. */
+  readonly arms: Arms = newArms();
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   readonly player: Car;
@@ -435,6 +438,7 @@ export class World {
     updateMines(this);
     updateDrops(this);
     updatePulses(this);
+    updateArms(this);
     updateEmbers(this);
 
     if (this.sandbox) return;
@@ -496,6 +500,9 @@ export class World {
       .num(this.craters.length)
       .num(this.clouds.length)
       .num(this.spikes.length);
+    const A = this.arms;
+    H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
+    for (const b of A.balls) H.num(b.x).num(b.y);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

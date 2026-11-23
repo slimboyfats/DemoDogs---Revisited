@@ -160,6 +160,24 @@ export class Cells {
     this.kind[i] = kind;
   }
 
+  /**
+   * A whirlpool at (x, y): every cell within R is carried round it and in towards it, `k` art px a
+   * second at the rim and faster nearer the middle. It moves the cells themselves, so it works on
+   * fire, smoke and leaves alike, whatever their own air is doing.
+   */
+  swirl(x: number, y: number, R: number, k: number, dt: number): void {
+    for (let i = 0; i < this.n; i++) {
+      const dx = x - this.x[i]!;
+      const dy = y - this.y[i]!;
+      if (Math.abs(dx) > R || Math.abs(dy) > R) continue;
+      const d = Math.hypot(dx, dy);
+      if (d > R || d < 1.5) continue;
+      const s = (k * (0.4 + 1.6 * (1 - d / R)) * dt) / d;
+      this.x[i] = this.x[i]! + (dx * 0.7 - dy) * s;
+      this.y[i] = this.y[i]! + (dy * 0.7 + dx) * s;
+    }
+  }
+
   /** Set a ring of air turning. */
   ring(r: Omit<Ring, 'max'>): void {
     if (this.rings.length >= 12) this.rings.shift();

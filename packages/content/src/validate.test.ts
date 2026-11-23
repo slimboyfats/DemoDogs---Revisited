@@ -29,13 +29,11 @@ describe('content validate', () => {
   it('everything drawn has a look', () => {
     const C = loadContent();
     const looks = loadLooks();
-    // a gun is part of the car, a slick is paint on the ground, smoke is cells and a pulse is all
-    // sparks; the rest are drawn
-    const shown = [...C.weapon.values()]
-      .filter(
-        (w) => w.kind !== 'gun' && w.kind !== 'slick' && w.kind !== 'smoke' && w.kind !== 'pulse',
-      )
-      .map((w) => w.id);
+    // a gun is part of the car, a slick is paint on the ground, smoke is cells, a pulse is all
+    // sparks, a spray is a jet of single cells, a rail is a line of light, an arc is lightning and
+    // a vortex is a swirl of cells; the rest are drawn
+    const bare = new Set(['gun', 'slick', 'smoke', 'pulse', 'spray', 'rail', 'arc', 'vortex']);
+    const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it
     const fitted = [...C.pickup.values()]
       .filter((p) => p.kind === 'blade' || p.kind === 'springs')

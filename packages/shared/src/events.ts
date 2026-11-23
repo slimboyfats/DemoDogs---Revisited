@@ -106,6 +106,18 @@ export type SimEvent =
   | { t: 'hop'; car: number; x: number; y: number }
   /** A sprung car came down at (x, y); impact is how fast it was falling. */
   | { t: 'touchdown'; car: number; x: number; y: number; impact: number }
+  /** A rail slug flew from (x, y) to (tx, ty), through whatever it struck. */
+  | { t: 'rail'; car: number; x: number; y: number; tx: number; ty: number }
+  /** A sticky bomb clung to a car (`car`), or came to rest on the ground (-1), at (x, y). */
+  | { t: 'stick'; car: number; x: number; y: number }
+  /** A car carrying a sticky bomb handed it on to another by touching it. */
+  | { t: 'pass'; from: number; to: number; x: number; y: number }
+  /** Lightning from a coil: through the points [x0, y0, x1, y1, ...]. */
+  | { t: 'lightning'; car: number; pts: number[] }
+  /** A suction orb anchored at (x, y) and began to pull everything within r. */
+  | { t: 'orb'; x: number; y: number; r: number }
+  /** A spray's drop struck something at (x, y): `lit` drops burn, others splash. */
+  | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }

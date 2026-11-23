@@ -22,3 +22,6 @@ export {
 export type { Pulse } from './shock';
 export { fitMover, nose } from './movers';
 export { grant } from './things';
+export * from './arms';
+export { light } from './damage';
+export * from './arcs';

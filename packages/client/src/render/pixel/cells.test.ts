@@ -81,4 +81,16 @@ describe('cells', () => {
     expect(Math.max(...seen)).toBeGreaterThan(8);
     expect(C.count(CKind.Wisp)).toBe(40);
   });
+
+  it('a whirlpool carries cells round and in, and leaves those beyond it alone', () => {
+    const C = new Cells(8, rng());
+    C.add(CKind.Wisp, 40, 0, 2, 0, 0, 0, 9);
+    C.add(CKind.Wisp, 200, 0, 2, 0, 0, 0, 9);
+    const at = (i: number) => (C as unknown as { x: Float32Array; y: Float32Array }).x[i]!;
+    const yat = (i: number) => (C as unknown as { y: Float32Array }).y[i]!;
+    for (let i = 0; i < 30; i++) C.swirl(0, 0, 70, 60, 1 / 60);
+    expect(Math.hypot(at(0), yat(0))).toBeLessThan(40);
+    expect(yat(0)).not.toBe(0);
+    expect(at(1)).toBe(200);
+  });
 });

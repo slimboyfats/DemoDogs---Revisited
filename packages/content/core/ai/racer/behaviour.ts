@@ -1,5 +1,13 @@
 import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
-import { angDiff, defineAi, dropsBehind, nearestCar, steerTo, unstick } from '@demodogs/sim';
+import {
+  angDiff,
+  armsWants,
+  defineAi,
+  dropsBehind,
+  nearestCar,
+  steerTo,
+  unstick,
+} from '@demodogs/sim';
 
 /**
  * ai.racer: drive the racing line in a lane of its own, slow for bends, pick fights with a car just
@@ -51,6 +59,7 @@ export default defineAi({
       ai.boostT -= DT;
       out.boost = true;
     } else if (curv < 0.15 && c.nitro > 0.5 && w.rng.next() < 0.006) ai.boostT = 1.3;
+    if (armsWants(w, c)) out.fire = true;
     if (c.weapon?.kind === 'rocket' && prey && pd < 200 && Math.abs(d) < 0.2) out.fire = true;
     if (dropsBehind(c.weapon?.kind)) {
       const [behind] = nearestCar(

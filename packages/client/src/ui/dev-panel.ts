@@ -1,5 +1,7 @@
 import {
   dropsBehind,
+  isArms,
+  rangeArms,
   rangeBlast,
   rangeDrop,
   rangeGive,
@@ -24,6 +26,7 @@ export type Tool =
   | 'mine'
   | 'drop'
   | 'shock'
+  | 'arms'
   | 'blast'
   | 'hit'
   | 'wreck'
@@ -40,6 +43,7 @@ const TOOLS: [Tool, string, string][] = [
   ['mine', 'MINE', 'Tap: lay a mine there'],
   ['drop', 'DROP', 'Tap: drop the chosen rear weapon there (smoke, tacks, glue, oil)'],
   ['shock', 'SHOCK', 'Tap: your car jumps there and lets off a shock pulse'],
+  ['arms', 'ARMS', 'Tap: your car turns to that spot and fires the chosen heavy weapon'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
   ['wreck', 'WRECK', 'Tap a car: wreck it'],
@@ -87,6 +91,7 @@ export class DevPanel {
   readonly pickupSel = document.createElement('select');
   /** Which rocket the ROCKET tool fires (seekers, clusters). */
   readonly rocketSel = document.createElement('select');
+  private readonly armsSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
   private fps = 60;
 
@@ -119,6 +124,10 @@ export class DevPanel {
     for (const r of [...content.weapon.values()].filter((d) => d.kind === 'rocket'))
       this.rocketSel.append(new Option(r.meta.name, r.id));
     root.append(this.rocketSel);
+    for (const d of [...content.weapon.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
+      if (isArms(d.kind)) this.armsSel.append(new Option(d.meta.name, d.id));
+    this.armsSel.onchange = () => this.pick('arms');
+    root.append(this.armsSel);
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
@@ -265,6 +274,11 @@ export class DevPanel {
           rangeMove(P, x, y);
           rangePulse(w, def, P);
         }
+        break;
+      }
+      case 'arms': {
+        const def = this.content.weapon.get(this.armsSel.value);
+        if (def) rangeArms(w, def, P, x, y);
         break;
       }
       case 'blast':

@@ -76,9 +76,16 @@
   "venue.tank-farm",
   "venue.tar-flats",
   "venue.the-pit",
+  "weapon.bowler",
   "weapon.glue-pot",
+  "weapon.gulp",
   "weapon.gun",
+  "weapon.hot-breath",
+  "weapon.hot-dish",
+  "weapon.hydrant",
   "weapon.litter",
+  "weapon.lobster",
+  "weapon.long-bark",
   "weapon.mine",
   "weapon.oil-can",
   "weapon.pup",
@@ -86,5 +93,7 @@
   "weapon.shock-pulse",
   "weapon.smoke-pot",
   "weapon.sniffer",
-  "weapon.tacks"
+  "weapon.tacks",
+  "weapon.tick",
+  "weapon.zap-collar"
 ]
