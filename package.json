@@ -25,6 +25,7 @@
     "look": "pnpm build && node scripts/capture-look.mjs",
     "sky": "pnpm build && node scripts/capture-sky.mjs",
     "life": "pnpm build && node scripts/capture-life.mjs",
+    "bones": "pnpm build && node scripts/capture-bones.mjs",
     "world": "pnpm build && node scripts/capture-world.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",

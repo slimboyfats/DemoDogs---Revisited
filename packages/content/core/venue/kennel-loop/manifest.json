@@ -368,6 +368,23 @@
           "weight": 0.12
         }
       ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.windmill",
+          "x": 52,
+          "y": -247,
+          "rot": 0
+        },
+        {
+          "prop": "prop.windmill",
+          "x": 644,
+          "y": 82,
+          "rot": 0
+        }
+      ]
     }
   ],
   "bots": {
