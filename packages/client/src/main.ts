@@ -197,8 +197,9 @@ function resize(): void {
   overlay.height = H;
   const short = Math.min(W, H);
   const long = Math.max(W, H);
-  // close enough to see what the cars are made of: about 130 art pixels up the short side
-  scale = Math.max(2, Math.round(Math.min(short / 130, long / 230) * 2) / 2);
+  // about 175 art pixels up the short side: far enough out that the cells read as fine grain
+  // (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
+  scale = Math.max(2, Math.round(Math.min(short / 175, long / 310) * 2) / 2);
   scene.setScale(scale);
   if (session) {
     session.setView(W / scale, H / scale);
