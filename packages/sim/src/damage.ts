@@ -16,6 +16,7 @@ import { toLocal } from './physics';
 import { tumble } from './rubble';
 import { fallOver, settleFloors } from './downtown';
 import { stand } from './stand';
+import { giveWay, wouldHold } from './spans';
 import { fireproof, held, padded, shared } from './guards';
 import type { World } from './world';
 
@@ -541,6 +542,8 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   if (s.down) return;
   s.down = true;
   s.hp = 0;
+  delete s.sagT;
+  delete s.sag;
   if (s.def.fallOver)
     fallOver(w, s, x, y, (d, px, py, r) => stand(w, d, px, py, r, w.rng.range(0, 10)));
   w.emit({ t: 'fall', prop: s.index, x, y });
@@ -557,6 +560,7 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
     explode(w, s.x, s.y, s.def.blast, null);
     throwOut(w, s);
   }
+  giveWay(w, s);
   if (s.group === undefined || !s.bears) return;
   let walls = 0;
   let gone = 0;
@@ -586,6 +590,8 @@ export function updateMending(w: World): void {
     const r = s.def.radius + CAR_RADIUS + 4;
     if (s.def.solid && w.cars.some((c) => Math.abs(c.x - s.x) < r && Math.abs(c.y - s.y) < r))
       continue;
+    // a piece of bridge waits for what it stands on
+    if (!wouldHold(w, s)) continue;
     w.mending.splice(i, 1);
     s.down = false;
     s.mending = false;

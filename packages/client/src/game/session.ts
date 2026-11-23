@@ -121,6 +121,8 @@ export class Session {
       if (s.def.rubble) props.add(s.def.rubble.prop);
     }
     for (const p of world.props) props.add(p.def.id);
+    // the animals, in every step of their walk
+    for (const k of world.critters) props.add(k.def.id);
     // and what the weather may leave standing
     for (const m of world.mods) if (m.def.leaves) props.add(m.def.leaves.prop);
     const bots = new Map<string, { id: string; paint: string }>();
@@ -136,7 +138,7 @@ export class Session {
     for (const id of props) {
       const name = o.content.prop.get(id)?.meta.name ?? id;
       await report(`Scenery: ${name.toLowerCase()}`, done++, of);
-      o.art.prop(id);
+      o.art.warm(id);
     }
     await report('Waking the scrap bots', done++, of);
     for (const b of bots.values()) o.art.bot(b.id, b.paint);

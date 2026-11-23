@@ -59,6 +59,53 @@ describe('venue.knotwood', () => {
     expect(P.z).toBe(0);
   });
 
+  it('a span whose pillars go sags and falls piece by piece, out to the next pillars', () => {
+    const w = bench({ venue: 'venue.knotwood' });
+    const deck = w.statics.filter((s) => s.link !== undefined);
+    const legs = w.statics.filter((s) => s.holds !== undefined);
+    // a pair of pillars with pillars on both sides of it
+    const held = [...new Set(legs.map((s) => s.holds!))].sort((a, b) => a - b);
+    const at = held[1]!;
+    const pair = legs.filter((s) => s.holds === at);
+    expect(pair.length).toBe(2);
+    // one of a pair is not enough to hold it
+    fall(w, pair[0]!, pair[0]!.x, pair[0]!.y);
+    const doomed = deck.filter((s) => s.sagT !== undefined).map((s) => s.link!);
+    expect(doomed).toEqual(
+      deck.filter((s) => s.link! > held[0]! + 1 && s.link! < held[2]! - 1).map((s) => s.link),
+    );
+    expect(deck.some((s) => s.down)).toBe(false);
+    let most = 0;
+    let last = 0;
+    runUntil(
+      w,
+      () => {
+        const n = deck.filter((s) => s.down).length;
+        most = Math.max(most, n - last);
+        last = n;
+        return w.sagging.length === 0;
+      },
+      60 * 3,
+    );
+    expect(last).toBe(doomed.length);
+    // it ran out along the deck from the break: never more than a piece each way in one step
+    expect(most).toBeLessThanOrEqual(2);
+    // and all of it is built again, on its pillars
+    runUntil(w, () => w.mending.length === 0, 60 * 30);
+    expect(deck.every((s) => !s.down)).toBe(true);
+    expect(pair.every((s) => !s.down)).toBe(true);
+    expect(w.sagging.length).toBe(0);
+  });
+
+  it('the ramps lie on the ground: a hole in one takes nothing else with it', () => {
+    const w = bench({ venue: 'venue.knotwood' });
+    const low = w.statics.filter((s) => s.rests);
+    expect(low.length).toBeGreaterThan(8);
+    const hit = low[3]!;
+    fall(w, hit, hit.x, hit.y);
+    expect(w.sagging.length).toBe(0);
+  });
+
   it('the rails keep a car on the deck', () => {
     const w = bench({ venue: 'venue.knotwood' });
     const T = w.track!;

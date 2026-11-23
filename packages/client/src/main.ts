@@ -6,6 +6,8 @@ import {
   watchGl,
   type PerfContext,
 } from './game/perf-log';
+import { SliceFx } from './render/slice-fx';
+import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
 import { loadContent, loadLooks } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
@@ -67,6 +69,20 @@ const sound = new Sound();
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
+// how sharp the game is drawn: steps down by itself on a device that keeps falling behind. A
+// driven browser (the capture scripts) stays at full unless the address says otherwise, so a slow
+// headless frame never changes what a screenshot shows.
+const resolution = new Resolution(
+  safeStore(),
+  params.get('res') ?? (navigator.webdriver ? 'full' : null),
+);
+function safeStore(): Storage | undefined {
+  try {
+    return localStorage;
+  } catch {
+    return undefined;
+  }
+}
 // Tab while driving: the names over the cars, on and off (spectating, Tab is the next car)
 addEventListener('keydown', (e) => {
   if (!isKey('watch', e.key.toLowerCase()) || e.repeat || e.metaKey || e.ctrlKey || e.altKey)
@@ -367,6 +383,8 @@ let lastCareer = false;
 let W = 0;
 let H = 0;
 let DPR = 1;
+/** Overlay pixels per canvas pixel: the HUD stays sharp when the game is drawn at a lower resolution. */
+let overK = 1;
 /** Device pixels per art pixel when driving, and as shown now (a spectator can pull back). */
 let scale = 4;
 let shown = 4;
@@ -420,13 +438,16 @@ function spectate(dt: number): void {
 }
 
 function resize(): void {
-  DPR = Math.min(2, devicePixelRatio || 1);
+  const device = devicePixelRatio || 1;
+  DPR = resolution.pick(device, Math.min(innerWidth, innerHeight));
   W = Math.round(innerWidth * DPR);
   H = Math.round(innerHeight * DPR);
   canvas.width = W;
   canvas.height = H;
-  overlay.width = W;
-  overlay.height = H;
+  // the HUD and the words over the game are drawn at the full resolution whatever the game is at
+  overK = Math.min(2, device) / DPR;
+  overlay.width = Math.round(W * overK);
+  overlay.height = Math.round(H * overK);
   const short = Math.min(W, H);
   const long = Math.max(W, H);
   // about 175 art pixels up the short side: far enough out that the cells read as fine grain
@@ -440,6 +461,18 @@ function resize(): void {
     hud.layout(session.world, DPR);
   }
 }
+
+/** The RESOLUTION buttons say what is picked, and what it comes to on this screen. */
+function showRes(): void {
+  const text = `RESOLUTION ${resolution.mode.toUpperCase()} · ${W}×${H}`;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.resBtn')) b.textContent = text;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.resBtn'))
+  b.onclick = () => {
+    resolution.next();
+    resize();
+    showRes();
+  };
 
 function show(id: string | null): void {
   for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online', 'tracks'])
@@ -763,7 +796,7 @@ function perfContext(): PerfContext {
   const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
   return {
     phase: devMode ? 'range' : w.phase,
-    quality: s.fx.quality.toFixed(2),
+    quality: `${s.fx.quality.toFixed(2)} ${W}x${H}`,
     cells: s.fx.cells.live,
     particles: s.fx.fx.length,
     voxels: s.fx.voxels.length,
@@ -870,6 +903,8 @@ function frame(t: number): void {
     }
     spectate(dt);
     weatherAreas();
+    // the slice effects run on the frame's clock: the track creator stops the sim, not them
+    session.fx.slices.frame(session.world, paused && !online.racing ? 0 : dt);
     const r0 = performance.now();
     // the overdraw meter reads its counts back about twice a second (a GPU stall, so not every frame)
     if (scene instanceof PixelScene && scene.meterOn && ++meterFrames % 30 === 0)
@@ -877,7 +912,8 @@ function frame(t: number): void {
     scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
     const r1 = performance.now();
     octx.setTransform(1, 0, 0, 1, 0, 0);
-    octx.clearRect(0, 0, W, H);
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+    octx.setTransform(overK, 0, 0, overK, 0, 0);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
     else if (nameTags.shown && !devMode)
@@ -887,10 +923,21 @@ function frame(t: number): void {
     else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
     if (online.racing) $('netDot').textContent = online.status();
-    // a device that keeps falling behind gets thinner fire and smoke, by itself
-    if (!paused && slow.frame(t, wall) && session.fx.quality > 0.3) {
-      session.fx.quality = Math.max(0.3, session.fx.quality * 0.65);
-      perf?.note(t, 'quality', `effects thinned to ${session.fx.quality.toFixed(2)}`);
+    // a device that keeps falling behind gets thinner fire and smoke, by itself, then fewer
+    // pixels to fill (the bigger lever, but the one that shows), then thinner effects again
+    if (!paused && slow.frame(t, wall)) {
+      const fx = session.fx;
+      if (
+        fx.quality <= 0.7 &&
+        resolution.drop(devicePixelRatio || 1, Math.min(innerWidth, innerHeight))
+      ) {
+        resize();
+        showRes();
+        perf?.note(t, 'quality', `resolution down to ${W}x${H}`);
+      } else if (fx.quality > 0.3) {
+        fx.quality = Math.max(0.3, fx.quality * 0.65);
+        perf?.note(t, 'quality', `effects thinned to ${fx.quality.toFixed(2)}`);
+      }
     }
     if (perf && !paused) {
       if (glWatch) perf.drew(glWatch.take());
@@ -929,8 +976,14 @@ function boot(): void {
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
   }
+  // ?slices=0: nothing is built slice by slice or seen through
+  if (params.get('slices') === '0') SliceFx.enabled = false;
   resize();
-  addEventListener('resize', resize);
+  showRes();
+  addEventListener('resize', () => {
+    resize();
+    showRes();
+  });
   buildMenu();
   $('prevCar').onclick = () => {
     carIdx = (carIdx + cars.length - 1) % cars.length;
@@ -1027,6 +1080,16 @@ function boot(): void {
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
       editor,
+      /** The resolution for scripts: the steps this screen has, and `set(n)` to draw n steps down. */
+      res: {
+        steps: () => resSteps(devicePixelRatio || 1, Math.min(innerWidth, innerHeight)),
+        set(drop: number) {
+          resolution.mode = 'auto';
+          resolution.dropped = drop;
+          resize();
+          showRes();
+        },
+      },
       tracks: trackStore,
       online,
       spectator,

@@ -215,6 +215,17 @@ export interface StaticProp {
   /** The building it is a piece of, and whether it helps hold that building up. */
   group?: number;
   bears?: boolean;
+  /**
+   * A raised road (see spans.ts): the beam it is part of, and its place along it (`link`) if it
+   * is deck, or the place it holds up (`holds`) if it is a leg. `rests`: deck lying on the ground.
+   */
+  beam?: number;
+  link?: number;
+  holds?: number;
+  rests?: boolean;
+  /** Deck with nothing under it: seconds until it comes down, and how long it has been sinking. */
+  sagT?: number;
+  sag?: number;
   /** A building with floors: how many it has left standing. */
   storeys?: number;
   /** Which way it falls over when it comes down (radians), if the rule that built it says. */

@@ -16,6 +16,7 @@ export { boostAhead, onPad, padAt } from './pads';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';
+export { OVERHANG, SAG, SAG_STEP } from './spans';
 export { batter, dig, shed, explode, fall, footing, ignite, spill } from './damage';
 export {
   blinded,

@@ -1,5 +1,6 @@
 import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
+import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
@@ -234,6 +235,8 @@ export class Effects {
   readonly guards = new GuardState();
   /** Catch-up items: size bursts, the gale, the lead ball. */
   readonly catchup = new CatchupFx();
+  /** Things going up slice by slice, and tall scenery seen through to your car (slice-fx.ts). */
+  readonly slices = new SliceFx();
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
   readonly life = new LifeFx();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
@@ -1014,6 +1017,8 @@ export class Effects {
           this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
           this.smokeT[e.car] = 0;
+          // the fresh car is put together where it stands, slice by slice
+          this.slices.start(c, c.z);
           break;
         }
         case 'land':
@@ -1133,9 +1138,29 @@ export class Effects {
           break;
         }
         case 'storey':
-        case 'topple':
           this.collapse(e);
           break;
+        case 'topple':
+          // a tower tips over. A thing without floors (a span of road) just drops: its 'fall',
+          // next, cracks it into slabs and grit where it hung
+          if (w.statics[e.prop]!.def.storeys) this.collapse(e);
+          break;
+        case 'sag': {
+          // a bridge gives way: it cracks like a shot, the ground jumps, grit rains off the deck
+          const s = w.statics[e.prop]!;
+          const v = this.vol(e.x, e.y);
+          if (v > 0) this.sound.crash(Math.min(200, 60 + 20 * e.pieces) * v);
+          if (this.near(e.x, e.y, 220))
+            this.shake = Math.max(this.shake, Math.min(9, 3 + e.pieces * 0.8));
+          for (const o of w.sagging) {
+            if (o.beam !== s.beam) continue;
+            const z = (o.lift ?? 16) + 2;
+            for (let i = 0; i < 2; i++)
+              this.puff(o.x + rand(-6, 6), o.y + rand(-6, 6), z - rand(0, 6), 'dust');
+            for (let i = 0; i < 3; i++) this.spark(o.x + rand(-6, 6), o.y + rand(-6, 6), z, 50);
+          }
+          break;
+        }
         case 'mend':
           // gathered up and started together once this step's events are read
           this.mends.push({ s: w.statics[e.prop]!, in: e.in });
@@ -1385,6 +1410,7 @@ export class Effects {
         case 'bot-spawn': {
           const b = w.bots[e.bot]!;
           place(this.walkers[e.bot]!, b.x, b.y, b.h);
+          this.slices.start(b);
           break;
         }
         case 'break':
