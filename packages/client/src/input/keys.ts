@@ -14,7 +14,8 @@ export const KEYS: Readonly<Record<Action, readonly string[]>> = {
   boost: [' '],
   fire: ['x', 'f', 'shift'],
   pause: ['p', 'escape'],
-  // once your car is out of it: the next car to watch (Shift goes back), and the camera's zoom
+  // driving: the names over the cars, on and off. Once your car is out of it: the next car to
+  // watch (Shift goes back), and the camera's zoom
   watch: ['tab'],
   zoom: ['z'],
   // and, where nobody else is waiting on the race, straight to the results
