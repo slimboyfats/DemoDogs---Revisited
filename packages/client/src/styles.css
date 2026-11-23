@@ -202,8 +202,8 @@ body.kbd:not(.nohints) .pad kbd {
 }
 #pauseKey {
   position: fixed;
-  left: calc(56px + env(safe-area-inset-left));
-  top: calc(20px + env(safe-area-inset-top));
+  left: calc(20px + env(safe-area-inset-left));
+  top: calc(58px + env(safe-area-inset-top));
   display: none;
 }
 #keyHints {
