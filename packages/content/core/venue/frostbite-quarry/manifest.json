@@ -298,6 +298,29 @@
           "ahead": 0
         }
       ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.radar-tower",
+          "x": -671,
+          "y": -165,
+          "rot": 0
+        },
+        {
+          "prop": "prop.radar-tower",
+          "x": 635,
+          "y": -353,
+          "rot": 0
+        },
+        {
+          "prop": "prop.radar-tower",
+          "x": 707,
+          "y": 75,
+          "rot": 0
+        }
+      ]
     }
   ],
   "bots": {

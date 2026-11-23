@@ -10,6 +10,7 @@ import {
 import type { Art } from './art';
 import { queueToppling } from './collapse';
 import type { Effects } from './effects';
+import { queueRig, rigTall, tickBones } from './bones';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
@@ -80,6 +81,7 @@ export function queueStacks(
 ): void {
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
+  tickBones(w.time);
   for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
   queueToppling(R, fx.toppling);
   // what has just come down, whole for the moment before it cracks apart
@@ -181,6 +183,15 @@ function queueStatic(
   }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
   const lift = s.lift ?? 0;
+  // something with moving parts, while it is whole: once it is hurt it is one piece, and stops
+  const rig = lift === 0 && strip === art.prop(s.def.id) ? art.rig(s.def.id) : null;
+  if (rig) {
+    const r = Math.max(s.def.radius + 12, Math.hypot(strip.cw, strip.ch) / strip.res / 2 + 2);
+    if (!R.visible(s.x, s.y, r, rigTall(rig))) return;
+    R.group(s.y);
+    queueRig(R, rig, s.x, s.y, 0, s.rot, 1, w.time, s.seed, s, w.cars);
+    return;
+  }
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
   R.group(s.y);
   // just put down (the track creator, the test range): it goes up slice by slice
@@ -263,23 +274,32 @@ function queueCritter(R: StackSink, art: Art, w: World, k: Critter): void {
   const D = k.def.critter!;
   const id = k.def.id;
   const flier = D.kind === 'bird';
+  // a walker's poses are the steps of one stride, in order; a bird's are standing, wings up, down
+  const n = art.poses(id);
   let pose = 0;
   let z = k.z;
   let rot = k.h;
   if (k.state === 'fly') pose = 1 + (Math.floor(w.time * 9 + k.index * 0.37) & 1);
   else if (k.state === 'air') {
     rot += w.time * 17 + k.index;
-    pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 14) & 1;
+    pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 7 * n) % n;
   } else if (k.state === 'wind') {
     // pawing the ground: stamping from foot to foot, shuddering, head down
-    pose = Math.floor(w.time * 10) & 1;
+    pose = (Math.floor(w.time * 10) & 1) * Math.max(1, n >> 2);
     rot += Math.sin(w.time * 40) * 0.06;
   } else if (k.state !== 'idle') {
-    // one step each time it has gone about its own length
+    // one step each time it has gone about its own length, a stride every two
     const ph = k.gait / Math.max(1.6, k.def.radius * 1.5);
-    pose = flier ? 0 : Math.floor(ph) & 1;
+    pose = flier ? 0 : Math.floor((ph * n) / 2) % n;
     z += Math.abs(Math.sin(ph * Math.PI)) * D.step;
   } else if (!flier && Math.sin(w.time * 1.7 + k.index * 2.4) > 0.86) pose = 1;
+  const rig = art.rig(id);
+  if (rig) {
+    // thrown through the air it has other things on its mind than watching the cars
+    const seen = k.state === 'air' ? null : w.cars;
+    queueRig(R, rig, k.x, k.y, z, rot, 1, w.time, k.index, k, seen, pose);
+    return;
+  }
   R.stack(art.prop(id, undefined, pose), k.x, k.y, z, rot);
 }
 
