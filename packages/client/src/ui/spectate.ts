@@ -36,7 +36,10 @@ export class SpectateBar {
     press('specPrev', () => act.next(-1));
     press('specNext', () => act.next(1));
     press('specZoom', () => act.zoom());
-    press('specSkip', () => act.skip());
+    // on the click, not the press: a press would swap the screen under the finger, and the
+    // click that follows would land on whatever results button is there
+    press('specSkip', () => undefined);
+    document.getElementById('specSkip')!.addEventListener('click', () => act.skip());
     addEventListener('keydown', (e) => {
       if (!this.on || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
