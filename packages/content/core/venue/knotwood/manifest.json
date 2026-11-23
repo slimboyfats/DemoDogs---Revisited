@@ -283,6 +283,17 @@
       ]
     },
     {
+      "rule": "along",
+      "at": [0.48],
+      "items": [
+        {
+          "prop": "prop.moose",
+          "lane": 2.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
       "rule": "scatter",
       "perArea": 0.0006,
       "clear": 7,

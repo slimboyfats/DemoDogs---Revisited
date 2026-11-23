@@ -331,6 +331,17 @@
       ]
     },
     {
+      "rule": "along",
+      "at": [0.55],
+      "items": [
+        {
+          "prop": "prop.bull",
+          "lane": 2.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
       "rule": "field",
       "count": 5,
       "prop": "prop.corn",

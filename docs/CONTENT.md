@@ -48,7 +48,10 @@ way in.
 - **`critter`**: an animal. The prop is where a group of them lives (`group: [min, max]`); they
   wander, bolt from cars, and are bowled over (light) or stand like a rock (heavy). `kind: "bird"`
   takes off and lands again. A look may give other poses in `alts` (the other step of a walk, wings
-  up and down). Rules: `sim/src/critters.ts`.
+  up and down). A heavy one with `charge` attacks (the bull, the rams, the moose): it picks out a
+  car that moves within `notice`, paws the ground for `wind` seconds with a red mark over it, then
+  runs at the car at `speed`; a car it catches takes `hit` damage and is thrown at `shove`. Rules:
+  `sim/src/critters.ts`.
 - **`trample`**: a plant that is flattened for good by a car driving over it (not solid).
 - **`low`**: how tall a solid prop is; a car in the air above that sails over it.
 

@@ -60,9 +60,26 @@ export const CritterSchema = z.strictObject({
   height: z.number().positive().default(34),
   step: z.number().min(0).default(0.6),
   /** What the client calls out and plays when a car sends it flying or runs into it. */
-  cry: z.enum(['cluck', 'baa', 'moo', 'caw', 'squeak']).default('squeak'),
+  cry: z.enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow']).default('squeak'),
   /** Points for the car that bowls it over (light ones only). */
   points: z.number().int().min(0).default(0),
+  /**
+   * It attacks (heavy ground animals only). A car that moves within `notice` of it is picked
+   * out: the animal turns on it and paws the ground for `wind` seconds, then runs at it at
+   * `speed` for up to `reach` art px. A car it catches takes `hit` damage and is thrown off at
+   * `shove` art px a second. Hit or miss, it is blown for `rest` seconds; a tree stops it dead.
+   */
+  charge: z
+    .strictObject({
+      notice: z.number().positive(),
+      wind: z.number().positive().default(0.7),
+      speed: z.number().positive(),
+      reach: z.number().positive().default(220),
+      hit: z.number().positive(),
+      shove: z.number().positive(),
+      rest: z.number().positive().default(3),
+    })
+    .optional(),
 });
 export type CritterManifest = z.infer<typeof CritterSchema>;
 

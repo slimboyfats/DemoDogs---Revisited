@@ -21,11 +21,22 @@ const rand = (a: number, b: number) => a + Math.random() * (b - a);
 const pick = (c: readonly number[]) => c[(Math.random() * c.length) | 0]!;
 const AMBER = [0xfffbd6, 0xffe98a, 0xffb637, 0xff8a1c] as const;
 const BLUE = [0xffffff, 0xc8f6ff, 0x6fd6ff, 0x32b4f0] as const;
-const CRIES = { cluck: 'BAWK!', baa: 'BAA!', moo: 'MOO!', caw: 'CAW!', squeak: 'EEK!' } as const;
+const CRIES = {
+  cluck: 'BAWK!',
+  baa: 'BAA!',
+  moo: 'MOO!',
+  caw: 'CAW!',
+  squeak: 'EEK!',
+  snort: 'SNORT!',
+  bellow: 'ROAR!',
+} as const;
+const RED = [0xffffff, 0xff8a70, 0xff3b2a, 0xd0141a] as const;
 const hex = (rgb: number) => `#${rgb.toString(16).padStart(6, '0')}`;
 
 export class LifeFx {
   /** Cars that left a ramp and have not come down yet, by index. */
+  /** Seconds until the player may be told to look out again. */
+  private warned = 0;
   private readonly flying = new Set<number>();
   /** Which colours a surging car trails: those of the tile that kicked it. */
   private readonly trail = new Map<number, readonly number[]>();
@@ -202,16 +213,99 @@ export class LifeFx {
         break;
       case 'down':
         break;
+      case 'wind':
+        // it has picked a car out: a red mark over its head that everyone sees, and a snort
+        fx.text(e.x, e.y - 10, '!', '#ff3b2a', true);
+        this.ringOf(fx, e.x, e.y, k.def.radius + 4, 14, RED);
+        if (v > 0) S.cry(D.cry, Math.max(v, c === w.player ? 1 : 0));
+        if (c === w.player && this.warned <= 0) {
+          this.warned = 1.5;
+          fx.text(c.x, c.y - 14, 'LOOK OUT!', '#ff3b2a');
+        }
+        break;
+      case 'charge':
+        for (let i = 0; i < 10; i++)
+          fx.puff(
+            e.x,
+            e.y,
+            1,
+            'dust',
+            -Math.cos(k.h) * rand(20, 70),
+            -Math.sin(k.h) * rand(20, 70),
+          );
+        if (v > 0) S.stampede(v);
+        break;
+      case 'gore': {
+        // caught: a burst of red and dust, the car's paint in the air, and the screen jumps
+        const n = Math.round(26 * fx.quality) + 10;
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * TAU;
+          fx.puff(e.x, e.y, 1.5, 'dust', Math.cos(a) * rand(40, 90), Math.sin(a) * rand(40, 90));
+          fx.emit(
+            'glitter',
+            e.x,
+            e.y,
+            rand(2, 7),
+            Math.cos(a) * rand(40, 130) + Math.cos(k.h) * 50,
+            Math.sin(a) * rand(40, 130) + Math.sin(k.h) * 50,
+            rand(20, 90),
+            rand(0.35, 0.8),
+            Math.random() < 0.4 ? 2 : 1,
+            pick(RED),
+          );
+        }
+        for (let i = 0; i < 16; i++) fx.spark(e.x, e.y, 4, 120);
+        this.fluff(fx, tones, 10, e.x, e.y, 4, 0, 0, 50);
+        if (v > 0) {
+          S.thud(Math.max(v, c === w.player ? 1 : 0));
+          S.cry(D.cry, v);
+          fx.text(e.x, e.y - 8, 'RAMMED!', '#ff3b2a', true);
+        }
+        if (c === w.player) fx.shake = Math.max(fx.shake, 12);
+        break;
+      }
     }
   }
 
   step(fx: Effects, w: World): void {
     this.hush -= DT;
+    this.warned -= DT;
     for (const c of w.cars) {
       if (c.surge > 0 && !c.wrecked) this.surging(fx, c);
       if (this.flying.has(c.index) && c.z <= c.deck + 0.01) {
         this.flying.delete(c.index);
         this.touchdown(fx, w, c);
+      }
+    }
+    for (const k of w.critters) {
+      if (k.state === 'wind') {
+        // pawing the ground: dirt kicked back, and a red ring that tightens until it goes
+        if (Math.random() < 0.5)
+          fx.puff(
+            k.x,
+            k.y,
+            0.5,
+            'dust',
+            -Math.cos(k.h) * rand(25, 60),
+            -Math.sin(k.h) * rand(25, 60),
+          );
+        const left = k.t / (k.def.critter!.charge?.wind ?? 1);
+        if (Math.random() < 0.5) this.ringOf(fx, k.x, k.y, k.def.radius + 3 + left * 9, 5, RED);
+      } else if (k.state === 'charge') {
+        // head down and coming: dust off its heels and a red streak
+        fx.puff(k.x, k.y, 0.5, 'dust', -Math.cos(k.h) * 30, -Math.sin(k.h) * 30);
+        fx.emit(
+          'glitter',
+          k.x - Math.cos(k.h) * k.def.radius + rand(-2, 2),
+          k.y - Math.sin(k.h) * k.def.radius + rand(-2, 2),
+          rand(1, 6),
+          -Math.cos(k.h) * rand(10, 40),
+          -Math.sin(k.h) * rand(10, 40),
+          rand(0, 12),
+          rand(0.25, 0.5),
+          1,
+          pick(RED),
+        );
       }
     }
     // an animal knocked flying sheds a little of its coat all the way down
@@ -230,6 +324,33 @@ export class LifeFx {
           pick(t),
         );
       }
+  }
+
+  /** A ring of `n` bright cells of these colours, `r` art px out, just off the ground. */
+  private ringOf(
+    fx: Effects,
+    x: number,
+    y: number,
+    r: number,
+    n: number,
+    col: readonly number[],
+  ): void {
+    const a0 = rand(0, TAU);
+    for (let i = 0; i < n; i++) {
+      const a = a0 + (i / n) * TAU;
+      fx.emit(
+        'glitter',
+        x + Math.cos(a) * r,
+        y + Math.sin(a) * r * 0.8,
+        1,
+        0,
+        0,
+        rand(2, 8),
+        rand(0.2, 0.4),
+        1,
+        pick(col),
+      );
+    }
   }
 
   /** A car on a boost: fire out of both pipes and streaks of the tile's colour down its wake. */

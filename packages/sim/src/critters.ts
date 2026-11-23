@@ -16,8 +16,9 @@ import type { World } from './world';
  * Animals: chickens, sheep, cows, crows and the like that live beside a track. Each is put down
  * as a prop with a `critter` (see shared/pieces.ts), which becomes a group of them in
  * `world.critters`. They wander near home, bolt from fast cars, and are knocked flying (light
- * ones) or stand their ground (heavy ones). Birds take off and come down again. None of them is
- * ever killed: what lands gets up and runs.
+ * ones) or stand their ground (heavy ones). Birds take off and come down again. Some heavy ones
+ * attack: they pick out a car, paw the ground and run at it (`charge`). None of them is ever
+ * killed: what lands gets up and runs.
  */
 export interface Critter {
   index: number;
@@ -38,11 +39,16 @@ export interface Critter {
   ty: number;
   /**
    * idle: standing about. walk: strolling to (tx, ty). flee: running from a car. air: knocked
-   * flying. fly: a bird on the wing.
+   * flying. fly: a bird on the wing. wind: turned on a car, pawing the ground. charge: running
+   * at it.
    */
-  state: 'idle' | 'walk' | 'flee' | 'air' | 'fly';
-  /** Seconds left of standing, of fright, or of flight. */
+  state: 'idle' | 'walk' | 'flee' | 'air' | 'fly' | 'wind' | 'charge';
+  /** Seconds left of standing, of fright, of flight, of pawing or of the charge. */
   t: number;
+  /** The car it has picked out (an index into world.cars), or -1. */
+  prey: number;
+  /** Seconds until it has its breath back and can charge again. */
+  blown: number;
   /** How far it has gone on foot, art px: its gait. */
   gait: number;
 }
@@ -82,6 +88,8 @@ export function spawnCritters(
       ty: py,
       state: 'idle',
       t: rng.range(0.3, 3),
+      prey: -1,
+      blown: 0,
       gait: 0,
     });
   }
@@ -170,6 +178,15 @@ export function updateCritters(w: World): void {
       fly(w, k, D);
       continue;
     }
+    if (D.charge) {
+      // nothing frightens it; it does the frightening
+      scared = false;
+      if (k.blown > 0) k.blown -= DT;
+      if (awake && attack(w, k, D, D.charge)) {
+        for (const c of w.cars) meet(w, k, D, c);
+        continue;
+      }
+    }
     // with nobody near, it stands where it is: a field of sheep costs nothing far from the race
     if (!awake && k.state !== 'flee') continue;
     if (scared) {
@@ -196,7 +213,7 @@ export function updateCritters(w: World): void {
         [k.tx, k.ty] = spot(w, k, D);
         k.state = 'walk';
       }
-    } else {
+    } else if (k.state === 'walk') {
       const dx = k.tx - k.x;
       const dy = k.ty - k.y;
       if (Math.abs(dx) < 3 && Math.abs(dy) < 3) {
@@ -206,6 +223,15 @@ export function updateCritters(w: World): void {
         want = Math.atan2(dy, dx);
         speed = D.walk;
       }
+    }
+    if (k.state === 'charge') {
+      const C = D.charge!;
+      const c = w.cars[k.prey];
+      // it runs nearly straight: a car that swerves late gets out of its way
+      if (c) want = aim(k, c, C.speed);
+      speed = C.speed;
+      turn = 1.6;
+      if ((k.t -= DT) <= 0) tire(k, C.rest * 0.6);
     }
     if (speed > 0) {
       const off = angDiff(want, k.h);
@@ -224,6 +250,8 @@ export function updateCritters(w: World): void {
           ny = s.y + ((ny - s.y) / d) * r;
           // blocked on a walk: think again
           if (k.state === 'walk') [k.tx, k.ty] = spot(w, k, D);
+          // ran into it head down: that is the end of the charge
+          if (k.state === 'charge') tire(k, D.charge!.rest);
         }
       }
       [nx, ny] = w.keepInside(nx, ny, rad);
@@ -233,6 +261,85 @@ export function updateCritters(w: World): void {
     }
     if (D.kind === 'ground') for (const c of w.cars) meet(w, k, D, c);
   }
+}
+
+/** The heading that brings an animal running at `speed` to where this car will be. */
+function aim(k: Critter, c: Car, speed: number): number {
+  let t = 0;
+  for (let i = 0; i < 3; i++)
+    t = Math.min(1.2, Math.hypot(c.x + c.vx * t - k.x, c.y + c.vy * t - k.y) / speed);
+  return Math.atan2(c.y + c.vy * t - k.y, c.x + c.vx * t - k.x);
+}
+
+/** The charge is over: it stands and gets its breath back. */
+function tire(k: Critter, rest: number): void {
+  k.state = 'idle';
+  k.t = rest;
+  k.blown = rest;
+  k.prey = -1;
+}
+
+/**
+ * An animal that attacks: picks out the nearest moving car within its notice, turns on it and
+ * paws the ground. True while it is pawing (it does nothing else).
+ */
+function attack(
+  w: World,
+  k: Critter,
+  D: CritterManifest,
+  C: NonNullable<CritterManifest['charge']>,
+): boolean {
+  if (k.state === 'charge') return false;
+  if (k.state === 'wind') {
+    const c = w.cars[k.prey];
+    if (!c || c.wrecked) {
+      tire(k, 0.5);
+      return true;
+    }
+    k.t -= DT;
+    // it aims where the car will be when it gets there
+    const want = aim(k, c, C.speed);
+    k.h += clamp(angDiff(want, k.h), -9 * DT, 9 * DT);
+    if (k.t <= 0) {
+      k.state = 'charge';
+      k.t = C.reach / C.speed;
+      w.emit({
+        t: 'critter',
+        what: 'charge',
+        critter: k.index,
+        car: c.index,
+        x: k.x,
+        y: k.y,
+        power: C.speed,
+      });
+    }
+    return true;
+  }
+  if (k.blown > 0 || k.state === 'flee' || w.phase !== 'race') return false;
+  let best: Car | null = null;
+  let near = C.notice;
+  for (const c of w.cars) {
+    if (c.wrecked || c.z - c.deck > 7) continue;
+    const d = Math.hypot(c.x - k.x, c.y - k.y);
+    if (d < near && Math.hypot(c.vx, c.vy) > 25) {
+      near = d;
+      best = c;
+    }
+  }
+  if (!best) return false;
+  k.state = 'wind';
+  k.t = C.wind;
+  k.prey = best.index;
+  w.emit({
+    t: 'critter',
+    what: 'wind',
+    critter: k.index,
+    car: best.index,
+    x: k.x,
+    y: k.y,
+    power: C.wind,
+  });
+  return true;
 }
 
 /** A bird on the wing: it climbs, comes round over where it means to land, and glides down. */
@@ -314,18 +421,51 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
     c.y -= ny * (m - d) * (1 - share);
     k.x += nx * (m - d) * share;
     k.y += ny * (m - d) * share;
+    if (k.state === 'charge' && D.charge) {
+      // caught it: the car goes the way the animal was going, spinning
+      const C = D.charge;
+      const ax = Math.cos(k.h);
+      const ay = Math.sin(k.h);
+      c.vx = c.vx * 0.35 + ax * C.shove;
+      c.vy = c.vy * 0.35 + ay * C.shove;
+      c.spin += (w.rng.next() < 0.5 ? -1 : 1) * w.rng.range(2.5, 4.5);
+      tire(k, C.rest);
+      damage(w, c, C.hit, null, p[0] + nx * R, p[1] + ny * R);
+      w.emit({
+        t: 'critter',
+        what: 'gore',
+        critter: k.index,
+        car: c.index,
+        x: k.x,
+        y: k.y,
+        power: C.hit,
+      });
+      w.emit({
+        t: 'crash',
+        x: k.x - nx * k.def.radius,
+        y: k.y - ny * k.def.radius,
+        impact: C.shove,
+        player: c === w.player,
+      });
+      return;
+    }
     if (closing <= 0) return;
     c.vx -= nx * closing * 1.3;
     c.vy -= ny * closing * 1.3;
     c.spin += w.rng.range(-1, 1) * clamp(closing * 0.02, 0, 2.5);
     // and it is off, the way it was shoved
-    k.h = Math.atan2(ny, nx);
-    k.state = 'flee';
-    k.t = 1.6;
+    if (D.charge) {
+      // one that attacks does not run from a knock: it turns on whoever gave it
+      if (k.state !== 'wind' && closing > 25) k.blown = 0;
+    } else {
+      k.h = Math.atan2(ny, nx);
+      k.state = 'flee';
+      k.t = 1.6;
+    }
     if (closing > 25 && c.hitCd <= 0) {
       c.hitCd = 0.25;
       if (closing > 45 && !c.wrecked)
-        damage(w, c, (closing - 40) * 0.16, null, p[0] + nx * R, p[1] + ny * R);
+        damage(w, c, (closing - 35) * 0.2, null, p[0] + nx * R, p[1] + ny * R);
       w.emit({
         t: 'critter',
         what: 'bump',
