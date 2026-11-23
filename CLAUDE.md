@@ -15,23 +15,8 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev` (also starts the lobby server), menu → ONLINE    | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)              |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`            | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                   |
 | `pnpm look [out-dir]`                                       | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after   |
-| `?mods=downpour,gale` (or `all`, `wild`), WORLD on the menu | world modifiers (rain, gale, lightning, night ...); `pnpm world` shoots each one (`captures/world/`)        |
-| `pnpm format`                                               | Prettier, write                                                                                             |
-| `pnpm content:validate`                                     | resolve and validate every manifest                                                                         |
-| `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`  | regenerate golden hashes after an intended sim change                                                       |
-| `pnpm deploy:pages`                                         | build and push `packages/client/dist` to `gh-pages`                                                         |
-| Command                                                     | What                                                                                                        |
-| ----------------------------------------------------------  | ----------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                                                  | Vite dev server (LAN-visible for phones)                                                                    |
-| `pnpm check`                                                | lint + format check + typecheck + tests with coverage. Run before every push                                |
-| `pnpm verify`                                               | `check`, then build and `scripts/play-smoke.mjs` (headless Chromium at 844×390, screenshots in `captures/`) |
-| `pnpm dev`, then `/?dev`                                    | the test range: fire weapons at parked cars and props, slow time, read the counters                         |
-| `/?dev&venue=knotwood`                                      | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap      |
-| `/?perf`, or RECORD PERFORMANCE when paused                 | the performance recorder: saves a log of what each second cost on that device                               |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE    | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)              |
-| `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`            | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                   |
-| `pnpm look [out-dir]`                                       | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after   |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`      | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`   |
+| `?mods=downpour,gale` (or `all`, `wild`), WORLD on the menu | world modifiers (rain, gale, lightning, night ...); `pnpm world` shoots each one (`captures/world/`)        |
 | `pnpm format`                                               | Prettier, write                                                                                             |
 | `pnpm content:validate`                                     | resolve and validate every manifest                                                                         |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`  | regenerate golden hashes after an intended sim change                                                       |
