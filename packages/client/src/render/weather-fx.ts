@@ -205,9 +205,21 @@ export class WeatherFx {
       case 'flood': {
         const m = this.w.content.material.get(e.material);
         if (!m) break;
-        fx.pool(m, e.x, e.y, e.r);
+        // flood water is the material lit by the sky: its colour pulled toward the flood's own
+        const sky = this.w.mods.find((k) => k.def.kind === 'flood')?.def.colour ?? m.colour;
+        const a0 = parseInt(m.colour.slice(1), 16);
+        const b0 = shade(parseInt(sky.slice(1), 16), 0.55);
+        const mid = (sh: number) =>
+          Math.round(((a0 >> sh) & 255) * 0.35 + ((b0 >> sh) & 255) * 0.65) << sh;
+        const rgb = mid(16) | mid(8) | mid(0);
+        fx.pool(
+          { ...m, colour: '#' + rgb.toString(16).padStart(6, '0'), alpha: 0.42 },
+          e.x,
+          e.y,
+          e.r,
+        );
         // the edge creeping out: a few pale cells along it
-        const pale = shade(parseInt(m.colour.slice(1), 16), 1.9);
+        const pale = shade(rgb, 1.9);
         for (let i = 0; i < 6 * fx.quality; i++) {
           const a = rand(0, TAU);
           fx.cells.add(
@@ -484,6 +496,32 @@ export class WeatherFx {
         d.glow(gx, gy, 2 + u * 46, 1, hot ? 0xffd070 : 0xff8030, Math.sin(u * Math.PI) * 0.9);
       }
     }
+
+    // rising water glints: short pale dashes that come and go on each pool in view
+    for (const m of w.mods)
+      for (const p of m.pools) {
+        if (Math.abs(p.x - d.cx) > d.hw + p.r || Math.abs(p.y - d.cy) > d.hh + p.r) continue;
+        const n = Math.min(40, Math.ceil(p.r * 0.5 * q));
+        const id = Math.floor(p.x * 7 + p.y * 13);
+        for (let i = 0; i < n; i++) {
+          const per = 0.6 + h01(i + id, 31) * 0.8;
+          const ph = t / per + h01(i + id, 32);
+          const cyc = Math.floor(ph);
+          const u = ph - cyc;
+          const a = h01(i + id, cyc * 2 + 33) * TAU;
+          const rr = Math.sqrt(h01(i + id, cyc * 2 + 34)) * p.r * 0.8;
+          d.bar(
+            p.x + Math.cos(a) * rr,
+            p.y + Math.sin(a) * rr,
+            0.2,
+            2 + Math.floor(h01(i + id, 35) * 3),
+            1,
+            0xcfeaff,
+            Math.sin(u * Math.PI) * 0.5,
+            0,
+          );
+        }
+      }
   }
 }
 

@@ -24,6 +24,22 @@ Needs Node 22 and pnpm. On a phone, play in landscape; "Add to Home Screen" runs
 Four cars, each with its own handling: **Mutt** (pickup, all-rounder), **Whippet** (muscle car, fastest and
 fragile), **Bruiser** (van, heavy and tough) and **Pug** (buggy, quick and nimble).
 
+**World modifiers** change the whole race, and any number can be on at once. Pick them on the menu's WORLD row
+(WILD draws two or three for you), or as the host of an online room:
+
+| Modifier     | What it does                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------- |
+| Downpour     | Less grip everywhere, puddles gather on the road, fires go out                                      |
+| Gale         | A steady wind with gusts that shove cars, rockets and loose scenery, and strip the trees            |
+| Thunderheads | Lightning: a warning on the road, then a strike that stalls engines and blasts what it hits         |
+| Lights Out   | Night. Each car lights the road ahead while it still has its nose; rivals who lose theirs slow down |
+| Moon Bounce  | Low gravity: jumps and wreckage hang in the air, kerbs launch you                                   |
+| Tremors      | Quakes that crack the ground open, topple scenery and throw the cars about                          |
+| High Water   | Pools of flood water that keep widening for the whole race                                          |
+| Scrapfall    | Burning scrap falls out of the sky and leaves craters, and sometimes a wreck in the road            |
+| Greased      | Oil slicks turn up on the racing line                                                               |
+| Tinderbox    | Bone dry: fire throws sparks and spreads across the ground                                          |
+
 ## Controls
 
 - **Touch:** drag anywhere on the left half. Push the way you want to go: the car turns to face it, and the further
