@@ -29,9 +29,9 @@ describe('content validate', () => {
   it('everything drawn has a look', () => {
     const C = loadContent();
     const looks = loadLooks();
-    // a gun is part of the car and a slick is paint on the ground; the rest are drawn
+    // a gun is part of the car, a slick is paint on the ground and smoke is cells; the rest are drawn
     const shown = [...C.weapon.values()]
-      .filter((w) => w.kind !== 'gun' && w.kind !== 'slick')
+      .filter((w) => w.kind !== 'gun' && w.kind !== 'slick' && w.kind !== 'smoke')
       .map((w) => w.id);
     const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown];
     expect(drawn.filter((id) => !looks.has(id))).toEqual([]);

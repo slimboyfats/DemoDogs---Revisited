@@ -43,6 +43,7 @@ import {
   updateRockets,
 } from './things';
 import { standings, trackIndex } from './race';
+import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 
 export interface WorldOptions {
   content: Content;
@@ -126,6 +127,9 @@ export class World {
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
   readonly spills: Spill[] = [];
+  /** Smoke clouds and spikes dropped behind cars. */
+  readonly clouds: Cloud[] = [];
+  readonly spikes: Spike[] = [];
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   readonly player: Car;
@@ -398,6 +402,7 @@ export class World {
       } else if (live) {
         ctl = c.ai ? c.ai.behaviour.drive(this, c) : c.isPlayer ? player : NO_CONTROLS;
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
+        ctl = blinded(this, c, ctl);
       } else if (c.isPlayer) c.throttle = player.throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
@@ -420,6 +425,7 @@ export class World {
     updatePickups(this);
     updateRockets(this);
     updateMines(this);
+    updateDrops(this);
     updateEmbers(this);
 
     if (this.sandbox) return;
@@ -478,7 +484,9 @@ export class World {
     H.num(this.embers.length)
       .num(this.blazes.length)
       .num(this.spills.length)
-      .num(this.craters.length);
+      .num(this.craters.length)
+      .num(this.clouds.length)
+      .num(this.spikes.length);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

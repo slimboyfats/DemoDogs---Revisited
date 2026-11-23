@@ -1,0 +1,16 @@
+{
+  "id": "weapon.glue-pot",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glue pot",
+    "description": "Tips a patch of glue out behind. Whoever drives into it bogs right down.",
+    "since": "core@0.4.0"
+  },
+  "kind": "slick",
+  "label": "GLUE",
+  "ammo": 3,
+  "power": 1,
+  "cooldown": 0.5,
+  "material": "material.glue",
+  "radius": 14
+}

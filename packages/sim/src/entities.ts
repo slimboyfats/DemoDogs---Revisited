@@ -123,6 +123,10 @@ export interface Car {
   has: { front: boolean; rear: boolean; top: boolean };
   aiSpeed: number;
   smokeT: number;
+  /** Seconds left on a flat tyre (spikes). */
+  flat?: number;
+  /** Seconds an AI driver still cannot see the road (smoke). */
+  blind?: number;
 }
 
 export interface Bot {

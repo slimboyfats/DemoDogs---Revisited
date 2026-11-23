@@ -3,11 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Arms crate",
-    "description": "A weapon: rockets, mines or oil.",
+    "description": "A weapon: rockets, mines, oil, smoke, tacks or glue.",
     "since": "core@0.1.0"
   },
   "kind": "arms",
   "weight": 0.68,
   "hurtWeight": 0.45,
-  "weapons": ["weapon.rocket", "weapon.mine", "weapon.oil-can"]
+  "weapons": [
+    "weapon.rocket",
+    "weapon.mine",
+    "weapon.oil-can",
+    "weapon.smoke-pot",
+    "weapon.tacks",
+    "weapon.glue-pot"
+  ]
 }

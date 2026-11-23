@@ -3,6 +3,7 @@ import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import type { World } from './world';
+import { drop, inSmoke } from './drops';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -290,6 +291,8 @@ export function fire(w: World, c: Car): void {
       wpn.radius ?? 12,
       c.index,
     );
+  else if (wpn.kind === 'smoke' || wpn.kind === 'caltrops')
+    drop(w, wpn, c.index, c.x - cs * 18, c.y - sn * 18, c.h);
   else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;
@@ -309,7 +312,7 @@ export function shoot(w: World, c: Car): void {
   let best: Car | null = null;
   let bd = range;
   for (const o of w.cars) {
-    if (o === c || o.wrecked || o.invuln > 0 || o.z > 10) continue;
+    if (o === c || o.wrecked || o.invuln > 0 || o.z > 10 || inSmoke(w, o.x, o.y)) continue;
     const d = Math.hypot(o.x - c.x, o.y - c.y);
     if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
       bd = d;

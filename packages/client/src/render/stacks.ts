@@ -63,6 +63,12 @@ export function queueStacks(
         0,
       );
     }
+  // tacks lie flat, each turned its own way
+  for (const s of w.spikes)
+    if (R.visible(s.x, s.y, 4)) {
+      R.group(s.y - 5);
+      R.stack(art.prop(s.def.id), s.x, s.y, 0, (s.x * 7.3 + s.y * 3.1) % (Math.PI * 2));
+    }
   for (const r of w.rockets) {
     R.group(r.y);
     R.stack(art.prop(r.def.id), r.x, r.y, 4, r.h);

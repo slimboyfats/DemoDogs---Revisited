@@ -10,3 +10,12 @@ export { World, ahead, type Oval, type Phase, type WorldOptions } from './world'
 export * from './range';
 export { stand } from './scenery';
 export { batter, dig, shed, explode, fall, footing, ignite, spill } from './damage';
+export {
+  blinded,
+  cloudReach,
+  dropsBehind,
+  inSmoke,
+  rangeDrop,
+  type Cloud,
+  type Spike,
+} from './drops';
