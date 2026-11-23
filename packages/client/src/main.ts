@@ -32,6 +32,7 @@ import { Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
+import { KeyHints } from './ui/key-hints';
 import { results } from './ui/results';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
@@ -50,6 +51,7 @@ const content = loadContent();
 const art = new Art(loadLooks());
 const sound = new Sound();
 const input = new Input(() => sound.init());
+const keyHints = new KeyHints();
 const canvas = $<HTMLCanvasElement>('game');
 const overlay = $<HTMLCanvasElement>('overlay');
 const octx = overlay.getContext('2d')!;
@@ -233,8 +235,11 @@ function updateFireButton(): void {
   const b = $('btnFire');
   const P = session?.world.player;
   if (!P) return;
-  b.textContent = P.weapon ? `${P.weapon.label} ×${P.ammo}` : 'FIRE';
+  const text = P.weapon ? `${P.weapon.label} ×${P.ammo}` : 'FIRE';
+  const label = $('fireLabel');
+  if (label.textContent !== text) label.textContent = text;
   b.classList.toggle('empty', !P.weapon);
+  keyHints.setFire(text, !P.weapon);
 }
 
 function goFullscreen(): void {

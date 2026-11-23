@@ -155,10 +155,122 @@ body[data-screen='game'] #controls {
 body[data-screen='game'] #pauseBtn {
   display: block;
 }
+
+/* key hints: square key caps that say which key does what (KEY HINTS in the menus turns them off) */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: #16141c;
+  background: #ece6d8;
+  border: 2px solid #16141c;
+  box-shadow:
+    0 3px 0 #8d8676,
+    0 3px 0 2px #16141c;
+  pointer-events: none;
+}
+kbd.down {
+  background: #ffd24a;
+  transform: translateY(3px);
+  box-shadow: 0 0 0 0 #16141c;
+}
+body.nohints kbd,
+body.nohints #keyHints {
+  display: none;
+}
+/* on a touch screen: badges on the buttons, once a keyboard shows itself */
+.pad kbd {
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  transform: translateX(-50%);
+  display: none;
+}
+.pad kbd.down {
+  transform: translate(-50%, 3px);
+}
+body.kbd:not(.nohints) .pad kbd {
+  display: inline-flex;
+}
+#pauseKey {
+  position: fixed;
+  left: calc(56px + env(safe-area-inset-left));
+  top: calc(20px + env(safe-area-inset-top));
+  display: none;
+}
+#keyHints {
+  display: none;
+}
+#keyHints b {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-shadow:
+    1px 1px 0 #16141c,
+    -1px 1px 0 #16141c,
+    1px -1px 0 #16141c,
+    -1px -1px 0 #16141c;
+}
+.khDrive {
+  position: absolute;
+  left: calc(18px + env(safe-area-inset-left));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.khPad {
+  display: grid;
+  grid-template-columns: repeat(3, 22px);
+  gap: 6px 3px;
+}
+.khPad kbd:first-child {
+  grid-column: 2;
+}
+.khPad kbd:nth-child(2) {
+  grid-column: 1;
+}
+.khActs {
+  position: absolute;
+  right: calc(18px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 9px;
+}
+.khRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.khRow.boost b {
+  color: #4fb8ff;
+}
+.khRow.fire b {
+  color: #ff7850;
+}
+.khRow.empty {
+  opacity: 0.5;
+}
 @media (hover: hover) and (pointer: fine) {
   #controls .pad,
   #stickZone .hint {
     display: none;
+  }
+  body:not(.nohints) #keyHints {
+    display: block;
+  }
+  body[data-screen='game']:not(.nohints) #pauseKey {
+    display: inline-flex;
   }
 }
 

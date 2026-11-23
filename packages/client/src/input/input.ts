@@ -1,13 +1,14 @@
 import type { Controls } from '@demodogs/shared';
 import { toControls, type RawInput } from './controls';
+import { isKey, KEYS } from './keys';
 
 /** CSS pixels from the stick's centre to its edge. */
 const RADIUS = 56;
 
 /**
  * Touch and keyboard. The left of the screen is a floating stick (it appears where the finger
- * lands); BRAKE, BOOST and FIRE are buttons on the right. Keys: arrows or WASD, Space boosts, X,
- * F or Shift fires, P or Esc pauses.
+ * lands); BRAKE, BOOST and FIRE are buttons on the right. The keys are in `keys.ts`: arrows or
+ * WASD, Space boosts, X, F or Shift fires, P or Esc pauses.
  */
 export class Input {
   private readonly keys = new Set<string>();
@@ -119,8 +120,8 @@ export class Input {
       if ([' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) e.preventDefault();
       if (this.keys.has(k)) return;
       this.keys.add(k);
-      if (k === 'x' || k === 'shift' || k === 'f') this.raw.fire = true;
-      if (k === 'p' || k === 'escape') this.pausePressed = true;
+      if (isKey('fire', k)) this.raw.fire = true;
+      if (isKey('pause', k)) this.pausePressed = true;
       this.onGesture();
     });
     addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
@@ -134,12 +135,13 @@ export class Input {
     const k = this.keys;
     const b = this.buttons();
     const r = this.raw;
-    r.up = k.has('arrowup') || k.has('w');
-    r.down = k.has('arrowdown') || k.has('s');
-    r.left = k.has('arrowleft') || k.has('a');
-    r.right = k.has('arrowright') || k.has('d');
+    const held = (keys: readonly string[]) => keys.some((key) => k.has(key));
+    r.up = held(KEYS.gas);
+    r.down = held(KEYS.brake);
+    r.left = held(KEYS.left);
+    r.right = held(KEYS.right);
     r.brake = b.brake;
-    r.boost = b.boost || k.has(' ');
+    r.boost = b.boost || held(KEYS.boost);
     const out = toControls(r, heading);
     r.fire = false;
     return out;
