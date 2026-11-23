@@ -297,6 +297,17 @@
       ]
     },
     {
+      "rule": "along",
+      "at": [0.3, 0.72],
+      "items": [
+        {
+          "prop": "prop.ram",
+          "lane": 2.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
       "rule": "scatter",
       "perArea": 0.00012,
       "clear": 6,

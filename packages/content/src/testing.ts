@@ -184,6 +184,7 @@ export function critterTest(
   packed = false,
   ticks = 150,
   gap = 150,
+  throttle = 1,
 ) {
   const w = flatBench();
   const c = w.player;
@@ -206,7 +207,7 @@ export function critterTest(
   let flung = 0;
   let bumped = 0;
   for (let i = 0; i < ticks; i++) {
-    w.step({ steer: 0, throttle: i < 120 ? 1 : 0, brake: false, boost: false, fire: false });
+    w.step({ steer: 0, throttle: i < 120 ? throttle : 0, brake: false, boost: false, fire: false });
     for (const e of w.takeEvents()) {
       if (e.t !== 'critter') continue;
       events.push(e.what);

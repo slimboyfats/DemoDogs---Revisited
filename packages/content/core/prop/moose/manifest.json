@@ -1,0 +1,32 @@
+{
+  "id": "prop.moose",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Moose",
+    "description": "A moose out of the trees. Slow to anger and you get a long warning, but nothing on the road hits harder.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 6.6,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 1],
+    "roam": 60,
+    "walk": 6,
+    "run": 50,
+    "scare": 30,
+    "cry": "bellow",
+    "mass": 5,
+    "shy": 45,
+    "step": 0.8,
+    "charge": {
+      "notice": 155,
+      "wind": 1.1,
+      "speed": 175,
+      "reach": 280,
+      "hit": 30,
+      "shove": 170,
+      "rest": 4.5
+    }
+  }
+}

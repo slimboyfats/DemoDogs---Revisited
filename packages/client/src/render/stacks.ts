@@ -227,6 +227,10 @@ function queueCritter(R: StackSink, art: Art, w: World, k: Critter): void {
   else if (k.state === 'air') {
     rot += w.time * 17 + k.index;
     pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 14) & 1;
+  } else if (k.state === 'wind') {
+    // pawing the ground: stamping from foot to foot, shuddering, head down
+    pose = Math.floor(w.time * 10) & 1;
+    rot += Math.sin(w.time * 40) * 0.06;
   } else if (k.state !== 'idle') {
     // one step each time it has gone about its own length
     const ph = k.gait / Math.max(1.6, k.def.radius * 1.5);

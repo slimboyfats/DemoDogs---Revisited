@@ -230,11 +230,13 @@ export type SimEvent =
   /**
    * An animal (world.critters[critter]) at (x, y): a car (or a blast, car -1) knocked it flying
    * (`flung`), a car ran into one too heavy to move (`bump`, with the closing speed as `power`),
-   * or a bird took off (`up`) or came down (`down`).
+   * or a bird took off (`up`) or came down (`down`). One that attacks has picked out `car` and
+   * is pawing the ground (`wind`), has set off at it (`charge`), or has caught it (`gore`, with
+   * the damage as `power`).
    */
   | {
       t: 'critter';
-      what: 'flung' | 'bump' | 'up' | 'down';
+      what: 'flung' | 'bump' | 'up' | 'down' | 'wind' | 'charge' | 'gore';
       critter: number;
       car: number;
       x: number;

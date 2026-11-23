@@ -287,6 +287,17 @@
           "ahead": 20
         }
       ]
+    },
+    {
+      "rule": "along",
+      "at": [0.58],
+      "items": [
+        {
+          "prop": "prop.ram",
+          "lane": 2.3,
+          "ahead": 0
+        }
+      ]
     }
   ],
   "bots": {
