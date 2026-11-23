@@ -87,7 +87,11 @@ export class Session {
     for (const c of world.cars)
       cars.set(c.def.id + c.paint, { id: c.def.id, paint: c.paint, name: c.def.meta.name });
     const props = new Set<string>();
-    for (const s of world.statics) props.add(s.def.id);
+    for (const s of world.statics) {
+      props.add(s.def.id);
+      // what it leaves when it comes down, so a rockfall is not built in the middle of a race
+      if (s.def.rubble) props.add(s.def.rubble.prop);
+    }
     for (const p of world.props) props.add(p.def.id);
     const bots = new Map<string, { id: string; paint: string }>();
     for (const b of world.bots) bots.set(b.def.id + b.paint, { id: b.def.id, paint: b.paint });

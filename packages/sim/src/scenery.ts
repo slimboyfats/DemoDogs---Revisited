@@ -1,39 +1,18 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
+import { stand } from './stand';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
 import { layRiver } from './river';
 
+export { stand };
+
 /**
  * Lays out a venue's scenery from its rules, using the venue's own seed so a venue always looks the
  * same. Static props go in world.statics; loose ones (cones, crates, barrels) in world.props.
  */
-/** Stand a static prop in the world. */
-export function stand(
-  w: World,
-  def: PropManifest,
-  x: number,
-  y: number,
-  rot: number,
-  seed: number,
-): StaticProp {
-  const s: StaticProp = {
-    index: w.statics.length,
-    def,
-    made: def.made ? (w.content.material.get(def.made) ?? null) : null,
-    x,
-    y,
-    rot,
-    seed,
-  };
-  if (def.integrity !== undefined) s.hp = def.integrity;
-  if (def.crown) s.leaves = 1;
-  w.statics.push(s);
-  return s;
-}
-
 type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
 
 export function buildScenery(w: World, rng: Rng): void {
@@ -178,6 +157,42 @@ function apply(
         }
         group++;
         n++;
+      }
+      return;
+    }
+    case 'arch': {
+      if (!T) return;
+      let group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
+      // never over the starting grid
+      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every) {
+        const a = T.a[i]!;
+        const nx = -Math.sin(a);
+        const ny = Math.cos(a);
+        const legOff = half + rule.offset + prop(rule.leg).radius;
+        const legs: [number, number][] = [-1, 1].map((sd) => [
+          T.x[i]! + nx * legOff * sd,
+          T.y[i]! + ny * legOff * sd,
+        ]);
+        // a leg must stand clear of the road everywhere, also across the inside of a bend
+        if (w.grid && legs.some(([x, y]) => w.grid!.at(x, y) < legOff - 4)) continue;
+        if (!legs.every(([x, y]) => w.free(x, y, prop(rule.leg).radius + 2))) continue;
+        for (const [x, y] of legs) {
+          const s = add(rule.leg, x, y, a);
+          if (s) {
+            s.group = group;
+            s.bears = true;
+          }
+        }
+        const n = Math.max(1, Math.round((legOff * 2) / rule.step) - 1);
+        for (let k = 1; k <= n; k++) {
+          const o = -legOff + (k * legOff * 2) / (n + 1);
+          const s = add(rule.span, T.x[i]! + nx * o, T.y[i]! + ny * o, a + Math.PI / 2);
+          if (s) {
+            s.group = group;
+            s.bears = false;
+          }
+        }
+        group++;
       }
       return;
     }
