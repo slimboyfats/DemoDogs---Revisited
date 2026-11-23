@@ -1,0 +1,16 @@
+{
+  "id": "prop.tower-steel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Steel tower",
+    "description": "A column of a dark steel-and-smoked-glass block, seven floors with a lit band on each. It sheds floors as it is hit and topples when its block goes.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5.5,
+  "made": "material.steel",
+  "integrity": 280,
+  "hardness": 1.4,
+  "storeys": 7,
+  "fallOver": { "rubble": "prop.rubble", "floor": 4, "step": 6, "spread": 3, "crush": 40 }
+}

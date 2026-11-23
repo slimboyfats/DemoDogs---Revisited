@@ -6,6 +6,8 @@ import { clamp } from './math';
 import { tipOff } from './docks';
 import { toLocal } from './physics';
 import { tumble } from './rubble';
+import { fallOver, settleFloors } from './downtown';
+import { stand } from './stand';
 import type { World } from './world';
 
 /** Damage a car at (px, py), credited to `by`. Scaled by the mode and the car's armour. */
@@ -494,6 +496,7 @@ export function batter(
   s.hp -= d;
   if (s.hp > 0) {
     w.emit({ t: 'chip', prop: s.index, x, y, amount: d, by });
+    settleFloors(w, s, x, y);
     return false;
   }
   fall(w, s, x, y);
@@ -505,6 +508,8 @@ export function fall(w: World, s: StaticProp, x: number, y: number): void {
   if (s.down) return;
   s.down = true;
   s.hp = 0;
+  if (s.def.fallOver)
+    fallOver(w, s, x, y, (d, px, py, r) => stand(w, d, px, py, r, w.rng.range(0, 10)));
   w.emit({ t: 'fall', prop: s.index, x, y });
   pour(w, s);
   tumble(w, s);

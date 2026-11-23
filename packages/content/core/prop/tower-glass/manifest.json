@@ -1,0 +1,16 @@
+{
+  "id": "prop.tower-glass",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glass tower",
+    "description": "A column of a glass office block, nine floors of blue panes on a steel frame. Blasts take it down a floor at a time; when its block gives way it falls across the road.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5.5,
+  "made": "material.steel",
+  "integrity": 330,
+  "hardness": 1.4,
+  "storeys": 9,
+  "fallOver": { "rubble": "prop.rubble", "floor": 4, "step": 6, "spread": 3, "crush": 40 }
+}

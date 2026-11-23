@@ -1,0 +1,21 @@
+{
+  "id": "prop.overpass-deck",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Overpass deck",
+    "description": "A span of the raised road, high enough to drive under. It falls when its pillars go, and leaves a heap of rubble across the track.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "solid": false,
+  "made": "material.concrete",
+  "integrity": 220,
+  "fallOver": {
+    "rubble": "prop.rubble",
+    "floor": 6,
+    "step": 4,
+    "spread": 1.5,
+    "crush": 30
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "prop.parked-car",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Parked car",
+    "description": "Somebody left it at the kerb. It takes a few rockets, and then its fuel tank goes up.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 9,
+  "hardness": 1.1,
+  "made": "material.steel",
+  "integrity": 110,
+  "blast": 0.9
+}

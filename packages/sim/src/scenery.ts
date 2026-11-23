@@ -3,6 +3,7 @@ import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { stand } from './stand';
 import { harbour, stacks } from './docks';
+import { buildDowntown } from './downtown';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -10,12 +11,12 @@ import { layRiver } from './river';
 
 export { stand };
 
+type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
+
 /**
  * Lays out a venue's scenery from its rules, using the venue's own seed so a venue always looks the
  * same. Static props go in world.statics; loose ones (cones, crates, barrels) in world.props.
  */
-type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
-
 export function buildScenery(w: World, rng: Rng): void {
   const prop = (id: string): PropManifest => w.content.prop.get(id)!;
   const add: Add = (id, x, y, rot) => {
@@ -61,6 +62,7 @@ function apply(
   const T = w.track;
   const half = w.road / 2;
   const O = w.oval;
+  if (buildDowntown(w, rng, rule, add)) return;
   switch (rule.rule) {
     case 'bend-wall': {
       if (!T || !w.grid) return;

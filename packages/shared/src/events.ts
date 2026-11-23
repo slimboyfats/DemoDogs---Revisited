@@ -47,6 +47,10 @@ export type SimEvent =
     }
   /** That piece of scenery came down for good. */
   | { t: 'fall'; prop: number; x: number; y: number }
+  /** A building (world.statics[prop]) lost its top floor at (x, y) and has `left` standing. */
+  | { t: 'storey'; prop: number; left: number; x: number; y: number }
+  /** It fell over with `left` floors standing, towards angle `a`, `len` art px long. */
+  | { t: 'topple'; prop: number; left: number; a: number; len: number }
   /**
    * A tree lost `amount` of a full crown of leaves and has `left`: torn off by a blast at (x, y),
    * burnt off, or shaken loose by a ram there.

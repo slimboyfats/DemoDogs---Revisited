@@ -173,6 +173,10 @@ export interface StaticProp {
   /** The building it is a piece of, and whether it helps hold that building up. */
   group?: number;
   bears?: boolean;
+  /** A building with floors: how many it has left standing. */
+  storeys?: number;
+  /** Which way it falls over when it comes down (radians), if the rule that built it says. */
+  lean?: number;
   x: number;
   y: number;
   rot: number;

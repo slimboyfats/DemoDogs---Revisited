@@ -7,6 +7,7 @@ import {
   type World,
 } from '@demodogs/sim';
 import type { Art } from './art';
+import { queueToppling } from './collapse';
 import type { Effects } from './effects';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
@@ -49,6 +50,7 @@ export function queueStacks(
   still?: StaticHook,
 ): void {
   for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, still);
+  queueToppling(R, fx.toppling);
   for (const p of w.props)
     if (p.alive && R.visible(p.x, p.y, 8, 10)) {
       R.group(p.y);
@@ -91,6 +93,13 @@ export function queueStacks(
   for (const c of w.cars) queueCar(R, art, w, fx, c);
 }
 
+/** How many of a static's slices still stand: all of them, unless it is a building short of floors. */
+export function standing(s: StaticProp, strip: Strip): number {
+  const n = s.def.storeys;
+  if (!n || s.storeys === undefined || s.storeys >= n) return strip.n;
+  return Math.round(s.storeys * (s.def.fallOver?.floor ?? 4) * strip.res);
+}
+
 function queueStatic(
   R: StackSink,
   art: Art,
@@ -102,6 +111,12 @@ function queueStatic(
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip))) return;
   R.group(s.y);
+  const lost = standing(s, strip);
+  if (lost < strip.n) {
+    // a building that has lost floors: only what still stands
+    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, i / strip.res, s.rot);
+    return;
+  }
   if (!s.def.sway) {
     if (!still?.(s, strip)) R.stack(strip, s.x, s.y, 0, s.rot);
     if (s.def.press) queuePress(R, art, w, s);

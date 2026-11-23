@@ -22,6 +22,7 @@ export function stand(
   };
   if (def.integrity !== undefined) s.hp = def.integrity;
   if (def.crown) s.leaves = 1;
+  if (def.storeys) s.storeys = def.storeys;
   w.statics.push(s);
   return s;
 }

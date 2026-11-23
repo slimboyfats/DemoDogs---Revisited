@@ -3,6 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
+import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import type { Strip } from './stack';
 import { char, clone, dent, restore, shatter, stripCrown, voxelsOf, type Chip } from './strips';
 import {
@@ -101,6 +102,9 @@ const BOT_RIG = {
 export class Effects {
   readonly fx: Particle[] = [];
   readonly debris: Debris[] = [];
+  /** Buildings falling over (see collapse.ts), and those that went that way. */
+  readonly toppling: Toppling[] = [];
+  private readonly toppled = new Set<StaticProp>();
   readonly texts: FloatText[] = [];
   readonly bodies: Strip[] = [];
   /** Short bursts of light (explosions, muzzle flashes) for renderers that light the world. */
@@ -848,6 +852,12 @@ export class Effects {
         case 'chip': {
           // a piece knocked out of scenery where it was struck
           const s = w.statics[e.prop]!;
+          // a tower keeps its one shared strip (a copy of each would fill the atlas): it shows
+          // its damage by the floors it loses, and a knock only throws grit off it
+          if (s.def.storeys) {
+            this.chipOff(s, e.x, e.y, e.amount);
+            break;
+          }
           let strip = this.scarred.get(s);
           if (!strip) {
             if (this.scarred.size >= MAX_SCARRED) break;
@@ -879,9 +889,15 @@ export class Effects {
           if (e.by === 'impact') for (let i = 0; i < 3; i++) this.puff(e.x, e.y, 2, 'dust');
           break;
         }
+        case 'storey':
+        case 'topple':
+          this.collapse(e);
+          break;
         case 'fall': {
           // it comes down: every voxel it still has flies apart, and rubble marks the spot
           const s = w.statics[e.prop]!;
+          // one that fell over bursts where it lands instead (see collapse)
+          if (this.toppled.has(s)) break;
           let strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
           if (s.def.topples) {
             // it does not break up: it tips off what it stood on and falls whole (a loose prop now)
@@ -1261,9 +1277,101 @@ export class Effects {
   }
 
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
+  /** A building loses its top floor, or falls over. */
+  private collapse(e: Extract<SimEvent, { t: 'storey' | 'topple' }>): void {
+    const s = this.w.statics[e.prop]!;
+    const base = this.art.prop(s.def.id);
+    const floor = s.def.fallOver?.floor ?? 4;
+    const v = this.vol(s.x, s.y);
+    if (e.t === 'storey') {
+      // the floor that went flies off in its blocks, with a cloud of grit at that height
+      const z0 = e.left * floor;
+      this.burst(floorOf(this.chipsOf(base), z0, z0 + floor + 1), 140, {
+        x: s.x,
+        y: s.y,
+        h: s.rot,
+        z: 0,
+        ox: e.x,
+        oy: e.y,
+        speed: 45,
+        vx: 0,
+        vy: 0,
+      });
+      for (let i = 0; i < 4; i++)
+        this.puff(s.x + rand(-4, 4), s.y + rand(-4, 4), z0 + rand(0, floor), 'dust');
+      if (v > 0) this.sound.crash(3 * v);
+      return;
+    }
+    const strip = this.scarred.get(s) ?? base;
+    const layers = s.def.storeys
+      ? Math.min(strip.n, Math.round(e.left * floor * strip.res))
+      : strip.n;
+    this.toppled.add(s);
+    this.toppling.push({ s, strip, layers, a: e.a, len: e.len, t: 0, dur: fallTime(e.len) });
+    for (let i = 0; i < 6; i++) this.puff(s.x + rand(-5, 5), s.y + rand(-5, 5), rand(0, 4), 'dust');
+  }
+
+  /** Grit off a tower where it was struck: a handful of its blocks from around that height. */
+  private chipOff(s: StaticProp, x: number, y: number, amount: number): void {
+    const n = s.storeys ?? 1;
+    const top = n * (s.def.fallOver?.floor ?? 4);
+    const z = rand(0, top);
+    const bits = floorOf(this.chipsOf(this.art.prop(s.def.id)), z - 3, z + 3);
+    this.burst(bits, Math.round(Math.min(60, 8 + amount)), {
+      x: s.x,
+      y: s.y,
+      h: s.rot,
+      z: 0,
+      ox: x,
+      oy: y,
+      speed: 40,
+      vx: 0,
+      vy: 0,
+    });
+    this.puff(x, y, z, 'dust');
+  }
+
+  /** Falling buildings tip further; one that hits the ground bursts along where it lies. */
+  private fallen(): void {
+    for (let i = this.toppling.length - 1; i >= 0; i--) {
+      const T = this.toppling[i]!;
+      T.t += DT;
+      if (T.t < T.dur) continue;
+      this.toppling.splice(i, 1);
+      const s = T.s;
+      const height = T.layers / T.strip.res;
+      const chips = floorOf(this.chipsOf(this.art.prop(s.def.id)), 0, height);
+      this.burst(laidOut(chips, T.a, s.rot, height, T.len), 320, {
+        x: s.x,
+        y: s.y,
+        h: s.rot,
+        z: 0,
+        ox: s.x,
+        oy: s.y,
+        speed: 28,
+        vx: Math.cos(T.a) * 30,
+        vy: Math.sin(T.a) * 30,
+      });
+      const cs = Math.cos(T.a);
+      const sn = Math.sin(T.a);
+      for (let d = 0; d < T.len; d += 5)
+        this.puff(s.x + cs * d + rand(-4, 4), s.y + sn * d + rand(-4, 4), rand(0, 5), 'dust');
+      const v = this.vol(s.x, s.y);
+      if (v > 0) {
+        this.sound.crash(9 * v);
+        this.shake = Math.max(this.shake, 5 * v);
+      }
+      if (this.scarred.get(s) === T.strip) {
+        this.scarred.delete(s);
+        this.dropped.push(T.strip);
+      }
+    }
+  }
+
   afterStep(): void {
     const w = this.w;
     this.defence.afterStep();
+    this.fallen();
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
     // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
     for (const p of w.props) {
