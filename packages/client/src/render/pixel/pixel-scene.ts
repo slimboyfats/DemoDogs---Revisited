@@ -132,6 +132,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha?: number): void {
     this.stacks.stack(s, x, y, z, rot, alpha);
   }
+  zoom(k: number): void {
+    this.stacks.zoom(k);
+  }
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     this.stacks.limb(s, a, b, n);
   }

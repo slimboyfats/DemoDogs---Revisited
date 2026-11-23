@@ -46,6 +46,7 @@ import {
 } from './things';
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
+import { updateCatchup } from './catchup';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -491,6 +492,7 @@ export class World {
     } else if (this.phase === 'race') this.raceTime += DT;
     const live = this.phase === 'race';
 
+    updateCatchup(this);
     for (const c of this.cars) {
       c.invuln = Math.max(0, c.invuln - DT);
       c.fireCd -= DT;
@@ -596,6 +598,7 @@ export class World {
         .num(c.hp)
         .num(c.lap)
         .num(c.score)
+        .num(c.size)
         .num(c.wrecked ? 1 : 0);
     for (const b of this.bots)
       H.num(b.x)

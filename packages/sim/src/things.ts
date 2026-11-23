@@ -1,4 +1,6 @@
-import { DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { CAR_RADIUS, DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { fitCatchup, odds, place } from './catchup';
+import { hull } from './physics';
 import { grantDefence } from './defence';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
@@ -229,6 +231,7 @@ export function updateProps(w: World): void {
 
 export function updatePickups(w: World): void {
   const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
+  const reach = 13 - CAR_RADIUS;
   for (const p of w.pickups) {
     p.t += DT;
     if (!p.on) {
@@ -239,16 +242,22 @@ export function updatePickups(w: World): void {
       continue;
     }
     for (const c of w.cars) {
-      if (c.wrecked || Math.abs(c.deck - p.z) > 8 || Math.hypot(c.x - p.x, c.y - p.y) > 13)
+      if (
+        c.wrecked ||
+        Math.abs(c.deck - p.z) > 8 ||
+        Math.hypot(c.x - p.x, c.y - p.y) > reach + hull(c)
+      )
         continue;
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
-      const total = kinds.reduce((s, k) => s + (hurt ? k.hurtWeight : k.weight), 0);
+      // where the car is running leans the odds: the back of the field rolls the strong ones
+      const at = place(w, c);
+      const total = kinds.reduce((s, k) => s + odds(k, hurt, at), 0);
       let roll = w.rng.next() * total;
       let got = kinds[kinds.length - 1]!;
       for (const k of kinds) {
-        roll -= hurt ? k.hurtWeight : k.weight;
+        roll -= odds(k, hurt, at);
         if (roll < 0) {
           got = k;
           break;
@@ -267,6 +276,8 @@ export function grant(w: World, c: Car, got: PickupManifest): string {
   if (defence) return defence;
   const mover = fitMover(w, c, got);
   if (mover !== null) return mover;
+  const help = fitCatchup(w, c, got);
+  if (help !== null) return help;
   let label: string;
   if (got.kind === 'repair') {
     c.hp = Math.min(100, c.hp + (got.amount ?? 40));

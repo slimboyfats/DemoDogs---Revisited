@@ -37,5 +37,7 @@
     "weapon.red-dot",
     "weapon.switcheroo",
     "weapon.hot-paws"
-  ]
+  ],
+  "lead": 0.7,
+  "trail": 1.4
 }

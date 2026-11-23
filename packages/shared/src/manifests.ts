@@ -383,6 +383,17 @@ export const ModeSchema = z.strictObject({
   ai: id('ai'),
   /** Seconds a pickup takes to come back. */
   pickupRespawn: z.number().positive(),
+  /**
+   * Race: a human more than `gap` art px of road behind the car in front is helped along, up to
+   * `pace` times its top speed once it is `full` behind (rivals have their own rubber band).
+   */
+  chase: z
+    .strictObject({
+      gap: z.number().positive(),
+      full: z.number().positive(),
+      pace: z.number().min(1),
+    })
+    .optional(),
 });
 export type ModeManifest = z.infer<typeof ModeSchema>;
 
@@ -540,10 +551,43 @@ export type WeaponManifest = z.infer<typeof WeaponSchema>;
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
-  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash', 'shield', 'weld', 'blade', 'springs']),
+  kind: z.enum([
+    'repair',
+    'nitro',
+    'arms',
+    'ammo',
+    'cash',
+    'shield',
+    'weld',
+    'blade',
+    'springs',
+    'grow',
+    'shrink',
+    'wind',
+    'collar',
+    'bones',
+  ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
+  /**
+   * Catch-up: in a race the chance is multiplied by `lead` for the car in front and by `trail`
+   * for the car at the back, and by something in between for the cars between them (both 1 when
+   * absent). A derby has no front or back: every car gets the midpoint.
+   */
+  lead: z.number().min(0).optional(),
+  trail: z.number().min(0).optional(),
+  /**
+   * Catch-up items (sim/catchup.ts), all lasting `seconds`. Grow: the car swells to `scale` times
+   * its size, and `pace` multiplies its top speed. Shrink: every rival ahead (or, with nobody
+   * ahead, within `radius`) is zapped down to `scale`, at `pace`. Wind: top speed times `pace`.
+   * Collar: the car in front is weighed down to `pace`. Bones: `charges` of `prop` drop out of
+   * the sky in front of each rival ahead (or within `radius`).
+   */
+  scale: z.number().positive().optional(),
+  pace: z.number().positive().optional(),
+  radius: z.number().positive().optional(),
+  prop: id('prop').optional(),
   /** Repair: armour restored. Ammo: rounds for the gun. Cash: money. */
   amount: z.number().positive().optional(),
   /** Arms: weapons to pick from. */

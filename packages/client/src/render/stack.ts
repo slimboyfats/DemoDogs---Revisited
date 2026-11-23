@@ -160,7 +160,8 @@ export class StackRenderer {
     const sx = this.ox + Math.round((x - this.camX) * this.scale);
     const sy = this.oy + Math.round((y - this.camY) * this.scale * this.ys);
     const up = Math.round(z * this.zk);
-    const rows = Math.max(1, Math.ceil((this.zk * thick) / s.res - 0.02));
+    const res = s.res / this.zm;
+    const rows = Math.max(1, Math.ceil((this.zk * thick) / res - 0.02));
     for (let k = 0; k < rows; k++) {
       const it = this.take();
       it.img = s.stale ? settle(s) : s.img;
@@ -168,7 +169,7 @@ export class StackRenderer {
       it.ch = s.ch;
       it.u = sliceX(s, i);
       it.v = sliceY(s, i);
-      it.res = s.res;
+      it.res = res;
       it.i = i;
       it.x = sx;
       it.y = sy - up - k;
@@ -181,9 +182,17 @@ export class StackRenderer {
     }
   }
 
+  private zm = 1;
+
+  /** Draw what follows `k` times its size, with pixels that much bigger (1 puts it back). */
+  zoom(k: number): void {
+    this.zm = k;
+  }
+
   /** Queue a whole stack standing at (x, y, z). */
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
-    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / s.res, rot, 1, alpha);
+    const res = s.res / this.zm;
+    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / res, rot, 1, alpha);
   }
 
   /** One single-slice strip repeated n times along a bone from a to b. */

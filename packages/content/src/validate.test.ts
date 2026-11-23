@@ -51,7 +51,7 @@ describe('content validate', () => {
     const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it
     const fitted = [...C.pickup.values()]
-      .filter((p) => p.kind === 'blade' || p.kind === 'springs')
+      .filter((p) => p.kind === 'blade' || p.kind === 'springs' || p.kind === 'collar')
       .map((p) => p.id);
     const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown, ...fitted];
     expect(drawn.filter((id) => !looks.has(id))).toEqual([]);

@@ -1,0 +1,17 @@
+{
+  "id": "pickup.big-dog",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big Dog",
+    "description": "The car swells to nearly twice its size for a few seconds: heavier, harder to hurt, through walls it would have bounced off, and over the top of any car much smaller than it is.",
+    "since": "core@0.7.0"
+  },
+  "kind": "grow",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "lead": 0.15,
+  "trail": 3,
+  "seconds": 8,
+  "scale": 1.8,
+  "pace": 1.06
+}
