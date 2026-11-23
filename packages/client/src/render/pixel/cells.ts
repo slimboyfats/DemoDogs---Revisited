@@ -1,5 +1,6 @@
 import { Shape } from './batch';
 import { shade, WIND, type Put } from './particles';
+import type { GasGpu } from './gas-gpu';
 
 /**
  * Fire and smoke as mudders draws them: nothing is a drawn shape. A blast lets go thousands of
@@ -92,10 +93,10 @@ export const FIRE_RAMP: readonly number[] = Array.from({ length: 13 }, (_, i) =>
   );
 });
 
-/** Time in `n` hard steps, each cell on its own clock (`th` is the cell's own offset, 0 to 1). */
 /** A cheap e^-x for x >= 0, close enough for the shape of a gust. */
 const fall = (x: number): number => 1 / (1 + x + 0.5 * x * x);
 
+/** Time in `n` hard steps, each cell on its own clock (`th` is the cell's own offset, 0 to 1). */
 const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.floor(t * n + th) / n);
 
 export class Cells {
@@ -145,6 +146,17 @@ export class Cells {
    */
   split = 1;
 
+  /**
+   * Where gas cells go when the renderer can step them on the GPU (see `GasGpu`): then only
+   * leaves are kept here, and `step` hands the GPU the air (rings, cars, whirlpools) each tick.
+   */
+  gpu: GasGpu | null = null;
+
+  /** Cells alive: here, and about how many on the GPU. */
+  get live(): number {
+    return this.n + (this.gpu?.live ?? 0);
+  }
+
   /** Let go one cell (`split` of them for gas). When full, one of the cells already burning is replaced. */
   add(
     kind: CKind,
@@ -187,6 +199,10 @@ export class Cells {
     life: number,
     rgb: number,
   ): void {
+    if (this.gpu && kind !== CKind.Leaf) {
+      this.gpu.add(kind, x, y, z, vx, vy, vz, life, this.rand(), rgb);
+      return;
+    }
     let i = this.n;
     if (i >= this.cap) {
       i = this.next;
@@ -211,6 +227,7 @@ export class Cells {
    * fire, smoke and leaves alike, whatever their own air is doing.
    */
   swirl(x: number, y: number, R: number, k: number, dt: number): void {
+    this.gpu?.swirl(x, y, R, k * dt);
     for (let i = 0; i < this.n; i++) {
       const dx = x - this.x[i]!;
       const dy = y - this.y[i]!;
@@ -368,6 +385,7 @@ export class Cells {
     const air: [number, number, number] = [0, 0, 0];
     const calm = this.rings.length === 0;
     this.prepare();
+    this.gpu?.step(dt, this.rings, this.prep, this.nPrep / 7);
     const still = this.nPrep === 0;
     const drag = Math.exp(-3 * dt);
     const rand = this.rand;
@@ -518,6 +536,7 @@ export class Cells {
 
   clear(): void {
     this.n = 0;
+    this.gpu?.clear();
     this.rings.length = 0;
     this.landed.length = 0;
   }

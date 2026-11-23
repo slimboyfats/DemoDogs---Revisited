@@ -15,6 +15,7 @@ import { pixels } from '../strips';
 import { Lights } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
 import { fineGrid } from '../strips';
+import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
@@ -28,6 +29,9 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
+/** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
+const GAS_CAP = 65536;
+
 export class PixelScene implements WorldRenderer, StackSink, CountSource {
   readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
@@ -43,6 +47,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private scale = 4;
   /** Screen cells to the art pixel for particles (see `fineGrid`). */
   private fxGrid = fineGrid(4);
+  /** Fire and smoke on the GPU; null where it cannot (then they stay on the CPU). */
+  private gas: GasGpu | null | undefined = undefined;
   private readonly ys = Math.sin(PITCH);
   private readonly cosP = Math.cos(PITCH);
   private ox = 0;
@@ -164,7 +170,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // a new race: nothing of the last one's damaged art will be drawn again
     if (fx !== this.fx) {
       this.atlas.reset();
+      if (this.fx) this.fx.cells.gpu = null;
       this.fx = fx;
+      // fire and smoke go to the GPU from here on (if it can take them)
+      if (this.gas === undefined) {
+        try {
+          this.gas = new GasGpu(gl, GAS_CAP);
+        } catch {
+          this.gas = null;
+        }
+      }
+      this.gas?.clear();
+      fx.cells.gpu = this.gas;
       // and its tall scenery throws its shadows anew, from its own shape
       this.shadowLayer?.dispose();
       const art = this.art;
@@ -238,10 +255,23 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
     // Smoke first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
+    const gas: GasView = {
+      w: W,
+      h: H,
+      ox: this.ox,
+      oy: this.oy,
+      scale: S,
+      grid: this.fxGrid,
+      ys: this.ys,
+      cosP: this.cosP,
+    };
+    this.gas?.draw(gas, 0);
     this.queueParticles(fx);
     this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
+    this.gas?.draw(gas, 1);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
+    this.gas?.draw(gas, 2);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
 

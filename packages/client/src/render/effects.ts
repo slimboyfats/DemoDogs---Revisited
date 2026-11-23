@@ -92,6 +92,8 @@ export interface FloatText {
 
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 4000;
+/** Ticks a blast goes on letting go soot into its rolling air (mudders' SMOKE_FEED). */
+const SOOT_FEED = 70;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
 /** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
@@ -191,6 +193,8 @@ export class Effects {
     /** Ticks it goes on smoking into the turning air after the fire. */
     smoke: number;
     high: boolean;
+    /** Ticks since it went off. */
+    age: number;
   }[] = [];
   /** Fires still burning where something blew up. */
   readonly fires: Fire[] = [];
@@ -379,7 +383,9 @@ export class Effects {
       life: 2.2,
     });
     // the bang: it fills the blast radius in a few ticks and burns out fast
-    const nBang = Math.min(3000, Math.round(r * r * 3.6 * q));
+    // with the GPU stepping the gas, as dense as mudders' (r² × 13 bang cells, r² × 11 fire)
+    const gpu = C.gpu !== null;
+    const nBang = Math.min(gpu ? 6000 : 3000, Math.round(r * r * (gpu ? 13 : 3.6) * q));
     const vMax = (0.5 + r * 0.13) * 38;
     for (let i = 0; i < nBang; i++) {
       const a = rand(0, TAU);
@@ -403,10 +409,11 @@ export class Effects {
       y,
       z,
       r,
-      left: Math.min(4500, Math.round(r * r * 6 * q)),
+      left: Math.min(gpu ? 8000 : 4500, Math.round(r * r * (gpu ? 11 : 6) * q)),
       ticks: 22,
       smoke: 50,
       high,
+      age: 0,
     });
     // the shock front: a ring of sparks racing out along the ground
     if (!high)
@@ -463,6 +470,30 @@ export class Effects {
     for (let i = this.burning.length - 1; i >= 0; i--) {
       const b = this.burning[i]!;
       const r = b.r;
+      b.age++;
+      // mudders' soot: the ball goes black as it burns out, so soot is let go all through where
+      // the fire was, thick at first, and it is caught by the same turning air (GPU only: it is
+      // thousands of cells that hang for seconds)
+      if (C.gpu && b.age >= 6 && b.age < SOOT_FEED) {
+        const k = 1 - b.age / SOOT_FEED;
+        const puffs = Math.min(700, Math.round(r * r * 0.5 * this.quality * k * k));
+        const rise = (0.55 + r * 0.03) * 45;
+        for (let p = 0; p < puffs; p++) {
+          const a = rand(0, TAU);
+          const d = Math.sqrt(Math.random()) * r * 0.6;
+          C.add(
+            CKind.Wisp,
+            b.x + Math.cos(a) * d,
+            b.y + Math.sin(a) * d,
+            b.z + rand(0, r * 0.7) + b.age * 0.25,
+            Math.cos(a) * 15,
+            Math.sin(a) * 15,
+            (b.high ? rand(-0.2, 0.2) : rand(0.2, 0.6)) * rise,
+            rand(2.2, 5.2),
+            SMOKE_TONES[(Math.random() * 4) | 0]!,
+          );
+        }
+      }
       if (b.ticks <= 0) {
         // the fire is out: the crater goes on smoking into the air that is still turning
         if (--b.smoke <= 0) this.burning.splice(i, 1);

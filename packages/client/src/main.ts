@@ -481,7 +481,7 @@ function perfContext(): PerfContext {
   return {
     phase: devMode ? 'range' : w.phase,
     quality: s.fx.quality.toFixed(2),
-    cells: s.fx.cells.n,
+    cells: s.fx.cells.live,
     particles: s.fx.fx.length,
     voxels: s.fx.voxels.length,
     slices: scene instanceof PixelScene ? scene.instances : 0,
