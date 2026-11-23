@@ -76,9 +76,10 @@ export class Hud {
     this.mini = { cv, k };
   }
 
-  draw(w: World, fx: Effects, W: number, H: number, u: number): void {
+  /** `focus` is the car the readouts are about: this screen's own, or the one being watched. */
+  draw(w: World, fx: Effects, W: number, H: number, u: number, focus: Car = w.player): void {
     const ctx = this.ctx;
-    const P = w.player;
+    const P = focus;
     const pad = 12 * u;
     const left = pad + 46 * u;
     const font = (px: number) => `900 ${Math.round(px * u)}px system-ui, sans-serif`;
@@ -165,6 +166,13 @@ export class Hud {
         ctx.fillStyle = c === w.player ? '#fff' : c.paint;
         const s = (c === w.player ? 6 : 4.5) * u;
         ctx.fillRect(mx + 4 + c.x * m.k - s / 2, my + 4 + c.y * m.k - s / 2, s, s);
+        if (c === focus && c !== w.player) {
+          // the car being watched wears a ring
+          ctx.strokeStyle = '#ffd24a';
+          ctx.lineWidth = 1.5 * u;
+          const r = s / 2 + 2.5 * u;
+          ctx.strokeRect(mx + 4 + c.x * m.k - r, my + 4 + c.y * m.k - r, r * 2, r * 2);
+        }
       }
       // standings under the minimap
       let y = pad + m.cv.height + 6 * u;
@@ -178,7 +186,7 @@ export class Hud {
           W - pad - 12 * u,
           y,
           `800 ${Math.round(10 * u)}px system-ui, sans-serif`,
-          c === w.player ? '#ffd24a' : c.wrecked ? '#999' : '#fff',
+          c === w.player ? '#ffd24a' : c === focus ? '#7fe0ff' : c.wrecked ? '#999' : '#fff',
           'right',
         );
         y += 13 * u;

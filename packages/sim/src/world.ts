@@ -82,6 +82,11 @@ export interface WorldOptions {
   you?: number;
   /** A wrecked car is out for good, and the race ends when the player is. */
   knockout?: boolean;
+  /**
+   * A derby runs on to its last car (or the clock) after every human is scrapped, so they can
+   * watch the end. Off, it ends a moment after the last human is out.
+   */
+  playOn?: boolean;
   /** Laps, instead of the mode's. */
   laps?: number;
   /**
@@ -136,6 +141,7 @@ export class World {
   deckPiece: Int32Array | null = null;
   readonly road: number;
   readonly knockout: boolean;
+  readonly playOn: boolean;
   readonly sandbox: boolean;
   /** The gun every car carries: the pack's gun, if it has one. */
   readonly gun: WeaponManifest | null;
@@ -206,6 +212,7 @@ export class World {
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
+    this.playOn = opts.playOn ?? false;
     this.sandbox = opts.sandbox ?? false;
     this.leak =
       [...C.material.values()]
@@ -564,7 +571,7 @@ export class World {
     if (this.kind === 'derby' && live) {
       this.timeLeft -= DT;
       const alive = this.cars.filter((c) => !c.wrecked).length;
-      const out = this.humans.every((c) => c.wrecked);
+      const out = !this.playOn && this.humans.every((c) => c.wrecked);
       if (this.endT < 0 && (alive <= 1 || out || this.timeLeft <= 0)) this.endT = out ? 2.6 : 2;
     }
     if (this.endT < 0 && this.finishBy > 0 && this.raceTime >= this.finishBy) this.endT = 0.5;

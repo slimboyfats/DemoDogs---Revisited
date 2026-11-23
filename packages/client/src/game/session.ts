@@ -1,5 +1,5 @@
 import { DT, type Controls } from '@demodogs/shared';
-import { World, type Content, type Entrant, type Setup } from '@demodogs/sim';
+import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Input } from '../input/input';
 import type { Art } from '../render/art';
@@ -21,6 +21,8 @@ export interface SessionOptions {
   field?: Entrant[];
   player?: Setup;
   knockout?: boolean;
+  /** A derby plays on after this screen's car is scrapped, to be watched (or skipped). */
+  playOn?: boolean;
   /** A test range: parked targets, no countdown, no end. */
   sandbox?: boolean;
   /** Online: the other drivers (seats 1, 2, ...) and which seat this screen drives. */
@@ -44,6 +46,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.field ? { field: o.field } : {}),
     ...(o.player ? { player: o.player } : {}),
     ...(o.knockout ? { knockout: true } : {}),
+    ...(o.playOn ? { playOn: true } : {}),
     ...(o.sandbox ? { sandbox: true } : {}),
     ...(o.humans ? { humans: o.humans } : {}),
     ...(o.you !== undefined ? { you: o.you } : {}),
@@ -73,6 +76,12 @@ export class Session {
   rate = 1;
   /** The camera follows the player's car; off, it stays where it is put. */
   follow = true;
+  /**
+   * Spectating: the car the camera follows instead of this screen's own, or a spot it rests on.
+   * A viewpoint only, like `world.player`: nothing in the world reads it.
+   */
+  watch: Car | null = null;
+  spot: { x: number; y: number } | null = null;
   /** Online: the race driver decides when ticks run and with whose controls. */
   net: NetRace | null = null;
 
@@ -154,14 +163,17 @@ export class Session {
     this.simMs += t1 - t0;
     this.stepMs += performance.now() - t1;
     this.ticks++;
-    if (!P.ai) this.o.sound.engineSet(Math.abs(P.vf), P.throttle, P.boosting);
+    // the engine heard is the car on screen
+    const C = this.watch ?? P;
+    if (!P.ai || this.watch)
+      this.o.sound.engineSet(Math.abs(C.vf), C.wrecked ? 0 : C.throttle, C.boosting);
     // the camera looks ahead of the car, the way it is going
     // never so far that the car leaves the middle third of the picture
     const lead = 0.42;
     const mx = this.viewW * 0.3;
     const my = this.viewH * 0.3;
-    const tx = P.x + Math.max(-mx, Math.min(mx, P.vx * lead));
-    const ty = P.y + Math.max(-my, Math.min(my, P.vy * lead));
+    const tx = this.spot?.x ?? C.x + Math.max(-mx, Math.min(mx, C.vx * lead));
+    const ty = this.spot?.y ?? C.y + Math.max(-my, Math.min(my, C.vy * lead));
     if (this.follow) {
       const k = Math.min(1, 4 * DT);
       this.cam.x += (tx - this.cam.x) * k;

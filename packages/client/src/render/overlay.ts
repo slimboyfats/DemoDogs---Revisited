@@ -1,4 +1,4 @@
-import type { World } from '@demodogs/sim';
+import type { Car, World } from '@demodogs/sim';
 import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { Camera } from './scene';
@@ -66,4 +66,40 @@ export function drawOverlay(
       ctx.fill();
       ctx.restore();
     }
+}
+
+/**
+ * Every running car's name over its roof. Spectating, the one being watched is picked out;
+ * driving, `skip` is this screen's own car, which needs no label.
+ */
+export function drawNames(
+  ctx: CanvasRenderingContext2D,
+  P: Projector,
+  w: World,
+  watched: Car | null,
+  W: number,
+  H: number,
+  dpr: number,
+  skip: Car | null = null,
+): void {
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.lineJoin = 'round';
+  // the watched car's name last, so it is on top where cars bunch up
+  const order = w.cars.filter((c) => c !== watched);
+  if (watched) order.push(watched);
+  for (const c of order) {
+    if (c.wrecked || c === skip) continue;
+    const on = c === watched;
+    const sx = P.sx(c.x);
+    const sy = P.sy(c.y, c.z + 16) - 4 * dpr;
+    if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+    ctx.font = `900 ${Math.round((on ? 13 : 10) * dpr)}px system-ui, sans-serif`;
+    ctx.lineWidth = 3.5 * dpr;
+    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    const label = on ? `▼ ${c.name}` : c.name;
+    ctx.strokeText(label, sx, sy);
+    ctx.fillStyle = on ? '#ffd24a' : c.paint;
+    ctx.fillText(label, sx, sy);
+  }
 }
