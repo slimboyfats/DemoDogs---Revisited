@@ -102,6 +102,24 @@ export type SimEvent =
     }
   /** A car's welding: under way (`start`), a lost `part` put back on, or finished (`done`). */
   | { t: 'weld'; car: number; what: 'start' | 'part' | 'done'; part?: CarPart }
+  /**
+   * A car's guard (pickup `id`, a GuardKind `kind`): fitted (`on`), gone (`off`: spent, run out or
+   * lost in a wreck) or at work (`use`) at (x, y). A `use` that reaches somewhere (a shot brought
+   * down, a round sent back, a blow passed on, a mine tripped) has that place in (tx, ty), and
+   * the car it lands on instead (a round sent back to its shooter) in `to`.
+   */
+  | {
+      t: 'guard';
+      car: number;
+      id: string;
+      kind: string;
+      what: 'on' | 'off' | 'use';
+      x: number;
+      y: number;
+      tx?: number;
+      ty?: number;
+      to?: number;
+    }
   | { t: 'fire'; car: number; weapon: string }
   /** A car rolled over a spike at (x, y) and has a flat tyre. */
   | { t: 'puncture'; car: number; x: number; y: number }
@@ -127,6 +145,21 @@ export type SimEvent =
     }
   /** A car's engine was cut by a shock for `time` seconds. */
   | { t: 'stall'; car: number; by: number; time: number }
+  /**
+   * A catch-up item at work on `car` at (x, y), set off by car `by` (-1: nobody): it swelled up
+   * (`grow`) or was zapped small (`shrink`), came back to its own size (`back`), was flattened
+   * under a much bigger car (`squash`), got a second wind (`wind`), had a lead collar clamped on or
+   * drop off (`collar`, `collar-off`; `id` is the pickup), or bones were called down on it (`bones`).
+   */
+  | {
+      t: 'catchup';
+      what: 'grow' | 'shrink' | 'back' | 'squash' | 'wind' | 'collar' | 'collar-off' | 'bones';
+      car: number;
+      by: number;
+      id: string;
+      x: number;
+      y: number;
+    }
   /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */
   | { t: 'blade'; car: number; id: string; on: boolean; x: number; y: number }
   /** A car's springs threw it up at (x, y) to clear the ground ahead. */

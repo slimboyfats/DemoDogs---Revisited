@@ -1,6 +1,7 @@
 import { DT, type WeaponManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 import { batter, damage, shed } from './damage';
+import { held } from './guards';
 import type { World } from './world';
 
 /**
@@ -144,7 +145,8 @@ function front(w: World, p: Howl): void {
     if (!reached(p, dist, c.def.body.halfWidth)) continue;
     p.cars.push(c.index);
     if (c.invuln > 0 && !c.wrecked) continue;
-    const k = force(p, dist);
+    // (claws that are dug in hold it down: the wave goes over it)
+    const k = force(p, dist) * held(w, c);
     c.vx += ux * push * k;
     c.vy += uy * push * k;
     c.vz = Math.max(c.vz, lift * k);

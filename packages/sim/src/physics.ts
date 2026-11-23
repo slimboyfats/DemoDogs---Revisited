@@ -14,6 +14,8 @@ import {
 import type { Car, Setup } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
+import { dugIn, padded } from './guards';
+import { flatten } from './catchup';
 import type { World } from './world';
 
 export function makeCar(
@@ -118,17 +120,34 @@ export function makeCar(
     blade: null,
     springs: null,
     hop: -1,
+    guards: {},
+    size: 1,
+    pace: 1,
+    squashT: 0,
+    morph: null,
+    wind: null,
+    collar: null,
   };
 }
 
-/** The two hull circles of a car. */
+/** The two hull circles of a car (each of radius `hull(c)`). */
 export function circles(c: Car): [[number, number], [number, number]] {
-  const cs = Math.cos(c.h);
-  const sn = Math.sin(c.h);
+  const cs = Math.cos(c.h) * CAR_OFFSET * c.size;
+  const sn = Math.sin(c.h) * CAR_OFFSET * c.size;
   return [
-    [c.x + cs * CAR_OFFSET, c.y + sn * CAR_OFFSET],
-    [c.x - cs * CAR_OFFSET, c.y - sn * CAR_OFFSET],
+    [c.x + cs, c.y + sn],
+    [c.x - cs, c.y - sn],
   ];
+}
+
+/** The radius of a car's hull circles: a swollen car's are bigger, a shrunk one's smaller. */
+export function hull(c: Car): number {
+  return CAR_RADIUS * c.size;
+}
+
+/** What a car weighs in a collision: its mass, by its size squared; more as a wreck or in a lead collar. */
+export function heft(c: Car): number {
+  return c.stats.mass * c.size * c.size * (c.wrecked ? 1.6 : 1) * (c.collar ? 1.5 : 1);
 }
 
 /** A world point in the car's frame: x forward, y to its right. */
@@ -184,14 +203,20 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   c.boosting = boost;
   c.nitro = boost ? Math.max(0, c.nitro - 0.32 * DT) : Math.min(1, c.nitro + 0.025 * DT);
   const maxS =
-    BASE_SPEED * S.speed * weak * (off ? 0.56 : 1) * (boost ? 1.33 * c.fuel : 1) * c.aiSpeed;
+    BASE_SPEED *
+    S.speed *
+    weak *
+    (off ? 0.56 : 1) *
+    (boost ? 1.33 * c.fuel : 1) *
+    c.aiSpeed *
+    c.pace;
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
       if (vf > 15) vf -= 330 * DT;
       else vf = Math.max(-72, vf - 150 * DT);
     } else if (ctl.throttle > 0 && vf < maxS) {
-      const acc = 240 * S.accel * (boost ? 1.8 : 1);
+      const acc = 240 * S.accel * (boost ? 1.8 : 1) * Math.max(1, c.pace);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
     vf -= vf * ((off ? 1.4 : 0.42) + bog) * DT;
@@ -260,7 +285,7 @@ function bump(
   if (impact > 30) {
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
-      damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
+      if (!padded(w, c, px, py)) damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
       w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c === w.player });
     }
   } else if (impact > 8 && c.scrapeCd <= 0) {
@@ -270,7 +295,9 @@ function bump(
 }
 
 export function collideWorld(w: World, c: Car): void {
-  const R = CAR_RADIUS;
+  const R = hull(c);
+  // a swollen car hits scenery like the lorry it has become
+  const big = Math.max(1, c.size);
   for (const p of circles(c)) {
     const O = w.oval;
     if (!O) {
@@ -297,10 +324,10 @@ export function collideWorld(w: World, c: Car): void {
     rails(w, c);
     return;
   }
-  for (const s of w.near(c.x, c.y, 20)) {
+  for (const s of w.near(c.x, c.y, 20 * big)) {
     const r = s.def.radius;
-    if (s.down || !s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16)
-      continue;
+    const far = r + 16 * big;
+    if (s.down || !s.def.solid || Math.abs(s.x - c.x) > far || Math.abs(s.y - c.y) > far) continue;
     for (const p of circles(c)) {
       const dx = p[0] - s.x;
       const dy = p[1] - s.y;
@@ -313,13 +340,15 @@ export function collideWorld(w: World, c: Car): void {
       const px = s.x + (dx / d) * r;
       const py = s.y + (dy / d) * r;
       if (
-        vn > 22 + 23 * s.def.hardness &&
+        vn > (22 + 23 * s.def.hardness) / big &&
         c.z < 6 &&
-        batter(w, s, (vn - 35) * 0.5 * c.def.stats.mass, 'impact', px, py)
+        batter(w, s, (vn * big - 35) * 0.5 * c.def.stats.mass * big * big, 'impact', px, py)
       ) {
-        c.vx *= 0.72;
-        c.vy *= 0.72;
-        damage(w, c, (vn - 28) * 0.1 * s.def.hardness, null, px, py);
+        const keep = big > 1 ? 0.9 : 0.72;
+        c.vx *= keep;
+        c.vy *= keep;
+        if (!padded(w, c, px, py))
+          damage(w, c, ((vn - 28) * 0.1 * s.def.hardness) / big, null, px, py);
         w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c === w.player });
         break;
       }
@@ -335,7 +364,8 @@ function rails(w: World, c: Car): void {
   const a = T.a[i]!;
   const nx = -Math.sin(a);
   const ny = Math.cos(a);
-  const lim = w.road / 2 - CAR_RADIUS;
+  const R = hull(c);
+  const lim = w.road / 2 - R;
   for (const p of circles(c)) {
     const off = (p[0] - T.x[i]!) * nx + (p[1] - T.y[i]!) * ny;
     if (Math.abs(off) <= lim) continue;
@@ -343,8 +373,8 @@ function rails(w: World, c: Car): void {
     bump(
       w,
       c,
-      p[0] + nx * sg * CAR_RADIUS,
-      p[1] + ny * sg * CAR_RADIUS,
+      p[0] + nx * sg * R,
+      p[1] + ny * sg * R,
       -nx * sg,
       -ny * sg,
       Math.abs(off) - lim,
@@ -359,24 +389,27 @@ export function zoneFactor(lx: number): number {
 }
 
 export function collideCars(w: World, a: Car, b: Car): void {
-  if (Math.abs(a.x - b.x) > 30 || Math.abs(a.y - b.y) > 30 || Math.abs(a.z - b.z) > 10) return;
-  const R = CAR_RADIUS;
+  const reach = 15 * (a.size + b.size);
+  if (Math.abs(a.x - b.x) > reach || Math.abs(a.y - b.y) > reach || Math.abs(a.z - b.z) > 10)
+    return;
+  const ra0 = hull(a);
+  const R2 = ra0 + hull(b);
   let best: { px: number; py: number; ov: number; nx: number; ny: number } | null = null;
   for (const p of circles(a))
     for (const q of circles(b)) {
       const dx = q[0] - p[0];
       const dy = q[1] - p[1];
       const d = Math.hypot(dx, dy);
-      const ov = R * 2 - d;
+      const ov = R2 - d;
       if (ov > 0 && (!best || ov > best.ov)) {
         const nx = d > 0.001 ? dx / d : 1;
         const ny = d > 0.001 ? dy / d : 0;
-        best = { px: p[0] + nx * R, py: p[1] + ny * R, ov, nx, ny };
+        best = { px: p[0] + nx * ra0, py: p[1] + ny * ra0, ov, nx, ny };
       }
     }
-  if (!best) return;
-  const ma = a.stats.mass * (a.wrecked ? 1.6 : 1);
-  const mb = b.stats.mass * (b.wrecked ? 1.6 : 1);
+  if (!best || flatten(w, a, b)) return;
+  const ma = heft(a) * dugIn(a);
+  const mb = heft(b) * dugIn(b);
   const tot = ma + mb;
   a.x -= (best.nx * best.ov * mb) / tot;
   a.y -= (best.ny * best.ov * mb) / tot;
@@ -390,8 +423,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
   b.vx += (j / mb) * best.nx;
   b.vy += (j / mb) * best.ny;
   // a hit off the centre line turns the car
-  const ra = toLocal(a, best.px, best.py);
-  const rb = toLocal(b, best.px, best.py);
+  const ra = toLocal(a, best.px, best.py).map((v) => v / a.size) as [number, number];
+  const rb = toLocal(b, best.px, best.py).map((v) => v / b.size) as [number, number];
   a.spin += clamp(((-ra[1] * j * 0.0016) / ma) * Math.sign(ra[0] + 0.01), -5, 5);
   b.spin += clamp(((rb[1] * j * 0.0016) / mb) * Math.sign(rb[0] + 0.01), -5, 5);
   const impact = -vrel;
@@ -425,8 +458,8 @@ export function collideProps(w: World, c: Car): void {
       !p.alive ||
       p.z - c.deck > 10 ||
       c.deck - p.z > 10 ||
-      Math.abs(p.x - c.x) > 22 ||
-      Math.abs(p.y - c.y) > 22
+      Math.abs(p.x - c.x) > 22 * Math.max(1, c.size) ||
+      Math.abs(p.y - c.y) > 22 * Math.max(1, c.size)
     )
       continue;
     const pr = p.def.radius;
@@ -435,7 +468,7 @@ export function collideProps(w: World, c: Car): void {
       const dx = p.x - q[0];
       const dy = p.y - q[1];
       const d = Math.hypot(dx, dy);
-      const m = pr + CAR_RADIUS;
+      const m = pr + hull(c);
       if (d >= m || d < 0.001) continue;
       const nx = dx / d;
       const ny = dy / d;
@@ -443,13 +476,13 @@ export function collideProps(w: World, c: Car): void {
       p.y += ny * (m - d);
       const vrel = (p.vx - c.vx) * nx + (p.vy - c.vy) * ny;
       if (vrel >= 0) continue;
-      const mc = c.stats.mass * 3;
+      const mc = heft(c) * 3;
       const j = (-1.5 * vrel) / (1 / mc + 1 / pm);
       p.vx += (j / pm) * nx;
       p.vy += (j / pm) * ny;
       c.vx -= (j / mc) * nx;
       c.vy -= (j / mc) * ny;
-      const impact = -vrel;
+      const impact = -vrel * Math.max(1, c.size);
       p.spin += w.rng.range(-1, 1) * impact * 0.15;
       if (p.def.breaksAt !== undefined && impact > p.def.breaksAt) {
         breakProp(w, p, c);

@@ -42,6 +42,8 @@ import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
+import { GuardState, guardEvent, guardTick } from './guards-fx';
+import { CatchupFx } from './catchup-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
 import { wildEvent } from './wild-fx';
@@ -223,6 +225,10 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** Guards: where turrets point, which feelers twitch and which claws are down. */
+  readonly guards = new GuardState();
+  /** Catch-up items: size bursts, the gale, the lead ball. */
+  readonly catchup = new CatchupFx();
 
   constructor(
     readonly w: World,
@@ -593,7 +599,7 @@ export class Effects {
     this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
-  private fling(
+  fling(
     strip: Strip,
     x: number,
     y: number,
@@ -1431,6 +1437,12 @@ export class Effects {
         case 'fill':
           wildEvent(this, w, e, S);
           break;
+        case 'guard':
+          guardEvent(this, w, e, S);
+          break;
+        case 'catchup':
+          this.catchup.handle(this, w, e, S, this.art);
+          break;
         case 'catch':
         case 'leash':
         case 'snap':
@@ -1780,6 +1792,8 @@ export class Effects {
     this.cells.step(DT);
     this.shock.step(DT);
     howlTick(this, w);
+    guardTick(this, w, this.sound);
+    this.catchup.step(this, w);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

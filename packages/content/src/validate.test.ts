@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { GUARD_KINDS } from '@demodogs/shared';
 import { describe, expect, it } from 'vitest';
 import { loadContent, loadLooks } from './index';
 import { itemFolders } from './glob';
@@ -57,7 +58,13 @@ describe('content validate', () => {
     const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it
     const fitted = [...C.pickup.values()]
-      .filter((p) => p.kind === 'blade' || p.kind === 'springs')
+      .filter(
+        (p) =>
+          p.kind === 'blade' ||
+          p.kind === 'springs' ||
+          p.kind === 'collar' ||
+          (GUARD_KINDS as readonly string[]).includes(p.kind),
+      )
       .map((p) => p.id);
     const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown, ...fitted];
     expect(drawn.filter((id) => !looks.has(id))).toEqual([]);

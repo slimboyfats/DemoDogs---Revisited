@@ -1,6 +1,7 @@
 import { DT, type Controls, type WeaponManifest } from '@demodogs/shared';
 import type { Car, Spill, StaticProp } from './entities';
 import { damage, ignite, light } from './damage';
+import { earthed } from './guards';
 import type { World } from './world';
 
 /**
@@ -181,7 +182,7 @@ function discharge(
 function strike(w: World, p: Pulse, c: Car, fx: number, fy: number, fz: number): void {
   p.struck.push(c.index);
   w.emit({ t: 'arc', x: fx, y: fy, z: fz, tx: c.x, ty: c.y, tz: c.z + ROOF });
-  if (c.invuln > 0) return;
+  if (c.invuln > 0 || earthed(w, c)) return;
   const time = p.def.stall ?? 1.1;
   c.stall = Math.max(c.stall ?? 0, time);
   c.spin += w.rng.range(-1.2, 1.2);

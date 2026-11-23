@@ -1,0 +1,14 @@
+{
+  "id": "pickup.squeaker",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Squeaker",
+    "description": "A squeaky toy thrown out the back when a rocket comes for the car. The rocket chases the squeak.",
+    "since": "core@0.7.0"
+  },
+  "kind": "decoy",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "charges": 3,
+  "reach": 130
+}

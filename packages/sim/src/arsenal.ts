@@ -802,7 +802,7 @@ function updateFleas(w: World): void {
       const c = w.cars[f.host]!;
       // a car that leaves the ground shakes them off, and a wreck is no meal
       if (c.wrecked || c.z - c.deck > 5) gone = true;
-      else {
+      else if (!gone) {
         riding[c.index] = (riding[c.index] ?? 0) + 1;
         by[c.index] = f.owner;
       }

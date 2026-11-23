@@ -168,6 +168,7 @@ export class StackBatch {
   begin(view: StackView): void {
     this.v = view;
     this.n = 0;
+    this.zm = 1;
   }
 
   private push(
@@ -218,12 +219,20 @@ export class StackBatch {
     const a = this.atlas.slot(s);
     const zk = this.v.zk;
     const up = Math.round(z * zk);
+    const res = s.res / this.zm;
     // a layer is drawn a row or two thick so stacks have no gaps between slices
-    const rows = Math.max(1, Math.ceil((zk * thick) / s.res - 0.02));
+    const rows = Math.max(1, Math.ceil((zk * thick) / res - 0.02));
     const u = a.x + sliceX(s, i);
     const v = a.y + sliceY(s, i);
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, s.res);
+      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res);
+  }
+
+  private zm = 1;
+
+  /** Draw what follows `k` times its size, with pixels that much bigger (1 puts it back). */
+  zoom(k: number): void {
+    this.zm = k;
   }
 
   /**
@@ -239,7 +248,8 @@ export class StackBatch {
   }
 
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
-    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / s.res, rot, 1, alpha);
+    const res = s.res / this.zm;
+    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / res, rot, 1, alpha);
   }
 
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {

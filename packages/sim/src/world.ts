@@ -32,7 +32,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn, updateEmbers, updateMending } from './damage';
+import { explode, respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -46,6 +46,7 @@ import {
 } from './things';
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
+import { updateCatchup } from './catchup';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -53,6 +54,7 @@ import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
+import { updateGuards, type Decoy } from './guards';
 
 export interface WorldOptions {
   content: Content;
@@ -157,6 +159,9 @@ export class World {
   readonly pulses: Pulse[] = [];
   /** Howls: shockwaves still running out. */
   readonly howls: Howl[] = [];
+  /** Decoys thrown out for rockets to chase, and the id the next one gets. */
+  readonly decoys: Decoy[] = [];
+  decoySeq = 0;
   readonly pickups: Pickup[] = [];
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
@@ -494,6 +499,7 @@ export class World {
     } else if (this.phase === 'race') this.raceTime += DT;
     const live = this.phase === 'race';
 
+    updateCatchup(this);
     for (const c of this.cars) {
       c.invuln = Math.max(0, c.invuln - DT);
       c.fireCd -= DT;
@@ -540,6 +546,7 @@ export class World {
     updatePresses(this);
     updatePickups(this);
     updateDefence(this);
+    updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateRockets(this);
     updateMines(this);
     updateDrops(this);
@@ -599,6 +606,7 @@ export class World {
         .num(c.hp)
         .num(c.lap)
         .num(c.score)
+        .num(c.size)
         .num(c.wrecked ? 1 : 0);
     for (const b of this.bots)
       H.num(b.x)
@@ -614,7 +622,8 @@ export class World {
       .num(this.spills.length)
       .num(this.craters.length)
       .num(this.clouds.length)
-      .num(this.spikes.length);
+      .num(this.spikes.length)
+      .num(this.decoys.length);
     const A = this.arms;
     H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
     for (const b of A.balls) H.num(b.x).num(b.y);

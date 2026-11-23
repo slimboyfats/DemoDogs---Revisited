@@ -9,5 +9,7 @@
   "kind": "cash",
   "weight": 0.2,
   "hurtWeight": 0.12,
-  "amount": 150
+  "amount": 150,
+  "lead": 1.5,
+  "trail": 0.6
 }

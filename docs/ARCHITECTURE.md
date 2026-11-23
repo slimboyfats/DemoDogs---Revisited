@@ -27,16 +27,17 @@ compares hashes, so a behaviour change shows up as a failing golden.
 
 ## The sim (`packages/sim`)
 
-| File         | What                                                                                                                  |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `world.ts`   | `World`: builds the venue (track samples, distance grid or oval, scenery, field, pickups, bots), `step`, events, hash |
-| `physics.ts` | arcade drift driving, walls, statics, car-car impulses, shoving props                                                 |
-| `damage.ts`  | damage, part loss, wrecks, respawn, explosions                                                                        |
-| `things.ts`  | scrap bots, loose props, pickups, weapons                                                                             |
-| `race.ts`    | lap progress, finishing, standings                                                                                    |
-| `scenery.ts` | the venue's scenery rules (bend walls, scatter, roadside groups, rings ...)                                           |
-| `content.ts` | resolves packs: `extends`, schema validation, cross-references                                                        |
-| `ai-kit.ts`  | helpers AI behaviours share                                                                                           |
+| File         | What                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `world.ts`   | `World`: builds the venue (track samples, distance grid or oval, scenery, field, pickups, bots), `step`, events, hash            |
+| `physics.ts` | arcade drift driving, walls, statics, car-car impulses, shoving props                                                            |
+| `damage.ts`  | damage, part loss, wrecks, respawn, explosions                                                                                   |
+| `things.ts`  | scrap bots, loose props, pickups, weapons                                                                                        |
+| `race.ts`    | lap progress, finishing, standings                                                                                               |
+| `guards.ts`  | countermeasures a car carries that act by themselves (decoys, flak, mirror, bond, feelers, earth, claws, wet coat, jammer, pads) |
+| `scenery.ts` | the venue's scenery rules (bend walls, scatter, roadside groups, rings ...)                                                      |
+| `content.ts` | resolves packs: `extends`, schema validation, cross-references                                                                   |
+| `ai-kit.ts`  | helpers AI behaviours share                                                                                                      |
 
 ## Content (`packages/content`)
 

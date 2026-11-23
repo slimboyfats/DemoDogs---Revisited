@@ -43,5 +43,7 @@
     "weapon.dig",
     "weapon.cold-nose",
     "weapon.pit-stop"
-  ]
+  ],
+  "lead": 0.7,
+  "trail": 1.4
 }

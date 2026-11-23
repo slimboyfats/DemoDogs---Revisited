@@ -1,0 +1,14 @@
+{
+  "id": "pickup.whiskers",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Whiskers",
+    "description": "Long feelers on the nose that trip mines from a safe way off and flick spikes aside.",
+    "since": "core@0.7.0"
+  },
+  "kind": "sweep",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 20,
+  "reach": 36
+}
