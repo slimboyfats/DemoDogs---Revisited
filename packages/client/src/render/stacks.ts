@@ -62,6 +62,9 @@ export interface StackSink {
 /** A static prop that never moves or sways: the canvas renderer draws it as one baked image. */
 export type StaticHook = (s: StaticProp, strip: Strip) => boolean;
 
+/** How solid a thing is drawn when it hides your car: a crown, a deck, anything tall in front of it. */
+const THROUGH = 0.4;
+
 /** What is being built slice by slice goes through this on its way to the sink. */
 const builder = new Builder();
 
@@ -204,19 +207,31 @@ function queueStatic(
   const lost = standing(s, strip);
   if (lost < strip.n) {
     // a building that has lost floors: only what still stands
-    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot);
+    const a = lift === 0 && fx.slices.hides(s, strip, lost, P) ? THROUGH : 1;
+    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot, 1, a);
     return;
   }
   if (lift !== 0) {
     // stood up off the ground: a deck piece or a crown up in a tree. Slices that would be under
     // the ground (the foot of a ramp) are left out.
-    const alpha = over(s, strip, lift, P) ? 0.4 : 1;
+    const alpha = over(s, strip, lift, P) ? THROUGH : 1;
     const from = Math.max(0, Math.ceil(-lift * strip.res));
     const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
     for (let i = from; i < strip.n; i++) {
       const o = (0.5 + (0.5 * i) / strip.n) * 1.6;
       R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot, 1, alpha);
     }
+    return;
+  }
+  // tall, and your car is behind it: seen through, the way a crown or a deck over the car is
+  if (fx.slices.hides(s, strip, strip.n, P)) {
+    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
+    for (let i = 0; i < strip.n; i++) {
+      const k = i / strip.n;
+      const o = k * k * 1.8;
+      R.slice(strip, i, s.x + wx * o, s.y + wy * o, i / strip.res, s.rot, 1, THROUGH);
+    }
+    if (s.def.press) queuePress(R, art, w, s);
     return;
   }
   if (!s.def.sway) {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { StaticProp, World } from '@demodogs/sim';
+import type { Car, StaticProp, World } from '@demodogs/sim';
 import type { Strip } from './stack';
 import type { StackSink } from './stacks';
-import { Builder, SliceFx, buildSlice, buildTime } from './slice-fx';
+import { Builder, SliceFx, buildSlice, buildTime, footprint, hidesFrom } from './slice-fx';
 
 describe('building slice by slice', () => {
   it('starts with nothing, the lowest slice first, and ends with everything in place', () => {
@@ -46,6 +46,49 @@ describe('building slice by slice', () => {
     got.length = 0;
     new Builder().into(R, { t0: 0, base: 5 }, buildTime(20)).stack(strip, 0, 0, 5, 0);
     expect(got.map((g) => g[1])).toEqual(Array.from({ length: 20 }, (_, i) => 5 + i));
+  });
+});
+
+describe('seeing through tall scenery', () => {
+  // a tower 20 wide, 20 deep, 60 tall at (100, 100)
+  const from = (cx: number, cy: number, cz = 0, height = 60): number =>
+    hidesFrom(100, 100, 10, 10, height, cx, cy, cz);
+
+  it('leaves alone what hides nothing', () => {
+    expect(from(100, 130)).toBe(60); // the car is in front
+    expect(from(140, 80)).toBe(60); // off to one side
+    expect(from(100, 20)).toBe(60); // far behind, clear of the top
+    expect(from(100, 80, 0, 10)).toBe(10); // too low to hide a car
+    expect(from(100, 80, 70)).toBe(60); // the car is above it
+  });
+
+  it('finds the height from which the car is hidden, never below waist height', () => {
+    const near = from(100, 85);
+    const far = from(100, 65);
+    expect(near).toBeLessThan(60);
+    expect(near).toBeGreaterThanOrEqual(7);
+    expect(far).toBeGreaterThan(near);
+    expect(far).toBeLessThan(60);
+  });
+
+  it('measures a turned footprint', () => {
+    const s = { cw: 40, ch: 10, res: 1 } as Strip;
+    expect(footprint(s, 0)).toEqual([20, 5]);
+    const [w, d] = footprint(s, Math.PI / 2);
+    expect(w).toBeCloseTo(5);
+    expect(d).toBeCloseTo(20);
+  });
+
+  it('says when a tower hides the car, and never when switched off or with nobody to watch', () => {
+    const fx = new SliceFx();
+    const strip = { n: 60, res: 1, cw: 20, ch: 20 } as Strip;
+    const tower = { x: 100, y: 100, rot: 0 } as StaticProp;
+    const car = (x: number, y: number): Car => ({ x, y, z: 0 }) as Car;
+    expect(fx.hides(tower, strip, 60, car(100, 85))).toBe(true);
+    expect(fx.hides(tower, strip, 60, car(100, 200))).toBe(false);
+    expect(fx.hides(tower, strip, 60, null)).toBe(false);
+    fx.on = false;
+    expect(fx.hides(tower, strip, 60, car(100, 85))).toBe(false);
   });
 });
 
