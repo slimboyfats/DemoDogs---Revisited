@@ -137,6 +137,8 @@ const set = (C: Rgb, m = 1): void => {
   pg = C[1] * m;
   pb = C[2] * m;
 };
+/** The heights (of the big noise) at which the country steps up a level. */
+export const LEDGES = [0.3, 0.68];
 const BRIGHT: Rgb = [246, 249, 253];
 const ICE: Rgb = [150, 182, 208];
 const THIN_ICE: Rgb = [172, 198, 220];
@@ -280,6 +282,27 @@ export function terrainPixel(
       break;
     }
   }
+  if (terrain !== 'paved') {
+    // Depth. The light comes from the top left: ground that rises away from it is lit, ground
+    // that falls away is in shade; and where the country steps up a level there is a ledge, with
+    // a lit rim on the side that faces the light and a shadow thrown on the low ground behind it.
+    const a0 = F.big.at(x, y);
+    const hi = F.big.at(x - 3, y - 3);
+    const lo = F.big.at(x + 3, y + 3);
+    let sh = (lo - hi) * 4.5 + (F.mid.at(x + 1, y + 1) - F.mid.at(x - 1, y - 1)) * 1.8;
+    sh = sh < -0.2 ? -0.2 : sh > 0.2 ? 0.2 : sh;
+    k *= 1 + sh;
+    for (let n = 0; n < LEDGES.length; n++) {
+      const t = LEDGES[n]!;
+      if (a0 < t && hi >= t) {
+        if (terrain === 'snow') {
+          pr *= 0.74;
+          pg *= 0.82;
+          pb *= 0.96;
+        } else k *= 0.6;
+      } else if (a0 >= t && hi < t && F.big.at(x - 1, y - 1) < t) k *= 1.16;
+    }
+  }
   out[0] = clamp255(pr * k);
   out[1] = clamp255(pg * k);
   out[2] = clamp255(pb * k);
@@ -320,6 +343,10 @@ export interface Line {
 }
 
 const NONE = 0xffff;
+// the kerb colour being mixed
+let kr = 0;
+let kg = 0;
+let kb = 0;
 
 /** For every pixel near the line: how far it is from it, and which sample is nearest. */
 export interface Near {
@@ -449,9 +476,9 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
   const seed = F.seed;
   // tarmac takes a little of the country's colour, so every venue's road is its own grey
   const TAR: Rgb = [
-    0x47 * 0.86 + G[0] * 0.14 * 0.6,
-    0x47 * 0.86 + G[1] * 0.14 * 0.6,
-    0x4d * 0.86 + G[2] * 0.14 * 0.6,
+    0x3e * 0.88 + G[0] * 0.12 * 0.6,
+    0x3e * 0.88 + G[1] * 0.12 * 0.6,
+    0x45 * 0.88 + G[2] * 0.12 * 0.6,
   ];
   // what lies beside the road: a snow bank, a pavement, or the venue's dirt
   const SHOULDER: Rgb =
@@ -466,7 +493,26 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
     (D[1] * 0.75 + G[1] * 0.25) * 0.84,
     (D[2] * 0.75 + G[2] * 0.25) * 0.84,
   ];
-  const creepMost = terrain === 'snow' ? 0.42 : terrain === 'paved' ? 0.08 : 0.34;
+  // industrial venues stripe their bends in yellow and black; circuits in red and white
+  const hazard = terrain === 'paved' || terrain === 'gravel' || terrain === 'dirt';
+  const kerb = (al: number, q: number): void => {
+    if (hazard) {
+      const dark = (Math.floor((al + q) / 5) & 1) === 0;
+      kr = dark ? 0x1c : 0xe8;
+      kg = dark ? 0x1c : 0xb6;
+      kb = dark ? 0x20 : 0x1e;
+    } else {
+      const red = (Math.floor(al / 7) & 1) === 0;
+      kr = red ? 0xc8 : 0xef;
+      kg = red ? 0x32 : 0xea;
+      kb = red ? 0x2e : 0xe0;
+    }
+  };
+  // the pit apron: a strip of concrete beside the grid, on the +across side
+  const apronBack = Math.round(150 / T.step);
+  const apronFore = Math.round(30 / T.step);
+  const onApron = (i: number): boolean => i >= T.n - apronBack || i < apronFore;
+  const creepMost = terrain === 'snow' ? 0.24 : terrain === 'paved' ? 0.08 : 0.34;
   const SEC = 150;
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
@@ -489,20 +535,24 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
       // the outside of a bend is the side the road turns away from
       const outer = kerbed && (bend > 0 ? side < 0 : side > 0);
       const mid = F.mid.at(x, y);
+      // how squarely this side of the road faces the light (top left): 1 towards it, -1 away
+      const lit = side * 0.7071 * (Math.sin(a) - Math.cos(a));
       let r: number;
       let g: number;
       let b: number;
       let m = 1;
       if (style === 'dirt') {
         const ext = half + (mid - 0.5) * 9;
-        if (d > ext + 3) continue;
+        if (d > ext + 4) continue;
         if (d > ext) {
-          // the berm's shadow on the country beside it
-          if (hsh > 0.6) continue;
+          // the bank beside a sunken road: lit where it faces the light, and throwing a shadow
+          // on the country behind it where it faces away
+          const f = lit < -0.15 ? 0.62 : lit > 0.15 ? 1.16 : 0.85;
+          if (hsh > 0.85) continue;
           const p = k * 4;
-          px[p] = px[p]! * 0.74;
-          px[p + 1] = px[p + 1]! * 0.74;
-          px[p + 2] = px[p + 2]! * 0.74;
+          px[p] = clamp255(px[p]! * f);
+          px[p + 1] = clamp255(px[p + 1]! * f);
+          px[p + 2] = clamp255(px[p + 2]! * f);
           continue;
         }
         r = EARTH[0];
@@ -527,8 +577,9 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
         else if (hsh > 0.95) m *= 1.28;
         // washboard through the bends
         if (kerbed && ali % 5 === 0) m *= 0.9;
-        // the berm: loose earth thrown to the edge
-        if (d > ext - 4) m *= hsh < 0.22 ? 0.72 : 1.16;
+        // the road is worn down into the ground: the bank towards the light shades its edge,
+        // the far bank's foot catches the light
+        if (d > ext - 6) m *= lit > 0.15 ? 0.64 : lit < -0.15 ? 1.2 : hsh < 0.22 ? 0.72 : 1.1;
       } else if (d <= half) {
         r = TAR[0];
         g = TAR[1];
@@ -543,6 +594,11 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
         const lane = Math.abs(d - half * 0.46);
         if (lane < 6 && hash2(Math.round(d * side), Math.floor(al / 9), seed + 13) < 0.72)
           m *= kerbed ? 0.86 : 0.93;
+        // a dark streak of oil down the middle of each lane, and grime along the edges
+        if (lane < 1.3 && hash2(Math.floor(al / 46), side, seed + 17) < 0.55) m *= 0.84;
+        if (d > half - 9) m *= 0.92;
+        // a pavement stands above the road and shades its edge on the side towards the light
+        if (terrain === 'paved' && lit > 0.15 && d > half - 3) m *= 0.68;
         // the painted lines: one down each edge, dashes down the middle, worn through in places
         const worn = hash2(Math.floor(al / 4), d < 3 ? 0 : side, seed + 14) < 0.07;
         if (d > half - 4.4 && d < half - 2.4 && !worn) {
@@ -573,15 +629,37 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
             m = terrain === 'snow' ? 1 : 0.9 + hsh * 0.4;
           }
         }
+      } else if (side > 0 && onApron(i) && d <= half + 26) {
+        // the pit apron: poured concrete in bays, a white line against the road, hazard
+        // stripes along its far edge, and its own shadow where it faces away from the light
+        const q = d - half;
+        if (q > 22) {
+          const dark = (Math.floor((al + q) / 4) & 1) === 0;
+          r = dark ? 0x1c : 0xe8;
+          g = dark ? 0x1c : 0xb6;
+          b = dark ? 0x20 : 0x1e;
+          if (q > 25 && lit < 0) m = 0.6;
+        } else if (q < 1.6) {
+          r = 228;
+          g = 226;
+          b = 214;
+        } else {
+          r = 138;
+          g = 136;
+          b = 132;
+          m = 0.94 + hash2(Math.floor(al / 22), 3, seed + 18) * 0.12;
+          if (((ali % 22) + 22) % 22 === 0) m *= 0.7;
+          else if (hsh < 0.05) m *= 0.8;
+        }
       } else if (terrain === 'paved') {
         // a kerbstone, then a pavement of small slabs, all the way round
         const q = d - half;
         if (q > 15) continue;
         if (kerbed && q <= 5) {
-          const red = (Math.floor(al / 7) & 1) === 0;
-          r = red ? 0xc8 : 0xef;
-          g = red ? 0x32 : 0xea;
-          b = red ? 0x2e : 0xe0;
+          kerb(al, q);
+          r = kr;
+          g = kg;
+          b = kb;
           if (q > 4) m = 0.7;
         } else if (q <= 3) {
           r = 178;
@@ -598,14 +676,14 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
         }
       } else if (kerbed && d <= half + 5.5) {
         // red and white kerb blocks, a lit lip against the road and a shadow on the far side
-        const blk = Math.floor(al / 7);
-        const red = (blk & 1) === 0;
-        r = red ? 0xc8 : 0xef;
-        g = red ? 0x32 : 0xea;
-        b = red ? 0x2e : 0xe0;
-        m = 0.96 + hash2(blk, side, seed + 16) * 0.08;
-        if (d > half + 4.5) m *= 0.68;
-        else if (d < half + 1) m *= 1.08;
+        kerb(al, d - half);
+        r = kr;
+        g = kg;
+        b = kb;
+        m = 0.96 + hash2(Math.floor(al / 7), side, seed + 16) * 0.08;
+        // a kerb stands proud: lit on the side that faces the light, dark on the other
+        if (d > half + 4.2) m *= lit < 0 ? 0.55 : 0.85;
+        else if (d < half + 1.2) m *= lit < 0 ? 1.12 : 0.8;
       } else {
         // the verge: bare ground beside the road, ragged, widening into a run-off outside a bend
         const from = kerbed ? half + 5.5 : half;
@@ -634,8 +712,12 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
           else if (hsh > 0.85) m *= 1.25;
         } else if (hsh < 0.09) m *= 0.68;
         else if (hsh > 0.93) m *= 1.3;
-        // the tarmac's lip throws a thin shadow
-        if (!kerbed && d < half + 1.3) m *= 0.66;
+        // the road stands a little above the ground: it throws a shadow on the verge on the
+        // side away from the light, and shows a lit lip on the side towards it
+        const e = d - from;
+        if (lit < -0.15 && e < 4.5) m *= 0.56;
+        else if (lit > 0.15 && e < 1.6) m *= 1.2;
+        else if (e < 1.2) m *= 0.74;
       }
       const p = k * 4;
       px[p] = clamp255(r * m);
@@ -721,11 +803,75 @@ export function paintBowl(
         let m = 1;
         if (streak < 0.3) m -= 0.13 * band;
         else if (streak > 0.86) m += 0.08 * band;
-        // the wall's shadow on the floor
-        if (off > -9) m *= 0.84;
+        // the wall's shadow on the floor: long under the wall that stands towards the light
+        const lit = (-ex - ey) / (q * 1.4142 || 1);
+        if (off > -(5 + 16 * Math.max(0, lit))) m *= 0.64;
         px[p] = clamp255(px[p]! * m);
         px[p + 1] = clamp255(px[p + 1]! * m);
         px[p + 2] = clamp255(px[p + 2]! * m);
       }
     }
+}
+
+/**
+ * The wilds: the further the country is from the road, the more it sinks into the venue's
+ * outside colour, so the track stands out lit and the edges of the map fall away dark.
+ */
+export function paintWilds(
+  px: Uint8ClampedArray,
+  w: number,
+  h: number,
+  T: Line,
+  from: number,
+  to: number,
+  colors: GroundColors,
+  seed: number,
+  most = 0.42,
+): void {
+  const OUT = rgbOf(colors.outside);
+  // how far each 8x8 block of the map is from the road
+  const Q = 8;
+  const gw = Math.ceil(w / Q) + 1;
+  const gh = Math.ceil(h / Q) + 1;
+  const dist = new Float32Array(gw * gh).fill(1e9);
+  const R = Math.ceil(to / Q) + 1;
+  for (let i = 0; i < T.n; i += 2) {
+    const cx = Math.round(T.x[i]! / Q);
+    const cy = Math.round(T.y[i]! / Q);
+    for (let gy = Math.max(0, cy - R); gy <= Math.min(gh - 1, cy + R); gy++)
+      for (let gx = Math.max(0, cx - R); gx <= Math.min(gw - 1, cx + R); gx++) {
+        const dx = gx * Q - T.x[i]!;
+        const dy = gy * Q - T.y[i]!;
+        const d = dx * dx + dy * dy;
+        const k = gy * gw + gx;
+        if (d < dist[k]!) dist[k] = d;
+      }
+  }
+  for (let k = 0; k < dist.length; k++) dist[k] = Math.min(to, Math.sqrt(dist[k]!));
+  for (let y = 0; y < h; y++) {
+    const fy = y / Q;
+    const yi = Math.floor(fy);
+    const ty = fy - yi;
+    for (let x = 0; x < w; x++) {
+      const fx = x / Q;
+      const xi = Math.floor(fx);
+      const tx = fx - xi;
+      const k = yi * gw + xi;
+      const a = dist[k]!;
+      const b = dist[k + 1]!;
+      const c = dist[k + gw]!;
+      const e = dist[k + gw + 1]!;
+      const d = a + (b - a) * tx + (c - a) * ty + (a - b - c + e) * tx * ty;
+      if (d <= from) continue;
+      let f = (d - from) / (to - from);
+      // in steps, with a dithered edge between them, like everything else on the ground
+      f = Math.floor(f * 5 + hash2(x, y, seed + 41) * 0.9) / 5;
+      f = (f > 1 ? 1 : f) * most;
+      if (f <= 0) continue;
+      const p = (y * w + x) * 4;
+      px[p] = px[p]! * (1 - f) + OUT[0] * f;
+      px[p + 1] = px[p + 1]! * (1 - f) + OUT[1] * f;
+      px[p + 2] = px[p + 2]! * (1 - f) + OUT[2] * f;
+    }
+  }
 }

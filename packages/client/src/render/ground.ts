@@ -6,11 +6,26 @@ import {
   paintGully,
   paintRoad,
   paintTerrain,
+  paintWilds,
   rgbOf,
   terrainOf,
 } from './terrain';
 
 const TAU = Math.PI * 2;
+
+/** Digits three pixels by five, for the numbers painted on the starting grid. */
+const DIGITS = [
+  ['###', '# #', '# #', '# #', '###'],
+  [' # ', '## ', ' # ', ' # ', '###'],
+  ['###', '  #', '###', '#  ', '###'],
+  ['###', '  #', '###', '  #', '###'],
+  ['# #', '# #', '###', '  #', '  #'],
+  ['###', '#  ', '###', '  #', '###'],
+  ['###', '#  ', '###', '# #', '###'],
+  ['###', '  #', '  #', '  #', '  #'],
+  ['###', '# #', '###', '# #', '###'],
+  ['###', '# #', '###', '  #', '###'],
+];
 
 /** A small seeded random for the ground's texture, so a venue's grass looks the same each time. */
 function mulberry(seed: number): () => number {
@@ -67,6 +82,7 @@ export function makeGround(w: World): Ground {
   const img = g.createImageData(w.w, w.h);
   paintTerrain(img.data, w.w, w.h, C, F);
   if (T) {
+    paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
     if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
     paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
   }
@@ -117,18 +133,28 @@ export function makeGround(w: World): Ground {
     const ny = Math.cos(a);
     const fx = Math.cos(a);
     const fy = Math.sin(a);
+    // (three rows of chequer between two white bars)
+    for (const bar of [-9, 7]) {
+      g.save();
+      g.translate(T.x[0]! + fx * bar, T.y[0]! + fy * bar);
+      g.rotate(a);
+      g.fillStyle = 'rgba(240,238,226,0.9)';
+      g.fillRect(-1, -road / 2 + 2, 2, road - 4);
+      g.restore();
+    }
     for (let k = -road / 2; k < road / 2; k += 4)
-      for (let row = 0; row < 2; row++) {
+      for (let row = 0; row < 3; row++) {
         g.fillStyle = (k / 4 + row) & 1 ? '#111' : '#f2f2f2';
         g.save();
         g.translate(
-          T.x[0]! + nx * (k + 2) + fx * (row * 4 - 4),
-          T.y[0]! + ny * (k + 2) + fy * (row * 4 - 4),
+          T.x[0]! + nx * (k + 2) + fx * (row * 4 - 5),
+          T.y[0]! + ny * (k + 2) + fy * (row * 4 - 5),
         );
         g.rotate(a);
         g.fillRect(-2, -2, 4.4, 4.4);
         g.restore();
       }
+    const paint = C.road !== 'dirt';
     for (let slot = 0; slot < w.cars.length; slot++) {
       const i = w.gridSlot(slot);
       const side = slot % 2 ? 1 : -1;
@@ -137,9 +163,28 @@ export function makeGround(w: World): Ground {
       g.save();
       g.translate(T.x[i]! + sn * side * road * 0.22, T.y[i]! + cs * side * road * 0.22);
       g.rotate(T.a[i]!);
-      g.strokeStyle = 'rgba(240,240,240,0.55)';
-      g.lineWidth = 1.2;
-      g.strokeRect(-11, -7, 24, 14);
+      // the rubber every start has left: two black streaks out of the front of the box
+      for (const o of [-4.5, 4.5])
+        for (let q = 0; q < 46; q++) {
+          g.fillStyle = `rgba(10,10,12,${0.5 * (1 - q / 46) * (0.6 + r() * 0.4)})`;
+          g.fillRect(8 + q, o - 1 + Math.sin(q * 0.2 + slot) * 0.8, 1, 2);
+        }
+      // the box: an open bracket at the front, and the slot's number behind it
+      g.fillStyle = paint ? 'rgba(240,240,232,0.75)' : 'rgba(240,240,232,0.4)';
+      g.fillRect(12, -7, 1.4, 14);
+      g.fillRect(4, -7, 9, 1.2);
+      g.fillRect(4, 5.8, 9, 1.2);
+      if (paint) {
+        const num = String(slot + 1);
+        for (let c = 0; c < num.length; c++) {
+          const glyph = DIGITS[num.charCodeAt(c) - 48]!;
+          for (let gy = 0; gy < 5; gy++)
+            for (let gx = 0; gx < 3; gx++)
+              if (glyph[gy]![gx] === '#')
+                // (read from behind the car: the top of the digit points up the road)
+                g.fillRect(-4 - gy * 2 + 8 - 10, -3 * num.length + c * 7 + gx * 2 + 0.5, 2, 2);
+        }
+      }
       g.restore();
     }
   }
@@ -189,12 +234,81 @@ function dressRoad(
       T.y[k]! + Math.cos(a) * across + Math.sin(a) * along,
     ];
   };
+  const hashy = (i: number, n: number): number => {
+    const v = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453;
+    return v - Math.floor(v);
+  };
   const turn = (i: number): number => {
     let d = T.a[(i + 7) % T.n]! - T.a[(i - 7 + T.n) % T.n]!;
     while (d > Math.PI) d -= TAU;
     while (d < -Math.PI) d += TAU;
     return d;
   };
+  // Grit, on any road. Long tyre marks: pairs of dark lines that run on down the road, drifting
+  // from side to side, broken where the tyres let go.
+  for (let n = 0; n < T.n / 34; n++) {
+    let i = Math.floor(r() * T.n);
+    let ac = (r() - 0.5) * (road - 26);
+    const gap = 8 + r() * 3;
+    const len = Math.round((80 + r() * 220) / T.step);
+    const dark = 0.16 + r() * 0.26;
+    let drift = (r() - 0.5) * 0.3;
+    for (let q = 0; q < len; q++, i++) {
+      if (up(i)) break;
+      if (r() < 0.04) drift = (r() - 0.5) * 0.4;
+      ac = Math.max(-half + 9, Math.min(half - 9, ac + drift));
+      if (hashy(i, n) < 0.12) continue;
+      g.fillStyle = `rgba(10,10,12,${dark * Math.min(1, q / 6, (len - q) / 6)})`;
+      for (const o of [-gap / 2, gap / 2])
+        for (const f of [0, T.step / 2]) {
+          const [x, y] = at(i, ac + o, f);
+          g.fillRect(Math.round(x), Math.round(y), 2, 2);
+        }
+    }
+  }
+  // oil: a dark pool with a glint on the side towards the light, and the drips that led to it
+  for (let n = 0; n < T.n / 60; n++) {
+    const i = Math.floor(r() * T.n);
+    if (up(i)) continue;
+    const ac = (r() - 0.5) * (road - 20);
+    const [x, y] = at(i, ac);
+    g.fillStyle = 'rgba(8,8,12,0.42)';
+    const s = 3 + r() * 5;
+    for (let q = 0; q < 6; q++) {
+      g.beginPath();
+      g.ellipse(
+        x + (r() - 0.5) * s * 1.6,
+        y + (r() - 0.5) * s,
+        s * (0.4 + r() * 0.6),
+        s * (0.3 + r() * 0.4),
+        r() * TAU,
+        0,
+        TAU,
+      );
+      g.fill();
+    }
+    g.fillStyle = 'rgba(150,160,184,0.4)';
+    for (let q = 0; q < 4; q++)
+      g.fillRect(Math.round(x - s * 0.6 + q * 1.5), Math.round(y - s * 0.5 - (q & 1)), 1, 1);
+    g.fillStyle = 'rgba(8,8,12,0.5)';
+    for (let q = 2; q < 6 + r() * 16; q++) {
+      const [dx, dy] = at(i - q * 2, ac + Math.sin(q) * 1.5);
+      if (r() < 0.7) g.fillRect(Math.round(dx), Math.round(dy), r() < 0.3 ? 2 : 1, 1);
+    }
+  }
+  // scorch marks: where something burned, a black heart and soot thinning outwards
+  for (let n = 0; n < T.n / 130; n++) {
+    const i = Math.floor(r() * T.n);
+    if (up(i)) continue;
+    const [x, y] = at(i, (r() - 0.5) * (road - 24));
+    const s = 7 + r() * 8;
+    for (let q = 0; q < s * s * 2.2; q++) {
+      const a = r() * TAU;
+      const d = r() ** 1.6 * s;
+      g.fillStyle = `rgba(8,6,5,${0.55 * (1 - d / s) + 0.1})`;
+      g.fillRect(Math.round(x + Math.cos(a) * d * 1.2), Math.round(y + Math.sin(a) * d), 1, 1);
+    }
+  }
   if (dirtRoad) {
     // ruts: long dark lines that wander along the road
     for (let n = 0; n < T.n / 30; n++) {
@@ -305,6 +419,20 @@ function dressRoad(
           fx += Math.cos(fa);
           fy += Math.sin(fa);
         }
+      }
+    }
+  }
+  // tar snakes: cracks sealed with a bead of black tar, wriggling along the road
+  for (let n = 0; n < T.n / 32; n++) {
+    let i = Math.floor(r() * T.n);
+    let ac = (r() - 0.5) * (road - 14);
+    g.fillStyle = 'rgba(10,10,12,0.72)';
+    for (let q = 0; q < (30 + r() * 70) / T.step; q++, i++) {
+      if (up(i)) break;
+      ac = Math.max(-half + 6, Math.min(half - 6, ac + (r() - 0.5) * 2.6));
+      for (const f of [0, 1, 2, 3]) {
+        const [x, y] = at(i, ac + (r() - 0.5), (f * T.step) / 4);
+        g.fillRect(Math.round(x), Math.round(y), 1, 2);
       }
     }
   }

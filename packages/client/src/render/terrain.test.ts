@@ -10,6 +10,7 @@ import {
   paintGully,
   paintRoad,
   paintTerrain,
+  paintWilds,
   terrainOf,
   type GroundColors,
   type Line,
@@ -271,5 +272,57 @@ describe('paintBowl', () => {
     // outside is the venue's outside colour, more or less (green here)
     const [r, g] = at(px, w, 4, 4);
     expect(g).toBeGreaterThan(r);
+  });
+});
+
+describe('depth', () => {
+  it('throws a shadow beside the road on the side away from the light', () => {
+    // the light is at the top left: below the top straight the verge is in the road's shadow,
+    // above it the verge is lit
+    const w = 300;
+    const h = 160;
+    const px = new Uint8ClampedArray(w * h * 4);
+    const F = makeFields(w, h, 5);
+    paintTerrain(px, w, h, GRASS, F);
+    paintRoad(px, w, h, { T: hook(), road: 40, colors: GRASS, F, use: () => true });
+    let above = 0;
+    let below = 0;
+    for (let x = 120; x < 200; x++) {
+      const up = at(px, w, x, 18);
+      const down = at(px, w, x, 61);
+      above += up[0] + up[1] + up[2];
+      below += down[0] + down[1] + down[2];
+    }
+    expect(below).toBeLessThan(above * 0.8);
+  });
+
+  it('stripes an industrial bend in yellow and black, not red', () => {
+    const w = 300;
+    const h = 160;
+    const C: GroundColors = { ...GRASS, ground: '#5d5f63', terrain: 'gravel' };
+    const px = new Uint8ClampedArray(w * h * 4);
+    const F = makeFields(w, h, 5);
+    paintTerrain(px, w, h, C, F);
+    paintRoad(px, w, h, { T: hook(), road: 40, colors: C, F, use: () => true });
+    let yellow = 0;
+    let red = 0;
+    for (let k = 0; k < px.length; k += 4) {
+      if (px[k]! > 190 && px[k + 1]! > 140 && px[k + 2]! < 70) yellow++;
+      if (px[k]! > 170 && px[k + 1]! < 80 && px[k + 2]! < 80) red++;
+    }
+    expect(yellow).toBeGreaterThan(40);
+    expect(red).toBe(0);
+  });
+
+  it('sinks the country far from the road into the outside colour', () => {
+    const w = 600;
+    const h = 160;
+    const px = new Uint8ClampedArray(w * h * 4).fill(200);
+    paintWilds(px, w, h, hook(), 60, 200, GRASS, 5);
+    // near the road nothing changes; at the far edge it is darker and greener (the outside)
+    expect(at(px, w, 150, 80)).toEqual([200, 200, 200]);
+    const far = at(px, w, 590, 80);
+    expect(far[0]).toBeLessThan(150);
+    expect(far[1]).toBeGreaterThan(far[0]);
   });
 });
