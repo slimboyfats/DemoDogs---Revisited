@@ -110,6 +110,11 @@ vec3 air(vec3 p) {
     if (rho > 0.01) a.xy += s * dh * d / rho * min(1.0, rho / (h.x * 0.7));
     a.z += -s * dr + g.w * fl * 0.35 * h.w;
   }
+  return a;
+}
+// the air the cars stir (see Cells.stir)
+vec3 wake(vec3 p) {
+  vec3 a = vec3(0.0);
   for (int m = 0; m < ${MAX_MOVERS}; m++) {
     if (m >= u_nm) break;
     vec4 A = u_ma[m];
@@ -170,7 +175,7 @@ void main() {
   float k60 = u_dt * 60.0;
   if (k == ${CKind.Fog}) {
     // a smoke screen: heavy and cold, it seeks its own height and churns slowly there
-    vec3 ai = air(p);
+    vec3 ai = air(p) + wake(p);
     float f = min(1.0, 2.5 * u_dt);
     float roll = age * (0.8 + th) + th * 30.0;
     v.x += (ai.x + u_wind.x * 0.25 + sin(roll) * 5.0 - v.x) * f;
@@ -187,7 +192,8 @@ void main() {
     float drag = fire ? 0.96 : 0.95;
     float lift = bang ? 14.0 : fire ? 14.0 : 11.0 * (1.0 - t * 0.6);
     float swirl = bang ? 0.0 : fire ? 75.0 : 95.0;
-    float lean = bang ? 0.0 : fire ? 0.1 + t * 0.4 : 0.25 + t * 1.0;
+    // the wind leans on a blast from its first tick: the ball is blown over as it flies out
+    float lean = bang ? 0.6 : fire ? 0.6 + t * 0.4 : 0.6 + t * 0.8;
     drag = 1.0 - (1.0 - drag) * (1.0 + h * 0.5);
     v *= pow(drag, k60);
     v.z += lift * (1.0 + h) * u_dt;
@@ -195,8 +201,12 @@ void main() {
     // a thing just thrown keeps its own way for a moment before the air takes it, so a blast's
     // fire flies out as a ball first and is rolled up after
     float ticks = age * 60.0;
-    flow *= min(1.0, 0.03 + ticks * ticks / 700.0);
-    vec3 ai = air(p);
+    float own = min(1.0, 0.03 + ticks * ticks / 700.0);
+    // ...but a car going by drags it along at once, however fresh
+    vec3 wk = wake(p);
+    float near = min(1.0, dot(wk, wk) / 64.0);
+    flow *= mix(own, 1.0, near);
+    vec3 ai = air(p) * mix(1.0, own, near) + wk;
     float sp = dot(ai, ai);
     // still air leaves it alone
     if (sp > 1.0) v += (ai - v) * min(1.0, flow * (1.0 + h * 0.5) * min(1.0, sp / 64.0) * k60);

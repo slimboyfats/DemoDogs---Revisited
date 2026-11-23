@@ -411,6 +411,9 @@ export class Cells {
         this.rings.splice(i, 1);
         continue;
       }
+      // the whole roll drifts downwind, and what turns in it with it
+      g.x += WIND[0] * 0.7 * dt;
+      g.y += WIND[1] * 0.7 * dt;
       g.z += g.vz * dt;
       g.vz *= Math.exp(-1.1 * dt);
       g.R += g.grow * dt;
@@ -443,9 +446,9 @@ export class Cells {
       let vy = this.vy[i]!;
       let vz = this.vz[i]!;
       if (k === CKind.Bang) {
-        // thrown too hard for the air to turn it: it brakes, and licks upward
-        vx *= drag;
-        vy *= drag;
+        // thrown too hard for the air to turn it: it brakes, leans on the wind and licks upward
+        vx = vx * drag + WIND[0] * 1.8 * dt;
+        vy = vy * drag + WIND[1] * 1.8 * dt;
         vz = vz * drag + 70 * dt;
       } else if (k === CKind.Leaf) {
         if (calm) air[0] = air[1] = air[2] = 0;
@@ -481,7 +484,7 @@ export class Cells {
         const t = a / life;
         const fire = k === CKind.Fire;
         const f = Math.min(1, (fire ? 11 : 8) * dt);
-        const lean = fire ? 0.15 + t * 0.5 : 0.3 + t * 1.1;
+        const lean = fire ? 0.6 + t * 0.4 : 0.6 + t * 0.8;
         const j = fire ? 7 : 5;
         vx += (air[0] + WIND[0] * lean - vx) * f + (rand() - 0.5) * j;
         vy += (air[1] + WIND[1] * lean - vy) * f + (rand() - 0.5) * j;
