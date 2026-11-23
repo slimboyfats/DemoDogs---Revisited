@@ -2,6 +2,7 @@ import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { stand } from './stand';
+import { harbour, stacks } from './docks';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -323,6 +324,12 @@ function apply(
     }
     case 'river':
       layRiver(w, rng, rule, add);
+      return;
+    case 'harbour':
+      harbour(w, rng, rule, add);
+      return;
+    case 'stacks':
+      stacks(w, rng, rule, add);
       return;
     case 'oval-scatter': {
       if (!O) return;

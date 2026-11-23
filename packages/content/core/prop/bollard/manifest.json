@@ -1,0 +1,13 @@
+{
+  "id": "prop.bollard",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bollard",
+    "description": "A cast iron mooring post on the quay edge, with a rope still on it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 2.4,
+  "made": "material.steel",
+  "integrity": 45
+}

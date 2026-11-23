@@ -5,6 +5,7 @@ import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import { fitMover } from './movers';
 import { burst, lockOn, lockedOn } from './payloads';
+import { smash } from './docks';
 import type { World } from './world';
 import { drop, inSmoke } from './drops';
 import { firePulse } from './shock';
@@ -184,6 +185,7 @@ export function updateProps(w: World): void {
     if (p.z > 0 || p.vz) {
       p.vz -= GRAVITY * 0.95 * DT;
       p.z += p.vz * DT;
+      if (p.def.smash && p.vz < -20 && p.z < 9) smash(w, p);
       if (p.z <= 0) {
         if (p.def.crush && p.vz < -60) land(w, p, -p.vz);
         p.z = 0;

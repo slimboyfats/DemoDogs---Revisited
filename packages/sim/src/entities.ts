@@ -200,6 +200,8 @@ export interface LooseProp {
   leaked?: boolean;
   /** A burst fuel drum on its way up; it blows apart at the top of its climb. */
   flying?: boolean;
+  /** A falling heavy prop that has already come down on something (see `smash` in docks.ts). */
+  crushed?: boolean;
 }
 
 /** A burning bit thrown out of a burst: a star (pops where it lands) or a glob of fuel. */

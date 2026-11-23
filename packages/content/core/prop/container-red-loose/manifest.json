@@ -1,0 +1,16 @@
+{
+  "id": "prop.container-red-loose",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fallen container (rust red)",
+    "description": "A container that came off its stack: heavy enough to crush a car it lands on and to block a lane, and only a blast breaks it open.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 5,
+  "mass": 7,
+  "breaksAt": 230,
+  "launch": 0.02,
+  "smash": 36,
+  "points": 40
+}
