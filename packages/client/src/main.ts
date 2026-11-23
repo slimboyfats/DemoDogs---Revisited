@@ -22,25 +22,30 @@ import {
   type RaceId,
 } from './game/career';
 import { Session, type SessionOptions } from './game/session';
+import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
+import { isKey } from './input/keys';
 import { Art } from './render/art';
-import { Hud } from './render/hud';
-import { drawOverlay, type WorldRenderer } from './render/overlay';
+import { Hud, placeName } from './render/hud';
+import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
-import { Scene } from './render/scene';
+import { PITCH, Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { KeyHints } from './ui/key-hints';
+import { NameTags } from './ui/name-tags';
 import { results } from './ui/results';
+import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
 
 /**
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
  * ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
- * player's car with the rivals' AI); ?career opens the career, ?career=<easy|medium|hard|final>
+ * player's car with the rivals' AI, &ghosts=<n> adds idle drivers so there is a race left to watch
+ * once your car is scrapped); ?career opens the career, ?career=<easy|medium|hard|final>
  * enters that race; ?dev opens the test range. window.__dd exposes the running session, the
  * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
@@ -52,6 +57,15 @@ const art = new Art(loadLooks());
 const sound = new Sound();
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
+const nameTags = new NameTags();
+// Tab while driving: the names over the cars, on and off (spectating, Tab is the next car)
+addEventListener('keydown', (e) => {
+  if (!isKey('watch', e.key.toLowerCase()) || e.repeat || e.metaKey || e.ctrlKey || e.altKey)
+    return;
+  if (screen !== 'game' || paused || specBar.shown) return;
+  e.preventDefault();
+  nameTags.toggle();
+});
 const canvas = $<HTMLCanvasElement>('game');
 const overlay = $<HTMLCanvasElement>('overlay');
 const octx = overlay.getContext('2d')!;
@@ -187,7 +201,56 @@ let lastCareer = false;
 let W = 0;
 let H = 0;
 let DPR = 1;
+/** Device pixels per art pixel when driving, and as shown now (a spectator can pull back). */
 let scale = 4;
+let shown = 4;
+
+// once this screen's car is out of it, the camera can follow the others: a viewpoint, not a rule
+const spectator = new Spectator();
+let specZooms: Zoom[] = [];
+const specBar = new SpectateBar({
+  next: (dir) => session && spectator.next(session.world, dir),
+  zoom: () => spectator.nextZoom(specZooms.length),
+  skip: () => {
+    if (screen === 'game' && spectator.active && !online.room) finish();
+  },
+});
+
+/** How much of the screen's height the whole-arena view may fill. */
+const ARENA_FILL = 0.86;
+
+/** Point the session's camera where the spectator is looking, at the zoom picked. */
+function spectate(dt: number): void {
+  const s = session;
+  if (!s) return;
+  const w = s.world;
+  if (!paused || online.racing) spectator.update(w, dt);
+  const on = spectator.active;
+  if (on && specZooms.length === 0)
+    // the arena view keeps clear of the bar along the bottom
+    specZooms = zooms(w.w, w.h, W / scale, (H / scale / Math.sin(PITCH)) * ARENA_FILL);
+  const z = on ? (specZooms[spectator.zoom] ?? specZooms[0]!) : null;
+  s.watch = on ? spectator.target : null;
+  // whole art pixels where there is room for them; the arena view takes what fits
+  const want = z ? (z.whole ? z.k * scale : Math.max(1, Math.round(z.k * scale * 2) / 2)) : scale;
+  if (want !== shown) {
+    shown = want;
+    scene.setScale(shown);
+    s.setView(W / shown, H / shown);
+  }
+  const lift = ((1 - ARENA_FILL) / 2) * (H / shown / Math.sin(PITCH));
+  s.spot = z?.whole ? { x: w.w / 2, y: w.h / 2 + lift } : null;
+  specBar.show(on && !paused);
+  specBar.setSkip(!online.room);
+  if (!on || !z) return;
+  const c = spectator.target;
+  if (c) {
+    const place = placeName(w.standings().indexOf(c) + 1);
+    const what = c.isPlayer ? 'DRIVER' : 'BOT';
+    const state = scrapped(w, c) ? 'SCRAPPED' : c.finished ? 'FINISHED' : place;
+    specBar.set(c.name, c.paint, `${state} · ${what}`, z.label);
+  } else specBar.set('NOBODY LEFT', '#555', 'ALL SCRAPPED', z.label);
+}
 
 function resize(): void {
   DPR = Math.min(2, devicePixelRatio || 1);
@@ -202,6 +265,8 @@ function resize(): void {
   // about 175 art pixels up the short side: far enough out that the cells read as fine grain
   // (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
   scale = Math.max(2, Math.round(Math.min(short / 175, long / 310) * 2) / 2);
+  shown = scale;
+  specZooms = [];
   scene.setScale(scale);
   if (session) {
     session.setView(W / scale, H / scale);
@@ -217,6 +282,7 @@ function show(id: string | null): void {
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
+  if (s !== 'game') specBar.show(false);
   if (s !== 'game' && devMode) {
     devMode = false;
     dev.close();
@@ -293,6 +359,9 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
   );
   if (mine !== launching || screen !== 'loading') return;
   session = made;
+  spectator.reset();
+  specZooms = [];
+  if (shown !== scale) scene.setScale((shown = scale));
   session.setView(W / scale, H / scale);
   hud.layout(session.world, DPR);
   paused = false;
@@ -317,8 +386,15 @@ function startGame(venue: string): void {
   const seed = params.has('seed')
     ? Number(params.get('seed'))
     : Math.floor(Math.random() * 2 ** 31);
+  // ?ghosts=<n> seats n more drivers who never touch the controls, so the race outlives your car
+  const ghosts = Math.min(3, Number(params.get('ghosts')) || 0);
+  const humans = Array.from({ length: ghosts }, (_, i) => {
+    const c = cars[(carIdx + 1 + i) % cars.length]!;
+    return { car: c.id, name: `GHOST ${i + 1}`, paint: c.paint };
+  });
   void launch(
-    { venue, car: cars[carIdx]!.id, seed },
+    // a derby plays on after you are scrapped: watch it out, or skip to the results
+    { venue, car: cars[carIdx]!.id, seed, playOn: true, ...(ghosts ? { humans } : {}) },
     content.venue.get(venue)!.meta.name.toUpperCase(),
   );
 }
@@ -590,6 +666,7 @@ function frame(t: number): void {
       finish();
       return;
     }
+    spectate(dt);
     const r0 = performance.now();
     // the overdraw meter reads its counts back about twice a second (a GPU stall, so not every frame)
     if (scene instanceof PixelScene && scene.meterOn && ++meterFrames % 30 === 0)
@@ -599,8 +676,11 @@ function frame(t: number): void {
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
+    if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
+    else if (nameTags.shown && !devMode)
+      drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (devMode) dev.frame(dt);
-    else hud.draw(session.world, session.fx, W, H, DPR);
+    else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
     if (online.racing) $('netDot').textContent = online.status();
     // a device that keeps falling behind gets thinner fire and smoke, by itself
@@ -728,6 +808,7 @@ function boot(): void {
       },
       dev,
       online,
+      spectator,
       /**
        * The overdraw meter for scripts: `measure()` draws the current frame again with the counts
        * and returns them (fragments per pixel); `heat(channel | null)` shows a heat map.
