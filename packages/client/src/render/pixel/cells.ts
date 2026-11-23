@@ -93,6 +93,9 @@ export const FIRE_RAMP: readonly number[] = Array.from({ length: 13 }, (_, i) =>
 });
 
 /** Time in `n` hard steps, each cell on its own clock (`th` is the cell's own offset, 0 to 1). */
+/** A cheap e^-x for x >= 0, close enough for the shape of a gust. */
+const fall = (x: number): number => 1 / (1 + x + 0.5 * x * x);
+
 const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.floor(t * n + th) / n);
 
 export class Cells {
@@ -100,6 +103,11 @@ export class Cells {
   readonly rings: Ring[] = [];
   /** Leaves that came to rest this tick, as x, y, colour triples; whoever paints them empties it. */
   readonly landed: number[] = [];
+  /**
+   * What moves through the air this tick and drags it along: x, y, z, vx, vy per mover (the
+   * cars), set by whoever owns the cells before `step`. See `stir`.
+   */
+  readonly movers: number[] = [];
   private readonly x: Float32Array;
   private readonly y: Float32Array;
   private readonly z: Float32Array;
@@ -130,7 +138,14 @@ export class Cells {
     this.kind = new Uint8Array(cap);
   }
 
-  /** Let go one cell. When full, one of the cells already burning is replaced. */
+  /**
+   * How many screen cells each gas cell let go becomes (fire, bang, smoke, fog; never leaves).
+   * The cells are drawn one screen cell each, finer than an art pixel, so a blast is as many
+   * more of them, each a little apart and on its own clock: the same cloud in finer grain.
+   */
+  split = 1;
+
+  /** Let go one cell (`split` of them for gas). When full, one of the cells already burning is replaced. */
   add(
     kind: CKind,
     x: number,
@@ -141,6 +156,36 @@ export class Cells {
     vz: number,
     life: number,
     rgb = 0,
+  ): void {
+    const n = kind === CKind.Leaf ? 1 : this.split;
+    this.put(kind, x, y, z, vx, vy, vz, life, rgb);
+    const r = this.rand;
+    for (let k = 1; k < n; k++) {
+      const f = 0.85 + r() * 0.3;
+      this.put(
+        kind,
+        x + (r() - 0.5) * 0.9,
+        y + (r() - 0.5) * 0.9,
+        z + (r() - 0.5) * 0.9,
+        vx * f,
+        vy * f,
+        vz * f,
+        life * (0.9 + r() * 0.2),
+        rgb,
+      );
+    }
+  }
+
+  private put(
+    kind: CKind,
+    x: number,
+    y: number,
+    z: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    life: number,
+    rgb: number,
   ): void {
     let i = this.n;
     if (i >= this.cap) {
@@ -221,6 +266,91 @@ export class Cells {
     out[2] = az;
   }
 
+  /**
+   * The air a moving car stirs at a point, added to `out`: it drags the air behind it along
+   * (the slipstream), rolls it into two whirls turning opposite ways off its back corners (the
+   * wake), and shoves it aside at the nose. The faster the car, the wider and harder. Only near
+   * the ground: smoke high in a column is above it.
+   */
+  stir(px: number, py: number, pz: number, out: [number, number, number]): void {
+    if (this.preparedFor !== this.movers.length) this.prepare();
+    const P = this.prep;
+    for (let m = 0; m < this.nPrep; m += 7) {
+      const R = P[m + 6]!;
+      const reach = R * 4;
+      const dx = px - P[m]!;
+      if (dx > reach || dx < -reach) continue;
+      const dy = py - P[m + 1]!;
+      if (dy > reach || dy < -reach) continue;
+      const hz = pz - P[m + 2]!;
+      if (hz > R * 2) continue;
+      const ux = P[m + 3]!;
+      const uy = P[m + 4]!;
+      const sp = P[m + 5]!;
+      const along = dx * ux + dy * uy;
+      if (along > R * 1.5 || along < -reach) continue;
+      const side = -dx * uy + dy * ux;
+      const RR = R * R;
+      const low = fall(Math.max(0, hz) / (R * 0.8));
+      let fa = 0;
+      let fs = 0;
+      if (along < 0) {
+        // slipstream: pulled along behind, most in the car's own lane
+        const lane = fall((side * side) / (RR * 0.6)) * fall(-along / (R * 2.2));
+        fa += sp * 0.75 * lane;
+        // the wake: a whirl off each back corner, turning opposite ways, drifting back; each
+        // turns fastest at its rim (about 0.6 R out) and is still at its eye
+        const ca = along + R * 0.9;
+        const r2 = RR * 0.35;
+        for (let k = -1; k <= 1; k += 2) {
+          const cs = side - k * R * 0.45;
+          const t = (sp * 0.9 * k * R * 0.6) / (r2 + ca * ca + cs * cs);
+          fa -= cs * t;
+          fs += ca * t;
+        }
+      } else {
+        // the bow: shoved aside and forward off the nose
+        const bow = fall(along / (R * 0.6)) * fall((side * side) / RR);
+        fs += (side < 0 ? -1 : 1) * sp * 0.6 * bow;
+        fa += sp * 0.3 * bow;
+      }
+      fa *= low;
+      fs *= low;
+      out[0] += fa * ux - fs * uy;
+      out[1] += fa * uy + fs * ux;
+      // a fast car lifts what it passes through a little
+      out[2] += (fs < 0 ? -fs : fs) * 0.15;
+    }
+  }
+
+  /** The movers worked out once a tick: x, y, z, heading x, heading y, speed, reach. */
+  private prep = new Float32Array(0);
+  private nPrep = 0;
+  private preparedFor = -1;
+  private prepare(): void {
+    const M = this.movers;
+    if (this.prep.length < (M.length / 5) * 7)
+      this.prep = new Float32Array((M.length / 5) * 7 + 14);
+    let n = 0;
+    for (let m = 0; m < M.length; m += 5) {
+      const vx = M[m + 3]!;
+      const vy = M[m + 4]!;
+      const sp = Math.hypot(vx, vy);
+      if (sp < 25) continue;
+      const P = this.prep;
+      P[n] = M[m]!;
+      P[n + 1] = M[m + 1]!;
+      P[n + 2] = M[m + 2]!;
+      P[n + 3] = vx / sp;
+      P[n + 4] = vy / sp;
+      P[n + 5] = sp;
+      P[n + 6] = 9 + sp * 0.07;
+      n += 7;
+    }
+    this.nPrep = n;
+    this.preparedFor = M.length;
+  }
+
   /** One tick: the rings climb and die away, every cell is carried, ages and burns out. */
   step(dt: number): void {
     for (let i = this.rings.length - 1; i >= 0; i--) {
@@ -237,6 +367,8 @@ export class Cells {
     }
     const air: [number, number, number] = [0, 0, 0];
     const calm = this.rings.length === 0;
+    this.prepare();
+    const still = this.nPrep === 0;
     const drag = Math.exp(-3 * dt);
     const rand = this.rand;
     let w = 0;
@@ -259,6 +391,7 @@ export class Cells {
       } else if (k === CKind.Leaf) {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // it brakes hard, takes up the air and the wind, and sinks slowly, swinging as it goes
         const th = this.th[i]!;
         const f = Math.min(1, 3.2 * dt);
@@ -273,6 +406,7 @@ export class Cells {
       } else if (k === CKind.Fog) {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // it seeks its own height a little above the ground and churns slowly there
         const th = this.th[i]!;
         const f = Math.min(1, 2.5 * dt);
@@ -283,6 +417,7 @@ export class Cells {
       } else {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // weightless: it takes up the air's speed, lifts on its own heat and jitters
         const t = a / life;
         const fire = k === CKind.Fire;
@@ -319,7 +454,8 @@ export class Cells {
   }
 
   /**
-   * Draw every cell, one art pixel each: smoke and soot first, fire over them, and a hard
+   * Draw every cell, one screen cell each (sizes go to `normal` and `glow` in screen cells, finer
+   * than an art pixel): smoke and soot first, fire over them, and a hard
    * additive cell on each of the hottest. `seen` culls what is off screen.
    */
   draw(normal: Put, glow: Put, seen: (x: number, y: number, z: number) => boolean): void {
@@ -359,7 +495,8 @@ export class Cells {
           if (t > 0.8 && th < (t - 0.8) / 0.2) continue;
           if (!seen(x, y, z)) continue;
           const s = stepT(t, th, 4);
-          normal(x, y, z, t < 0.85 ? 2 : 1, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
+          // a bank of it hides the road: three cells across until it thins
+          normal(x, y, z, t < 0.85 ? 3 : 2, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
         } else if (k === CKind.Fire) {
           const s = stepT(t, th, 12);
           const hot = s < 0.3;

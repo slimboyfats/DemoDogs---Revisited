@@ -35,6 +35,13 @@ export function tones(h: string): Tones {
 export const DETAIL = 3;
 /** Texels per art pixel for cars: twice as fine again, eight times the voxels. */
 export const CAR_DETAIL = 6;
+
+/**
+ * Screen cells to the art pixel for what is drawn on the screen's own grid (the ground's grain,
+ * fire, smoke, sparks): one cell about two device pixels across (one CSS pixel on a phone), as
+ * fine as mudders' cells at a whole-map view, whatever the zoom.
+ */
+export const fineGrid = (scale: number): number => Math.max(1, Math.round(scale / 2));
 /** The widest a strip's image may be; longer strips wrap onto more rows. */
 export const MAX_W = 2040;
 

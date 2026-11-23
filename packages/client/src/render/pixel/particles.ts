@@ -135,23 +135,24 @@ const PLUME_ALPHA = [0.6, 0.6, 0.6, 0.55, 0.3] as const;
 
 /**
  * Draw one particle the way mudders does: `normal` takes the opaque and dithered blobs, `glow`
- * the additive cells (sparks, embers, the hot core of a flame).
+ * the additive cells (sparks, embers, the hot core of a flame). `cell` is the size of one screen
+ * cell in art px: sparks and embers are one cell, as fine as the screen draws, not a whole art px.
  */
-export function drawParticle(p: Particle, normal: Put, glow: Put): void {
+export function drawParticle(p: Particle, normal: Put, glow: Put, cell = 1): void {
   const t = age(p);
   const s = p.size;
   switch (p.kind) {
     case 'spark':
-      glow(p.x, p.y, p.z, 1, p.rgb, t < 0.6 ? 1 : (1 - t) / 0.4, Shape.Rect);
+      glow(p.x, p.y, p.z, cell, p.rgb, t < 0.6 ? 1 : (1 - t) / 0.4, Shape.Rect);
       break;
     case 'glitter':
       // full on, then strobing as it burns out
       if (t > 0.55 && (Math.floor(p.life * 30) & 1) === 0) break;
-      glow(p.x, p.y, p.z, s, p.rgb, t < 0.55 ? 1 : 0.85, Shape.Rect);
+      glow(p.x, p.y, p.z, Math.max(cell, s * cell * 2), p.rgb, t < 0.55 ? 1 : 0.85, Shape.Rect);
       break;
     case 'ember':
       if (t > 0.4 && (Math.floor(p.life * 20 + p.max * 50) & 3) === 0) break;
-      glow(p.x, p.y, p.z, 1, t < 0.5 ? 0xffc040 : 0xe05a18, 1, Shape.Rect);
+      glow(p.x, p.y, p.z, cell, t < 0.5 ? 0xffc040 : 0xe05a18, 1, Shape.Rect);
       break;
     case 'flame': {
       const band = Math.min(3, Math.floor(t * 4));

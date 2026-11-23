@@ -122,6 +122,14 @@ const BOT_RIG = {
  * words, screen shake, each car's dented body, the bots' walk rigs and the big centre message.
  * It reads the sim's events after every tick and plays them as sights and sounds.
  */
+/** Screen cells per gas cell at an effects quality: four at full, down to one on a slow device. */
+export const splitFor = (quality: number): number =>
+  quality > 0.8 ? 4 : quality > 0.6 ? 3 : quality > 0.4 ? 2 : 1;
+const withSplit = (c: Cells, quality: number): Cells => {
+  c.split = splitFor(quality);
+  return c;
+};
+
 export class Effects {
   readonly fx: Particle[] = [];
   readonly debris: Debris[] = [];
@@ -159,9 +167,19 @@ export class Effects {
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
   /** Single cells of fire and smoke, and the rolling air that carries them. */
-  readonly cells = new Cells(14000);
-  /** How much of the full effect to draw: 1 everything, less on a slow device. */
-  quality = 1;
+  readonly cells = withSplit(new Cells(24000), 1);
+  private q = 1;
+  /**
+   * How much of the full effect to draw: 1 everything, less on a slow device. Gas cells are let
+   * go `split` screen cells at a time (finer grain), fewer as the quality drops.
+   */
+  get quality(): number {
+    return this.q;
+  }
+  set quality(v: number) {
+    this.q = v;
+    this.cells.split = splitFor(v);
+  }
   /** Blasts still letting go of their burning gas. */
   private readonly burning: {
     x: number;
@@ -272,20 +290,26 @@ export class Effects {
     );
   }
 
-  /** A thin stippled puff: tyre smoke, or dust off the dirt. */
+  /**
+   * A thin puff of single cells: tyre smoke, or dust off the dirt. The air carries each cell on
+   * its own, so a puff frays out cell by cell instead of fading as one blob.
+   */
   puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
-    this.emit(
-      kind,
-      x + rand(-2, 2),
-      y + rand(-2, 2),
-      z,
-      vx + rand(-8, 8),
-      vy + rand(-8, 8),
-      rand(8, 20),
-      rand(0.8, 1.6),
-      rand(3, 5.5),
-      kind === 'smoke' ? 0x8a8680 : 0x9a8460,
-    );
+    const rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460;
+    const dust = kind === 'dust';
+    const n = Math.max(1, Math.round(4 * this.quality));
+    for (let i = 0; i < n; i++)
+      this.cells.add(
+        CKind.Wisp,
+        x + rand(-2.5, 2.5),
+        y + rand(-2.5, 2.5),
+        z + rand(0, 1.5),
+        vx + rand(-8, 8),
+        vy + rand(-8, 8),
+        dust ? rand(-4, 4) : rand(4, 12),
+        dust ? rand(0.5, 1.1) : rand(0.8, 1.6),
+        rgb,
+      );
   }
 
   /**
@@ -310,7 +334,7 @@ export class Effects {
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
-    const n = Math.max(1, Math.round(size * size * 0.3 * this.quality));
+    const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
     const r = size * 0.5;
     for (let i = 0; i < n; i++)
       this.cells.add(
@@ -1072,20 +1096,21 @@ export class Effects {
                 }
               }
           });
-          // clods of earth thrown out: they land and stay as specks, and dust hangs over the pit
+          // clods of earth thrown out, most of them grit a third of an art px across: they land
+          // and stay as specks, and dust hangs over the pit
           const clods: Chip[] = [];
-          for (let i = 0; i < r * 5; i++) {
+          for (let i = 0; i < r * 10; i++) {
             const a = rand(0, TAU);
             const d = rand(0.2, 1) * r;
             clods.push({
               x: Math.cos(a) * d,
               y: Math.sin(a) * d,
               z: rand(0, 2),
-              s: Math.random() < 0.3 ? 1 : 0.5,
+              s: Math.random() < 0.12 ? 1 : Math.random() < 0.4 ? 2 / 3 : 1 / 3,
               rgb: shade(dirt, rand(0.6, 1.2)),
             });
           }
-          this.burst(clods, 90, {
+          this.burst(clods, 160, {
             x,
             y,
             h: 0,
@@ -1657,6 +1682,10 @@ export class Effects {
     armsTick(this, w, this.sound);
     this.feed();
     feedClouds(this, w);
+    // the cars drag the air they drive through: fire and smoke near a fast car swirl in its wake
+    const M = this.cells.movers;
+    M.length = 0;
+    for (const c of w.cars) if (c.vx * c.vx + c.vy * c.vy > 625) M.push(c.x, c.y, c.z, c.vx, c.vy);
     this.cells.step(DT);
     this.shock.step(DT);
     this.leafFall();

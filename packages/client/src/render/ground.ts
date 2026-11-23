@@ -200,11 +200,11 @@ export function makeGround(w: World): Ground {
     g.lineWidth = 3;
     g.stroke();
   }
-  // grain over everything, so the pixels read as texture when scaled up
+  // a little grain per art pixel; the fine grain (blades, gravel, pebbles) is the shader's
   const id = g.getImageData(0, 0, w.w, w.h);
   const px = id.data;
   for (let i = 0; i < px.length; i += 4) {
-    const n = (r() - 0.5) * 16;
+    const n = (r() - 0.5) * 9;
     px[i] = px[i]! + n;
     px[i + 1] = px[i + 1]! + n;
     px[i + 2] = px[i + 2]! + n;

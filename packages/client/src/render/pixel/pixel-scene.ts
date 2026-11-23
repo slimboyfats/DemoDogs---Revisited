@@ -14,7 +14,7 @@ import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
-import { DETAIL } from '../strips';
+import { fineGrid } from '../strips';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
@@ -41,6 +41,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private shadows: ShadowMap | null = null;
   private ground: Ground | null = null;
   private scale = 4;
+  /** Screen cells to the art pixel for particles (see `fineGrid`). */
+  private fxGrid = fineGrid(4);
   private readonly ys = Math.sin(PITCH);
   private readonly cosP = Math.cos(PITCH);
   private ox = 0;
@@ -84,6 +86,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   setScale(s: number): void {
     this.scale = s;
+    this.fxGrid = fineGrid(s);
   }
 
   sx(x: number): number {
@@ -232,14 +235,13 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 
-    // particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art
-    // pixel) so smoke and fire have the same grain as what they come off. Smoke first, fire over
-    // it, then the additive cells (sparks, embers, the hot core of a flame).
+    // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
+    // Smoke first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
     this.queueParticles(fx);
-    this.quads.flush(quadView, quadOrigin, S / DETAIL);
+    this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
     gl.blendFunc(gl.ONE, gl.ONE);
-    this.glow.flush(quadView, quadOrigin, S / DETAIL);
+    this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
 
@@ -273,23 +275,37 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
 
   /**
-   * Particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art pixel)
-   * so smoke and fire have the same grain as what they come off. Smoke first, fire over it; the
-   * additive cells (sparks, embers, the hot core of a flame) go to the glow batch.
+   * Particles, on the screen's own fine grid: one cell is `fxGrid` to the art pixel, about two
+   * device pixels (one CSS pixel), as small as mudders draws its fire and smoke at a whole-map
+   * view. Fire, smoke, sparks and embers are single cells on that grid; the few blob particles
+   * left (art px sizes) are drawn on it too, so their edges step in fine cells. Smoke first, fire
+   * over it; the additive cells (sparks, embers, the hot core of a flame) go to the glow batch.
    */
   private queueParticles(fx: Effects): void {
-    const G = DETAIL;
-    const cell = (v: number) => Math.floor(v * G) + 0.5;
-    const normal: Put = (x, y, z, d, rgb, a, shape) =>
-      this.quads.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, shape);
-    const glow: Put = (x, y, z, d, rgb, a) =>
-      this.glow.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, Shape.Rect);
+    const G = this.fxGrid;
+    // a cell's place on the grid: odd sizes sit on a cell, even ones on the line between cells
+    const at = (v: number, n: number) => (n & 1 ? Math.floor(v * G) + 0.5 : Math.round(v * G));
+    // sizes in art px (blobs)
+    const normal: Put = (x, y, z, d, rgb, a, shape) => {
+      const n = Math.max(1, Math.round(d * G));
+      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+    };
+    const glow: Put = (x, y, z, d, rgb, a) => {
+      const n = Math.max(1, Math.round(d * G));
+      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+    };
+    // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
+    const cellN: Put = (x, y, z, n, rgb, a, shape) =>
+      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+    const cellG: Put = (x, y, z, n, rgb, a) =>
+      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+    const one = 1 / G;
     for (const f of fx.fx)
-      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
+      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
     for (const f of fx.fx)
-      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
-    fx.cells.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
-    fx.shock.sparks.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
+      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
+    fx.cells.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
+    fx.shock.sparks.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
   }
 
@@ -350,8 +366,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.queueShadows(this.frameW, this.fx);
     this.quads.flush(q, o, this.scale, step);
     this.queueParticles(this.fx);
-    this.quads.flush(q, o, this.scale / DETAIL, step);
-    this.glow.flush(q, o, this.scale / DETAIL, step);
+    this.quads.flush(q, o, this.scale / this.fxGrid, step);
+    this.glow.flush(q, o, this.scale / this.fxGrid, step);
   }
 
   /** Slices drawn last frame (for the perf readout and tests). */

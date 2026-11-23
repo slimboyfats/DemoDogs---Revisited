@@ -93,4 +93,65 @@ describe('cells', () => {
     expect(yat(0)).not.toBe(0);
     expect(at(1)).toBe(200);
   });
+
+  it('gas lets go `split` finer cells at once, leaves stay one', () => {
+    const C = new Cells(64, rng());
+    C.split = 4;
+    C.add(CKind.Fire, 0, 0, 1, 0, 0, 0, 1);
+    expect(C.n).toBe(4);
+    C.add(CKind.Leaf, 0, 0, 10, 0, 0, 0, 5, 0x3f8a3f);
+    expect(C.n).toBe(5);
+  });
+
+  it('a fast car drags smoke along behind it and stirs it into a wake', () => {
+    const run = (car: boolean) => {
+      const C = new Cells(64, rng());
+      // smoke hanging over the road, a little behind and beside where the car is
+      for (let k = 0; k < 6; k++) C.add(CKind.Wisp, -6, (k - 3) * 2, 2, 0, 0, 0, 3, 0x808080);
+      for (let t = 0; t < 30; t++) {
+        C.movers.length = 0;
+        if (car) C.movers.push(t * 4, 0, 0, 240, 0);
+        C.step(1 / 60);
+      }
+      // the mean drift along the car's way and the spread across it
+      let ax = 0;
+      let ys = 0;
+      const seen: number[] = [];
+      C.draw(
+        (x, y) => seen.push(x, y),
+        () => {},
+        () => true,
+      );
+      for (let i = 0; i < seen.length; i += 2) {
+        ax += seen[i]!;
+        ys += Math.abs(seen[i + 1]!);
+      }
+      return { ax: ax / (seen.length / 2), ys: ys / (seen.length / 2) };
+    };
+    const calm = run(false);
+    const stirred = run(true);
+    expect(stirred.ax - calm.ax).toBeGreaterThan(8);
+    expect(stirred.ys).not.toBe(calm.ys);
+    // behind a back corner the air turns: across the car's way, opposite on the two sides
+    const C = new Cells(1, rng());
+    C.movers.push(0, 0, 0, 200, 0);
+    const l: [number, number, number] = [0, 0, 0];
+    const r: [number, number, number] = [0, 0, 0];
+    C.stir(-30, -14, 1, l);
+    C.stir(-30, 14, 1, r);
+    expect(Math.abs(l[1])).toBeGreaterThan(5);
+    expect(Math.sign(l[1])).toBe(-Math.sign(r[1]));
+  });
+
+  it('a slow car leaves the air alone', () => {
+    const C = new Cells(8, rng());
+    const out: [number, number, number] = [0, 0, 0];
+    C.movers.push(0, 0, 0, 10, 0);
+    C.stir(-3, 0, 1, out);
+    expect(out).toEqual([0, 0, 0]);
+    const D = new Cells(8, rng());
+    D.movers.push(0, 0, 0, 200, 0);
+    D.stir(-3, 0, 1, out);
+    expect(out[0]).toBeGreaterThan(20);
+  });
 });
