@@ -1,0 +1,13 @@
+{
+  "id": "pickup.shiny-coat",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Shiny Coat",
+    "description": "Mirror plates down both flanks: gun rounds, rail slugs and sticky darts go back where they came from.",
+    "since": "core@0.7.0"
+  },
+  "kind": "mirror",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 10
+}

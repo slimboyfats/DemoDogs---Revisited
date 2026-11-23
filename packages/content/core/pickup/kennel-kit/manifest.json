@@ -1,0 +1,24 @@
+{
+  "id": "pickup.kennel-kit",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Kennel Kit",
+    "description": "A crate of countermeasures: one of ten defences that act by themselves when trouble turns up.",
+    "since": "core@0.7.0"
+  },
+  "kind": "kit",
+  "weight": 0.3,
+  "hurtWeight": 0.36,
+  "kits": [
+    "pickup.squeaker",
+    "pickup.snapper",
+    "pickup.shiny-coat",
+    "pickup.pack-bond",
+    "pickup.whiskers",
+    "pickup.ground-lead",
+    "pickup.dig-in",
+    "pickup.wet-dog",
+    "pickup.dog-whistle",
+    "pickup.bubble-wrap"
+  ]
+}

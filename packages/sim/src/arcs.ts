@@ -2,6 +2,7 @@ import { CAR_RADIUS, DT, type WeaponManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 import { angDiff } from './math';
 import { batter, damage, explode, ignite, light, shed } from './damage';
+import { earthed, held } from './guards';
 import type { World } from './world';
 
 /**
@@ -71,10 +72,13 @@ function strike(w: World, c: Car, d: WeaponManifest): void {
     y = best.y;
     pts.push(x, y);
     // a jolt: the engine cuts out for a moment and the car shakes
-    best.vx *= 0.86;
-    best.vy *= 0.86;
-    best.spin += w.rng.range(-1.5, 1.5);
-    damage(w, best, amount, c, x, y);
+    // (unless it trails a lead that takes the bolt to ground)
+    if (!earthed(w, best)) {
+      best.vx *= 0.86;
+      best.vy *= 0.86;
+      best.spin += w.rng.range(-1.5, 1.5);
+      damage(w, best, amount, c, x, y);
+    }
     // the spark sets alight a slick under it, and a drum beside it
     ignite(w, x, y, CAR_RADIUS, c.index);
     for (const p of w.props)
@@ -187,8 +191,9 @@ export function updateOrbs(w: World): void {
       const dx = o.x - c.x;
       const dy = o.y - c.y;
       const d = Math.hypot(dx, dy);
-      const f = pull(o, d) * (c.index === o.owner ? 0.4 : 1);
+      let f = pull(o, d) * (c.index === o.owner ? 0.4 : 1);
       if (!f) continue;
+      f *= held(w, c);
       // pulled in and swung round: the swirl goes anticlockwise
       c.vx += ((dx / d) * f + (-dy / d) * f * 0.35) * DT * 3;
       c.vy += ((dy / d) * f + (dx / d) * f * 0.35) * DT * 3;

@@ -4,6 +4,7 @@ import type { LooseProp, StaticProp } from './entities';
 import { TAU } from './math';
 import { circles } from './physics';
 import type { Rng } from './prng';
+import { padded } from './guards';
 import type { World } from './world';
 
 /**
@@ -212,7 +213,7 @@ export function smash(w: World, p: LooseProp): void {
   for (const c of w.cars) {
     if (c.wrecked || c.z > 8 || Math.abs(c.x - p.x) > 30 || Math.abs(c.y - p.y) > 30) continue;
     if (!circles(c).some((q) => Math.hypot(q[0] - p.x, q[1] - p.y) < m)) continue;
-    damage(w, c, C * k, null, p.x, p.y);
+    if (!padded(w, c, p.x, p.y)) damage(w, c, C * k, null, p.x, p.y);
     hit = true;
     player ||= c === w.player;
   }

@@ -1,4 +1,5 @@
 import type { Car, Rocket } from './entities';
+import { hidden } from './guards';
 import { angDiff } from './math';
 import type { World } from './world';
 
@@ -17,6 +18,7 @@ export function lockOn(w: World, r: Rocket): void {
   for (const c of w.cars) {
     // (not a car on another level: a flyover deck above it, or the road under it)
     if (c.index === r.owner || c.wrecked || c.invuln > 0 || Math.abs(c.deck - r.z) > 8) continue;
+    if (hidden(c)) continue;
     const d = Math.hypot(c.x - r.x, c.y - r.y);
     if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < L.cone) {
       bd = d;
@@ -30,7 +32,7 @@ export function lockOn(w: World, r: Rocket): void {
 export function lockedOn(w: World, r: Rocket): Car | null {
   if (r.target === undefined) return null;
   const c = w.cars[r.target];
-  if (c && !c.wrecked) return c;
+  if (c && !c.wrecked && !hidden(c)) return c;
   delete r.target;
   return null;
 }

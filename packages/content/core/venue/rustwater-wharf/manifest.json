@@ -113,6 +113,7 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.kennel-kit"
   ]
 }

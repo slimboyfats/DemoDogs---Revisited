@@ -42,6 +42,7 @@ import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
+import { GuardState, guardEvent, guardTick } from './guards-fx';
 import { armsEvent, armsTick } from './arms-fx';
 
 const TAU = Math.PI * 2;
@@ -221,6 +222,8 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** Guards: where turrets point, which feelers twitch and which claws are down. */
+  readonly guards = new GuardState();
 
   constructor(
     readonly w: World,
@@ -1421,6 +1424,9 @@ export class Effects {
         case 'stall':
           this.shock.handle(e);
           break;
+        case 'guard':
+          guardEvent(this, w, e, S);
+          break;
         case 'howl':
         case 'hurl':
           howlEvent(this, w, e, S);
@@ -1758,6 +1764,7 @@ export class Effects {
     this.cells.step(DT);
     this.shock.step(DT);
     howlTick(this, w);
+    guardTick(this, w, this.sound);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

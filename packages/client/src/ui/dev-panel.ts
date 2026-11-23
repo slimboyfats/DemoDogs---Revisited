@@ -1,3 +1,4 @@
+import { guardLabels } from '../render/hud';
 import {
   dropsBehind,
   isArms,
@@ -361,7 +362,10 @@ export class DevPanel {
         (c) =>
           `${c.def.meta.name} ${c.wrecked ? 'wrecked' : Math.ceil(c.hp)}` +
           (c.shield > 0 ? ` shield ${Math.ceil(c.shield)}` : '') +
-          (c.weldT > 0 ? ' welding' : ''),
+          (c.weldT > 0 ? ' welding' : '') +
+          guardLabels(c)
+            .map((g) => ` ${g.toLowerCase()}`)
+            .join(''),
       )
       .join('  ');
     this.statsEl.textContent =

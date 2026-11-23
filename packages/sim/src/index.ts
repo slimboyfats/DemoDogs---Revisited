@@ -26,6 +26,7 @@ export type { Pulse } from './shock';
 export { howl, howlWants, type Howl } from './howl';
 export { fitMover, nose } from './movers';
 export { grant } from './things';
+export * from './guards';
 export * from './arms';
 export { light } from './damage';
 export * from './arcs';

@@ -1,7 +1,20 @@
-import type { World } from '@demodogs/sim';
+import { GUARD_KINDS } from '@demodogs/shared';
+import type { Car, World } from '@demodogs/sim';
 import type { Effects } from './effects';
 
 const TAU = Math.PI * 2;
+
+/** The guards a car carries, as the HUD names them: seconds left, or uses left. */
+export function guardLabels(c: Car): string[] {
+  const out: string[] = [];
+  for (const k of GUARD_KINDS) {
+    const g = c.guards[k];
+    if (!g) continue;
+    const name = g.def.meta.name.toUpperCase();
+    out.push(g.def.seconds !== undefined ? `${name} ${Math.ceil(g.t)}s` : `${name} x${g.n}`);
+  }
+  return out;
+}
 
 export function placeName(n: number): string {
   return n + (n === 1 ? 'ST' : n === 2 ? 'ND' : n === 3 ? 'RD' : 'TH');
@@ -136,6 +149,7 @@ export class Hud {
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
       P.springs && P.springs.n > 0 ? `SPRINGS x${P.springs.n}` : '',
+      ...guardLabels(P),
     ]
       .filter(Boolean)
       .join('  ');

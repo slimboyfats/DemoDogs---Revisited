@@ -1,0 +1,14 @@
+{
+  "id": "pickup.snapper",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Snapper",
+    "description": "A snappy little roof gun that bites rockets, shells and darts out of the air before they land.",
+    "since": "core@0.7.0"
+  },
+  "kind": "flak",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "charges": 6,
+  "reach": 46
+}

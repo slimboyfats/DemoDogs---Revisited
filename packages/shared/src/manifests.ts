@@ -509,10 +509,51 @@ export const WeaponSchema = z.strictObject({
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 
+/**
+ * Guards: countermeasures a car carries that act by themselves when the thing they guard against
+ * turns up. Each is a pickup kind.
+ *
+ * - decoy   thrown out when a rocket comes for the car; rockets chase it instead and burst on it
+ * - flak    shoots rockets, shells and darts out of the air within `reach`
+ * - mirror  gun rounds, rail slugs and sticky darts go back the way they came
+ * - bond    `amount` of every blow runs down a leash of sparks to the nearest rival within `reach`
+ * - sweep   feelers that set mines off early and flick spikes aside, `reach` ahead
+ * - earth   a trailing lead that takes shocks and lightning to ground
+ * - anchor  claws that hold the car where a blast, a shockwave or a pull would throw it
+ * - soak    a wet coat: fire does not burn it, and fire within `reach` is put out
+ * - jam     guns, seeker rockets and lobbed shells cannot pick the car out
+ * - pads    what the car drives into, or what falls on it, costs no armour
+ */
+export const GUARD_KINDS = [
+  'decoy',
+  'flak',
+  'mirror',
+  'bond',
+  'sweep',
+  'earth',
+  'anchor',
+  'soak',
+  'jam',
+  'pads',
+] as const;
+export type GuardKind = (typeof GUARD_KINDS)[number];
+
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
-  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash', 'shield', 'weld', 'blade', 'springs']),
+  kind: z.enum([
+    'repair',
+    'nitro',
+    'arms',
+    'ammo',
+    'cash',
+    'shield',
+    'weld',
+    'blade',
+    'springs',
+    'kit',
+    ...GUARD_KINDS,
+  ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
@@ -530,6 +571,13 @@ export const PickupSchema = z.strictObject({
   /** Springs: leaps it holds, and how hard each one throws the car up (art px/s). */
   charges: z.number().int().positive().optional(),
   lift: z.number().positive().optional(),
+  /** Kit: a crate that holds one of these pickups, picked at random. */
+  kits: z.array(id('pickup')).min(1).optional(),
+  /**
+   * Guards (see GUARD_KINDS, and guards.ts in the sim): `charges` uses or `seconds` on the car,
+   * and how far it reaches (art px). A bond's `amount` is the share of each blow it passes on.
+   */
+  reach: z.number().positive().optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 
