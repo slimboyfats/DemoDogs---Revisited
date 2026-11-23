@@ -21,6 +21,9 @@ describe('key bindings', () => {
     expect(hintFor('pause')).toBe('P');
     expect(keyName('arrowleft')).toBe('◀');
     expect(keyName('escape')).toBe('ESC');
+    expect(hintFor('watch')).toBe('TAB');
+    expect(hintFor('zoom')).toBe('Z');
+    expect(hintFor('skip')).toBe('ENTER');
   });
 
   it('finds what a key does', () => {

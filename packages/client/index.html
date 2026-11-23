@@ -42,6 +42,25 @@
         </div>
       </div>
     </div>
+    <!-- spectating, once your car is out of it: tap anywhere for the next car -->
+    <div id="spectate" class="hidden">
+      <div id="specTap"></div>
+      <div id="specBar">
+        <button id="specPrev" aria-label="Previous car">&#9664;</button>
+        <div id="specWho">
+          <small>WATCHING · TAP FOR NEXT</small>
+          <b><i id="specDot"></i><span id="specName"></span></b>
+          <small id="specSub"></small>
+        </div>
+        <button id="specNext" aria-label="Next car">&#9654;<kbd data-act="watch"></kbd></button>
+        <button id="specZoom">
+          <small>ZOOM</small><span id="specZoomLabel">CLOSE</span><kbd data-act="zoom"></kbd>
+        </button>
+        <button id="specSkip">
+          <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
+        </button>
+      </div>
+    </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
     <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
     <div id="recDot"></div>
@@ -91,8 +110,8 @@
             <p class="help">
               <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
               BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X fire,
-              P pause.<br />Smash scrap bots for points and boost. Crates give rockets, mines,
-              repairs.
+              P pause.<br /><b>Scrapped?</b> Tap (or Tab) to watch the next car, ZOOM (or Z) to pull
+              back.<br />Smash scrap bots for points and boost. Crates give rockets, mines, repairs.
             </p>
             <button class="muteBtn small">SOUND ON</button>
             <button class="hintsBtn small">KEY HINTS ON</button>
