@@ -270,6 +270,7 @@ uniform vec3 u_hot;
 uniform int u_lcount;
 uniform vec4 u_lpos[${MAX_LIGHTS}];
 uniform vec3 u_lcol[${MAX_LIGHTS}];
+uniform vec3 u_amb; // the sky's light on smoke and fog (1 by day)
 out vec4 v_color;
 float stepT(float t, float th, float n) { return min(1.0, floor(t * n + th) / n); }
 vec3 rgbOf(float c) {
@@ -327,6 +328,7 @@ void main() {
       a = 0.4;
     } else c = u_bang[int(floor(f * 8.0 + 0.5))];
   } else return;
+  if (lit) c *= u_amb;
   if (lit && u_lcount > 0) {
     vec3 L = vec3(0.0);
     for (int i = 0; i < ${MAX_LIGHTS}; i++) {
@@ -386,6 +388,7 @@ const DRAW_U = [
   'u_lcount',
   'u_lpos',
   'u_lcol',
+  'u_amb',
 ] as const;
 
 const rgb3 = (c: number): number[] => [
@@ -653,7 +656,7 @@ export class GasGpu {
    * Draw one pass (0 smoke and cool fire, 1 hot fire and bang, 2 glow). Blending is the
    * caller's: premultiplied for 0 and 1, additive for 2.
    */
-  draw(v: GasView, lights: Lights, pass: 0 | 1 | 2): void {
+  draw(v: GasView, lights: Lights, pass: 0 | 1 | 2, amb?: Float32Array): void {
     this.upload();
     this.unseen = 0;
     const runs = this.runs;
@@ -674,6 +677,8 @@ export class GasGpu {
     gl.uniform1i(u.u_lcount, lights.count);
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);
+    if (amb) gl.uniform3fv(u.u_amb, amb);
+    else gl.uniform3f(u.u_amb, 1, 1, 1);
     gl.bindVertexArray(this.vaos[this.cur]!);
     for (let i = 0; i < runs.length; i += 2) gl.drawArrays(gl.POINTS, runs[i]!, runs[i + 1]!);
     gl.bindVertexArray(null);

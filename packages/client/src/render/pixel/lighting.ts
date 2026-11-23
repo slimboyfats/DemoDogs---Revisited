@@ -4,7 +4,10 @@
  * wrecks, rockets and pickups, and light the sprite stacks in hard dithered bands.
  */
 
-export const MAX_LIGHTS = 8;
+export const MAX_LIGHTS = 12;
+/** Headlamp beams a frame, and how far one reaches (art px). */
+export const MAX_CONES = 8;
+export const CONE_REACH = 96;
 /** Light bands per unit strength (hard steps, dithered between). */
 export const LIGHT_BANDS = 4;
 
@@ -15,9 +18,23 @@ export class Lights {
   /** rgb 0–1. */
   readonly col = new Float32Array(MAX_LIGHTS * 3);
   count = 0;
+  /** Headlamp beams: x, y, and the unit direction they shine in. */
+  readonly cones = new Float32Array(MAX_CONES * 4);
+  coneCount = 0;
 
   clear(): void {
     this.count = 0;
+    this.coneCount = 0;
+  }
+
+  /** Add a headlamp beam from (x, y) along `heading`; past the limit it is left out. */
+  cone(x: number, y: number, heading: number): void {
+    if (this.coneCount >= MAX_CONES) return;
+    const o = this.coneCount++ * 4;
+    this.cones[o] = x;
+    this.cones[o + 1] = y;
+    this.cones[o + 2] = Math.cos(heading);
+    this.cones[o + 3] = Math.sin(heading);
   }
 
   /** Add a light; when full, it replaces the weakest one if it is stronger. */

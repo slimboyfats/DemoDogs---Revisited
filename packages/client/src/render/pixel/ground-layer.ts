@@ -36,6 +36,11 @@ export class GroundLayer {
       'u_lcount',
       'u_lpos',
       'u_lcol',
+      'u_amb',
+      'u_snow',
+      'u_wet',
+      'u_cone',
+      'u_ccount',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -58,7 +63,11 @@ export class GroundLayer {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, gl.RGBA, gl.UNSIGNED_BYTE, img);
   }
 
-  draw(v: StackView, lights: Lights): void {
+  draw(
+    v: StackView,
+    lights: Lights,
+    sky?: { ground: Float32Array; snow: number; wet: number },
+  ): void {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
@@ -70,6 +79,12 @@ export class GroundLayer {
     gl.uniform1i(u.u_lcount, lights.count);
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);
+    gl.uniform4fv(u.u_cone, lights.cones);
+    gl.uniform1i(u.u_ccount, lights.coneCount);
+    if (sky) gl.uniform3fv(u.u_amb, sky.ground);
+    else gl.uniform3f(u.u_amb, 1, 1, 1);
+    gl.uniform1f(u.u_snow, sky?.snow ?? 0);
+    gl.uniform1f(u.u_wet, sky?.wet ?? 0);
     gl.uniform2f(u.u_size, this.ground.cv.width, this.ground.cv.height);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);

@@ -61,3 +61,15 @@ export const PALETTE: Record<string, Tones> = {
   dead: ['#4a4038', '#655a50', '#857a6e'],
   moss: ['#3a5a2a', '#4f7a38', '#6f9c4c'],
 };
+
+/**
+ * The materials that give off light, and how strongly (1 to 7): lamps and lenses. They keep
+ * their colour when the scene darkens, and the renderer lets them shine.
+ */
+export const GLOWS: Readonly<Record<string, number>> = {
+  light: 7,
+  tail: 5,
+  glow: 6,
+  boteye: 7,
+  minelit: 7,
+};
