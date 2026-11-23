@@ -16,6 +16,28 @@ export const TRACK_VERSION = 1;
 /** The map's edge is fenced: nothing of the road may come nearer to it than this. */
 export const TRACK_MARGIN = 70;
 
+/** A thing put down by hand may be from half to three times its usual size, in quarter steps. */
+export const SIZE_MIN = 0.5;
+export const SIZE_MAX = 3;
+export const SIZE_STEP = 0.25;
+
+/** The nearest size a thing can have to `k`. */
+export const sizeStep = (k: number): number =>
+  Math.min(SIZE_MAX, Math.max(SIZE_MIN, Math.round(k / SIZE_STEP) * SIZE_STEP));
+
+/**
+ * The id a prop goes by at another size: a track that has a cone at twice its size has a prop of
+ * its own for it, made when the track is installed, with this id. At its usual size, its own id.
+ */
+export const sizedId = (prop: string, size = 1): string =>
+  sizeStep(size) === 1 ? prop : `${prop}-x${Math.round(sizeStep(size) * 100)}`;
+
+/** The prop a sized id was made from, and its size (any other id: itself, 1). */
+export function sizeOfId(id: string): [string, number] {
+  const m = /^(.+)-x(\d{2,3})$/.exec(id);
+  return m ? [m[1]!, Number(m[2]) / 100] : [id, 1];
+}
+
 export const TrackFileSchema = z.object({
   format: z.literal(TRACK_FORMAT),
   version: z.literal(TRACK_VERSION),
@@ -45,7 +67,16 @@ export const TrackFileSchema = z.object({
   dressing: z.array(z.strictObject({ on: z.boolean(), rule: z.unknown() })).max(40),
   /** Things put down by hand: a prop at map coordinates, turned `rot` radians. */
   items: z
-    .array(z.strictObject({ prop: z.string(), x: z.number(), y: z.number(), rot: z.number() }))
+    .array(
+      z.strictObject({
+        prop: z.string(),
+        x: z.number(),
+        y: z.number(),
+        rot: z.number(),
+        /** How many times its usual size it is (absent: 1). See `sizedId`. */
+        size: z.number().min(SIZE_MIN).max(SIZE_MAX).optional(),
+      }),
+    )
     .max(1200),
   /** Pools laid by hand: mud, ice, oil. */
   pools: z

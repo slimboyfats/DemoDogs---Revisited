@@ -184,12 +184,26 @@ check(
   Math.abs(Math.cos(cone.rot)) < 0.5,
   `a thing on the road should line up with it (rot ${cone.rot})`,
 );
+// tap the cone to choose it: turn it, make it bigger, then let go of it
+await tapMap(cone.x, cone.y);
 await bar('⟳').tap();
 await page.waitForTimeout(300);
 check(
   Math.abs((await track()).items[4].rot - cone.rot - Math.PI / 12) < 1e-6,
-  'the turn button did not turn it',
+  'the turn button did not turn the chosen thing',
 );
+await bar('BIGGER').tap();
+await bar('BIGGER').tap();
+await page.waitForTimeout(400);
+const bigCone = await page.evaluate(
+  () => window.__dd.session.world.props.filter((p) => p.def.id === 'prop.cone-x150').length,
+);
+check(
+  (await track()).items[4].size === 1.5 && bigCone === 1,
+  `the chosen thing did not grow (${bigCone} big cones in the world)`,
+);
+await shot('7a-chosen-thing');
+await bar('DONE').tap();
 // track pieces: a boost pad on the road, and a flock of animals that the world brings alive
 await pickTile('prop.boost-pad');
 await tapMap(rx, ry - 200);
