@@ -1,7 +1,7 @@
 // Track-piece captures: stage the boost tiles, ramps, animals and new props on the test range
 // in headless Chromium (844x390, dpr 2) and save stills, and frames for a video when asked.
 // `pnpm build && node scripts/capture-life.mjs [out-dir] [--only=scene] [--venues=a,b] [--frames]
-// [--dpr=1]` (default captures/life/). Scenes: pieces, boost, jump, animals, corn, race.
+// [--dpr=1]` (default captures/life/). Scenes: pieces, boost, jump, animals, charge, corn, race.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -142,9 +142,19 @@ if (scene('pieces')) {
       for (let i = 0; i < 5; i++)
         for (let j = 0; j < 3; j++) dd.lay(id, at(-152 + k * 38 + i * 6), -24 + j * 6);
     });
-    ['chickens', 'penguins', 'rabbits', 'crows', 'sheep', 'cow', 'deer', 'gulls'].forEach((id, k) =>
-      dd.lay(id, at(-140 + (k % 4) * 52), 26 + Math.floor(k / 4) * 32),
-    );
+    [
+      'chickens',
+      'penguins',
+      'rabbits',
+      'crows',
+      'sheep',
+      'cow',
+      'deer',
+      'gulls',
+      'bull',
+      'ram',
+      'moose',
+    ].forEach((id, k) => dd.lay(id, at(-140 + (k % 4) * 52), 26 + Math.floor(k / 4) * 32));
     // stood still to be looked at
     for (const k of w.critters) k.t = 99;
   });
@@ -210,6 +220,50 @@ if (scene('animals')) {
   await shot('cow');
   await roll(40, GO);
 }
+
+// 4b: the ones that hit back: a bull, a pair of rams and a moose, each catching the car
+if (scene('charge'))
+  for (const [id, dy] of [
+    ['bull', 46],
+    ['ram', -40],
+    ['moose', 52],
+  ]) {
+    await range();
+    await page.evaluate(
+      ([id, dy]) => {
+        const dd = window.__dd;
+        dd.put(0, -210, 0, 0, 120);
+        dd.lay(id, 0, dy);
+      },
+      [id, dy],
+    );
+    const state = () =>
+      page.evaluate(() => {
+        const w = window.__dd.session.world;
+        return `${w.critters.map((k) => k.state).join()} ${Math.round(w.cars[0].hp)}`;
+      });
+    let got = '';
+    for (let i = 0; i < 110; i++) {
+      await roll(2, GO);
+      const now = await state();
+      if (!got.includes('w') && now.includes('wind')) {
+        await roll(12, GO);
+        await shot(`${id}-warning`);
+        got += 'w';
+      } else if (!got.includes('c') && now.includes('charge')) {
+        await roll(6, GO);
+        await shot(`${id}-charge`);
+        got += 'c';
+      } else if (!got.includes('h') && !now.endsWith(' 100')) {
+        await roll(4, GO);
+        await shot(`${id}-rammed`);
+        got += 'h';
+        await roll(50, IDLE);
+        break;
+      }
+    }
+    console.log(id, got, await state());
+  }
 
 // 5: a path cut through a field of corn
 if (scene('corn')) {

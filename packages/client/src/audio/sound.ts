@@ -354,7 +354,7 @@ export class Sound {
   }
 
   /** An animal's cry. */
-  cry(kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak', v = 1): void {
+  cry(kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow', v = 1): void {
     switch (kind) {
       case 'cluck':
         // three short clucks and a squawk
@@ -381,6 +381,24 @@ export class Sound {
       case 'squeak':
         this.squeak(v);
         break;
+      case 'snort':
+        // two hard blasts of breath through the nose
+        for (let i = 0; i < 2; i++) {
+          this.noise(0.16, 700, 1.4, 0.22 * v, 'bandpass', i * 0.2);
+          this.tone(90, 0.16, 0.14 * v, 'sawtooth', 0.8, i * 0.2);
+        }
+        break;
+      case 'bellow':
+        // a long low roar that climbs
+        this.tone(70, 1.1, 0.22 * v, 'sawtooth', 1.5);
+        this.tone(140, 1, 0.1 * v, 'square', 1.45, 0.03);
+        this.noise(0.9, 320, 1.6, 0.12 * v, 'bandpass');
+        break;
     }
+  }
+
+  /** Hooves coming on fast. */
+  stampede(v = 1): void {
+    for (let i = 0; i < 9; i++) this.noise(0.05, 160, 1.2, 0.2 * v, 'lowpass', i * 0.075);
   }
 }

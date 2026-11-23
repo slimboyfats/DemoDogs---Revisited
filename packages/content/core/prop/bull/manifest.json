@@ -1,0 +1,32 @@
+{
+  "id": "prop.bull",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bull",
+    "description": "A bull with the field to itself. Drive past and it turns, paws the ground and comes for you head down: swerve late, or put a tree between you.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 5.8,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 1],
+    "roam": 40,
+    "walk": 5,
+    "run": 40,
+    "scare": 30,
+    "cry": "snort",
+    "mass": 4,
+    "shy": 45,
+    "step": 0.4,
+    "charge": {
+      "notice": 135,
+      "wind": 0.75,
+      "speed": 190,
+      "reach": 240,
+      "hit": 22,
+      "shove": 150,
+      "rest": 3.5
+    }
+  }
+}

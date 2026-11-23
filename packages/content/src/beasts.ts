@@ -22,6 +22,8 @@ export interface Beast {
   /** Ears or horns of this material, a tail of this one. */
   ears?: string;
   tail?: string;
+  /** Horns or antlers that stand this far out to each side, art px (with `ears` as their material). */
+  horn?: number;
   /** Woolly: the coat is lumpy. */
   woolly?: boolean;
 }
@@ -33,9 +35,10 @@ export function beast(B: Beast, pose: 0 | 1): Part {
   const top = B.leg + B.deep;
   const hx = B.len / 2 + B.head * 0.55;
   const hz = B.leg + B.deep * 0.62 + B.neck - (pose ? 0.35 : 0);
-  const layers = Math.ceil(Math.max(top, hz + B.head) + (B.ears ? 1.4 : 0.4));
+  const layers = Math.ceil(Math.max(top, hz + B.head) + (B.ears ? 1.4 + (B.horn ?? 0) * 0.5 : 0.4));
   const w = Math.ceil(B.len + B.head * 2.4 + 3);
-  const h = Math.ceil(B.wid + 3);
+  const horn = B.horn ?? 0;
+  const h = Math.ceil(Math.max(B.wid, (B.head * 0.8 + horn) * 2) + 3);
   return {
     w,
     h,
@@ -69,6 +72,17 @@ export function beast(B: Beast, pose: 0 | 1): Part {
         Math.abs(Math.abs(y) - B.head * 0.8) < 0.5
       )
         return B.ears;
+      // horns: out to the side from the top of the head and curving up at the tips
+      if (B.ears && horn > 0) {
+        const out = Math.abs(y) - B.head * 0.7;
+        if (
+          out > 0 &&
+          out < horn &&
+          Math.abs(x - hx + 0.3) < 0.7 &&
+          Math.abs(z - (hz + B.head * 0.6 + sq(out / horn) * horn * 0.5)) < 0.65
+        )
+          return B.ears;
+      }
       // neck
       const t = (x - B.len * 0.3) / (hx - B.len * 0.3);
       if (t > 0 && t < 1 && Math.abs(y) < B.head * 0.6) {

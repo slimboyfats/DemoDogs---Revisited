@@ -1,0 +1,32 @@
+{
+  "id": "prop.ram",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rams",
+    "description": "Mountain rams with a short temper. Quick off the mark and they hunt in twos: the butt is light, but it puts you sideways.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 3.6,
+  "critter": {
+    "kind": "ground",
+    "group": [2, 3],
+    "roam": 44,
+    "walk": 7,
+    "run": 60,
+    "scare": 30,
+    "cry": "baa",
+    "mass": 0.9,
+    "shy": 45,
+    "step": 0.9,
+    "charge": {
+      "notice": 100,
+      "wind": 0.45,
+      "speed": 205,
+      "reach": 170,
+      "hit": 8,
+      "shove": 120,
+      "rest": 2.2
+    }
+  }
+}
