@@ -29,6 +29,7 @@ export { grant } from './things';
 export * from './arms';
 export { light } from './damage';
 export * from './arcs';
+export * from './arsenal';
 export { breached, riversOf, type River } from './river';
 export { inWater } from './docks';
 export * from './dmath';

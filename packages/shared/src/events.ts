@@ -143,6 +143,24 @@ export type SimEvent =
   | { t: 'lightning'; car: number; pts: number[] }
   /** A suction orb anchored at (x, y) and began to pull everything within r. */
   | { t: 'orb'; x: number; y: number; r: number }
+  /** A thrown stick came back to the hand of the car that threw it. */
+  | { t: 'catch'; car: number; x: number; y: number }
+  /** A hook bit car `to` at (x, y) and tied it to car `from`. */
+  | { t: 'leash'; from: number; to: number; x: number; y: number }
+  /** A line between two cars parted, at (x, y). */
+  | { t: 'snap'; x: number; y: number }
+  /** A shell is on its way down to (x, y) and lands `in` seconds from now. */
+  | { t: 'incoming'; x: number; y: number; in: number }
+  /** A turret at (x, y) was set down, was run over, or ran out of rounds or time. */
+  | { t: 'sentry'; what: 'up' | 'crushed' | 'spent'; x: number; y: number }
+  /** A flea jumped onto a car at (x, y). */
+  | { t: 'flea'; car: number; x: number; y: number }
+  /** A car's cutting ray came on or went off. */
+  | { t: 'beam'; car: number; on: boolean }
+  /** Cars a and b changed places: a was at (ax, ay) and b at (bx, by). */
+  | { t: 'swap'; a: number; b: number; ax: number; ay: number; bx: number; by: number }
+  /** Something thrown (a stick, a hook, a bolt) was spent against something at (x, y). */
+  | { t: 'fizz'; x: number; y: number }
   /** A spray's drop struck something at (x, y): `lit` drops burn, others splash. */
   | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */

@@ -1,0 +1,18 @@
+{
+  "id": "weapon.hot-paws",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hot Paws",
+    "description": "For a few seconds the car's wheels leave a wall of fire on the road behind them.",
+    "since": "core@0.7.0"
+  },
+  "kind": "trail",
+  "label": "HOT PAWS",
+  "ammo": 2,
+  "power": 0.2,
+  "cooldown": 1.0,
+  "life": 3.5,
+  "radius": 8,
+  "reach": 14,
+  "fuse": 3.5
+}

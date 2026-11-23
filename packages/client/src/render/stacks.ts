@@ -12,6 +12,7 @@ import type { Effects } from './effects';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
+import { queueArsenal } from './arsenal-fx';
 import { leanAt } from './rubble';
 
 const MINE_OFF = { minelit: 'black' };
@@ -106,6 +107,7 @@ export function queueStacks(
     R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
   queueArms(R, art, w);
+  queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(R, art, fx, b);
   for (const d of fx.debris)
     if (R.visible(d.x, d.y, 8, 10)) {

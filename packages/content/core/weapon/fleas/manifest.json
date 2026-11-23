@@ -1,0 +1,20 @@
+{
+  "id": "weapon.fleas",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fleas",
+    "description": "A boxful of fleas. They hop to the nearest rivals, cling on and bite, and the car twitches as it scratches. A jump shakes them off.",
+    "since": "core@0.7.0"
+  },
+  "kind": "swarm",
+  "label": "FLEAS",
+  "ammo": 2,
+  "power": 0.1,
+  "cooldown": 1.0,
+  "speed": 110,
+  "range": 180,
+  "count": 7,
+  "damage": 1.5,
+  "life": 5,
+  "fuse": 4
+}

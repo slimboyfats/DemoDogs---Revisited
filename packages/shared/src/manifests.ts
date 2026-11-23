@@ -405,6 +405,16 @@ export const WeaponSchema = z.strictObject({
     'arc',
     'vortex',
     'howl',
+    'boomerang',
+    'skip',
+    'tether',
+    'barrage',
+    'burrow',
+    'sentry',
+    'swarm',
+    'beam',
+    'swap',
+    'trail',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -506,6 +516,24 @@ export const WeaponSchema = z.strictObject({
    * swept along with the front. `power` is how hard it leans on scenery.
    */
   lift: z.number().min(0).optional(),
+  /**
+   * Ten more kinds (sim `arsenal.ts`), all on the fields above. Boomerangs: a stick of `radius`
+   * thrown at `speed` that turns for home `range` out (at `homing` rad/s) and cuts for `damage`.
+   * Skips: a bomb that bounces `count` times, `fuse` seconds apart, a blast of `power` each time.
+   * Tethers: a hook thrown `range` at `speed`; the car it bites is tied to the thrower for `life`
+   * seconds by a line with `reach` of slack that hauls with strength `push`. Barrages: `count`
+   * shells in a row within `range`, the first landing after `arm` seconds and the rest `fuse`
+   * apart, each `spread` off the line. Burrows: a digger at `speed` for `life` seconds that turns
+   * after cars within `range` (`homing`), comes up within `trigger` of one once `arm` has passed
+   * and throws it up at `lift`. Sentries: a turret that stands `life` seconds with `count` rounds,
+   * one every `fuse` seconds at cars within `range` for `damage`, turning at `homing`; run over,
+   * it blows with `power`. Swarms: `count` fleas that hop at `speed` after cars within `range` for
+   * `fuse` seconds, then ride one for `life` seconds, each biting `damage` a second. Beams: a ray
+   * `range` long held for `life` seconds that burns a car for `damage` a second and scenery by
+   * `power`. Swaps: a bolt at `speed` over `range` that bends (`homing`) towards a car within `aim`
+   * of its path and changes places with it. Trails: for `life` seconds the car leaves a fire of
+   * `radius` every `reach` it travels, each burning `fuse` seconds.
+   */
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 
