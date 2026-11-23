@@ -4,7 +4,9 @@ import {
   type PeerMessage,
   type RoomUpdate,
   type Seat,
+  type TrackFile,
 } from '@demodogs/shared';
+import { customVenueId } from '@demodogs/sim';
 import type { Link } from './link';
 import { GuestRace, HostRace, type NetRace } from './lockstep';
 import { RoomNet } from './rtc';
@@ -16,6 +18,8 @@ export interface RaceStart {
   venue: string;
   /** World modifiers on for the race: the same list on every peer. */
   mods: string[];
+  /** The host's own track, when the race is on one: `venue` is the venue it installs as. */
+  track?: TrackFile;
   seats: Seat[];
   you: number;
 }
@@ -52,6 +56,9 @@ export class OnlineRoom {
   venue: string;
   /** World modifiers the host has switched on. */
   mods: string[] = [];
+  /** Host: a track of their own to race on instead of the venue. Guests know only its name. */
+  track: TrackFile | null = null;
+  trackName = '';
   seats: Seat[] = [];
   you = 0;
   race: HostRace | GuestRace | null = null;
@@ -166,6 +173,14 @@ export class OnlineRoom {
   setVenue(v: string, summary: string): void {
     if (this.role !== 'host' || this.race) return;
     this.venue = v;
+    this.setTrack(null, summary);
+  }
+
+  /** Host: race on a track of their own (null: back to the venue). It is sent when the race starts. */
+  setTrack(t: TrackFile | null, summary: string): void {
+    if (this.role !== 'host' || this.race) return;
+    this.track = t;
+    this.trackName = t?.name ?? '';
     this.signal.send({
       type: 'roomSettings',
       name: `${this.me.name}'s room`,
@@ -190,8 +205,9 @@ export class OnlineRoom {
     for (let i = this.seats.length - 1; i > 0; i--) if (!this.seats[i]!.connected) this.dropSeat(i);
     const start: RaceStart = {
       seed: Math.floor(Math.random() * 2 ** 31),
-      venue: this.venue,
+      venue: this.track ? customVenueId(this.track.id) : this.venue,
       mods: [...this.mods],
+      ...(this.track ? { track: structuredClone(this.track) } : {}),
       seats: this.seats.map((s) => ({ ...s })),
       you: 0,
     };
@@ -201,6 +217,7 @@ export class OnlineRoom {
       seed: start.seed,
       venue: start.venue,
       mods: start.mods,
+      ...(start.track ? { track: start.track } : {}),
       seats: start.seats,
       you: seat,
       log: race.log,
@@ -390,6 +407,7 @@ export class OnlineRoom {
         type: 'lobby',
         venue: this.venue,
         mods: this.mods,
+        ...(this.track ? { track: this.track.name } : {}),
         seats: this.seats,
         you: seat,
       });
@@ -432,6 +450,7 @@ export class OnlineRoom {
       case 'lobby':
         this.venue = m.venue;
         this.mods = m.mods ?? [];
+        this.trackName = m.track ?? '';
         this.seats = m.seats;
         this.you = m.you;
         this.hooks.change();
@@ -441,6 +460,7 @@ export class OnlineRoom {
           seed: m.seed,
           venue: m.venue,
           mods: m.mods ?? [],
+          ...(m.track ? { track: m.track } : {}),
           seats: m.seats,
           you: m.you,
         };
