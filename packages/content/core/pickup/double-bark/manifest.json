@@ -1,0 +1,16 @@
+{
+  "id": "pickup.double-bark",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Double bark",
+    "description": "A second barrel for the nose gun: twice the rate of fire, a longer reach and more rounds.",
+    "since": "core@0.4.0"
+  },
+  "kind": "barrel",
+  "weight": 0.05,
+  "hurtWeight": 0.03,
+  "factor": 2,
+  "amount": 30,
+  "price": 2000,
+  "sold": "garage"
+}

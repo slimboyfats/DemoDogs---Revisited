@@ -113,6 +113,11 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

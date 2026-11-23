@@ -1,3 +1,4 @@
+import { fitted, mounts, place } from './addon-mounts';
 import {
   pressOpen,
   pressWarning,
@@ -259,6 +260,15 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
         R.stack(coil, c.x + cs * wx - sn * wy, c.y + sn * wx + cs * wy, cz, c.h, alpha);
       }
   }
+  // add-ons: each piece where the car's own shape puts it; a wreck's have been blown off it
+  if (!c.wrecked)
+    for (const kind of fitted(c)) {
+      const strip = art.prop(c.fit[kind]!.def.id);
+      for (const m of mounts(c, kind, A.body)) {
+        const [x, y, mz, rot] = place(c, m);
+        R.stack(strip, x, y, mz + c.bounce, rot, alpha);
+      }
+    }
   if (c.has.top)
     R.stack(
       A.top,

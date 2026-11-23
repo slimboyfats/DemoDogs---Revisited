@@ -74,11 +74,36 @@
     {
       "rule": "place",
       "items": [
-        { "prop": "prop.powder-keg", "x": -40, "y": -310, "rot": 0 },
-        { "prop": "prop.powder-keg", "x": -52, "y": -306, "rot": 1 },
-        { "prop": "prop.powder-keg", "x": 40, "y": -309, "rot": 2 },
-        { "prop": "prop.oil-drum", "x": 64, "y": -306, "rot": 0 },
-        { "prop": "prop.powder-keg", "x": 52, "y": -304, "rot": 0.5 }
+        {
+          "prop": "prop.powder-keg",
+          "x": -40,
+          "y": -310,
+          "rot": 0
+        },
+        {
+          "prop": "prop.powder-keg",
+          "x": -52,
+          "y": -306,
+          "rot": 1
+        },
+        {
+          "prop": "prop.powder-keg",
+          "x": 40,
+          "y": -309,
+          "rot": 2
+        },
+        {
+          "prop": "prop.oil-drum",
+          "x": 64,
+          "y": -306,
+          "rot": 0
+        },
+        {
+          "prop": "prop.powder-keg",
+          "x": 52,
+          "y": -304,
+          "rot": 0.5
+        }
       ]
     },
     {
@@ -86,12 +111,30 @@
       "perArea": 0.0005,
       "clear": 28,
       "items": [
-        { "prop": "prop.pine", "weight": 0.6 },
-        { "prop": "prop.poplar", "weight": 0.3 },
-        { "prop": "prop.birch", "weight": 0.3 },
-        { "prop": "prop.bush", "weight": 0.3 },
-        { "prop": "prop.rock", "weight": 0.15 },
-        { "prop": "prop.snag", "weight": 0.05 }
+        {
+          "prop": "prop.pine",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.05
+        }
       ]
     },
     {
@@ -132,8 +175,14 @@
         [1020, 1440]
       ],
       "bridges": [
-        { "deck": "prop.deck-plank", "rail": "prop.plank-fence" },
-        { "deck": "prop.deck-steel", "rail": "prop.rail-steel" }
+        {
+          "deck": "prop.deck-plank",
+          "rail": "prop.plank-fence"
+        },
+        {
+          "deck": "prop.deck-steel",
+          "rail": "prop.rail-steel"
+        }
       ],
       "dam": {
         "wall": "prop.dam-wall",
@@ -148,9 +197,18 @@
       "edge": {
         "every": 26,
         "items": [
-          { "prop": "prop.rock", "weight": 2 },
-          { "prop": "prop.bush", "weight": 2 },
-          { "prop": "prop.log-pile", "weight": 0.5 }
+          {
+            "prop": "prop.rock",
+            "weight": 2
+          },
+          {
+            "prop": "prop.bush",
+            "weight": 2
+          },
+          {
+            "prop": "prop.log-pile",
+            "weight": 0.5
+          }
         ]
       }
     }
@@ -170,6 +228,11 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

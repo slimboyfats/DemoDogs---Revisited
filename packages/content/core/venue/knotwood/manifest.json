@@ -83,13 +83,34 @@
       "perArea": 0.0004,
       "clear": 30,
       "items": [
-        { "prop": "prop.tree", "weight": 0.3 },
-        { "prop": "prop.maple", "weight": 0.2 },
-        { "prop": "prop.pine", "weight": 0.25 },
-        { "prop": "prop.bush", "weight": 0.4 },
-        { "prop": "prop.rock", "weight": 0.12 },
-        { "prop": "prop.log-pile", "weight": 0.08 },
-        { "prop": "prop.snag", "weight": 0.05 }
+        {
+          "prop": "prop.tree",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.4
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.12
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 0.08
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.05
+        }
       ]
     },
     {
@@ -121,6 +142,11 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

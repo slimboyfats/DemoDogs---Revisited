@@ -1,0 +1,15 @@
+{
+  "id": "pickup.scrap-jaws",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrap jaws",
+    "description": "A toothed trap on the nose: for a while, half of what you knock off a rival goes back on your own car, and the scrap pays cash.",
+    "since": "core@0.4.0"
+  },
+  "kind": "jaws",
+  "weight": 0.07,
+  "hurtWeight": 0.07,
+  "seconds": 14,
+  "factor": 0.5,
+  "amount": 6
+}

@@ -1,4 +1,5 @@
 import { DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { barrelOf, fitAddon, reachOf } from './addons';
 import { grantDefence } from './defence';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
@@ -238,8 +239,11 @@ export function updatePickups(w: World): void {
       continue;
     }
     for (const c of w.cars) {
-      if (c.wrecked || Math.abs(c.deck - p.z) > 8 || Math.hypot(c.x - p.x, c.y - p.y) > 13)
-        continue;
+      if (c.wrecked || Math.abs(c.deck - p.z) > 8) continue;
+      const far = Math.hypot(c.x - p.x, c.y - p.y);
+      if (far > reachOf(c, 13)) continue;
+      // a magnet's catch flies in from where it lay
+      if (far > 13) w.emit({ t: 'fetch', car: c.index, x: p.x, y: p.y });
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
@@ -266,6 +270,8 @@ export function grant(w: World, c: Car, got: PickupManifest): string {
   if (defence) return defence;
   const mover = fitMover(w, c, got);
   if (mover !== null) return mover;
+  const addon = fitAddon(w, c, got);
+  if (addon !== null) return addon;
   let label: string;
   if (got.kind === 'repair') {
     c.hp = Math.min(100, c.hp + (got.amount ?? 40));
@@ -344,7 +350,8 @@ export function shoot(w: World, c: Car): void {
   const g = c.gun;
   c.gunCd -= DT;
   if (!g || c.rounds <= 0 || c.gunCd > 0) return;
-  const range = g.range ?? 110;
+  const fast = barrelOf(c);
+  const range = (g.range ?? 110) * (fast > 1 ? 1.2 : 1);
   const aim = g.aim ?? 0.12;
   let best: Car | null = null;
   let bd = range;
@@ -359,7 +366,7 @@ export function shoot(w: World, c: Car): void {
   }
   if (!best) return;
   c.rounds--;
-  c.gunCd = g.cooldown;
+  c.gunCd = g.cooldown / fast;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
   const x = c.x + cs * (c.def.body.halfLength + 1);

@@ -1,3 +1,4 @@
+import { ADDON_KINDS } from '@demodogs/shared';
 import type { World } from '@demodogs/sim';
 import type { Effects } from './effects';
 
@@ -136,6 +137,13 @@ export class Hud {
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
       P.springs && P.springs.n > 0 ? `SPRINGS x${P.springs.n}` : '',
+      // add-ons that run down or get used up; the rest can be seen on the car
+      ...ADDON_KINDS.map((k) => {
+        const f = P.fit[k];
+        if (!f || (f.t <= 0 && f.n <= 0)) return '';
+        const name = f.def.meta.name.toUpperCase();
+        return f.t > 0 ? `${name} ${Math.ceil(f.t)}s` : f.n > 1 ? `${name} x${f.n}` : name;
+      }),
     ]
       .filter(Boolean)
       .join('  ');

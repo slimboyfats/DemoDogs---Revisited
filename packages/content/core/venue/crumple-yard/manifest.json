@@ -40,19 +40,84 @@
     {
       "rule": "place",
       "items": [
-        { "prop": "prop.crusher", "x": 0, "y": 0, "rot": 0 },
-        { "prop": "prop.crusher-post", "x": 0, "y": -16, "rot": 0 },
-        { "prop": "prop.crusher-post", "x": 0, "y": 16, "rot": 3.1416 },
-        { "prop": "prop.tyres-red", "x": -32, "y": -22, "rot": 0 },
-        { "prop": "prop.tyres", "x": -40, "y": -26, "rot": 0 },
-        { "prop": "prop.tyres-red", "x": -32, "y": 22, "rot": 0 },
-        { "prop": "prop.tyres", "x": -40, "y": 26, "rot": 0 },
-        { "prop": "prop.tyres-red", "x": 32, "y": -22, "rot": 0 },
-        { "prop": "prop.tyres", "x": 40, "y": -26, "rot": 0 },
-        { "prop": "prop.tyres-red", "x": 32, "y": 22, "rot": 0 },
-        { "prop": "prop.tyres", "x": 40, "y": 26, "rot": 0 },
-        { "prop": "prop.scrap-slab", "x": 0, "y": -40, "rot": 0.3 },
-        { "prop": "prop.scrap-slab", "x": 9, "y": 42, "rot": 2.8 }
+        {
+          "prop": "prop.crusher",
+          "x": 0,
+          "y": 0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.crusher-post",
+          "x": 0,
+          "y": -16,
+          "rot": 0
+        },
+        {
+          "prop": "prop.crusher-post",
+          "x": 0,
+          "y": 16,
+          "rot": 3.1416
+        },
+        {
+          "prop": "prop.tyres-red",
+          "x": -32,
+          "y": -22,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres",
+          "x": -40,
+          "y": -26,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres-red",
+          "x": -32,
+          "y": 22,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres",
+          "x": -40,
+          "y": 26,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres-red",
+          "x": 32,
+          "y": -22,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres",
+          "x": 40,
+          "y": -26,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres-red",
+          "x": 32,
+          "y": 22,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres",
+          "x": 40,
+          "y": 26,
+          "rot": 0
+        },
+        {
+          "prop": "prop.scrap-slab",
+          "x": 0,
+          "y": -40,
+          "rot": 0.3
+        },
+        {
+          "prop": "prop.scrap-slab",
+          "x": 9,
+          "y": 42,
+          "rot": 2.8
+        }
       ]
     },
     {
@@ -101,9 +166,18 @@
       "qMax": 0.85,
       "clear": 18,
       "items": [
-        { "prop": "prop.husk", "weight": 2 },
-        { "prop": "prop.husk-van", "weight": 1 },
-        { "prop": "prop.scrap-tower", "weight": 1 }
+        {
+          "prop": "prop.husk",
+          "weight": 2
+        },
+        {
+          "prop": "prop.husk-van",
+          "weight": 1
+        },
+        {
+          "prop": "prop.scrap-tower",
+          "weight": 1
+        }
       ]
     },
     {
@@ -113,10 +187,22 @@
       "qMax": 0.9,
       "clear": 6,
       "items": [
-        { "prop": "prop.oil-drum", "weight": 2 },
-        { "prop": "prop.barrel", "weight": 1 },
-        { "prop": "prop.scrap-slab", "weight": 2 },
-        { "prop": "prop.crate", "weight": 1 }
+        {
+          "prop": "prop.oil-drum",
+          "weight": 2
+        },
+        {
+          "prop": "prop.barrel",
+          "weight": 1
+        },
+        {
+          "prop": "prop.scrap-slab",
+          "weight": 2
+        },
+        {
+          "prop": "prop.crate",
+          "weight": 1
+        }
       ]
     }
   ],
@@ -135,6 +221,11 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

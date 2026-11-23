@@ -32,6 +32,10 @@ export interface Career {
   debt: number;
   /** Bought for the next race only. */
   kit: Record<KitId, boolean>;
+  /** Add-ons (pickup ids) bolted to the car for good: they go when the car is traded in. */
+  addons: string[];
+  /** Add-ons bought on the black market for the next race only. */
+  extras: string[];
   points: number;
   wins: number;
   /** Wins in a row. */
@@ -139,6 +143,8 @@ export function newCareer(c: Content, seed: number): Career {
     hp: 100,
     debt: 0,
     kit: { mines: false, spikes: false, fuel: false, sabotage: false },
+    addons: [],
+    extras: [],
     points: 0,
     wins: 0,
     streak: 0,
@@ -164,9 +170,27 @@ function spentOnTune(c: Content, k: Career): number {
   return sum;
 }
 
+export interface AddOn {
+  id: string;
+  name: string;
+  blurb: string;
+  price: number;
+}
+
+/** The add-ons for sale in the garage (kept on the car) or on the black market (one race). */
+export function addOns(c: Content, where: 'garage' | 'market'): AddOn[] {
+  return [...c.pickup.values()]
+    .filter((m) => m.price !== undefined && (m.sold ?? 'garage') === where)
+    .map((m) => ({ id: m.id, name: m.meta.name, blurb: m.meta.description, price: m.price! }))
+    .sort((a, b) => a.price - b.price || (a.id < b.id ? -1 : 1));
+}
+
+const spentOnAddons = (c: Content, k: Career): number =>
+  k.addons.reduce((s, id) => s + (c.pickup.get(id)?.price ?? 0), 0);
+
 /** What the dealer gives for the car you have: less for its age, its upgrades and its dents. */
 export function tradeIn(c: Content, k: Career): number {
-  const worth = priceOf(c, k.car) * 0.6 + spentOnTune(c, k) * 0.5;
+  const worth = priceOf(c, k.car) * 0.6 + (spentOnTune(c, k) + spentOnAddons(c, k)) * 0.5;
   return Math.round((worth * (0.6 + 0.4 * (k.hp / 100))) / 50) * 50;
 }
 
@@ -208,7 +232,23 @@ export function buyCar(c: Content, k: Career, car: string): Buy {
     cash: k.cash - cost,
     car,
     tune: { engine: 0, tyres: 0, armor: 0 },
+    addons: [],
     hp: 100,
+  });
+}
+
+/** Buy an add-on: bolted on for good in the garage, or loaded for one race on the black market. */
+export function buyAddon(c: Content, k: Career, id: string): Buy {
+  const m = c.pickup.get(id);
+  if (!m || m.price === undefined) return no('Not for sale.');
+  const market = m.sold === 'market';
+  if ((market ? k.extras : k.addons).includes(id))
+    return no(market ? 'Already bought for this race.' : 'Already fitted.');
+  if (m.price > k.cash) return no('Not enough cash.');
+  return yes({
+    ...k,
+    cash: k.cash - m.price,
+    ...(market ? { extras: [...k.extras, id] } : { addons: [...k.addons, id] }),
   });
 }
 
@@ -255,6 +295,15 @@ function tierDrivers(id: TierId): number[] {
   return [at, at + 1, at + 2, at + 3];
 }
 
+/** The add-ons a rival has bolted on: none in the backyard, more the higher the tier and seat. */
+function rivalAddons(c: Content, tier: number, seat: number, i: number): string[] {
+  const all = addOns(c, 'garage');
+  const n = Math.min(all.length, Math.max(0, tier + (seat > 1 ? 1 : 0) - 1));
+  return Array.from({ length: n }, (_, j) => all[(i * 3 + j * 2 + 1) % all.length]!.id).filter(
+    (id, j, list) => list.indexOf(id) === j,
+  );
+}
+
 /** The car a rival brings: better cars and more upgrades the higher their tier and seat. */
 function rivalEntry(c: Content, d: Driver, i: number): Entrant {
   const cars = shop(c);
@@ -268,6 +317,7 @@ function rivalEntry(c: Content, d: Driver, i: number): Entrant {
     paint: d.paint,
     tune: { engine: lv, tyres: lv, armor: Math.max(0, lv - 1) },
     skill: 0.84 + tier * 0.06 + seat * 0.015,
+    fit: rivalAddons(c, tier, seat, i),
   };
 }
 
@@ -290,6 +340,8 @@ export function raceSetup(c: Content, k: Career, race: RaceId): RaceSetup {
         paint: TOP_DOG.paint,
         tune: { engine: TUNE_MAX, tyres: TUNE_MAX, armor: TUNE_MAX },
         skill: 1.04,
+        // the Top Dog's car has everything on it
+        fit: addOns(c, 'garage').map((a) => a.id),
       },
     ];
   } else {
@@ -306,6 +358,7 @@ export function raceSetup(c: Content, k: Career, race: RaceId): RaceSetup {
     ...(k.kit.spikes ? { ram: 1.5 } : {}),
     ...(k.kit.fuel ? { fuel: 1.12 } : {}),
     ...(k.kit.mines && mine ? { weapon: { id: mine.id, ammo: 3 } } : {}),
+    fit: [...k.addons, ...k.extras].filter((id) => c.pickup.has(id)),
   };
   return { race, venue, seed: rng.int(2 ** 31), field, player };
 }
@@ -385,6 +438,7 @@ export function settle(k: Career, race: RaceId, o: Outcome): { career: Career; p
       debt: k.debt - cut,
       hp: o.wrecked ? 10 : Math.max(1, Math.round(o.hp)),
       kit: { mines: false, spikes: false, fuel: false, sabotage: false },
+      extras: [],
       points: k.points + points,
       wins: k.wins + (won ? 1 : 0),
       streak: won ? k.streak + 1 : 0,
@@ -403,7 +457,12 @@ export function parseCareer(c: Content, json: string | null): Career | null {
     if (k.v !== 1 || !c.car.has(k.car) || !Array.isArray(k.drivers) || k.drivers.length !== 12)
       return null;
     if (![k.cash, k.hp, k.points, k.day, k.debt, k.seed].every(Number.isFinite)) return null;
-    return k;
+    // a career saved before there were add-ons has none; one that names an add-on since gone loses it
+    const ids = (v: unknown): string[] =>
+      Array.isArray(v)
+        ? v.filter((id): id is string => typeof id === 'string' && c.pickup.has(id))
+        : [];
+    return { ...k, addons: ids(k.addons), extras: ids(k.extras) };
   } catch {
     return null;
   }

@@ -1,0 +1,16 @@
+{
+  "id": "pickup.roll-cage",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Roll cage",
+    "description": "Steel tube over the cab: the blow that would have wrecked you tears the cage off instead, once a race.",
+    "since": "core@0.4.0"
+  },
+  "kind": "cage",
+  "weight": 0.04,
+  "hurtWeight": 0.1,
+  "charges": 1,
+  "amount": 22,
+  "price": 2600,
+  "sold": "garage"
+}

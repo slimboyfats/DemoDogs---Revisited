@@ -6,6 +6,7 @@ import {
   type CarPart,
   type MaterialManifest,
 } from '@demodogs/shared';
+import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
 import type { Car, LooseProp, StaticProp } from './entities';
 import { topple } from './hazards';
@@ -27,8 +28,9 @@ export function damage(
   py: number,
 ): void {
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
-  const dealt = absorb(w, c, (amount * w.mode.damageScale) / c.stats.armor, px, py);
-  if (dealt <= 0) return;
+  const through = absorb(w, c, (amount * w.mode.damageScale) / c.stats.armor, px, py);
+  if (through <= 0) return;
+  const dealt = plateOff(w, c, through, by, px, py);
   c.hp -= dealt;
   const L = toLocal(c, px, py);
   const lx = clamp(L[0], -12, 12);
@@ -42,8 +44,9 @@ export function damage(
     by.score += pts;
     if (dealt > 9)
       w.emit({ t: 'score', car: by.index, x: c.x, y: c.y, points: pts, label: `+${pts}` });
+    chew(w, by, c, dealt, px, py);
   }
-  if (c.hp <= 0) wreck(w, c, by);
+  if (c.hp <= 0 && !caged(w, c)) wreck(w, c, by);
 }
 
 export function detach(w: World, c: Car, part: CarPart): void {

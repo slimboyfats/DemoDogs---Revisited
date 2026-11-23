@@ -36,6 +36,7 @@ import {
   type Particle,
 } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
+import { AddonFx } from './addons-fx';
 import { DefenceFx } from './defence-fx';
 import { PLAIN, Wreckage } from './wreckage';
 import type { Sound } from '../audio/sound';
@@ -221,6 +222,8 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** Add-ons going on, coming off and at work. */
+  readonly addons: AddonFx;
 
   constructor(
     readonly w: World,
@@ -229,6 +232,8 @@ export class Effects {
     private readonly sound: Sound,
   ) {
     for (const c of w.cars) this.bodies.push(clone(this.carArt(c).body));
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    const self = this;
     this.defence = new DefenceFx({
       w,
       bodies: this.bodies,
@@ -239,6 +244,41 @@ export class Effects {
       pop: (x, y) => {
         const v = this.vol(x, y);
         if (v > 0) sound.pop(v);
+      },
+    });
+    this.addons = new AddonFx({
+      w,
+      art,
+      flashes: this.flashes,
+      get quality() {
+        return self.quality;
+      },
+      freshBody: (c) => this.carArt(c).body,
+      shatter: (strip, at, ox, oy, speed, vx, vy) =>
+        this.burst(this.chipsOf(strip, true, strip.res), 160, {
+          x: at[0],
+          y: at[1],
+          z: at[2],
+          h: at[3],
+          ox,
+          oy,
+          speed,
+          vx,
+          vy,
+        }),
+      particle: (...a) => this.emit(...a),
+      spark: (x, y, z, sp) => this.spark(x, y, z, sp),
+      flame: (...a) => this.flame(...a),
+      plume: (x, y, z, size) => this.plume(x, y, z, size),
+      text: (x, y, t, col) => this.text(x, y, t, col),
+      msg: (t, s) => this.setMsg(t, s),
+      vol: (x, y) => this.vol(x, y),
+      shake: (k) => (this.shake = Math.max(this.shake, k)),
+      sound: (what, v) => {
+        if (what === 'scrape') sound.scrape();
+        else if (what === 'pickup') sound.pickup();
+        else if (what === 'repair') sound.repair();
+        else sound[what](v);
       },
     });
     for (const b of w.bots) {
@@ -828,6 +868,7 @@ export class Effects {
     let smashAt = '';
     for (const e of events) {
       this.defence.handle(e);
+      this.addons.handle(e);
       switch (e.t) {
         case 'hit': {
           const c = w.cars[e.car]!;
@@ -1575,6 +1616,7 @@ export class Effects {
   afterStep(): void {
     const w = this.w;
     this.defence.afterStep();
+    this.addons.afterStep();
     this.fallen();
     this.wreck.step(DT, w.cars);
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);

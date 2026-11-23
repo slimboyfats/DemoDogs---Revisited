@@ -133,6 +133,19 @@ export type SimEvent =
   | { t: 'hop'; car: number; x: number; y: number }
   /** A sprung car came down at (x, y); impact is how fast it was falling. */
   | { t: 'touchdown'; car: number; x: number; y: number; impact: number }
+  /**
+   * An add-on (pickup `id`) was bolted onto a car (`on`), or came off it at (x, y): `spent` when
+   * it was used up or struck off, otherwise it ran out of time.
+   */
+  | { t: 'addon'; car: number; id: string; on: boolean; x: number; y: number; spent?: boolean }
+  /** A car's plate (pickup `id`) blew off at (x, y) under a blow; it has `left`. */
+  | { t: 'plate'; car: number; id: string; x: number; y: number; left: number }
+  /** A car's magnet pulled in the pickup at (x, y). */
+  | { t: 'fetch'; car: number; x: number; y: number }
+  /** A car's jaws tore `armor` points off car `from` at (x, y) and it was paid `cash` for them. */
+  | { t: 'chew'; car: number; from: number; x: number; y: number; armor: number; cash: number }
+  /** A car's spiked hubs ground into another car at (x, y). */
+  | { t: 'grind'; car: number; x: number; y: number }
   /** A rail slug flew from (x, y) to (tx, ty), through whatever it struck. */
   | { t: 'rail'; car: number; x: number; y: number; tx: number; ty: number }
   /** A sticky bomb clung to a car (`car`), or came to rest on the ground (-1), at (x, y). */
