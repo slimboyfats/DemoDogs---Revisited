@@ -33,6 +33,7 @@ compares hashes, so a behaviour change shows up as a failing golden.
 | `physics.ts` | arcade drift driving, walls, statics, car-car impulses, shoving props                                                 |
 | `damage.ts`  | damage, part loss, wrecks, respawn, explosions                                                                        |
 | `things.ts`  | scrap bots, loose props, pickups, weapons                                                                             |
+| `addons.ts`  | add-ons: gear bolted to a car (pickups of an `ADDON_KINDS` kind), from the shop via `Setup.fit` or off the track      |
 | `race.ts`    | lap progress, finishing, standings                                                                                    |
 | `scenery.ts` | the venue's scenery rules (bend walls, scatter, roadside groups, rings ...)                                           |
 | `content.ts` | resolves packs: `extends`, schema validation, cross-references                                                        |
