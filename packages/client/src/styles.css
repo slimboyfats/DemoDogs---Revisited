@@ -274,6 +274,120 @@ body.kbd:not(.nohints) .pad kbd {
   }
 }
 
+/* spectating: the driving controls go, a bar at the bottom says who is on screen */
+body.spectating #controls {
+  visibility: hidden;
+}
+#spectate {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+body:not([data-screen='game']) #spectate {
+  display: none;
+}
+#specTap {
+  position: absolute;
+  inset: 0;
+  pointer-events: auto;
+  touch-action: none;
+}
+#specBar {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(19px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  pointer-events: none;
+}
+#specBar button,
+#specWho {
+  position: relative;
+  pointer-events: auto;
+  touch-action: none;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  background: rgba(10, 10, 16, 0.5);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+#specBar button {
+  min-width: 44px;
+  min-height: 42px;
+  padding: 0 12px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+#specBar button:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+#specWho {
+  pointer-events: none;
+  min-width: 176px;
+  padding: 4px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-color: #ffd24a;
+}
+#specBar small {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+#specWho b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  white-space: nowrap;
+}
+#specDot {
+  width: 10px;
+  height: 10px;
+  border: 1px solid #16141c;
+}
+#specZoom {
+  margin-left: 8px;
+  min-width: 124px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+#specBar #specSkip {
+  font-size: 12px;
+  white-space: nowrap;
+  border-color: rgba(255, 120, 80, 0.85);
+}
+#specBar #specSkip.hidden {
+  display: none;
+}
+#specBar kbd {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  transform: translateX(-50%);
+  display: none;
+}
+#specBar kbd.down {
+  transform: translate(-50%, 3px);
+}
+body.kbd:not(.nohints) #specBar kbd {
+  display: inline-flex;
+}
+@media (hover: hover) and (pointer: fine) {
+  body:not(.nohints) #specBar kbd {
+    display: inline-flex;
+  }
+}
+
 /* screens */
 .screen {
   position: fixed;
