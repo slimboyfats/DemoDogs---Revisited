@@ -41,6 +41,11 @@ import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
+import type { TrackFile } from '@demodogs/shared';
+import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
+import { LocalTrackStore, type KeyValue } from './game/tracks';
+import { TrackEditor } from './ui/track-editor';
+import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
 
 /**
@@ -49,7 +54,8 @@ import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
  * and the test range. ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
  * player's car with the rivals' AI, &ghosts=<n> adds idle drivers so there is a race left to watch
  * once your car is scrapped); ?career opens the career, ?career=<easy|medium|hard|final>
- * enters that race; ?dev opens the test range. window.__dd exposes the running session, the
+ * enters that race; ?dev opens the test range; ?edit opens the track creator on a new track.
+ * window.__dd exposes the running session, the
  * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -89,9 +95,17 @@ let carIdx = Math.max(
 );
 let session: Session | null = null;
 let lastVenue = venues[0]!.id;
-let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' = 'menu';
+let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' | 'tracks' = 'menu';
 /** The game on screen is the test range. */
 let devMode = false;
+/** The game on screen is the track creator. */
+let editMode = false;
+/** The custom track in hand: being built, or being test driven from the editor. */
+let editing: TrackFile | null = null;
+/** Device pixels per art pixel in the track creator (it can pull back to the whole map). */
+let editShown = 4;
+/** The custom track being raced (GO AGAIN races it again), or null on the game's own venues. */
+let lastCustom: Installed | null = null;
 const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
@@ -173,6 +187,98 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
     return `SKY ${skyName.toUpperCase().replace('-', ' ')}`;
   },
 });
+// tracks built in the track creator: kept on the device, raced like any venue
+function storage(): KeyValue | null {
+  try {
+    return localStorage;
+  } catch {
+    return null;
+  }
+}
+const trackStore = new LocalTrackStore(storage(), () => new Date().toISOString());
+const editor = new TrackEditor($('editPanel'), $('editTap'), $('editSetup'), content, {
+  view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
+  rebuild: (made) => {
+    const old = session;
+    const s = new Session({ art, sound, input, ...editOptions(made), autopilot: false });
+    if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
+    s.setView(W / shown, H / shown);
+    session = s;
+    return s;
+  },
+  zoom: () => {
+    const w = session!.world;
+    // close as in a race, twice as wide, and the whole map
+    const fit = Math.min(W / w.w, (H * 0.8) / (w.h * Math.sin(PITCH)));
+    const steps: [number, string][] = [
+      [scale, 'ZOOM'],
+      [Math.max(1, Math.round(scale) / 2), 'ZOOM WIDE'],
+      [Math.min(fit, scale / 2), 'ZOOM MAP'],
+    ];
+    const i = steps.findIndex(([v]) => v === editShown);
+    const next = steps[(i + 1) % steps.length]!;
+    editShown = next[0];
+    if (next[1] === 'ZOOM MAP') Object.assign(session!.cam, { x: w.w / 2, y: w.h / 2 });
+    return next[1];
+  },
+  save: (t) => {
+    editing = t;
+    void trackStore.put(t);
+  },
+  drive: (t) => raceTrack(t),
+  exit: () => openTracks(),
+});
+const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
+  edit: startEditor,
+  race: (t) => {
+    editing = null;
+    raceTrack(t);
+  },
+  back: () => setScreen('menu'),
+});
+function openTracks(): void {
+  editing = null;
+  setScreen('tracks');
+  tracksScreen.open();
+}
+function editOptions(made: Installed): Launch & { content: Content } {
+  return {
+    content: made.content,
+    venue: made.venue,
+    car: cars[carIdx]!.id,
+    seed: 1,
+    autopilot: false,
+    sandbox: true,
+    field: [],
+    laps: made.laps,
+  };
+}
+/** The track creator on a track: the track built as a world that stands still. */
+function startEditor(t: TrackFile): void {
+  careerRace = null;
+  editing = t;
+  let made;
+  try {
+    made = installTrack(content, t);
+  } catch {
+    openTracks();
+    return;
+  }
+  void launch(editOptions(made), 'TRACK CREATOR', (s) => {
+    editMode = true;
+    editShown = scale;
+    // a world that stands still never finishes rising out of the ground: show it risen
+    if (scene instanceof PixelScene) scene.bloom = false;
+    document.body.classList.add('editing');
+    editor.open(s, t);
+    if (made.dropped.length)
+      editor.say(`Not in this version of the game, left out: ${made.dropped.join(', ')}`);
+  });
+}
+/** Race a custom track like any venue. */
+function raceTrack(t: TrackFile): void {
+  startGame(customVenueId(t.id), installTrack(content, t));
+}
 /** The sky by name (see SKIES); false when there is no such sky or no pixel engine. */
 let skyName = 'day';
 function setSky(name: string, now = false): boolean {
@@ -261,7 +367,8 @@ function spectate(dt: number): void {
   const z = on ? (specZooms[spectator.zoom] ?? specZooms[0]!) : null;
   s.watch = on ? spectator.target : null;
   // whole art pixels where there is room for them; the arena view takes what fits
-  const want = z ? (z.whole ? z.k * scale : Math.max(1, Math.round(z.k * scale * 2) / 2)) : scale;
+  const drive = editMode ? editShown : scale;
+  const want = z ? (z.whole ? z.k * scale : Math.max(1, Math.round(z.k * scale * 2) / 2)) : drive;
   if (want !== shown) {
     shown = want;
     scene.setScale(shown);
@@ -294,7 +401,7 @@ function resize(): void {
   // about 175 art pixels up the short side: far enough out that the cells read as fine grain
   // (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
   scale = Math.max(2, Math.round(Math.min(short / 175, long / 310) * 2) / 2);
-  shown = scale;
+  shown = editShown = scale;
   specZooms = [];
   scene.setScale(scale);
   if (session) {
@@ -304,7 +411,7 @@ function resize(): void {
 }
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online'])
+  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online', 'tracks'])
     $(k).classList.toggle('hidden', k !== id);
 }
 
@@ -315,6 +422,12 @@ function setScreen(s: typeof screen): void {
   if (s !== 'game' && devMode) {
     devMode = false;
     dev.close();
+  }
+  if (s !== 'game' && editMode) {
+    editMode = false;
+    editor.close();
+    if (scene instanceof PixelScene) scene.bloom = params.get('bloom') !== '0';
+    document.body.classList.remove('editing');
   }
   if (s === 'loading') show('loader');
   else if (s === 'game') {
@@ -409,9 +522,11 @@ function startCareerRace(race: RaceId): void {
   );
 }
 
-function startGame(venue: string): void {
+function startGame(venue: string, custom: Installed | null = null): void {
   careerRace = null;
   lastVenue = venue;
+  lastCustom = custom;
+  const C = custom?.content ?? content;
   const seed = params.has('seed')
     ? Number(params.get('seed'))
     : Math.floor(Math.random() * 2 ** 31);
@@ -431,8 +546,9 @@ function startGame(venue: string): void {
       modifiers,
       playOn: true,
       ...(ghosts ? { humans } : {}),
+      ...(custom ? { content: C, laps: custom.laps } : {}),
     },
-    content.venue.get(venue)!.meta.name.toUpperCase() + modLine(content, modifiers),
+    C.venue.get(venue)!.meta.name.toUpperCase() + modLine(content, modifiers),
   );
 }
 
@@ -479,7 +595,7 @@ function finish(gaveUp = false): void {
   pay.replaceChildren();
   $('again').textContent = careerRace ? 'CONTINUE' : 'GO AGAIN';
   $('toMenu').classList.toggle('hidden', careerRace !== null);
-  $('toMenu').textContent = 'MENU';
+  $('toMenu').textContent = editing ? 'BACK TO THE EDITOR' : 'MENU';
   if (online.room) {
     $('again').textContent = online.isHost ? 'BACK TO THE ROOM' : 'WAITING FOR THE HOST…';
     $('toMenu').textContent = 'LEAVE ROOM';
@@ -541,7 +657,7 @@ function finish(gaveUp = false): void {
 }
 
 function togglePause(): void {
-  if (screen !== 'game') return;
+  if (screen !== 'game' || editMode) return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
   $('restart').classList.toggle('hidden', careerRace !== null || devMode || online.room !== null);
@@ -549,7 +665,9 @@ function togglePause(): void {
     ? 'GIVE UP THE RACE'
     : online.room
       ? 'LEAVE THE ONLINE RACE'
-      : 'QUIT TO MENU';
+      : editing
+        ? 'BACK TO THE EDITOR'
+        : 'QUIT TO MENU';
   if (paused) sound.engineStop();
   else {
     sound.engineStart();
@@ -732,7 +850,8 @@ function frame(t: number): void {
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
     else if (nameTags.shown && !devMode)
       drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
-    if (devMode) dev.frame(dt);
+    if (editMode) editor.draw(octx, dt);
+    else if (devMode) dev.frame(dt);
     else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
     if (online.racing) $('netDot').textContent = online.status();
@@ -793,19 +912,21 @@ function boot(): void {
     if (online.room) {
       if (online.isHost) online.backToLobby();
     } else if (lastCareer) openCareer();
-    else startGame(lastVenue);
+    else startGame(lastVenue, lastCustom);
   };
   $('toOnline').onclick = () => openOnline();
   $('toCareer').onclick = openCareer;
   $('toDev').onclick = () => startDev(cars[carIdx]!.id);
+  $('toTracks').onclick = openTracks;
   $('toMenu').onclick = () => {
     if (online.room) online.leave();
     document.body.classList.remove('online');
-    setScreen('menu');
+    if (editing) startEditor(editing);
+    else setScreen('menu');
   };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
-  $('restart').onclick = () => startGame(lastVenue);
+  $('restart').onclick = () => startGame(lastVenue, lastCustom);
   $('quit').onclick = () => {
     paused = false;
     if (online.room) {
@@ -814,6 +935,7 @@ function boot(): void {
     }
     // walking out of a career race is a last place, not a free retry
     if (careerRace) finish(true);
+    else if (editing) startEditor(editing);
     else setScreen('menu');
   };
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
@@ -841,6 +963,7 @@ function boot(): void {
     const c = params.get('car');
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
+  if (params.has('edit')) void tracksScreen.create();
   if (params.has('room')) openOnline(params.get('room') ?? '');
   if (params.has('career')) {
     const race = params.get('career');
@@ -869,6 +992,10 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
+      view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
+      editor,
+      tracks: trackStore,
       online,
       spectator,
       /**

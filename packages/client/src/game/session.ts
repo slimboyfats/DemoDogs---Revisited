@@ -25,6 +25,8 @@ export interface SessionOptions {
   playOn?: boolean;
   /** A test range: parked targets, no countdown, no end. */
   sandbox?: boolean;
+  /** Laps, instead of the mode's (a custom track sets its own). */
+  laps?: number;
   /** Online: the other drivers (seats 1, 2, ...) and which seat this screen drives. */
   humans?: Entrant[];
   you?: number;
@@ -50,6 +52,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.knockout ? { knockout: true } : {}),
     ...(o.playOn ? { playOn: true } : {}),
     ...(o.sandbox ? { sandbox: true } : {}),
+    ...(o.laps ? { laps: o.laps } : {}),
     ...(o.humans ? { humans: o.humans } : {}),
     ...(o.you !== undefined ? { you: o.you } : {}),
     ...(o.name ? { name: o.name } : {}),

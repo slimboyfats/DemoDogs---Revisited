@@ -1,6 +1,7 @@
 export * from './ai-kit';
 export * from './behaviours';
 export * from './content';
+export * from './custom';
 export * from './entities';
 export * from './math';
 export * from './prng';

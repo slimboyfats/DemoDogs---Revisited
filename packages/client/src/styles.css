@@ -1048,3 +1048,213 @@ body.online[data-screen='game'] #netDot {
   color: #16141c;
   opacity: 1;
 }
+
+/* ---- the track creator */
+.events button.career.tracks {
+  border-color: #ffd24a;
+  background: rgba(255, 210, 74, 0.14);
+}
+body.editing #controls,
+body.editing #pauseBtn,
+body.editing #pauseKey {
+  display: none !important;
+}
+#editTap {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+  cursor: crosshair;
+}
+#editPanel {
+  position: fixed;
+  top: calc(6px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  right: calc(8px + env(safe-area-inset-right));
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  pointer-events: none;
+}
+#editPanel .row1,
+#editPanel .row2 {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  pointer-events: none;
+}
+#editPanel .row1 > *,
+#editPanel .row2 > * {
+  pointer-events: auto;
+  flex: 0 0 auto;
+}
+#editPanel button,
+#editPanel select {
+  font: inherit;
+  font-weight: 800;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 8px;
+  padding: 9px 11px;
+  min-height: 36px;
+}
+#editPanel select {
+  max-width: 170px;
+}
+#editPanel button.on {
+  background: #ff6a3d;
+  border-color: #ff6a3d;
+}
+#editPanel button.go {
+  background: #2f8f3a;
+  border-color: #6fe07a;
+}
+#editPanel button:disabled {
+  opacity: 0.4;
+}
+#editPanel .gap {
+  width: 8px;
+}
+#editPanel label,
+#editPanel .hint {
+  color: #fff;
+  font-weight: 700;
+  text-shadow:
+    0 1px 2px #000,
+    0 0 4px #000;
+  pointer-events: none !important;
+}
+#editPanel .hint {
+  opacity: 0.9;
+  padding-left: 4px;
+}
+#editPanel input[type='range'] {
+  width: 90px;
+}
+#editPanel.hidden,
+#editTap.hidden {
+  display: none;
+}
+#editSetup {
+  z-index: 5;
+}
+#editSetup .field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+#editSetup .field > span:first-child {
+  flex: 0 0 96px;
+  opacity: 0.8;
+}
+#editSetup .field > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+#editSetup input[type='text'],
+#editSetup select {
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+  padding: 8px 10px;
+  user-select: text;
+  -webkit-user-select: text;
+}
+#editSetup .num {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#editSetup .num input {
+  flex: 1;
+  min-width: 0;
+}
+#editSetup .num b {
+  width: 30px;
+  text-align: right;
+}
+#editSetup h3 {
+  margin: 6px 0 0;
+  font-size: 12px;
+  opacity: 0.8;
+}
+#editSetup .rules {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+#editSetup .rules label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#editSetup .rules input {
+  width: 20px;
+  height: 20px;
+}
+#tracksPanel .newRow {
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+#tracksPanel select {
+  font: inherit;
+  font-weight: 700;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  padding: 10px;
+  flex: 1 1 180px;
+}
+.trackList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.trackRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+.trackRow > div {
+  flex: 1 1 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.trackRow small {
+  opacity: 0.75;
+  font-size: 12px;
+}
+#tracksPanel button.go {
+  border-color: #6fe07a;
+  background: rgba(47, 143, 58, 0.5);
+}
+#tracksPanel button.warn {
+  border-color: #ff5b4a;
+  background: rgba(255, 91, 74, 0.35);
+}
+.trackRow button {
+  border: 2px solid rgba(255, 210, 74, 0.55);
+  background: rgba(255, 210, 74, 0.1);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-weight: 900;
+  font-size: 13px;
+}

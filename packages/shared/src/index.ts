@@ -4,4 +4,5 @@ export * from './events';
 export * from './looks';
 export * from './manifests';
 export * from './protocol';
+export * from './track-file';
 export * from './pieces';

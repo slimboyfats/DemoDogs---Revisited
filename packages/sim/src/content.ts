@@ -5,6 +5,7 @@ import {
   type ContentType,
   type ManifestByType,
   type PackManifest,
+  type SceneryRule,
 } from '@demodogs/shared';
 import type { AiBehaviour } from './behaviours';
 
@@ -48,6 +49,41 @@ function typeOf(id: unknown): ContentType | null {
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
+/** The props and materials a scenery rule names. */
+export function sceneryRefs(r: SceneryRule): { prop: string[]; material: string[] } {
+  const prop: (string | undefined)[] = [];
+  const material: string[] = [];
+  if (r.rule === 'bend-wall' || r.rule === 'ring') prop.push(...r.props);
+  if (r.rule === 'scatter' || r.rule === 'oval-scatter') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'border' || r.rule === 'oval-wall' || r.rule === 'barricade') prop.push(r.prop);
+  if (r.rule === 'build')
+    for (const k of r.kinds) prop.push(k.wall, k.window, k.post, k.roof, ...k.inside);
+  if (r.rule === 'patches') material.push(r.material);
+  if (r.rule === 'river') {
+    material.push(r.material, r.bank);
+    for (const b of r.bridges) prop.push(b.deck, b.rail);
+    if (r.dam) prop.push(r.dam.wall);
+    prop.push(...(r.edge?.items ?? []).map((i) => i.prop));
+  }
+  if (r.rule === 'place') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'along') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'field') prop.push(r.prop);
+  if (r.rule === 'pools') material.push(...r.items.map((i) => i.material));
+  if (r.rule === 'harbour') {
+    material.push(r.material);
+    prop.push(r.piers.deck, r.piers.post, r.bollard, r.barges?.prop);
+    if (r.cranes) prop.push(r.cranes.leg, r.cranes.beam);
+  }
+  if (r.rule === 'stacks') prop.push(...r.bottom, ...r.top);
+  if (r.rule === 'roadside') prop.push(r.pair, r.stack, r.drum, ...r.tanks);
+  if (r.rule === 'flyover' || r.rule === 'overpass') prop.push(r.deck, r.pillar);
+  if (r.rule === 'canopy') prop.push(r.trunk, ...r.crowns);
+  if (r.rule === 'arch') prop.push(r.leg, r.span);
+  if (r.rule === 'towers') prop.push(...r.column, r.front);
+  if (r.rule === 'kerb') prop.push(...r.items.map((i) => i.prop));
+  return { prop: prop.filter((p): p is string => !!p), material };
 }
 
 /**
@@ -142,35 +178,9 @@ export function resolveContent(src: ContentSource): Content {
     need(v.id, 'bot', v.bots.bot);
     for (const p of v.pickups) need(v.id, 'pickup', p);
     for (const r of v.scenery) {
-      if (r.rule === 'bend-wall' || r.rule === 'ring')
-        for (const p of r.props) need(v.id, 'prop', p);
-      if (r.rule === 'scatter' || r.rule === 'oval-scatter')
-        for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'border' || r.rule === 'oval-wall' || r.rule === 'barricade')
-        need(v.id, 'prop', r.prop);
-      if (r.rule === 'build')
-        for (const k of r.kinds)
-          for (const p of [k.wall, k.window, k.post, k.roof, ...k.inside])
-            if (p) need(v.id, 'prop', p);
-      if (r.rule === 'patches') need(v.id, 'material', r.material);
-      if (r.rule === 'river') {
-        for (const m of [r.material, r.bank]) need(v.id, 'material', m);
-        for (const b of r.bridges) for (const p of [b.deck, b.rail]) need(v.id, 'prop', p);
-        if (r.dam) need(v.id, 'prop', r.dam.wall);
-        for (const i of r.edge?.items ?? []) need(v.id, 'prop', i.prop);
-      }
-      if (r.rule === 'place') for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'along') for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'field') need(v.id, 'prop', r.prop);
-      if (r.rule === 'harbour') {
-        need(v.id, 'material', r.material);
-        for (const p of [r.piers.deck, r.piers.post, r.bollard, r.barges?.prop])
-          if (p) need(v.id, 'prop', p);
-        if (r.cranes) for (const p of [r.cranes.leg, r.cranes.beam]) need(v.id, 'prop', p);
-      }
-      if (r.rule === 'stacks') for (const p of [...r.bottom, ...r.top]) need(v.id, 'prop', p);
-      if (r.rule === 'roadside')
-        for (const p of [r.pair, r.stack, r.drum, ...r.tanks]) need(v.id, 'prop', p);
+      const refs = sceneryRefs(r);
+      for (const p of refs.prop) need(v.id, 'prop', p);
+      for (const m of refs.material) need(v.id, 'material', m);
     }
     if (!v.track && !v.oval) problems.push(`${v.id}: needs a track or an oval`);
   }

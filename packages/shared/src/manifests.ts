@@ -137,6 +137,18 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
       z.strictObject({ prop: id('prop'), x: z.number(), y: z.number(), rot: z.number() }),
     ),
   }),
+  /** Pools of `material` laid by hand at map coordinates (a custom track's mud, ice and oil). */
+  z.strictObject({
+    rule: z.literal('pools'),
+    items: z.array(
+      z.strictObject({
+        material: id('material'),
+        x: z.number(),
+        y: z.number(),
+        r: z.number().positive(),
+      }),
+    ),
+  }),
   /**
    * Buildings put up piece by piece off the road, so that each piece can be knocked out on its
    * own. A `house` is a rectangle of `wall` pieces with a doorway, `window` pieces here and
