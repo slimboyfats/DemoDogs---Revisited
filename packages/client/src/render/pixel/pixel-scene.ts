@@ -78,6 +78,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   outline: 'on' | 'off' | 'auto' = 'auto';
   /** Let a new race rise out of the ground, slice by slice. */
   bloom = true;
+  /** Seconds the sky moves on each frame drawn, instead of the clock's (captures). */
+  fixedDt: number | null = null;
   private lastT = 0;
   private readonly stackSky: StackSky;
 
@@ -270,7 +272,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
     // the sky follows its targets, and strips waiting for their lighting get a little time
     const clock = performance.now();
-    const dt = this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0;
+    const dt = this.fixedDt ?? (this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0);
     this.lastT = clock;
     const A = this.sky;
     A.update(dt);
