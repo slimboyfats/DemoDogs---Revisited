@@ -49,6 +49,7 @@ import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
+import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
@@ -173,6 +174,8 @@ export class World {
   readonly arms: Arms = newArms();
   /** Sticks, skipping bombs, hooks, shells, diggers, turrets, fleas, rays, bolts and fire trails. */
   readonly arsenal: Arsenal = newArsenal();
+  /** Twisters, flails, bones on their way down and cracks running through the ground. */
+  readonly wild: Wild = newWild();
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   /**
@@ -619,6 +622,10 @@ export class World {
     H.num(K.sticks.length).num(K.toys.length).num(K.hooks.length).num(K.tethers.length);
     H.num(K.strikes.length).num(K.moles.length).num(K.sentries.length).num(K.fleas.length);
     H.num(K.beams.length).num(K.bolts.length).num(K.trails.length);
+    const W = this.wild;
+    H.num(W.flails.length).num(W.bones.length).num(W.cracks.length);
+    for (const t of W.twisters) H.num(t.x).num(t.y);
+    for (const h of W.holes) H.num(h.x).num(h.y).num(h.t);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

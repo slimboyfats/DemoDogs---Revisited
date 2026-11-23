@@ -44,6 +44,7 @@ import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
+import { wildEvent } from './wild-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -1421,6 +1422,14 @@ export class Effects {
         case 'arc':
         case 'stall':
           this.shock.handle(e);
+          break;
+        case 'crack':
+        case 'frost':
+        case 'meteor':
+        case 'pit':
+        case 'trap':
+        case 'fill':
+          wildEvent(this, w, e, S);
           break;
         case 'catch':
         case 'leash':

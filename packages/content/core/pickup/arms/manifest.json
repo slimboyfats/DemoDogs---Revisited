@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Arms crate",
-    "description": "A weapon: rockets, a Sniffer seeker or a Litter cluster, mines, oil, smoke, tacks, glue, or one of the heavy arms (flame, hose, rail, ball, fire shell, bomb, sticky bomb, lightning, suction orb), or one of ten odder ones (throwing stick, skipping bomb, hook and line, barrage, digger, turret, fleas, cutting ray, swap bolt, fire trail).",
+    "description": "A weapon: rockets, a Sniffer seeker or a Litter cluster, mines, oil, smoke, tacks, glue, or one of the heavy arms (flame, hose, rail, ball, fire shell, bomb, sticky bomb, lightning, suction orb), or one of ten odder ones (throwing stick, skipping bomb, hook and line, barrage, digger, turret, fleas, cutting ray, swap bolt, fire trail) Or one of six wild ones: whirlwind, flail, a bone from the sky, a split in the ground, a cold snap, a pit dug behind the car.",
     "since": "core@0.1.0"
   },
   "kind": "arms",
@@ -36,6 +36,12 @@
     "weapon.fleas",
     "weapon.red-dot",
     "weapon.switcheroo",
-    "weapon.hot-paws"
+    "weapon.hot-paws",
+    "weapon.tail-chaser",
+    "weapon.choke-chain",
+    "weapon.big-bone",
+    "weapon.dig",
+    "weapon.cold-nose",
+    "weapon.pit-stop"
   ]
 }

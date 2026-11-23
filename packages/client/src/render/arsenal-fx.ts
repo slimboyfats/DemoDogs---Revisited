@@ -5,6 +5,7 @@ import type { Effects } from './effects';
 import { HAZE, SOOT } from './pixel/particles';
 import type { StackSink } from './stacks';
 import type { Sound } from '../audio/sound';
+import { queueWild, wildLights, wildTick } from './wild-fx';
 
 /**
  * How the ten odd arms look and sound: the stick's whirr, the hook's line, the marks where shells
@@ -84,7 +85,12 @@ export function arsenalEvent(fx: Effects, w: World, e: Mine, S: Sound): boolean 
       const c = w.cars[e.car]!;
       const v = fx.vol(c.x, c.y);
       if (v <= 0) return true;
-      if (d.kind === 'boomerang' || d.kind === 'swarm') S.whoosh(v);
+      if (d.kind === 'boomerang' || d.kind === 'swarm' || d.kind === 'twister') S.whoosh(v);
+      else if (d.kind === 'fissure') S.boom(v * 0.6);
+      else if (d.kind === 'pit') S.thud(v);
+      else if (d.kind === 'flail') S.clang(v);
+      else if (d.kind === 'meteor') S.howl(v * 0.6);
+      else if (d.kind === 'frost') S.drop();
       else if (d.kind === 'skip' || d.kind === 'sentry') S.drop();
       else if (d.kind === 'burrow') S.thud(v);
       else if (d.kind === 'swap') S.zap(v);
@@ -198,6 +204,7 @@ export function arsenalEvent(fx: Effects, w: World, e: Mine, S: Sound): boolean 
 
 /** Each tick: what is in flight, on a line, under the ground or burning. */
 export function arsenalTick(fx: Effects, w: World, S: Sound): void {
+  wildTick(fx, w, S);
   const K = w.arsenal;
   const q = fx.quality;
   const now = w.time;
@@ -399,6 +406,7 @@ function shellHeight(t: number): number {
 
 /** The ones drawn as stacks: stick, bomb, hook, shells, the digger's hump and the turrets. */
 export function queueArsenal(R: StackSink, art: Art, w: World): void {
+  queueWild(R, art, w);
   const K = w.arsenal;
   for (const s of K.sticks)
     if (R.visible(s.x, s.y, 8, 12)) {
@@ -451,6 +459,7 @@ export function arsenalLights(
   L: { add(x: number, y: number, r: number, k: number, rgb: number): void },
   w: World,
 ): void {
+  wildLights(L, w);
   const K = w.arsenal;
   for (const b of K.beams) {
     L.add(b.tx, b.ty, 30, 0.9, 0xff3020);
