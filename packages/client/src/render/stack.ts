@@ -35,6 +35,12 @@ export interface Strip {
    */
   px?: Uint8ClampedArray;
   stale?: boolean;
+  /**
+   * How much each texel glows (0 to 7, one byte a texel in the image's layout), for strips with
+   * lamps in them. Set when the strip is built and never changed: a texel knocked off is gone
+   * from the pixels, and a charred one glows in its charred colour.
+   */
+  glow?: Uint8Array | undefined;
 }
 
 /** How tall a strip stands, in art pixels. */

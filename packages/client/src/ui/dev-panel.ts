@@ -79,6 +79,8 @@ export interface DevHooks {
   stats(): string;
   /** Step the overdraw meter (heat maps, then numbers only, then off); the button's new label. */
   heat(): string;
+  /** Step the sky (day, dusk, night, rain, storm, snow); the button's new label. */
+  sky(): string;
 }
 
 /**
@@ -168,6 +170,11 @@ export class DevPanel {
       'OVERDRAW',
       'Fragments per pixel: heat maps of written, solid, covered and particle fragments, then the numbers alone',
       () => (od.textContent = hooks.heat()),
+    );
+    const sk = btn(
+      'SKY DAY',
+      'The sky: day, dusk, night (headlamps), rain and storm (wet ground and reflections), snow',
+      () => (sk.textContent = hooks.sky()),
     );
     btn('EXIT', 'Back to the menu', () => hooks.exit());
     this.statsEl.className = 'stats';

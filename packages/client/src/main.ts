@@ -27,6 +27,7 @@ import { Art } from './render/art';
 import { Hud } from './render/hud';
 import { drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
+import { SKIES } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
@@ -140,7 +141,23 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
     scene.setHeat(next);
     return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
   },
+  sky: () => {
+    const names = Object.keys(SKIES);
+    skyName = names[(names.indexOf(skyName) + 1) % names.length]!;
+    setSky(skyName);
+    return `SKY ${skyName.toUpperCase().replace('-', ' ')}`;
+  },
 });
+/** The sky by name (see SKIES); false when there is no such sky or no pixel engine. */
+let skyName = 'day';
+function setSky(name: string, now = false): boolean {
+  const k = SKIES[name];
+  if (!k || !(scene instanceof PixelScene)) return false;
+  skyName = name;
+  Object.assign(scene.sky, k);
+  if (now) scene.sky.snap();
+  return true;
+}
 // online races: the lobby screen, and the room it holds while racing
 const online = new OnlineScreen(
   $('onlinePanel'),
@@ -636,6 +653,15 @@ function boot(): void {
   if (params.has('perf')) startPerf();
   if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
   if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
+  if (scene instanceof PixelScene) {
+    // the sky and its switches: ?sky=night, ?light=flat, ?bloom=0, ?outline=on|off, ?reflect=0
+    if (params.get('light') === 'flat') scene.setFlat(true);
+    if (params.get('bloom') === '0') scene.bloom = false;
+    if (params.get('reflect') === '0') scene.reflections = false;
+    const line = params.get('outline');
+    if (line === 'on' || line === 'off') scene.outline = line;
+    setSky(params.get('sky') ?? 'day', true);
+  }
   resize();
   addEventListener('resize', resize);
   buildMenu();
@@ -728,6 +754,26 @@ function boot(): void {
       },
       dev,
       online,
+      /**
+       * The sky for scripts: `set('night')` (see SKIES; `now` skips the fade), `flat(true)` for the
+       * old flat light, and `state` to read or set dark, wet and snow directly.
+       */
+      sky: {
+        set: (name: string, now = true) => setSky(name, now),
+        flat(on: boolean): void {
+          if (scene instanceof PixelScene) scene.setFlat(on);
+        },
+        get state() {
+          return scene instanceof PixelScene ? scene.sky : null;
+        },
+        get scene() {
+          return scene instanceof PixelScene ? scene : null;
+        },
+        /** Strips still waiting for their lighting to be baked. */
+        get baking() {
+          return scene instanceof PixelScene ? scene.baking : 0;
+        },
+      },
       /**
        * The overdraw meter for scripts: `measure()` draws the current frame again with the counts
        * and returns them (fragments per pixel); `heat(channel | null)` shows a heat map.

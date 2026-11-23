@@ -15,6 +15,8 @@ import { queueArms } from './arms-fx';
 import { leanAt } from './rubble';
 
 const MINE_OFF = { minelit: 'black' };
+/** The line round your own car. */
+const RIM = 0xf4f0e0;
 
 /**
  * Where a frame's stacks go: the canvas `StackRenderer` (which sorts them) or the pixel engine's
@@ -37,6 +39,13 @@ export interface StackSink {
   ): void;
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha?: number): void;
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void;
+  /** Where the next slice will go, and a line round everything queued since (the pixel engine). */
+  mark?(): number;
+  rim?(from: number, rgb: number): void;
+  /** What is queued while this is on is warm and moving (a car): snow hardly lies on it. */
+  warm?(on: boolean): void;
+  /** Should your own car get a line round it this frame? */
+  readonly rimOn?: boolean;
 }
 
 /** A static prop that never moves or sways: the canvas renderer draws it as one baked image. */
@@ -112,7 +121,9 @@ export function queueStacks(
       R.group(d.y);
       R.stack(d.strip, d.x, d.y, d.z, d.rot, d.life < 1.5 ? d.life / 1.5 : 1);
     }
+  R.warm?.(true);
   for (const c of w.cars) queueCar(R, art, w, fx, c);
+  R.warm?.(false);
 }
 
 /** How many of a static's slices still stand: all of them, unless it is a building short of floors. */
@@ -203,6 +214,7 @@ function over(s: StaticProp, strip: Strip, lift: number, P: Car): boolean {
 function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   if (!R.visible(c.x, c.y, 20, 14)) return;
   R.group(c.y);
+  const from = R.rimOn && c === w.player && !c.wrecked ? R.mark?.() : undefined;
   const A = fx.carArt(c);
   const body = fx.bodies[c.index]!;
   const D = c.def;
@@ -268,6 +280,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       c.h,
       alpha,
     );
+  // your own car, when it is dark enough to lose it: a pale line round the whole of it
+  if (from !== undefined) R.rim?.(from, RIM);
 }
 
 function queueBot(R: StackSink, art: Art, fx: Effects, b: Bot): void {

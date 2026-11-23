@@ -64,7 +64,7 @@ export class ShadowLayer {
   }
 
   /** Draw over the ground; blending must be on (premultiplied). */
-  draw(v: StackView): void {
+  draw(v: StackView, strength = 1): void {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
@@ -74,7 +74,7 @@ export class ShadowLayer {
     gl.uniform1f(u.u_ys, v.ys);
     gl.uniform1f(u.u_fine, fineGrid(v.scale));
     gl.uniform2f(u.u_size, this.map.w, this.map.h);
-    gl.uniform1f(u.u_alpha, DARK);
+    gl.uniform1f(u.u_alpha, DARK * strength);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);

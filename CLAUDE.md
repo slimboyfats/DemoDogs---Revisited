@@ -15,6 +15,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev` (also starts the lobby server), menu → ONLINE   | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)              |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`           | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                   |
 | `pnpm look [out-dir]`                                      | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after   |
+| `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`     | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`   |
 | `pnpm format`                                              | Prettier, write                                                                                             |
 | `pnpm content:validate`                                    | resolve and validate every manifest                                                                         |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden` | regenerate golden hashes after an intended sim change                                                       |

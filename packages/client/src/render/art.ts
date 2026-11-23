@@ -1,5 +1,5 @@
 import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
-import { PALETTE, kit } from '@demodogs/content';
+import { GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { Strip } from './stack';
 import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
@@ -43,7 +43,7 @@ export class Art {
   built = 0;
 
   private make(part: Part, mats: Record<string, Tones>, res?: number): Strip {
-    const s = build(part, mats, res);
+    const s = build(part, mats, res, GLOWS);
     this.built += s.cw * s.ch * s.n;
     return s;
   }
