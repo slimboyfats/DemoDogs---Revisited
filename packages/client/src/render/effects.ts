@@ -749,8 +749,9 @@ export class Effects {
 
   /**
    * A whole area of ground in a material (a snowfield, a sheet of ice, a desert): too big to lay
-   * cell by cell, so it is one ragged shape filled at once, then roughened with drifts of
-   * lighter and darker cells, thinning out toward its edge.
+   * cell by cell, so it is one ragged shape laid in thin coats, each smaller than the last, so
+   * that it fades out over its outer half; then drifts of lighter and darker cells, thinning
+   * out the same way.
    */
   terrain(m: MaterialManifest, x: number, y: number, r: number): void {
     const rgb = parseInt(m.colour.slice(1), 16);
@@ -760,13 +761,12 @@ export class Effects {
       r * (0.9 + 0.06 * Math.sin(a * k + ph) + 0.04 * Math.sin(a * (k * 2 + 1) - ph));
     this.paintGround(x, y, r + 3, (g) => {
       g.fillStyle = m.colour;
-      for (const [f, alpha] of [
-        [1, 0.35],
-        [0.96, 0.6],
-        [0.92, 1],
-      ] as const) {
-        // thin enough that the road still shows through it
-        g.globalAlpha = Math.min(0.72, Math.max(m.alpha, 0.6)) * alpha;
+      // thin enough in the middle that the road still shows through it
+      const most = Math.min(0.72, Math.max(m.alpha, 0.6));
+      const COATS = 14;
+      g.globalAlpha = 1 - (1 - most) ** (1 / COATS);
+      for (let c = 0; c < COATS; c++) {
+        const f = 1 - (c / (COATS - 1)) * 0.5;
         g.beginPath();
         for (let i = 0; i <= 96; i++) {
           const a = (i / 96) * TAU;
@@ -779,8 +779,9 @@ export class Effects {
       const n = Math.min(60000, Math.round(r * r * 0.25));
       for (let i = 0; i < n; i++) {
         const a = rand(0, TAU);
-        const d = Math.sqrt(rand(0, 1)) * edge(a) * 1.02;
-        g.globalAlpha = rand(0.25, 0.7);
+        const q = Math.sqrt(rand(0, 1));
+        const d = q * edge(a) * 1.02;
+        g.globalAlpha = rand(0.25, 0.7) * Math.min(1, (1.02 - q) * 2.2);
         g.fillStyle = hex(shade(rgb, rand(0.8, 1.1)));
         g.fillRect(
           Math.round(x + Math.cos(a) * d),
