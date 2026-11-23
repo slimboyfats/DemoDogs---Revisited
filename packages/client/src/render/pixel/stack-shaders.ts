@@ -116,6 +116,9 @@ in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform vec2 u_size;
 uniform float u_fine;
+uniform vec4 u_lpos[8];  // x, y, radius, strength
+uniform vec3 u_lcol[8];
+uniform int u_lcount;
 out vec4 o;
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
@@ -168,7 +171,24 @@ void main() {
   float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
   float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
   float m = grass * g + tar * t + dirt * pebble * grit;
-  o = vec4(clamp(c * k * m, 0.0, 1.0), 1.0);
+  c = clamp(c * k * m, 0.0, 1.0);
+  // Fire lights the ground round it, in the same hard dithered bands as it lights the stacks.
+  if (u_lcount > 0) {
+    vec2 wp = (cell + 0.5) / u_fine;
+    float b = bayer(ci);
+    vec3 l = vec3(0.0);
+    for (int n = 0; n < 8; n++) {
+      if (n >= u_lcount) break;
+      vec4 lp = u_lpos[n];
+      float dist = length(wp - lp.xy);
+      if (dist >= lp.z) continue;
+      float e = 1.0 - dist / lp.z;
+      l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    }
+    vec3 q = min(vec3(0.7), l);
+    c = min(vec3(1.0), c * (1.0 + q * 1.1) + q * (30.0 / 255.0));
+  }
+  o = vec4(c, 1.0);
 }`;
 
 /**

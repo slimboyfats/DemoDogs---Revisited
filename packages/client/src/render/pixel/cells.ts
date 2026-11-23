@@ -53,6 +53,19 @@ export interface Ring {
   max: number;
 }
 
+/**
+ * A blast's shove: for a moment the air goes outward from a point, hardest about `R` away and
+ * falling off beyond, at up to `v` art px a second. It dies away in a fraction of a second; what
+ * it threw out keeps going on its own.
+ */
+export interface Gust {
+  x: number;
+  y: number;
+  z: number;
+  R: number;
+  v: number;
+}
+
 const rgbOf = (r: number, g: number, b: number): number =>
   (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
 
@@ -86,8 +99,8 @@ export const BANG_RAMP: readonly number[] = Array.from({ length: 9 }, (_, i) => 
 /** A fire cell's colour in 12 hard steps: the fire ramp in the first third, then soot paling. */
 export const FIRE_RAMP: readonly number[] = Array.from({ length: 13 }, (_, i) => {
   const x = i / 12;
-  if (x >= 0.3) return rgbOf(...ramp3(SOOT, GREY, PALE, (x - 0.3) / 0.7));
-  const f = x / 0.3;
+  if (x >= 0.42) return rgbOf(...ramp3(SOOT, GREY, PALE, (x - 0.42) / 0.58));
+  const f = x / 0.42;
   return rgbOf(
     ...(f < 0.5 ? ramp3(WHITE, YELLOW, ORANGE, f * 2) : ramp3(ORANGE, RED, SOOT, f * 2 - 1)),
   );
@@ -102,6 +115,7 @@ const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.flo
 export class Cells {
   n = 0;
   readonly rings: Ring[] = [];
+  readonly gusts: Gust[] = [];
   /** Leaves that came to rest this tick, as x, y, colour triples; whoever paints them empties it. */
   readonly landed: number[] = [];
   /**
@@ -246,6 +260,12 @@ export class Cells {
     this.rings.push({ ...r, max: r.life });
   }
 
+  /** Shove the air outward from a point (a blast). */
+  gust(g: Gust): void {
+    if (this.gusts.length >= 6) this.gusts.shift();
+    this.gusts.push({ ...g });
+  }
+
   count(kind: CKind): number {
     let c = 0;
     for (let i = 0; i < this.n; i++) if (this.kind[i] === kind) c++;
@@ -257,6 +277,18 @@ export class Cells {
     let ax = 0;
     let ay = 0;
     let az = 0;
+    for (const g of this.gusts) {
+      const dx = px - g.x;
+      const dy = py - g.y;
+      const dz = pz - g.z;
+      const len = Math.hypot(dx, dy, dz);
+      const q = len / g.R;
+      if (q > 4 || len < 0.01) continue;
+      const s = (g.v * q * 1.9) / (1 + q * q * q) / len;
+      ax += dx * s;
+      ay += dy * s;
+      az += dz * s;
+    }
     for (const g of this.rings) {
       const dx = px - g.x;
       const dy = py - g.y;
@@ -269,14 +301,16 @@ export class Cells {
       const q = d / g.r;
       // fastest at the roll's own radius, falling off inside and outside it
       const fall = 2 / (1 + q * q);
-      const s = (g.spin * q * fall * g.life) / g.max / d;
+      const s = (g.spin * q * fall * ringStrength(g)) / d;
       const out2 = s * dh;
       if (rho > 0.01) {
-        ax += (out2 * dx) / rho;
-        ay += (out2 * dy) / rho;
+        // nothing crosses the axis: the pull inward dies away towards it
+        const k = Math.min(1, rho / (g.R * 0.7)) / rho;
+        ax += out2 * dx * k;
+        ay += out2 * dy * k;
       }
       // the whole roll is climbing: what is in it climbs with it
-      az += -s * dr + g.vz * fall * 0.5;
+      az += -s * dr + g.vz * fall * 0.35 * ringStrength(g);
     }
     out[0] = ax;
     out[1] = ay;
@@ -382,10 +416,17 @@ export class Cells {
       g.R += g.grow * dt;
       g.grow *= Math.exp(-1.6 * dt);
     }
+    const fade = Math.exp(-5 * dt);
+    for (let i = this.gusts.length - 1; i >= 0; i--) {
+      const g = this.gusts[i]!;
+      g.v *= fade;
+      g.R += g.v * dt * 0.5;
+      if (g.v < 3) this.gusts.splice(i, 1);
+    }
     const air: [number, number, number] = [0, 0, 0];
-    const calm = this.rings.length === 0;
+    const calm = this.rings.length === 0 && this.gusts.length === 0;
     this.prepare();
-    this.gpu?.step(dt, this.rings, this.prep, this.nPrep / 7);
+    this.gpu?.step(dt, this.rings, this.gusts, this.prep, this.nPrep / 7);
     const still = this.nPrep === 0;
     const drag = Math.exp(-3 * dt);
     const rand = this.rand;
@@ -493,7 +534,7 @@ export class Cells {
           normal(x, y, z, 1, face ? shade(c, 0.72) : c, 1, Shape.Rect);
         } else if (k === CKind.Wisp) {
           if (pass !== 0) continue;
-          if (th >= Math.min(1, t * 8 + 0.4) * (t < 0.25 ? 1 : (1 - t) / 0.75)) continue;
+          if (th >= Math.min(1, t * 8 + 0.4) * (t < 0.5 ? 1 : (1 - t) / 0.5)) continue;
           if (!seen(x, y, z)) continue;
           const s = stepT(t, th, 6);
           const c = this.rgb[i]!;
@@ -517,7 +558,7 @@ export class Cells {
           normal(x, y, z, t < 0.85 ? 3 : 2, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
         } else if (k === CKind.Fire) {
           const s = stepT(t, th, 12);
-          const hot = s < 0.3;
+          const hot = s < 0.42;
           if (hot !== (pass === 1)) continue;
           if (th >= (t < 0.45 ? 1 : (1 - t) / 0.55)) continue;
           if (!seen(x, y, z)) continue;
@@ -538,6 +579,16 @@ export class Cells {
     this.n = 0;
     this.gpu?.clear();
     this.rings.length = 0;
+    this.gusts.length = 0;
     this.landed.length = 0;
   }
+}
+
+/**
+ * How hard a ring is turning: it takes a moment to wind up (the bang flies out first, then is
+ * caught) and dies away over its life.
+ */
+export function ringStrength(g: Ring): number {
+  const age = g.max - g.life;
+  return Math.min(1, Math.max(0, (age - 0.08) / 0.23)) * (0.35 + (0.65 * g.life) / g.max);
 }

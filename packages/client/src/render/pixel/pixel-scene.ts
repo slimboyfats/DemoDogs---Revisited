@@ -30,7 +30,7 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
 /** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
-const GAS_CAP = 65536;
+const GAS_CAP = 131072;
 
 export class PixelScene implements WorldRenderer, StackSink, CountSource {
   readonly gl: WebGL2RenderingContext;
@@ -140,6 +140,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     L.clear();
     const t = w.time;
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
+    // a blast's ball lights the ground and its own smoke for as long as it burns
+    for (const b of fx.blasts) {
+      const k = 1 - b.age / 70;
+      L.add(b.x, b.y, b.r * 3.2, (1.3 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
+    }
     for (const c of w.cars)
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
@@ -227,7 +232,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    this.groundLayer!.draw(view);
+    this.gatherLights(w, fx);
+    this.groundLayer!.draw(view, this.lights);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
     const quadView: [number, number] = [W, H];
@@ -243,7 +249,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
     gl.depthMask(true);
-    this.gatherLights(w, fx);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
@@ -265,13 +270,13 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       ys: this.ys,
       cosP: this.cosP,
     };
-    this.gas?.draw(gas, 0);
+    this.gas?.draw(gas, this.lights, 0);
     this.queueParticles(fx);
     this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
-    this.gas?.draw(gas, 1);
+    this.gas?.draw(gas, this.lights, 1);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
-    this.gas?.draw(gas, 2);
+    this.gas?.draw(gas, this.lights, 2);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
 
