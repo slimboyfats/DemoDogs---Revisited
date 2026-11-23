@@ -4,6 +4,7 @@ import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import { fitMover } from './movers';
+import { burst, lockOn, lockedOn } from './payloads';
 import type { World } from './world';
 import { drop, inSmoke } from './drops';
 import { firePulse } from './shock';
@@ -285,8 +286,8 @@ export function fire(w: World, c: Car): void {
   const sn = Math.sin(c.h);
   c.fireCd = wpn.cooldown;
   c.ammo--;
-  if (wpn.kind === 'rocket')
-    w.rockets.push({
+  if (wpn.kind === 'rocket') {
+    const r = {
       x: c.x + cs * 15,
       y: c.y + sn * 15,
       h: c.h,
@@ -294,8 +295,10 @@ export function fire(w: World, c: Car): void {
       owner: c.index,
       life: wpn.life ?? 2,
       def: wpn,
-    });
-  else if (wpn.kind === 'slick')
+    };
+    lockOn(w, r);
+    w.rockets.push(r);
+  } else if (wpn.kind === 'slick')
     spill(
       w,
       w.content.material.get(wpn.material!)!,
@@ -354,38 +357,43 @@ export function updateRockets(w: World): void {
   for (let i = w.rockets.length - 1; i >= 0; i--) {
     const r = w.rockets[i]!;
     r.life -= DT;
-    // homing: lean towards a car in front
-    let best: Car | null = null;
+    r.age = (r.age ?? 0) + DT;
+    // homing: chase the car it locked onto, or else lean towards a car in front
+    let best: Car | null = lockedOn(w, r);
     let bd = 160;
-    for (const c of w.cars) {
-      if (c.index === r.owner || c.wrecked) continue;
-      const d = Math.hypot(c.x - r.x, c.y - r.y);
-      if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
-        bd = d;
-        best = c;
+    if (!best)
+      for (const c of w.cars) {
+        if (c.index === r.owner || c.wrecked) continue;
+        const d = Math.hypot(c.x - r.x, c.y - r.y);
+        if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
+          bd = d;
+          best = c;
+        }
       }
-    }
     const turn = (r.def.homing ?? 0) * DT;
     if (best) r.h += clamp(angDiff(Math.atan2(best.y - r.y, best.x - r.x), r.h), -turn, turn);
     r.x += Math.cos(r.h) * r.v * DT;
     r.y += Math.sin(r.h) * r.v * DT;
-    let hit = r.life <= 0;
+    let hit = r.life <= 0 || (r.def.cluster !== undefined && r.age >= r.def.cluster.fuse);
     const k = w.keepInside(r.x, r.y, 2);
     if (k[0] !== r.x || k[1] !== r.y) hit = true;
-    if (!hit)
+    // until it arms it flies through whatever it meets (bomblets leaving the burst)
+    const armed = r.age >= (r.def.arm ?? 0);
+    if (!hit && armed)
       hit = w.cars.some(
         (c) => c.index !== r.owner && c.z < 10 && Math.hypot(c.x - r.x, c.y - r.y) < 10,
       );
-    if (!hit)
+    if (!hit && armed)
       hit = w
         .near(r.x, r.y, 4)
         .some((s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2);
-    if (!hit)
+    if (!hit && armed)
       hit = w.props.some(
         (p) => p.alive && p.def.radius > 3 && Math.hypot(p.x - r.x, p.y - r.y) < p.def.radius + 2,
       );
     if (hit) {
       w.rockets.splice(i, 1);
+      burst(w, r);
       explode(w, r.x, r.y, r.def.power, w.cars[r.owner]!);
     }
   }

@@ -1347,10 +1347,34 @@ export class Effects {
     }
     // a rocket rides a tail of fire and leaves a thin smoke trail
     for (const r of w.rockets) {
-      const bx = r.x - Math.cos(r.h) * 5;
-      const by = r.y - Math.sin(r.h) * 5;
-      this.flame(bx, by, 5, rand(2, 3.5), 0, 0, 0);
-      if (Math.random() < 0.6) this.plume(bx, by, 5, 2.5, HAZE, 6);
+      // bomblets (rockets that arm late, thrown out of a cluster) ride a smaller flame
+      const small = r.def.arm !== undefined;
+      const bx = r.x - Math.cos(r.h) * (small ? 2 : 5);
+      const by = r.y - Math.sin(r.h) * (small ? 2 : 5);
+      this.flame(bx, by, 5, small ? rand(1, 1.8) : rand(2, 3.5), 0, 0, 0);
+      if (Math.random() < (small ? 0.25 : 0.6)) this.plume(bx, by, 5, small ? 1.5 : 2.5, HAZE, 6);
+      // a seeker paints its target: a ring of red cells turning round the car it is chasing
+      const tg = r.target !== undefined ? w.cars[r.target] : undefined;
+      // (every few ticks, cells that last a few frames, so slow phones still see it)
+      if (tg && !tg.wrecked && w.tick % 3 === 0) {
+        const spin = w.tick * DT * 5;
+        for (let k = 0; k < 4; k++) {
+          const a = spin + (k * TAU) / 4;
+          for (const d of [-0.18, 0, 0.18])
+            this.emit(
+              'glitter',
+              tg.x + Math.cos(a + d) * 14,
+              tg.y + Math.sin(a + d) * 14,
+              tg.z + 6,
+              0,
+              0,
+              0,
+              0.14,
+              1,
+              0xff3a2e,
+            );
+        }
+      }
     }
     // fires left by explosions burn down: flames, then mostly smoke
     for (let i = this.fires.length - 1; i >= 0; i--) {

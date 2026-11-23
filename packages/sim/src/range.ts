@@ -3,6 +3,7 @@ import type { PickupManifest, PropManifest, WeaponManifest } from '@demodogs/sha
 import { grant } from './things';
 import { damage, explode, wreck } from './damage';
 import type { Car } from './entities';
+import { lockOn } from './payloads';
 import type { World } from './world';
 import { firePulse } from './shock';
 
@@ -26,7 +27,9 @@ export function rangeRocket(
   y: number,
   h: number,
 ): void {
-  w.rockets.push({ x, y, h, v: def.speed ?? 340, owner: owner.index, life: def.life ?? 2, def });
+  const r = { x, y, h, v: def.speed ?? 340, owner: owner.index, life: def.life ?? 2, def };
+  lockOn(w, r);
+  w.rockets.push(r);
   w.emit({ t: 'fire', car: owner.index, weapon: def.id });
 }
 

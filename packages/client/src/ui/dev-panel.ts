@@ -36,7 +36,7 @@ export type Tool =
 
 const TOOLS: [Tool, string, string][] = [
   ['drive', 'DRIVE', 'Drive the car as in a race'],
-  ['rocket', 'ROCKET', 'Tap: a rocket flies from your car to that spot'],
+  ['rocket', 'ROCKET', 'Tap: the chosen rocket flies from your car towards that spot'],
   ['mine', 'MINE', 'Tap: lay a mine there'],
   ['drop', 'DROP', 'Tap: drop the chosen rear weapon there (smoke, tacks, glue, oil)'],
   ['shock', 'SHOCK', 'Tap: your car jumps there and lets off a shock pulse'],
@@ -85,6 +85,8 @@ export class DevPanel {
   private readonly propSel = document.createElement('select');
   private readonly dropSel = document.createElement('select');
   readonly pickupSel = document.createElement('select');
+  /** Which rocket the ROCKET tool fires (seekers, clusters). */
+  readonly rocketSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
   private fps = 60;
 
@@ -114,6 +116,9 @@ export class DevPanel {
         this.dropSel.append(new Option(d.meta.name, d.id));
     this.dropSel.onchange = () => this.pick('drop');
     root.append(this.dropSel);
+    for (const r of [...content.weapon.values()].filter((d) => d.kind === 'rocket'))
+      this.rocketSel.append(new Option(r.meta.name, r.id));
+    root.append(this.rocketSel);
     for (const p of [...content.prop.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.propSel.append(new Option(p.meta.name, p.id));
     root.append(this.propSel);
@@ -239,7 +244,7 @@ export class DevPanel {
     const weapon = (kind: string) => [...this.content.weapon.values()].find((d) => d.kind === kind);
     switch (tool) {
       case 'rocket': {
-        const def = weapon('rocket');
+        const def = this.content.weapon.get(this.rocketSel.value) ?? weapon('rocket');
         const h = Math.atan2(y - P.y, x - P.x);
         if (def) rangeRocket(w, def, P, P.x + Math.cos(h) * 15, P.y + Math.sin(h) * 15, h);
         break;

@@ -169,6 +169,12 @@ export function resolveContent(src: ContentSource): Content {
   for (const w of out.weapon.values()) {
     if (w.material) need(w.id, 'material', w.material);
     else if (w.kind === 'slick') problems.push(`${w.id}: a slick needs a material`);
+    if (w.cluster) {
+      const b = out.weapon.get(w.cluster.bomblet);
+      if (!b) need(w.id, 'weapon', w.cluster.bomblet);
+      else if (b.kind !== 'rocket' || b.cluster)
+        problems.push(`${w.id}: bomblet ${b.id} must be a rocket that does not split again`);
+    }
   }
   for (const m of out.mode.values()) need(m.id, 'ai', m.ai);
   for (const a of out.ai.values())

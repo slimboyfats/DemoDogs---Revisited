@@ -1,0 +1,18 @@
+{
+  "id": "weapon.sniffer",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sniffer",
+    "description": "A seeker rocket. Picks up the scent of the nearest rival ahead as it leaves and chases that car round corners until it hits or burns out.",
+    "since": "core@0.5.0"
+  },
+  "kind": "rocket",
+  "label": "SNIFFER",
+  "ammo": 2,
+  "power": 0.8,
+  "cooldown": 0.6,
+  "speed": 260,
+  "life": 3.2,
+  "homing": 4.2,
+  "lock": { "range": 320, "cone": 0.9 }
+}

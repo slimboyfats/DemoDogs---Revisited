@@ -230,6 +230,23 @@ export const WeaponSchema = z.strictObject({
   life: z.number().positive().optional(),
   homing: z.number().min(0).optional(),
   /**
+   * Rockets: on launch, lock onto the nearest rival within `range` and `cone` radians of the nose,
+   * and chase that car (at the `homing` turn rate) for the whole flight, wherever it goes.
+   */
+  lock: z.strictObject({ range: z.number().positive(), cone: z.number().positive() }).optional(),
+  /**
+   * Rockets: when it bursts it throws `count` of the `bomblet` weapon (a rocket) out ahead in a
+   * fan `spread` radians wide; it also bursts by itself after `fuse` seconds.
+   */
+  cluster: z
+    .strictObject({
+      bomblet: id('weapon'),
+      count: z.number().int().positive(),
+      spread: z.number().positive(),
+      fuse: z.number().positive(),
+    })
+    .optional(),
+  /**
    * Guns: fitted to every car and fired by themselves at a car in the sights. `ammo` is the rounds
    * a car starts with, `damage` what a round does, `range` how far it reaches and `aim` how far
    * off the nose (radians) a target may be.
@@ -240,7 +257,7 @@ export const WeaponSchema = z.strictObject({
   /** Slicks: a pool of `material` of this `radius` poured out behind the car. */
   material: id('material').optional(),
   radius: z.number().positive().optional(),
-  /** Mines: seconds before it arms; trigger radius. */
+  /** Mines: seconds before it arms; trigger radius. Rockets: seconds before contact sets it off. */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
   /**
