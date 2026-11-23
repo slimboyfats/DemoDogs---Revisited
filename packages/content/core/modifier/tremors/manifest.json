@@ -1,0 +1,17 @@
+{
+  "id": "modifier.tremors",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tremors",
+    "description": "Earthquakes. After a rumble the ground shakes cars about, splits open in cracks they lurch across, and brings scenery down.",
+    "since": "core@0.7.0"
+  },
+  "kind": "quake",
+  "label": "QUAKES",
+  "colour": "#a1887f",
+  "every": [9, 15],
+  "warn": 1.4,
+  "power": 1,
+  "reach": 190,
+  "time": 2.6
+}

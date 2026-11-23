@@ -174,7 +174,7 @@ export function updateProps(w: World): void {
       p.x += p.vx * DT;
       p.y += p.vy * DT;
       p.rot += p.spin * DT;
-      p.vz -= GRAVITY * 0.55 * DT;
+      p.vz -= GRAVITY * w.gravity * 0.55 * DT;
       p.z += p.vz * DT;
       const k = w.keepInside(p.x, p.y, p.def.radius);
       if (p.vz <= 0 || p.z <= 0 || k[0] !== p.x || k[1] !== p.y) airburst(w, p);
@@ -184,7 +184,7 @@ export function updateProps(w: World): void {
     p.y += p.vy * DT;
     p.rot += p.spin * DT;
     if (p.z > 0 || p.vz) {
-      p.vz -= GRAVITY * 0.95 * DT;
+      p.vz -= GRAVITY * w.gravity * 0.95 * DT;
       p.z += p.vz * DT;
       if (p.def.smash && p.vz < -20 && p.z < 9) smash(w, p);
       if (p.z <= 0) {

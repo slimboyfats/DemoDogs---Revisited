@@ -1,0 +1,20 @@
+{
+  "id": "modifier.scrapfall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrapfall",
+    "description": "Burning scrap falls out of the sky. A ring on the ground shows where the next piece lands; it blows a pit, throws fire about and may stay there, in the way.",
+    "since": "core@0.7.0"
+  },
+  "kind": "meteors",
+  "label": "SCRAPFALL",
+  "colour": "#ff8a50",
+  "every": [2.5, 5],
+  "warn": 1.5,
+  "power": 0.85,
+  "leaves": {
+    "prop": "prop.sky-scrap",
+    "chance": 0.6,
+    "max": 10
+  }
+}

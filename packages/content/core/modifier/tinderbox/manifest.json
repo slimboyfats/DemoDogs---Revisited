@@ -1,0 +1,15 @@
+{
+  "id": "modifier.tinderbox",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tinderbox",
+    "description": "Bone dry. Fire on the ground throws burning globs that start new fires where they land, and patches of ground catch by themselves.",
+    "since": "core@0.7.0"
+  },
+  "kind": "tinder",
+  "label": "DRY",
+  "colour": "#ff7043",
+  "spread": 0.16,
+  "every": [4, 8],
+  "tint": "#ffecd0"
+}

@@ -145,6 +145,8 @@ export class Sound {
     e.o1.stop(this.ac.currentTime + 0.3);
     e.o2.stop(this.ac.currentTime + 0.3);
     this.engine = null;
+    // the weather goes quiet with the engine (a pause, the menus)
+    this.rain(0);
   }
 
   crash(power: number): void {
@@ -182,6 +184,62 @@ export class Sound {
   gun(v = 1): void {
     this.noise(0.05, 1900, 0.8, 0.16 * v, 'bandpass');
     this.tone(210, 0.04, 0.05 * v, 'square', 0.5);
+  }
+
+  private rainNode: { g: GainNode; src: AudioBufferSourceNode } | null = null;
+
+  /** Rain on the ground: a steady hiss, as loud as `level` (0 stops it). */
+  rain(level: number): void {
+    const ac = this.ac;
+    if (!ac || !this.master || !this.noiseBuf) return;
+    if (level <= 0.01) {
+      if (this.rainNode) {
+        this.rainNode.src.stop();
+        this.rainNode = null;
+      }
+      return;
+    }
+    if (!this.rainNode) {
+      const src = ac.createBufferSource();
+      src.buffer = this.noiseBuf;
+      src.loop = true;
+      const f = ac.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 2200;
+      const g = ac.createGain();
+      g.gain.value = 0;
+      src.connect(f).connect(g).connect(this.master);
+      src.start();
+      this.rainNode = { g, src };
+    }
+    this.rainNode.g.gain.setTargetAtTime(0.07 * level, ac.currentTime, 0.3);
+  }
+
+  /** Thunder: the crack of the strike, then the roll after it. */
+  thunder(v = 1): void {
+    this.noise(0.14, 3600, 0.9, 0.5 * v, 'highpass');
+    this.noise(1.6, 140, 0.6, 0.9 * v, 'lowpass', 0.04);
+    this.noise(1.1, 420, 0.5, 0.35 * v, 'bandpass', 0.3);
+    this.tone(48, 1.2, 0.5 * v, 'sine', 0.6, 0.05);
+  }
+
+  /** The ground shaking: a low rumble for `dur` seconds. */
+  rumble(dur: number, v = 1): void {
+    this.noise(dur, 70, 0.5, 0.9 * v, 'lowpass');
+    this.tone(34, dur, 0.5 * v, 'sine', 0.8);
+    this.noise(dur * 0.7, 500, 0.6, 0.15 * v, 'bandpass', 0.1);
+  }
+
+  /** A gust of wind rising and dying over `dur` seconds. */
+  gust(dur: number, v = 1): void {
+    this.noise(dur, 480, 0.5, 0.3 * v, 'bandpass');
+    this.noise(dur * 0.8, 1300, 0.7, 0.12 * v, 'bandpass', dur * 0.15);
+  }
+
+  /** Something big coming down out of the sky: a falling whistle. */
+  whistle(dur: number, v = 1): void {
+    this.tone(1500, dur, 0.06 * v, 'sine', 0.25);
+    this.noise(dur, 900, 0.8, 0.1 * v, 'bandpass');
   }
 
   /** A fuel drum taking off: a rising rush of fire. */

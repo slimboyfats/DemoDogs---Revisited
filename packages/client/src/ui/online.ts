@@ -4,6 +4,7 @@ import { installDeterministicMath, contentHash } from '../net/det-math';
 import type { NetRace } from '../net/lockstep';
 import { OnlineRoom, type RaceStart } from '../net/room';
 import { SignalClient } from '../net/signal';
+import { modChips, modLine } from './mod-chips';
 
 export interface OnlineHooks {
   /** Build and show the race; `race` drives it. */
@@ -297,6 +298,9 @@ export class OnlineScreen {
         }
         el.append(
           sel,
+          modChips(this.content, room.mods, (m) => room.setMods(m)),
+        );
+        el.append(
           btn(
             room.seats.length > 1 ? 'START RACE' : 'START (ON YOUR OWN)',
             () => room.begin(),
@@ -308,7 +312,7 @@ export class OnlineScreen {
           h('p', {
             className: 'tag',
             textContent: venue
-              ? `${venue.meta.name.toUpperCase()} · waiting for the host to start`
+              ? `${venue.meta.name.toUpperCase()}${modLine(this.content, room.mods)} · waiting for the host to start`
               : 'Reaching the host…',
           }),
         );

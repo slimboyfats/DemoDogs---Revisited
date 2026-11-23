@@ -13,6 +13,7 @@ import { pose } from './rig';
 import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
 import { leanAt } from './rubble';
+import { BREEZE, WIND } from './pixel/particles';
 
 const MINE_OFF = { minelit: 'black' };
 
@@ -146,10 +147,10 @@ function queueStatic(
     // the ground (the foot of a ramp) are left out.
     const alpha = over(s, strip, lift, P) ? 0.4 : 1;
     const from = Math.max(0, Math.ceil(-lift * strip.res));
-    const wind = s.def.sway ? sway(w.time, s.seed) : 0;
+    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
     for (let i = from; i < strip.n; i++) {
-      const o = wind * (0.5 + (0.5 * i) / strip.n) * 1.6;
-      R.slice(strip, i, s.x + o, s.y + o * 0.4, lift + i / strip.res, s.rot, 1, alpha);
+      const o = (0.5 + (0.5 * i) / strip.n) * 1.6;
+      R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot, 1, alpha);
     }
     return;
   }
@@ -159,11 +160,11 @@ function queueStatic(
     return;
   }
   // trees sway: the higher the slice, the further it moves
-  const wind = sway(w.time, s.seed);
+  const [wx, wy] = sway(w.time, s.seed);
   for (let i = 0; i < strip.n; i++) {
     const k = i / strip.n;
-    const o = wind * k * k * 1.8;
-    R.slice(strip, i, s.x + o, s.y + o * 0.4, i / strip.res, s.rot);
+    const o = k * k * 1.8;
+    R.slice(strip, i, s.x + wx * o, s.y + wy * o, i / strip.res, s.rot);
   }
 }
 
@@ -175,9 +176,21 @@ function queuePress(R: StackSink, art: Art, w: World, s: StaticProp): void {
   R.stack(art.prop(P.plate), s.x + shake, s.y, 1 + P.lift * pressOpen(w, s), s.rot);
 }
 
-/** How far the wind has a tree over, for its phase `seed`. */
-function sway(t: number, seed: number): number {
-  return Math.sin(t * 1.3 + seed) * 0.9 + Math.sin(t * 2.9 + seed * 2) * 0.3;
+const STILL: readonly [number, number] = [0, 0];
+const CALM = Math.hypot(BREEZE[0], BREEZE[1]);
+
+/**
+ * How far the wind has a tree over, for its phase `seed`: it rocks as it always has in the
+ * breeze, and in a real wind (a gale's gust) it rocks harder, faster, and leans downwind.
+ */
+function sway(t: number, seed: number): readonly [number, number] {
+  const gale = Math.max(0, Math.hypot(WIND[0], WIND[1]) / CALM - 1);
+  const q = 1 + gale * 0.35;
+  const rock =
+    (Math.sin(t * 1.3 * q + seed) * 0.9 + Math.sin(t * 2.9 * q + seed * 2) * 0.3) *
+    (1 + gale * 0.25);
+  const lean = gale * 0.022;
+  return [rock + (WIND[0] - BREEZE[0]) * lean, rock * 0.4 + (WIND[1] - BREEZE[1]) * lean];
 }
 
 /** cot of the camera pitch: how far north on the ground a thing at height 1 is drawn over. */

@@ -36,10 +36,12 @@ import { KeyHints } from './ui/key-hints';
 import { results } from './ui/results';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
+import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
 
 /**
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
- * ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
+ * ?mods=<names> switches world modifiers on (downpour,gale ... or all, or wild) for quick races
+ * and the test range. ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
  * player's car with the rivals' AI); ?career opens the career, ?career=<easy|medium|hard|final>
  * enters that race; ?dev opens the test range. window.__dd exposes the running session, the
  * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
@@ -79,6 +81,15 @@ const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
 let careerRace: RaceId | null = null;
+
+/** World modifiers picked for quick races: ?mods= wins, otherwise what was picked last time. */
+const MODS = 'dd-mods-v1';
+let worldMods: string[] = [];
+try {
+  worldMods = parseMods(content, params.get('mods') ?? localStorage.getItem(MODS));
+} catch {
+  worldMods = parseMods(content, params.get('mods'));
+}
 
 function saveCareer(k: Career): void {
   career = k;
@@ -160,10 +171,11 @@ const online = new OnlineScreen(
           paint: host.paint,
           seed: s.seed,
           autopilot: false,
+          modifiers: s.mods,
           humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
           you: s.you,
         },
-        `ONLINE · ${content.venue.get(s.venue)?.meta.name.toUpperCase() ?? ''}`,
+        `ONLINE · ${content.venue.get(s.venue)?.meta.name.toUpperCase() ?? ''}${modLine(content, s.mods)}`,
         (made) => {
           made.net = race;
           document.body.classList.add('online');
@@ -317,9 +329,10 @@ function startGame(venue: string): void {
   const seed = params.has('seed')
     ? Number(params.get('seed'))
     : Math.floor(Math.random() * 2 ** 31);
+  const modifiers = resolveMods(content, worldMods, seed);
   void launch(
-    { venue, car: cars[carIdx]!.id, seed },
-    content.venue.get(venue)!.meta.name.toUpperCase(),
+    { venue, car: cars[carIdx]!.id, seed, modifiers },
+    content.venue.get(venue)!.meta.name.toUpperCase() + modLine(content, modifiers),
   );
 }
 
@@ -342,6 +355,7 @@ function startDev(car: string): void {
       seed: 1,
       autopilot: false,
       sandbox: true,
+      modifiers: resolveMods(content, parseMods(content, params.get('mods')), 1),
       field: cars
         .filter((c) => c.id !== car)
         .map((c) => ({ car: c.id, name: c.meta.name.toUpperCase(), paint: c.paint })),
@@ -456,6 +470,21 @@ function showCar(): void {
 }
 
 function buildMenu(): void {
+  $('worldPick').append(
+    modChips(
+      content,
+      worldMods,
+      (m) => {
+        worldMods = m;
+        try {
+          localStorage.setItem(MODS, m.join(','));
+        } catch {
+          /* private mode */
+        }
+      },
+      true,
+    ),
+  );
   const list = $('venues');
   for (const v of venues) {
     const mode = content.mode.get(v.mode)!;

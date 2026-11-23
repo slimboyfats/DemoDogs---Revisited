@@ -43,6 +43,7 @@ import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { armsEvent, armsTick } from './arms-fx';
+import { WeatherFx } from './weather-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -221,6 +222,8 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
+  readonly weather: WeatherFx;
 
   constructor(
     readonly w: World,
@@ -255,6 +258,7 @@ export class Effects {
     );
     // the pools the map starts with
     for (const s of w.spills) if (s.fixed) this.pool(s.def, s.x, s.y, s.r);
+    this.weather = new WeatherFx(this, w, sound);
   }
 
   carArt(c: Car) {
@@ -716,7 +720,7 @@ export class Effects {
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
-  private pool(m: MaterialManifest, x: number, y: number, r: number): void {
+  pool(m: MaterialManifest, x: number, y: number, r: number): void {
     const rgb = parseInt(m.colour.slice(1), 16);
     const k = 2 + Math.floor(rand(0, 3));
     const ph = rand(0, TAU);
@@ -1425,6 +1429,16 @@ export class Effects {
         case 'hurl':
           howlEvent(this, w, e, S);
           break;
+        case 'weather':
+        case 'omen':
+        case 'bolt':
+        case 'skyfall':
+        case 'quake':
+        case 'crack':
+        case 'gust':
+        case 'flood':
+          this.weather.handle(e);
+          break;
         case 'countdown':
           S.beep(false);
           break;
@@ -1574,6 +1588,7 @@ export class Effects {
 
   afterStep(): void {
     const w = this.w;
+    this.weather.tick();
     this.defence.afterStep();
     this.fallen();
     this.wreck.step(DT, w.cars);

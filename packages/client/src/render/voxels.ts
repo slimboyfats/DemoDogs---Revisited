@@ -35,6 +35,8 @@ export interface Home {
 }
 
 const GRAVITY = 420;
+/** Gravity for loose blocks and rubble, as a share of the usual: the world's own (see `WeatherFx`). */
+export const PULL = { g: 1 };
 const MAX_AGE = 6;
 /** Slower than this on the ground, a voxel stops and becomes part of the ground. */
 const REST_SPEED = 14;
@@ -57,7 +59,7 @@ export function stepVoxel(v: Voxel, dt: number, floor = 0): Fate {
   v.x += v.vx * dt;
   v.y += v.vy * dt;
   v.rot += v.spin * dt;
-  v.vz -= GRAVITY * dt;
+  v.vz -= GRAVITY * PULL.g * dt;
   v.z += v.vz * dt;
   if (v.z <= floor) {
     const hit = -v.vz;

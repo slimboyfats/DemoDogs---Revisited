@@ -171,6 +171,26 @@ export class Hud {
       }
     }
 
+    // what the world is doing: a chip for each modifier that is on
+    if (w.mods.length) {
+      ctx.font = `900 ${Math.round(10 * u)}px system-ui, sans-serif`;
+      const gap = 6 * u;
+      const widths = w.mods.map((m) => ctx.measureText(m.def.label).width + 12 * u);
+      let x = W / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1)) / 2;
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      w.mods.forEach((m, i) => {
+        const bw = widths[i]!;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        ctx.fillRect(x, pad, bw, 16 * u);
+        ctx.fillStyle = m.def.colour;
+        ctx.fillRect(x, pad + 14 * u, bw, 2 * u);
+        ctx.fillText(m.def.label, x + bw / 2, pad + 7.5 * u);
+        x += bw + gap;
+      });
+      ctx.textBaseline = 'top';
+    }
+
     // big centre messages
     ctx.textBaseline = 'middle';
     if (w.phase === 'countdown') {

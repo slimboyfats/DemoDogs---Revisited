@@ -1,0 +1,19 @@
+{
+  "id": "modifier.greased",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Greased",
+    "description": "The road is slick with oil from the start, and more seeps up as the race goes on. One spark and it burns.",
+    "since": "core@0.7.0"
+  },
+  "kind": "slick",
+  "label": "OIL",
+  "colour": "#8d7b68",
+  "every": [5, 9],
+  "pools": {
+    "material": "material.oil",
+    "start": 12,
+    "max": 22,
+    "r": [8, 14]
+  }
+}

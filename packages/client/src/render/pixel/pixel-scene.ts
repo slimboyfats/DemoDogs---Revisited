@@ -19,6 +19,8 @@ import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
+import { DuskPass } from './dusk';
+import type { WeatherDraw } from '../weather-fx';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
@@ -67,6 +69,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private lens: LensPass | null = null;
   private readonly lenses: Lens[] = [];
   distort = true;
+  /** Darkness and lamps (made the first time a world dims the picture). */
+  private dusk: DuskPass | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -282,6 +286,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 0);
     this.queueParticles(fx);
     this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
+    this.darken(w, fx, W, H);
     this.gas?.draw(gas, this.lights, 1);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
@@ -300,6 +305,36 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       if (this.heat) this.meter.drawHeat(this.heat, W, H);
     }
+  }
+
+  /**
+   * Night, or the gloom of a storm: multiply the world drawn so far by the weather's tint, less
+   * where a lamp, a fire or a flash lights the ground. Fire and glow are drawn after it.
+   */
+  private darken(w: World, fx: Effects, W: number, H: number): void {
+    const A = fx.weather;
+    if (!A.dim) return;
+    const D = (this.dusk ??= new DuskPass(this.gl));
+    D.clear();
+    if (A.lamps) {
+      // the car this screen follows first, so its lamps are never the ones left out
+      const P = w.player;
+      const cars = [P, ...w.cars.filter((c) => c !== P)];
+      for (const c of cars) {
+        if (!this.visible(c.x, c.y, 130)) continue;
+        if (!c.wrecked && c.has.front) D.lamp(c);
+        else D.ember(c);
+      }
+    }
+    D.take(this.lights);
+    // a bolt blinks the whole sky
+    const f = A.flash * 0.85;
+    const T = A.tint;
+    D.draw({ w: W, h: H, ox: this.ox, oy: this.oy, scale: this.scale, ys: this.ys }, [
+      T[0] + (1 - T[0]) * f,
+      T[1] + (1 - T[1]) * f,
+      T[2] + (1 - T[2]) * f,
+    ]);
   }
 
   /** The frame's lens rings in device pixels: every ripple that has started and is near the view. */
@@ -374,6 +409,31 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     fx.cells.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.shock.sparks.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
+    const S = this.scale;
+    const wd: WeatherDraw = {
+      cx: (this.vw / 2 - this.ox) / S,
+      cy: (this.vh / 2 - this.oy) / (S * this.ys),
+      hw: this.vw / (2 * S),
+      hh: this.vh / (2 * S * this.ys),
+      cell: (x, y, z, n, rgb, a) => cellN(x, y, z, n, rgb, a, Shape.Rect),
+      glow: (x, y, z, n, rgb, a) => cellG(x, y, z, n, rgb, a, Shape.Rect),
+      bar: (x, y, z, bw, bh, rgb, a, rot) =>
+        this.quads.push(
+          Math.round(x * G),
+          Math.round(this.my(y, z) * G),
+          bw,
+          bh,
+          rgb,
+          a,
+          Shape.Rect,
+          rot,
+        ),
+      shade: (x, y, d, a) =>
+        this.quads.push(x * G, this.my(y, 0) * G, d * G, d * G * this.ys, 0x000000, a, Shape.Disc),
+      ys: this.ys,
+      cosP: this.cosP,
+    };
+    fx.weather.draw(wd);
   }
 
   // ---- the overdraw meter (?dev OVERDRAW, ?overdraw with the perf recorder, __dd.overdraw())

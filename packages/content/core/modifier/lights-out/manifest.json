@@ -1,0 +1,15 @@
+{
+  "id": "modifier.lights-out",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lights Out",
+    "description": "Night. Each car lights the road ahead of it for as long as it still has its nose; rivals who have lost theirs slow down.",
+    "since": "core@0.7.0"
+  },
+  "kind": "night",
+  "label": "NIGHT",
+  "colour": "#7986cb",
+  "pace": 0.84,
+  "tint": "#2c3662",
+  "lamps": true
+}

@@ -46,8 +46,13 @@ export const FLAME_RAMP = [0xfff0a0, 0xffa020, 0xe04a10, 0x3a2a26] as const;
 export const SOOT = 0x2c2826;
 export const HAZE = 0x6a6660;
 
-/** The steady wind every smoke column leans on, art px per second squared. */
-export const WIND: readonly [number, number] = [16, -5];
+/** The breeze every smoke column leans on in still weather, art px per second squared. */
+export const BREEZE: readonly [number, number] = [16, -5];
+/**
+ * The wind right now: the breeze, plus the world's own wind when a modifier blows one (set every
+ * tick by `WeatherFx`). Fire, smoke, leaves, grit and trees all read it.
+ */
+export const WIND: [number, number] = [BREEZE[0], BREEZE[1]];
 
 /** Multiply a colour's channels by k (mudders' theme.shade). */
 export function shade(rgb: number, k: number): number {
