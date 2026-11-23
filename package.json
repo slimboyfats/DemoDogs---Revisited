@@ -27,6 +27,7 @@
     "life": "pnpm build && node scripts/capture-life.mjs",
     "bones": "pnpm build && node scripts/capture-bones.mjs",
     "world": "pnpm build && node scripts/capture-world.mjs",
+    "bridge": "pnpm build && node scripts/capture-bridge.mjs",
     "res": "pnpm build && node scripts/resolution.mjs",
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "verify": "pnpm check && pnpm play:smoke",

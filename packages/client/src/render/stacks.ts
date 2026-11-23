@@ -164,6 +164,11 @@ export function queueStacks(
   R.warm?.(false);
 }
 
+/** How far (art px) a piece of deck has sunk, `t` seconds after it lost its footing. */
+export function sagDip(t: number): number {
+  return Math.min(7, 1.5 + 9 * t);
+}
+
 /** How many of a static's slices still stand: all of them, unless it is a building short of floors. */
 export function standing(s: StaticProp, strip: Strip): number {
   const n = s.def.storeys;
@@ -185,7 +190,9 @@ function queueStatic(
     return;
   }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
-  const lift = s.lift ?? 0;
+  // bridge deck with nothing under it sinks and shudders before it goes
+  const sag = s.sagT === undefined ? 0 : sagDip(s.sag ?? 0);
+  const lift = (s.lift ?? 0) - sag;
   // something with moving parts, while it is whole: once it is hurt it is one piece, and stops
   const rig = lift === 0 && strip === art.prop(s.def.id) ? art.rig(s.def.id) : null;
   if (rig) {
@@ -216,7 +223,11 @@ function queueStatic(
     // the ground (the foot of a ramp) are left out.
     const alpha = over(s, strip, lift, P) ? THROUGH : 1;
     const from = Math.max(0, Math.ceil(-lift * strip.res));
-    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
+    const [wx, wy] = s.def.sway
+      ? sway(w.time, s.seed)
+      : sag > 0
+        ? [Math.sin(w.time * 47 + s.seed * 9) * 0.35, Math.cos(w.time * 53 + s.seed * 5) * 0.35]
+        : STILL;
     for (let i = from; i < strip.n; i++) {
       const o = (0.5 + (0.5 * i) / strip.n) * 1.6;
       R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot, 1, alpha);
