@@ -133,6 +133,162 @@
       "rule": "border",
       "prop": "prop.fence-tyres",
       "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.turbo-pad"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.12
+      },
+      "items": [
+        {
+          "prop": "prop.ramp"
+        },
+        {
+          "prop": "prop.crate",
+          "ahead": 50,
+          "row": 7,
+          "step": 10
+        },
+        {
+          "prop": "prop.crate",
+          "ahead": 62,
+          "row": 6,
+          "step": 10
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 2,
+        "apart": 0.1
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 2,
+          "gap": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 8,
+        "apart": 0.05
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.15, 0.45, 0.75],
+      "items": [
+        {
+          "prop": "prop.crows",
+          "lane": 0.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.3, 0.6, 0.9],
+      "items": [
+        {
+          "prop": "prop.rabbits",
+          "lane": 1.6,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 8e-5,
+      "clear": 6,
+      "items": [
+        {
+          "prop": "prop.tumbleweed",
+          "weight": 1
+        }
+      ]
     }
   ],
   "bots": {

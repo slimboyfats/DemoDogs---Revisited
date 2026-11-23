@@ -1,0 +1,20 @@
+{
+  "id": "prop.boost-pad",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Boost tile",
+    "description": "A plate of running arrows on the road. Drive over it and it kicks the car along the arrows, with a higher top speed for a moment.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 10,
+  "solid": false,
+  "pad": {
+    "kind": "boost",
+    "long": 22,
+    "wide": 20,
+    "push": 70,
+    "pace": 1.38,
+    "seconds": 1.5
+  }
+}

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AlongRule, FieldRule, pieceFields } from './pieces';
 
 /**
  * Manifest schemas. Every content item is a folder with a manifest.json; its id is
@@ -336,6 +337,8 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     chance: unit.default(1),
     items: z.array(ScatterItem).min(1),
   }),
+  AlongRule,
+  FieldRule,
 ]);
 export type SceneryRule = z.infer<typeof SceneryRuleSchema>;
 
@@ -829,6 +832,7 @@ export const PropSchema = z.strictObject({
       crush: z.number().min(0).default(30),
     })
     .optional(),
+  ...pieceFields,
 });
 export type PropManifest = z.infer<typeof PropSchema>;
 

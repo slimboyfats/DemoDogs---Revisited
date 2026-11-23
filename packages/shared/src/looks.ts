@@ -33,6 +33,11 @@ export interface CarLook {
 export interface PropLook {
   kind: 'prop';
   part: Part;
+  /**
+   * Other poses of the same thing, for the client to flip between: an animal's other step, a
+   * bird's wings up and down.
+   */
+  alts?: Part[];
   /** Extra materials this look uses beyond the shared palette. */
   materials?: Record<string, Tones>;
 }

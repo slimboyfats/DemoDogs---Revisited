@@ -1,0 +1,13 @@
+{
+  "id": "prop.tumbleweed",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tumbleweed",
+    "description": "A ball of dry twigs, light as nothing. A car sends it bounding away down the road.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 3.2,
+  "mass": 0.03,
+  "launch": 0.9
+}

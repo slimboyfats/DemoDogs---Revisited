@@ -160,6 +160,13 @@ export interface Car {
   /** Springs under the car: leaps left. `hop` is seconds into a sprung leap, -1 when not in one. */
   springs: { def: PickupManifest; n: number } | null;
   hop: number;
+  /**
+   * Track tiles (see pads.ts): seconds a boost tile's surge still lasts and how much it lifts the
+   * top speed, and the tile the car is on now (its place in world.statics), -1 if none.
+   */
+  surge: number;
+  surgeK: number;
+  pad: number;
   /** Countermeasures on the car, by kind (see guards.ts). */
   guards: Guards;
   /**

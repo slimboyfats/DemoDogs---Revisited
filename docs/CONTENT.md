@@ -35,5 +35,35 @@ or a reference points at nothing.
   screen and the test range automatically. A new `kind` needs a rule in the sim and, if it should show,
   a case in `client/src/render/weather-fx.ts`.
 
+## Track pieces
+
+Boost tiles, ramps, animals and crops are ordinary props with one extra field (the schemas are in
+`packages/shared/src/pieces.ts`), so anything that can place a prop can place them: every scenery
+rule, the test range's PROP tool, and the track creator. `putProp()` in `sim/src/stand.ts` is the one
+way in.
+
+- **`pad`**: a flat tile. `kind: "boost"` kicks a car along the way the prop is turned and lifts its
+  top speed for a moment; `kind: "jump"` is a ramp that throws a car into the air if it comes up it
+  the right way fast enough. The prop's turn is the arrow. Rules: `sim/src/pads.ts`.
+- **`critter`**: an animal. The prop is where a group of them lives (`group: [min, max]`); they
+  wander, bolt from cars, and are bowled over (light) or stand like a rock (heavy). `kind: "bird"`
+  takes off and lands again. A look may give other poses in `alts` (the other step of a walk, wings
+  up and down). Rules: `sim/src/critters.ts`.
+- **`trample`**: a plant that is flattened for good by a car driving over it (not solid).
+- **`low`**: how tall a solid prop is; a car in the air above that sails over it.
+
+Two scenery rules lay them along a road. `along` puts a set of things at spots on the track: at
+fractions of the lap (`at`), or where `pick` finds the straightest stretches or the sharpest bends.
+Each item has a `lane` (-1 and 1 are the kerbs), a distance `ahead`, and can repeat across (`row`)
+and down (`n`) the road. `field` plants plots of a crop in rows beside the road.
+
+```json
+{
+  "rule": "along",
+  "pick": { "where": "straight", "count": 1, "apart": 0.12 },
+  "items": [{ "prop": "prop.ramp" }, { "prop": "prop.hay-wall", "ahead": 50, "row": 9, "step": 8 }]
+}
+```
+
 If a change alters how a race plays out, the golden hashes in `golden.json` will fail: check the change
 is intended, then regenerate with `UPDATE_GOLDEN=1`.

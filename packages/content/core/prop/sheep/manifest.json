@@ -1,0 +1,24 @@
+{
+  "id": "prop.sheep",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sheep",
+    "description": "A few sheep grazing. Slow to move; a car that hits one sends it tumbling in a puff of wool and loses some speed.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 3.4,
+  "critter": {
+    "kind": "ground",
+    "group": [2, 5],
+    "roam": 40,
+    "walk": 5,
+    "run": 44,
+    "scare": 40,
+    "cry": "baa",
+    "mass": 0.35,
+    "shy": 35,
+    "step": 0.5,
+    "points": 10
+  }
+}

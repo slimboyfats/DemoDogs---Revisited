@@ -137,6 +137,32 @@
           "weight": 1
         }
       ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 2,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "items": [
+        {
+          "prop": "prop.crows",
+          "weight": 1
+        }
+      ],
+      "clear": 0
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 5,
+      "qMin": 0.2,
+      "qMax": 0.9,
+      "items": [
+        {
+          "prop": "prop.tumbleweed",
+          "weight": 1
+        }
+      ],
+      "clear": 0
     }
   ],
   "bots": {

@@ -1,0 +1,14 @@
+{
+  "id": "prop.scarecrow",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scarecrow",
+    "description": "A scarecrow on a pole. One knock and it is sticks and straw.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 1.6,
+  "hardness": 0.2,
+  "made": "material.wood",
+  "integrity": 5
+}

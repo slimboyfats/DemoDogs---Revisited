@@ -1,7 +1,8 @@
 import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
-import { stand } from './stand';
+import { putProp, stand } from './stand';
+import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
 import { buildDowntown } from './downtown';
 import { TAU, angDiff } from './math';
@@ -20,27 +21,7 @@ type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
  */
 export function buildScenery(w: World, rng: Rng): void {
   const prop = (id: string): PropManifest => w.content.prop.get(id)!;
-  const add: Add = (id, x, y, rot) => {
-    const def = prop(id);
-    if (def.body === 'static') return stand(w, def, x, y, rot, rng.range(0, 10));
-    else
-      w.props.push({
-        index: w.props.length,
-        def,
-        x,
-        y,
-        z: 0,
-        vx: 0,
-        vy: 0,
-        vz: 0,
-        rot,
-        spin: 0,
-        alive: true,
-        fuse: 0,
-        owner: -1,
-      });
-    return null;
-  };
+  const add: Add = (id, x, y, rot) => putProp(w, prop(id), x, y, rot, rng);
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
     for (const i of items) {
@@ -65,6 +46,12 @@ function apply(
   const O = w.oval;
   if (buildDowntown(w, rng, rule, add)) return;
   switch (rule.rule) {
+    case 'along':
+      layAlong(w, rule, add);
+      return;
+    case 'field':
+      layField(w, rng, rule, add);
+      return;
     case 'flyover':
       flyover(w, rule, add, DECK_SURFACE);
       return;
