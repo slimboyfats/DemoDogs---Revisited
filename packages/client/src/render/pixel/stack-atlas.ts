@@ -1,5 +1,6 @@
 import type { Strip } from '../stack';
 import { texture } from './gl';
+import { shellPixels } from './shell';
 
 /** Where a strip sits in the atlas, in texels. Slice i is at (x + i * cw, y). */
 export interface AtlasSlot {
@@ -67,6 +68,11 @@ export class StackAtlas {
   private readonly spare: AtlasSlot[] = [];
   /** How many times the atlas filled up and was started again. */
   flushes = 0;
+  /**
+   * The same atlas with the interior of every solid left out (shell stacks), kept only while the
+   * overdraw meter asks for it: it costs a pixel read and a pass over every strip uploaded.
+   */
+  shellTex: WebGLTexture | null = null;
   readonly size: number;
 
   constructor(
@@ -131,6 +137,30 @@ export class StackAtlas {
     this.shelf.x = this.shelf.y = this.shelf.row = 0;
   }
 
+  /** Keep the shelled copy too (or stop). Everything is uploaded afresh from the next frame. */
+  setShell(on: boolean): void {
+    const gl = this.gl;
+    if (on === !!this.shellTex) return;
+    if (on) {
+      this.shellTex = texture(gl);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA8,
+        this.size,
+        this.size,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null,
+      );
+    } else {
+      gl.deleteTexture(this.shellTex);
+      this.shellTex = null;
+    }
+    this.reset();
+  }
+
   /** Upload a redrawn strip again (no-op for a strip never drawn). */
   refresh(s: Strip): void {
     const a = this.slots.get(s);
@@ -156,9 +186,27 @@ export class StackAtlas {
         new Uint8Array(s.px.buffer, s.px.byteOffset, s.px.byteLength),
       );
     else gl.texSubImage2D(gl.TEXTURE_2D, 0, a.x, a.y, gl.RGBA, gl.UNSIGNED_BYTE, s.img);
+    if (this.shellTex) {
+      const px = s.px ?? s.img.getContext('2d')?.getImageData(0, 0, w, h).data;
+      if (!px) return;
+      const shell = shellPixels(px, w, s);
+      gl.bindTexture(gl.TEXTURE_2D, this.shellTex);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        a.x,
+        a.y,
+        w,
+        h,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array(shell.buffer, shell.byteOffset, shell.byteLength),
+      );
+    }
   }
 
   dispose(): void {
     this.gl.deleteTexture(this.tex);
+    if (this.shellTex) this.gl.deleteTexture(this.shellTex);
   }
 }

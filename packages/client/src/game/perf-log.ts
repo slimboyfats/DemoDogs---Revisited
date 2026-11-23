@@ -36,6 +36,11 @@ export interface PerfContext {
   note: string;
   /** JS heap in use, MB (0 where the browser doesn't say). A drop is a garbage collection. */
   heap: number;
+  /**
+   * The overdraw meter's last counts, fragments per pixel, when it is on (`?overdraw`): covered,
+   * solid, written, front-to-back, floor, shelled written, particles. Empty when off.
+   */
+  overdraw?: string;
 }
 
 interface Row extends PerfContext {
@@ -396,7 +401,7 @@ export class PerfRecorder {
 
 const HEAD =
   't,fps,frame avg,frame p95,frame max,ticks,sim avg,sim max,step avg,step max,render avg,render max,other avg,other max,speed %,asked %,' +
-  'quality,phase,cells,particles,voxels,slices,fires,pools,fallen,heap MB,draws,note';
+  'quality,phase,cells,particles,voxels,slices,fires,pools,fallen,heap MB,draws,overdraw (cov sol wri front floor shell par),note';
 
 function line(r: Row): string {
   return [
@@ -427,6 +432,7 @@ function line(r: Row): string {
     r.fallen,
     r.heap > 0 ? f1(r.heap) : '',
     r.draws > 0 ? Math.round(r.draws) : '',
+    r.overdraw ?? '',
     (r.marks > 0 ? 'SLOW-NOW ' : '') + r.note.replace(/[,\n]/g, ' '),
   ].join(',');
 }

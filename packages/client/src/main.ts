@@ -27,6 +27,7 @@ import { Art } from './render/art';
 import { Hud } from './render/hud';
 import { drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
+import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
@@ -115,7 +116,28 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   restart: startDev,
   exit: () => setScreen('menu'),
   record: () => (perf ? stopPerf() : startPerf()),
-  stats: () => (scene instanceof PixelScene ? `slices ${scene.instances}` : 'canvas'),
+  stats: () => {
+    if (!(scene instanceof PixelScene)) return 'canvas';
+    const o = scene.meterOn ? scene.overdraw : null;
+    return `slices ${scene.instances}${o ? `\nfragments/px  ${overdrawLine(o)}` : ''}`;
+  },
+  heat: () => {
+    if (!(scene instanceof PixelScene)) return 'NO GL';
+    // off -> written -> solid -> covered -> particles -> numbers only -> off
+    const order: (Channel | null)[] = ['written', 'solid', 'covered', 'particles', null];
+    if (!scene.meterOn) {
+      scene.setHeat('written');
+      return 'HEAT WRITTEN';
+    }
+    const i = order.indexOf(scene.heatShown);
+    if (scene.heatShown === null) {
+      scene.setMeter(false);
+      return 'OVERDRAW';
+    }
+    const next = order[i + 1] ?? null;
+    scene.setHeat(next);
+    return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
+  },
 });
 // online races: the lobby screen, and the room it holds while racing
 const online = new OnlineScreen(
@@ -465,9 +487,21 @@ function perfContext(): PerfContext {
     fires: s.fx.fires.length,
     pools: w.spills.length,
     fallen: w.statics.reduce((n, p) => n + (p.down ? 1 : 0), 0),
+    overdraw:
+      scene instanceof PixelScene && scene.meterOn && scene.overdraw
+        ? overdrawShort(scene.overdraw)
+        : '',
     note: `${w.venue.id} ${w.player.def.id}${scene instanceof PixelScene ? ` atlas ${Math.round(scene.atlasState.fill * 100)}% x${scene.atlasState.flushes}` : ''}`,
     heap: mem ? mem.usedJSHeapSize / 1048576 : 0,
   };
+}
+
+/** Fragments per pixel for the perf log: covered, solid, written, front-to-back, the floor, shelled written, particles. */
+function overdrawShort(o: OverdrawStats): string {
+  const a = o.avg;
+  return [a.covered, a.solid, a.written, a.front, o.visible, a.shellWritten, a.particles]
+    .map((v) => v.toFixed(2))
+    .join(' ');
 }
 
 function startPerf(): void {
@@ -535,6 +569,7 @@ document.addEventListener('visibilitychange', () =>
 );
 
 let last = performance.now();
+let meterFrames = 0;
 function frame(t: number): void {
   requestAnimationFrame(frame);
   const wall = t - last;
@@ -550,6 +585,9 @@ function frame(t: number): void {
       return;
     }
     const r0 = performance.now();
+    // the overdraw meter reads its counts back about twice a second (a GPU stall, so not every frame)
+    if (scene instanceof PixelScene && scene.meterOn && ++meterFrames % 30 === 0)
+      scene.measureNext();
     scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
     const r1 = performance.now();
     octx.setTransform(1, 0, 0, 1, 0, 0);
@@ -590,6 +628,8 @@ function boot(): void {
   for (const b of document.querySelectorAll<HTMLButtonElement>('.recBtn'))
     b.onclick = () => (perf ? stopPerf() : startPerf());
   if (params.has('perf')) startPerf();
+  if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
+  if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
   resize();
   addEventListener('resize', resize);
   buildMenu();
@@ -682,6 +722,37 @@ function boot(): void {
       },
       dev,
       online,
+      /**
+       * The overdraw meter for scripts: `measure()` draws the current frame again with the counts
+       * and returns them (fragments per pixel); `heat(channel | null)` shows a heat map.
+       */
+      overdraw: {
+        measure(): OverdrawStats | null {
+          if (!(scene instanceof PixelScene) || !session) return null;
+          scene.setMeter(true);
+          scene.measureNext();
+          scene.draw(session.world, session.fx, session.ground, session.cam, W, H);
+          return scene.overdraw;
+        },
+        heat(ch: Channel | null): void {
+          if (scene instanceof PixelScene) scene.setHeat(ch);
+        },
+        off(): void {
+          if (scene instanceof PixelScene) scene.setMeter(false);
+        },
+        /** The world as last drawn, read from the canvas (RGBA rows, bottom first), to compare looks. */
+        pixels(): Uint8Array | null {
+          if (!(scene instanceof PixelScene) || !session) return null;
+          scene.draw(session.world, session.fx, session.ground, session.cam, W, H);
+          const out = new Uint8Array(W * H * 4);
+          scene.gl.readPixels(0, 0, W, H, scene.gl.RGBA, scene.gl.UNSIGNED_BYTE, out);
+          return out;
+        },
+        /** Draw slices nearest first (true, the default) or as queued (false). */
+        order(front: boolean): void {
+          if (scene instanceof PixelScene) scene.frontToBack = front;
+        },
+      },
     },
   });
   requestAnimationFrame(frame);

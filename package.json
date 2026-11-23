@@ -20,6 +20,7 @@
     "content:validate": "vitest run --project content validate",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
+    "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",
     "signal": "pnpm --filter @demodogs/signal start",
