@@ -1,5 +1,6 @@
 /** One thing the player can do with a key. */
-export type Action = 'gas' | 'brake' | 'left' | 'right' | 'boost' | 'fire' | 'pause';
+export type Action =
+  'gas' | 'brake' | 'left' | 'right' | 'boost' | 'fire' | 'pause' | 'watch' | 'zoom';
 
 /**
  * The keyboard: each action and the keys that do it (`KeyboardEvent.key`, lower case). The first key
@@ -13,6 +14,9 @@ export const KEYS: Readonly<Record<Action, readonly string[]>> = {
   boost: [' '],
   fire: ['x', 'f', 'shift'],
   pause: ['p', 'escape'],
+  // once your car is out of it: the next car to watch (Shift goes back), and the camera's zoom
+  watch: ['tab'],
+  zoom: ['z'],
 };
 
 const NAMES: Readonly<Record<string, string>> = {
@@ -22,6 +26,7 @@ const NAMES: Readonly<Record<string, string>> = {
   arrowleft: '◀',
   arrowright: '▶',
   escape: 'ESC',
+  tab: 'TAB',
 };
 
 /** What to print on a key cap for `key`. */
