@@ -21,6 +21,8 @@ export interface SessionOptions {
   field?: Entrant[];
   player?: Setup;
   knockout?: boolean;
+  /** A derby plays on after this screen's car is scrapped, to be watched (or skipped). */
+  playOn?: boolean;
   /** A test range: parked targets, no countdown, no end. */
   sandbox?: boolean;
   /** Online: the other drivers (seats 1, 2, ...) and which seat this screen drives. */
@@ -44,6 +46,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.field ? { field: o.field } : {}),
     ...(o.player ? { player: o.player } : {}),
     ...(o.knockout ? { knockout: true } : {}),
+    ...(o.playOn ? { playOn: true } : {}),
     ...(o.sandbox ? { sandbox: true } : {}),
     ...(o.humans ? { humans: o.humans } : {}),
     ...(o.you !== undefined ? { you: o.you } : {}),

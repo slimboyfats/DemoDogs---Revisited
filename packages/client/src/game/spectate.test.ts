@@ -119,6 +119,23 @@ describe('spectating', () => {
     expect(s.active).toBe(false);
   });
 
+  it('an offline derby that plays on can be watched to its end', () => {
+    const w = makeWorld({ venue: 'venue.the-pit', car: 'car.pug', seed: 5, playOn: true });
+    runUntil(w, (x) => x.phase === 'race', 60 * 20);
+    rangeWreck(w, w.player);
+    const place = w.standings().indexOf(w.player);
+    w.step({ throttle: 0, steer: 0, brake: false, boost: false, fire: false });
+    expect(w.endT).toBeLessThan(0);
+    const s = new Spectator();
+    wait(s, w, LINGER * 2);
+    expect(s.active).toBe(true);
+    // it still ends: on its last car, or the clock
+    runUntil(w, (x) => x.phase === 'over', 60 * 400);
+    expect(w.phase).toBe('over');
+    // and the place you were scrapped in is the place you keep
+    expect(w.standings().indexOf(w.player)).toBe(place);
+  });
+
   it('a towed race car is not out, a finished one is', () => {
     const w = makeWorld({
       venue: 'venue.kennel-loop',

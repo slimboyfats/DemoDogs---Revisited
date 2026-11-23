@@ -361,6 +361,14 @@ body:not([data-screen='game']) #spectate {
   font-size: 12px;
   white-space: nowrap;
 }
+#specBar #specSkip {
+  font-size: 12px;
+  white-space: nowrap;
+  border-color: rgba(255, 120, 80, 0.85);
+}
+#specBar #specSkip.hidden {
+  display: none;
+}
 #specBar kbd {
   position: absolute;
   left: 50%;

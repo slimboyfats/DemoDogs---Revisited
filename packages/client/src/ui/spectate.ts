@@ -4,6 +4,8 @@ import { isKey } from '../input/keys';
 export interface SpectateActions {
   next(dir: 1 | -1): void;
   zoom(): void;
+  /** Stop watching and go to the results. */
+  skip(): void;
 }
 
 /**
@@ -34,6 +36,7 @@ export class SpectateBar {
     press('specPrev', () => act.next(-1));
     press('specNext', () => act.next(1));
     press('specZoom', () => act.zoom());
+    press('specSkip', () => act.skip());
     addEventListener('keydown', (e) => {
       if (!this.on || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
@@ -41,7 +44,17 @@ export class SpectateBar {
         e.preventDefault();
         act.next(e.shiftKey ? -1 : 1);
       } else if (isKey('zoom', k)) act.zoom();
+      else if (isKey('skip', k) && this.skippable) act.skip();
     });
+  }
+
+  /** SKIP is offered: nobody else is waiting on this race. */
+  private skippable = true;
+
+  setSkip(on: boolean): void {
+    if (on === this.skippable) return;
+    this.skippable = on;
+    document.getElementById('specSkip')!.classList.toggle('hidden', !on);
   }
 
   get shown(): boolean {

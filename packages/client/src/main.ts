@@ -200,6 +200,9 @@ let specZooms: Zoom[] = [];
 const specBar = new SpectateBar({
   next: (dir) => session && spectator.next(session.world, dir),
   zoom: () => spectator.nextZoom(specZooms.length),
+  skip: () => {
+    if (screen === 'game' && spectator.active && !online.room) finish();
+  },
 });
 
 /** How much of the screen's height the whole-arena view may fill. */
@@ -227,6 +230,7 @@ function spectate(dt: number): void {
   const lift = ((1 - ARENA_FILL) / 2) * (H / shown / Math.sin(PITCH));
   s.spot = z?.whole ? { x: w.w / 2, y: w.h / 2 + lift } : null;
   specBar.show(on && !paused);
+  specBar.setSkip(!online.room);
   if (!on || !z) return;
   const c = spectator.target;
   if (c) {
@@ -378,7 +382,8 @@ function startGame(venue: string): void {
     return { car: c.id, name: `GHOST ${i + 1}`, paint: c.paint };
   });
   void launch(
-    { venue, car: cars[carIdx]!.id, seed, ...(ghosts ? { humans } : {}) },
+    // a derby plays on after you are scrapped: watch it out, or skip to the results
+    { venue, car: cars[carIdx]!.id, seed, playOn: true, ...(ghosts ? { humans } : {}) },
     content.venue.get(venue)!.meta.name.toUpperCase(),
   );
 }
