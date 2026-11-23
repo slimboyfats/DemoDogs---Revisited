@@ -369,6 +369,14 @@ export const VenueSchema = z.strictObject({
     .strictObject({
       road: z.number().min(40).max(120),
       points: z.array(z.tuple([z.number(), z.number()])).min(4),
+      /**
+       * Stretches of road with another surface: from fraction `from` of the way round to `to`
+       * (past the start line if `to` is the smaller), the road is `material` (dirt, ice, sand)
+       * and grips and drags like it. Later ones lie over earlier ones.
+       */
+      surfaces: z
+        .array(z.strictObject({ from: unit, to: unit, material: id('material') }))
+        .optional(),
     })
     .optional(),
   /** Derby venues: the walled oval. */
@@ -376,6 +384,21 @@ export const VenueSchema = z.strictObject({
     .strictObject({ cx: z.number(), cy: z.number(), rx: z.number(), ry: z.number() })
     .optional(),
   colors: z.strictObject({ ground: hex, ground2: hex, dirt: hex, outside: hex }),
+  /**
+   * Weather that lies over part of the map: within `r` of (x, y) the sky is the one named (a name
+   * the client knows: snow, rain, night ...). The screen takes the sky of the area it is over;
+   * the last one listed wins where two overlap. A name the client does not know changes nothing.
+   */
+  weather: z
+    .array(
+      z.strictObject({
+        x: z.number(),
+        y: z.number(),
+        r: z.number().positive(),
+        sky: z.string().max(24),
+      }),
+    )
+    .optional(),
   scenery: z.array(SceneryRuleSchema),
   bots: z.strictObject({ bot: id('bot'), count: z.number().int().min(0).max(40) }),
   pickups: z.array(id('pickup')).min(1),

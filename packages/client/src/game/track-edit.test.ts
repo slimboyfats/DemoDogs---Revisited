@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { TRACK_FORMAT, TRACK_VERSION, type TrackFile } from '@demodogs/shared';
+import { sampleTrack, trackProblems } from '@demodogs/sim';
+import type { PropManifest } from '@demodogs/shared';
 import {
+  arc,
+  drawRoad,
+  onArc,
+  propGroup,
+  surfaceAt,
+  surfaceBetween,
   History,
   insertPoint,
   nearest,
@@ -34,6 +42,8 @@ const track = (): TrackFile => ({
   items: [{ prop: 'prop.cone', x: 500, y: 400, rot: 0 }],
   pools: [{ material: 'material.mud', x: 700, y: 480, r: 20 }],
   bridges: [],
+  surfaces: [],
+  areas: [],
   bots: 4,
 });
 
@@ -125,5 +135,118 @@ describe('editing a track', () => {
     expect(h.undo()?.name).toBe('Changed');
     expect(h.undo()?.name).toBe('Test');
     expect(h.undo()).toBeNull();
+  });
+
+  it('a stretch of road runs the shorter way round, in the direction of the race', () => {
+    expect(arc(100, 10, 30)).toEqual([10, 30]);
+    expect(arc(100, 30, 10)).toEqual([10, 30]);
+    expect(arc(100, 5, 90)).toEqual([90, 5]);
+    expect(onArc(100, 90, 5, 98)).toBe(true);
+    expect(onArc(100, 90, 5, 2)).toBe(true);
+    expect(onArc(100, 90, 5, 50)).toBe(false);
+  });
+
+  it('lays a surface along the road between two points and finds it again', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number, off = 0): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]! + off];
+    };
+    // dragged against the race, a little off the line: it still lies along the road, forwards
+    t.surfaces.push(surfaceBetween(T, 'material.ice', at(0.15, 10), at(0.05, -15)));
+    const s = t.surfaces[0]!;
+    expect(roadAt(t.road.points, s.x0, s.y0).d).toBeLessThan(3);
+    expect(Math.hypot(s.x0 - at(0.05)[0], s.y0 - at(0.05)[1])).toBeLessThan(20);
+    expect(surfaceAt(T, t, ...at(0.1), 40)).toBe(0);
+    expect(surfaceAt(T, t, ...at(0.6), 40)).toBe(-1);
+    expect(surfaceAt(T, t, 700, 480, 40)).toBe(-1);
+    // the one laid last lies on top
+    t.surfaces.push(surfaceBetween(T, 'material.mud', at(0.09), at(0.11)));
+    expect(surfaceAt(T, t, ...at(0.1), 40)).toBe(1);
+    expect(surfaceAt(T, t, ...at(0.06), 40)).toBe(0);
+  });
+
+  it('keeps a surface on the road when the road moves and when the map grows', () => {
+    const t = track();
+    t.surfaces.push(
+      surfaceBetween(sampleTrack(t.road.points, 4), 'material.ice', [500, 300], [900, 300]),
+    );
+    t.road.points[0] = [300, 200];
+    t.road.points[1] = [1100, 200];
+    snapBridges(t);
+    expect(roadAt(t.road.points, t.surfaces[0]!.x0, t.surfaces[0]!.y0).d).toBeLessThan(3);
+    const before = t.surfaces[0]!.x0;
+    resize(t, 1800, 1240);
+    expect(t.surfaces[0]!.x0).toBe(before + 200);
+  });
+
+  it('the pencil: a loop drawn by hand becomes a road that can be raced', () => {
+    const t = track();
+    const stroke: [number, number][] = [];
+    // a wobbly oval, drawn the way a finger draws: not quite closed
+    for (let k = 0; k < 150; k++) {
+      const a = (k / 155) * Math.PI * 2;
+      const wobble = 1 + 0.03 * Math.sin(k * 1.7);
+      stroke.push([700 + Math.cos(a) * 420 * wobble, 480 + Math.sin(a) * 260 * wobble]);
+    }
+    expect(drawRoad(t, stroke)).toBe('loop');
+    expect(t.road.points.length).toBeGreaterThanOrEqual(6);
+    expect(t.road.points.length).toBeLessThanOrEqual(48);
+    expect(trackProblems(t)).toEqual([]);
+    // it starts where the pencil went down and runs the way it was drawn
+    expect(Math.hypot(t.road.points[0]![0] - 1120, t.road.points[0]![1] - 480)).toBeLessThan(30);
+    expect(t.road.points[1]![1]).toBeGreaterThan(t.road.points[0]![1]);
+    for (const [x, y] of t.road.points)
+      expect(Math.abs(Math.hypot((x - 700) / 420, (y - 480) / 260) - 1)).toBeLessThan(0.12);
+  });
+
+  it('the pencil: a line from the road to the road is a new way between the two', () => {
+    const t = track();
+    // off the top straight, up in a hump, and back onto it
+    const stroke: [number, number][] = [];
+    for (let k = 0; k <= 40; k++)
+      stroke.push([500 + k * 10, 300 - Math.sin((k / 40) * Math.PI) * 180]);
+    expect(drawRoad(t, stroke)).toBe('stretch');
+    expect(t.road.points[0]).toEqual([300, 300]);
+    expect(t.road.points.length).toBeGreaterThan(4);
+    expect(Math.min(...t.road.points.map((p) => p[1]))).toBeLessThan(170);
+    expect(trackProblems(t)).toEqual([]);
+    // the rest of the road is as it was
+    expect(t.road.points.slice(-3)).toEqual([
+      [1100, 300],
+      [1100, 700],
+      [300, 700],
+    ]);
+    // drawn the other way, it is the same stretch that is replaced
+    const u = track();
+    expect(drawRoad(u, [...stroke].reverse())).toBe('stretch');
+    expect(u.road.points).toEqual(t.road.points);
+  });
+
+  it('the pencil: a scribble is not a road', () => {
+    const t = track();
+    const was = JSON.stringify(t);
+    expect(
+      drawRoad(t, [
+        [600, 500],
+        [620, 510],
+        [640, 500],
+        [660, 510],
+        [680, 500],
+      ]),
+    ).toBeNull();
+    expect(JSON.stringify(t)).toBe(was);
+  });
+
+  it('sorts things into the palette’s groups by what they do', () => {
+    const p = (extra: object): PropManifest =>
+      ({ body: 'static', sway: false, trample: false, ...extra }) as unknown as PropManifest;
+    expect(propGroup(p({ pad: {} }))).toBe('pieces');
+    expect(propGroup(p({ critter: {} }))).toBe('animals');
+    expect(propGroup(p({ sway: true }))).toBe('plants');
+    expect(propGroup(p({ body: 'loose', explodesAt: 40 }))).toBe('bangs');
+    expect(propGroup(p({ body: 'loose' }))).toBe('loose');
+    expect(propGroup(p({}))).toBe('built');
   });
 });

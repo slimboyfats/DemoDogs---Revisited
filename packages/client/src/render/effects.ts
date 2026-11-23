@@ -141,6 +141,9 @@ const withSplit = (c: Cells, quality: number): Cells => {
   return c;
 };
 
+/** A pool wider than this (art px) is an area of terrain, painted as one shape. */
+const TERRAIN_FROM = 90;
+
 export class Effects {
   readonly fx: Particle[] = [];
   readonly debris: Debris[] = [];
@@ -268,7 +271,11 @@ export class Effects {
       (k) => (this.shake = Math.max(this.shake, k)),
     );
     // the pools the map starts with
-    for (const s of w.spills) if (s.fixed) this.pool(s.def, s.x, s.y, s.r);
+    for (const s of w.spills)
+      if (s.fixed) {
+        if (s.r > TERRAIN_FROM) this.terrain(s.def, s.x, s.y, s.r);
+        else this.pool(s.def, s.x, s.y, s.r);
+      }
     this.weather = new WeatherFx(this, w, sound);
   }
 
@@ -738,6 +745,51 @@ export class Effects {
     if (!c) byBlock.set(block, (c = voxelsOf(art, block)));
     // a copy: `sample` shuffles and trims what it is given
     return c.slice();
+  }
+
+  /**
+   * A whole area of ground in a material (a snowfield, a sheet of ice, a desert): too big to lay
+   * cell by cell, so it is one ragged shape filled at once, then roughened with drifts of
+   * lighter and darker cells, thinning out toward its edge.
+   */
+  terrain(m: MaterialManifest, x: number, y: number, r: number): void {
+    const rgb = parseInt(m.colour.slice(1), 16);
+    const k = 3 + Math.floor(rand(0, 3));
+    const ph = rand(0, TAU);
+    const edge = (a: number): number =>
+      r * (0.9 + 0.06 * Math.sin(a * k + ph) + 0.04 * Math.sin(a * (k * 2 + 1) - ph));
+    this.paintGround(x, y, r + 3, (g) => {
+      g.fillStyle = m.colour;
+      for (const [f, alpha] of [
+        [1, 0.35],
+        [0.96, 0.6],
+        [0.92, 1],
+      ] as const) {
+        g.globalAlpha = Math.max(m.alpha, 0.8) * alpha;
+        g.beginPath();
+        for (let i = 0; i <= 96; i++) {
+          const a = (i / 96) * TAU;
+          const d = edge(a) * f + rand(-2, 2);
+          g.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d);
+        }
+        g.closePath();
+        g.fill();
+      }
+      const n = Math.min(60000, Math.round(r * r * 0.25));
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, TAU);
+        const d = Math.sqrt(rand(0, 1)) * edge(a) * 1.02;
+        g.globalAlpha = rand(0.25, 0.7);
+        g.fillStyle = hex(shade(rgb, rand(0.8, 1.1)));
+        g.fillRect(
+          Math.round(x + Math.cos(a) * d),
+          Math.round(y + Math.sin(a) * d),
+          Math.round(rand(1, 4)),
+          1,
+        );
+      }
+      g.globalAlpha = 1;
+    });
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */

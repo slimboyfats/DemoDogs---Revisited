@@ -148,6 +148,11 @@ export class World {
    * A flyover's deck along the track: the height of the road surface at each sample (0 on the
    * ground), and the static piece of deck that carries it there (-1: none). Null without one.
    */
+  /**
+   * The road's own surface at each track sample where it is not plain road (a stretch of dirt,
+   * ice, sand): null without any.
+   */
+  readonly roadSurface: (MaterialManifest | null)[] | null = null;
   deckH: Float32Array | null = null;
   deckPiece: Int32Array | null = null;
   readonly road: number;
@@ -256,6 +261,15 @@ export class World {
     if (venue.track) {
       this.track = sampleTrack(venue.track.points, 4);
       this.grid = new DistanceGrid(this.track, this.w, this.h, 6, this.road / 2 + 80);
+      const N = this.track.n;
+      for (const s of venue.track.surfaces ?? []) {
+        const m = C.material.get(s.material);
+        if (!m) continue;
+        const road = (this.roadSurface ??= new Array<MaterialManifest | null>(N).fill(null));
+        const i0 = Math.min(N - 1, Math.floor(s.from * N));
+        const len = ((Math.min(N - 1, Math.floor(s.to * N)) - i0 + N) % N) + 1;
+        for (let k = 0; k < len; k++) road[(i0 + k) % N] = m;
+      }
     }
     if (venue.oval) this.oval = { ...venue.oval };
     this.timeLeft = mode.timeLimit ?? 0;

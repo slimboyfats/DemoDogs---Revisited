@@ -12,6 +12,7 @@ import {
 } from '@demodogs/sim';
 import type { Session } from '../game/session';
 import {
+  drawRoad,
   History,
   insertPoint,
   nearest,
@@ -22,19 +23,46 @@ import {
   roadAt,
   snapBridges,
   startAt,
+  surfaceAt,
+  surfaceBetween,
 } from '../game/track-edit';
 import { pickTrackFile, saveTrackFile } from '../game/tracks';
+import type { Art } from '../render/art';
+import { SKIES } from '../render/atmosphere';
 import { PITCH } from '../render/scene';
+import { StackRenderer } from '../render/stack';
+import { EditPalette } from './edit-palette';
 
-export type EditTool = 'road' | 'place' | 'pool' | 'bridge' | 'erase';
+export type EditTool = 'road' | 'surface' | 'area' | 'place' | 'pool' | 'bridge' | 'erase';
 
 const TOOLS: [EditTool, string, string][] = [
   ['road', 'ROAD', 'Drag a point to bend the road. Tap the road to add a point.'],
-  ['place', 'THINGS', 'Tap to put the chosen thing down. Drag one to move it.'],
-  ['pool', 'POOLS', 'Tap to lay a pool: mud, ice, oil. Drag one to move it.'],
+  [
+    'surface',
+    'ROAD TYPE',
+    'Pick a surface, then drag along the road to lay it. Tap for a short stretch.',
+  ],
+  [
+    'area',
+    'TERRAIN',
+    'Pick the ground and the weather, then tap to lay an area of it. Drag its middle to move it.',
+  ],
+  [
+    'place',
+    'THINGS',
+    'Drag a thing from the tray onto the map, or tap the map. Drag one to move it.',
+  ],
+  ['pool', 'POOLS', 'Pick what it is made of, then tap to lay a pool. Drag one to move it.'],
   ['bridge', 'BRIDGE', 'Tap the road to raise a bridge there. Drag one along the road.'],
-  ['erase', 'ERASE', 'Tap a thing, a pool, a bridge or a road point to take it away.'],
+  [
+    'erase',
+    'ERASE',
+    'Tap a thing, a pool, a bridge, a stretch of surface or a road point to take it away.',
+  ],
 ];
+
+const PENCIL_HINT =
+  'Draw with a finger: a whole loop for a new road, or from the road to the road for a new way round.';
 
 const SIZES: [string, number, number][] = [
   ['SMALL', 1200, 840],
@@ -51,8 +79,10 @@ export interface EditHooks {
   view(): { w: number; h: number; scale: number; dpr: number };
   /** A fresh, frozen session on the track as installed, the camera where it was. */
   rebuild(made: Installed): Session;
-  /** Step the zoom (close, wide, the whole map); the button's new label. */
-  zoom(): string;
+  /** Show the map at this many device px to an art px, from this frame on. */
+  setZoom(scale: number): void;
+  /** The widest and the closest the map may be shown (device px to an art px). */
+  zoomRange(): [number, number];
   /** Keep the track (called after every change). */
   save(t: TrackFile): void;
   /** Race the track as it stands, then come back. */
@@ -60,7 +90,7 @@ export interface EditHooks {
   exit(): void;
 }
 
-type Pick = { kind: 'point' | 'item' | 'pool' | 'bridge'; index: number };
+type Pick = { kind: 'point' | 'item' | 'pool' | 'bridge' | 'surface' | 'area'; index: number };
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -71,6 +101,10 @@ function el<K extends keyof HTMLElementTagNameMap>(
   e.append(...kids);
   return e;
 }
+
+/** A sky's name as the weather picker shows it. */
+const skyLabel = (name: string): string =>
+  name === 'day' ? 'CLEAR DAY' : name.toUpperCase().replace('-', ' AT ');
 
 /** What a dressing rule does, in a few words, for its switch. */
 function ruleLabel(content: Content, r: unknown): string {
@@ -127,20 +161,34 @@ export class TrackEditor {
   private line: Track | null = null;
   private note = '';
   private noteT = 0;
+  /** The pencil is out: a drag on the map draws the road. */
+  pencil = false;
   private drag: {
     id: number;
     x: number;
     y: number;
     moved: boolean;
+    /** What the drag does: slides the map, moves what was grabbed, draws, lays a surface. */
+    mode: 'pan' | 'grab' | 'pencil' | 'lay';
     grab: Pick | null;
     changed: boolean;
+    /** Where on the ground it began, and where it is now. */
+    from: [number, number];
+    to: [number, number];
   } | null = null;
+  /** The fingers on the map, and the two-finger pinch they make. */
+  private readonly touches = new Map<number, { x: number; y: number }>();
+  private pinch: { d: number; cx: number; cy: number } | null = null;
+  private stroke: [number, number][] | null = null;
+  /** A thing on its way from the tray, and where the mouse is over the map. */
+  private carried: { prop: string; x: number; y: number } | null = null;
+  private hover: [number, number] | null = null;
+  private stacks: StackRenderer | null = null;
+  readonly palette: EditPalette;
 
   private readonly toolBtns = new Map<EditTool, HTMLButtonElement>();
   private readonly row2 = el('div', { className: 'row2' });
   private readonly hint = el('span', { className: 'hint' });
-  private readonly propSel = el('select');
-  private readonly matSel = el('select');
   private readonly sizeIn = el('input', { type: 'range', min: '8', max: '60', value: '22' });
   private readonly lengthIn = el('input', {
     type: 'range',
@@ -149,18 +197,39 @@ export class TrackEditor {
     step: '20',
     value: '220',
   });
+  private readonly areaIn = el('input', {
+    type: 'range',
+    min: '80',
+    max: '600',
+    step: '20',
+    value: '260',
+  });
+  private readonly skySel = el('select');
   private readonly mapSel = el('select');
   private readonly undoBtn: HTMLButtonElement;
-  private readonly zoomBtn: HTMLButtonElement;
   private readonly driveBtn: HTMLButtonElement;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly tap: HTMLElement,
     private readonly setup: HTMLElement,
+    tray: HTMLElement,
     private readonly content: Content,
+    private readonly art: Art,
     private readonly hooks: EditHooks,
   ) {
+    this.palette = new EditPalette(tray, content, art, {
+      chose: (kind, id) => this.chose(kind, id),
+      carry: (id, cx, cy) => {
+        if (!this.s) return;
+        const [x, y] = this.toWorld(cx, cy);
+        this.carried = { prop: id, x, y };
+      },
+      drop: (id, cx, cy, on) => {
+        this.carried = null;
+        if (on && this.s) this.put(id, ...this.toWorld(cx, cy));
+      },
+    });
     const row1 = el('div', { className: 'row1' });
     const btn = (label: string, title: string, on: () => void, cls = ''): HTMLButtonElement => {
       const b = el('button', { textContent: label, title, className: cls });
@@ -174,13 +243,12 @@ export class TrackEditor {
     }
     row1.append(el('span', { className: 'gap' }));
     this.undoBtn = btn('UNDO', 'Step back', () => this.undo());
-    this.zoomBtn = btn('ZOOM', 'Closer, wider, the whole map', () => {
-      this.zoomBtn.textContent = this.hooks.zoom();
-    });
     this.driveBtn = btn('TEST DRIVE', 'Race it now, then come back', () => this.testDrive(), 'go');
     row1.append(
       this.undoBtn,
-      this.zoomBtn,
+      btn('−', 'Further out (or the wheel, or pinch)', () => this.zoomBy(1 / 1.5)),
+      btn('+', 'Closer (or the wheel, or pinch)', () => this.zoomBy(1.5)),
+      btn('FIT', 'The whole map', () => this.fit()),
       btn('SETUP', 'Name, look, road width, laps, map size, scenery', () => this.openSetup()),
       btn('FILE', 'Save the track as a file, or load one', () => this.openFile()),
       this.driveBtn,
@@ -188,16 +256,21 @@ export class TrackEditor {
     );
     root.append(row1, this.row2);
 
-    for (const p of [...content.prop.values()].sort((a, b) => (a.meta.name < b.meta.name ? -1 : 1)))
-      this.propSel.append(new Option(p.meta.name, p.id));
-    for (const m of [...content.material.values()].sort((a, b) =>
-      a.meta.name < b.meta.name ? -1 : 1,
-    ))
-      this.matSel.append(new Option(m.meta.name, m.id));
-
     for (const [label, w, h] of SIZES)
       this.mapSel.append(new Option(`MAP ${label} ${w} × ${h}`, `${w}x${h}`));
     this.mapSel.onchange = () => this.setSize(this.mapSel.value);
+    this.skySel.append(new Option('WEATHER AS IT IS', ''));
+    for (const name of Object.keys(SKIES)) this.skySel.append(new Option(skyLabel(name), name));
+    // the weather and the size are the chosen area's, and the next one's
+    const area = () => (this.sel?.kind === 'area' ? this.track?.areas[this.sel.index] : undefined);
+    this.skySel.onchange = () => {
+      const a = area();
+      if (a) this.change(() => (a.sky = this.skySel.value));
+    };
+    this.areaIn.onchange = () => {
+      const a = area();
+      if (a) this.change(() => (a.r = Number(this.areaIn.value)));
+    };
     // the slider sets the chosen bridge's length, and the next one's
     this.lengthIn.onchange = () => {
       const sel = this.sel;
@@ -207,7 +280,38 @@ export class TrackEditor {
     tap.addEventListener('pointerdown', (e) => this.down(e));
     tap.addEventListener('pointermove', (e) => this.move(e));
     tap.addEventListener('pointerup', (e) => this.up(e));
-    tap.addEventListener('pointercancel', () => this.cancel());
+    tap.addEventListener('pointercancel', (e) => {
+      this.touches.delete(e.pointerId);
+      if (this.touches.size < 2) this.pinch = null;
+      this.cancel();
+    });
+    tap.addEventListener('pointerleave', () => (this.hover = null));
+    tap.addEventListener('contextmenu', (e) => e.preventDefault());
+    // the wheel, and two fingers on a trackpad, zoom about the pointer; a trackpad pinch arrives
+    // as a wheel with ctrl held, in finer steps
+    tap.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const px = e.deltaMode === 1 ? 32 : e.deltaMode === 2 ? 300 : 1;
+        const by = Math.exp(-e.deltaY * px * (e.ctrlKey || e.metaKey ? 0.01 : 0.002));
+        this.zoomAt(e.clientX, e.clientY, Math.max(0.6, Math.min(1.6, by)));
+      },
+      { passive: false },
+    );
+    // Safari tells of a trackpad pinch its own way
+    let pinched = 1;
+    tap.addEventListener('gesturestart', (e) => {
+      e.preventDefault();
+      pinched = 1;
+    });
+    tap.addEventListener('gesturechange', (e) => {
+      e.preventDefault();
+      const g = e as Event & { scale?: number; clientX?: number; clientY?: number };
+      if (this.touches.size > 0 || !g.scale) return;
+      this.zoomAt(g.clientX ?? innerWidth / 2, g.clientY ?? innerHeight / 2, g.scale / pinched);
+      pinched = g.scale;
+    });
   }
 
   // ---- opening and closing
@@ -234,6 +338,12 @@ export class TrackEditor {
   close(): void {
     this.s = null;
     this.drag = null;
+    this.pinch = null;
+    this.stroke = null;
+    this.carried = null;
+    this.hover = null;
+    this.touches.clear();
+    this.palette.show(null);
     this.root.classList.add('hidden');
     this.tap.classList.add('hidden');
     this.setup.classList.add('hidden');
@@ -247,8 +357,20 @@ export class TrackEditor {
 
   pick(t: EditTool): void {
     this.tool = t;
+    if (t !== 'road') this.pencil = false;
     for (const [k, b] of this.toolBtns) b.classList.toggle('on', k === t);
     if (this.sel && !this.fits(this.sel)) this.sel = null;
+    this.palette.show(
+      t === 'place'
+        ? 'props'
+        : t === 'pool'
+          ? 'pools'
+          : t === 'surface'
+            ? 'surfaces'
+            : t === 'area'
+              ? 'areas'
+              : null,
+    );
     this.showRow2();
   }
 
@@ -257,6 +379,8 @@ export class TrackEditor {
     return (
       this.tool === 'erase' ||
       (this.tool === 'road' && p.kind === 'point') ||
+      (this.tool === 'surface' && p.kind === 'surface') ||
+      (this.tool === 'area' && p.kind === 'area') ||
       (this.tool === 'place' && p.kind === 'item') ||
       (this.tool === 'pool' && p.kind === 'pool') ||
       (this.tool === 'bridge' && p.kind === 'bridge')
@@ -268,14 +392,25 @@ export class TrackEditor {
     const r = this.row2;
     r.replaceChildren();
     if (!t) return;
-    const btn = (label: string, title: string, on: () => void, off = false): void => {
+    const btn = (label: string, title: string, on: () => void, off = false, lit = false): void => {
       const b = el('button', { textContent: label, title, disabled: off });
+      b.classList.toggle('on', lit);
       b.onclick = on;
       r.append(b);
     };
     const sel = this.sel;
     if (this.tool === 'road') {
       const p = sel?.kind === 'point' ? sel.index : -1;
+      btn(
+        '✎ PENCIL',
+        'Draw the road with a finger',
+        () => {
+          this.pencil = !this.pencil;
+          this.showRow2();
+        },
+        false,
+        this.pencil,
+      );
       btn('DELETE POINT', 'Take the chosen point out of the road', () => this.erase(sel!), p < 0);
       btn('START HERE', 'Put the start line at the chosen point', () => this.setStart(p), p <= 0);
       btn('REVERSE', 'Race the other way round', () =>
@@ -286,13 +421,26 @@ export class TrackEditor {
         this.mapSel.append(new Option(`MAP ${t.size.w} × ${t.size.h}`, mine));
       this.mapSel.value = mine;
       r.append(this.mapSel);
+    } else if (this.tool === 'surface') {
+      const on = sel?.kind === 'surface';
+      btn('DELETE', 'Take the chosen stretch of surface away', () => this.erase(sel!), !on);
+    } else if (this.tool === 'area') {
+      const a = sel?.kind === 'area' ? t.areas[sel.index] : undefined;
+      if (a) {
+        this.skySel.value = a.sky;
+        this.areaIn.value = String(a.r);
+      }
+      r.append(this.skySel, el('label', { textContent: 'SIZE' }), this.areaIn);
+      btn('DELETE', 'Take the chosen area away', () => this.erase(sel!), !a);
     } else if (this.tool === 'place') {
-      r.append(this.propSel);
+      const it = sel?.kind === 'item' ? t.items[sel.index] : undefined;
+      const name = this.content.prop.get(it?.prop ?? this.palette.prop)?.meta.name ?? '';
+      r.append(el('label', { textContent: `${it ? 'CHOSEN' : 'NEXT'}: ${name.toUpperCase()}` }));
       btn('⟲', 'Turn it left', () => this.turn(-STEP));
       btn('⟳', 'Turn it right', () => this.turn(STEP));
       btn('DELETE', 'Take the chosen thing away', () => this.erase(sel!), sel?.kind !== 'item');
     } else if (this.tool === 'pool') {
-      r.append(this.matSel, el('label', { textContent: 'SIZE' }), this.sizeIn);
+      r.append(el('label', { textContent: 'SIZE' }), this.sizeIn);
       btn('DELETE', 'Take the chosen pool away', () => this.erase(sel!), sel?.kind !== 'pool');
     }
     if (this.tool === 'bridge') {
@@ -301,7 +449,7 @@ export class TrackEditor {
       r.append(el('label', { textContent: 'LENGTH' }), this.lengthIn);
       btn('DELETE', 'Take the chosen bridge away', () => this.erase(sel!), !b);
     }
-    this.hint.textContent = TOOLS.find(([k]) => k === this.tool)![2];
+    this.hint.textContent = this.pencil ? PENCIL_HINT : TOOLS.find(([k]) => k === this.tool)![2];
     r.append(this.hint);
     this.undoBtn.disabled = this.history.size === 0;
     this.driveBtn.disabled = this.problems.length > 0;
@@ -333,6 +481,8 @@ export class TrackEditor {
     this.line = null;
     snapBridges(t);
     if (this.sel?.kind === 'bridge' && !t.bridges[this.sel.index]) this.sel = null;
+    if (this.sel?.kind === 'surface' && !t.surfaces[this.sel.index]) this.sel = null;
+    if (this.sel?.kind === 'area' && !t.areas[this.sel.index]) this.sel = null;
     this.problems = trackProblems(t);
     this.hooks.save(t);
     if (!light) this.build();
@@ -399,6 +549,8 @@ export class TrackEditor {
       if (p.kind === 'point') removePoint(t, p.index);
       else if (p.kind === 'item') t.items.splice(p.index, 1);
       else if (p.kind === 'bridge') t.bridges.splice(p.index, 1);
+      else if (p.kind === 'surface') t.surfaces.splice(p.index, 1);
+      else if (p.kind === 'area') t.areas.splice(p.index, 1);
       else t.pools.splice(p.index, 1);
       this.sel = null;
     });
@@ -446,7 +598,7 @@ export class TrackEditor {
    */
   private reach(kind: Pick['kind'] = 'point'): number {
     const v = this.hooks.view();
-    const few = kind === 'point' || kind === 'bridge';
+    const few = kind === 'point' || kind === 'bridge' || kind === 'area';
     return Math.max(8, ((few ? 24 : 13) * v.dpr) / v.scale);
   }
 
@@ -462,8 +614,17 @@ export class TrackEditor {
             ? ['pool']
             : this.tool === 'bridge'
               ? ['bridge']
-              : ['item', 'pool', 'bridge', 'point'];
+              : this.tool === 'surface'
+                ? ['surface']
+                : this.tool === 'area'
+                  ? ['area']
+                  : ['item', 'pool', 'bridge', 'point', 'area', 'surface'];
     for (const kind of tries) {
+      if (kind === 'surface') {
+        const index = surfaceAt(this.road(), t, x, y, t.road.width / 2 + this.reach('item'));
+        if (index >= 0) return { kind, index };
+        continue;
+      }
       const things =
         kind === 'point'
           ? t.road.points.map(([px, py]) => ({ x: px, y: py }))
@@ -471,20 +632,120 @@ export class TrackEditor {
             ? t.items
             : kind === 'bridge'
               ? t.bridges
-              : t.pools;
+              : kind === 'area'
+                ? t.areas.map(({ x: ax, y: ay }) => ({ x: ax, y: ay }))
+                : t.pools;
       const index = nearest(things, x, y, this.reach(kind));
       if (index >= 0) return { kind, index };
     }
     return null;
   }
 
+  /** The road's line as it stands, sampled finely (kept until the road changes). */
+  private road(): Track {
+    return (this.line ??= sampleTrack(this.track!.road.points, 4));
+  }
+
+  /** How a thing put down at (x, y) is turned: along the road if it is on it. */
+  private rotAt(x: number, y: number): number {
+    const t = this.track!;
+    const T = this.road();
+    const near = nearestSample(T, x, y);
+    return (near.d < t.road.width / 2 ? T.a[near.i]! : 0) + this.rot;
+  }
+
+  // ---- the view: sliding and zooming
+
+  private slide(dx: number, dy: number): void {
+    const s = this.s;
+    const t = this.track;
+    if (!s || !t) return;
+    const v = this.hooks.view();
+    s.cam.x = Math.max(0, Math.min(t.size.w, s.cam.x - (dx * v.dpr) / v.scale));
+    s.cam.y = Math.max(0, Math.min(t.size.h, s.cam.y - (dy * v.dpr) / (v.scale * Math.sin(PITCH))));
+  }
+
+  /** Zoom by a factor, keeping the ground under a point of the screen (CSS px) where it is. */
+  zoomAt(cx: number, cy: number, by: number): void {
+    if (!this.s || !this.track) return;
+    const [lo, hi] = this.hooks.zoomRange();
+    const now = this.hooks.view().scale;
+    const k = Math.max(lo, Math.min(hi, now * by));
+    if (k === now) return;
+    const [x, y] = this.toWorld(cx, cy);
+    this.hooks.setZoom(k);
+    const [nx, ny] = this.toWorld(cx, cy);
+    this.s.cam.x += x - nx;
+    this.s.cam.y += y - ny;
+    this.slide(0, 0);
+  }
+
+  private zoomBy(by: number): void {
+    const v = this.hooks.view();
+    this.zoomAt(v.w / v.dpr / 2, v.h / v.dpr / 2, by);
+  }
+
+  /** The whole map on the screen, between the bar and the tray. */
+  fit(): void {
+    const t = this.track;
+    if (!t || !this.s) return;
+    const v = this.hooks.view();
+    const [lo, hi] = this.hooks.zoomRange();
+    const k = Math.min(v.w / t.size.w, (v.h * 0.6) / (t.size.h * Math.sin(PITCH)));
+    this.hooks.setZoom(Math.max(lo, Math.min(hi, k)));
+    Object.assign(this.s.cam, { x: t.size.w / 2, y: t.size.h / 2 });
+  }
+
+  /** How far apart the two fingers are, and the point midway between them (CSS px). */
+  private span(): { d: number; cx: number; cy: number } {
+    const [a, b] = [...this.touches.values()] as [
+      { x: number; y: number },
+      { x: number; y: number },
+    ];
+    return { d: Math.hypot(b.x - a.x, b.y - a.y) || 1, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  }
+
   private down(e: PointerEvent): void {
     e.preventDefault();
-    if (!this.s || !this.track || this.drag) return;
-    const [x, y] = this.toWorld(e.clientX, e.clientY);
-    const grab = this.tool === 'erase' ? null : this.hit(x, y);
-    this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, grab, changed: false };
+    const t = this.track;
+    if (!this.s || !t) return;
+    this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
     this.tap.setPointerCapture(e.pointerId);
+    if (this.touches.size === 2) {
+      // a second finger: whatever the first was doing, the two of them now pinch and slide
+      this.cancel();
+      this.pinch = this.span();
+      return;
+    }
+    if (this.touches.size > 2 || this.drag) return;
+    const at = this.toWorld(e.clientX, e.clientY);
+    const [x, y] = at;
+    let mode: 'pan' | 'grab' | 'pencil' | 'lay' = 'pan';
+    let grab: Pick | null = null;
+    // the middle and right buttons of a mouse always slide the map
+    if (e.button !== 1 && e.button !== 2) {
+      if (this.tool === 'road' && this.pencil) {
+        mode = 'pencil';
+        this.stroke = [at];
+      } else if (this.tool === 'surface') {
+        if (nearestSample(this.road(), x, y).d <= t.road.width / 2 + this.reach('item'))
+          mode = 'lay';
+      } else if (this.tool !== 'erase') {
+        grab = this.hit(x, y);
+        if (grab) mode = 'grab';
+      }
+    }
+    this.drag = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      moved: false,
+      mode,
+      grab,
+      changed: false,
+      from: at,
+      to: at,
+    };
     if (grab) {
       this.sel = grab;
       this.showRow2();
@@ -492,59 +753,180 @@ export class TrackEditor {
   }
 
   private move(e: PointerEvent): void {
-    const d = this.drag;
     const s = this.s;
     const t = this.track;
-    if (!d || d.id !== e.pointerId || !s || !t) return;
+    if (!s || !t) return;
+    const finger = this.touches.get(e.pointerId);
+    if (finger) Object.assign(finger, { x: e.clientX, y: e.clientY });
+    if (this.pinch) {
+      if (this.touches.size < 2) return;
+      const now = this.span();
+      this.slide(now.cx - this.pinch.cx, now.cy - this.pinch.cy);
+      this.zoomAt(now.cx, now.cy, now.d / this.pinch.d);
+      this.pinch = now;
+      return;
+    }
+    const d = this.drag;
+    if (!d) {
+      // a mouse over the map shows what a click would put down
+      if (e.pointerType === 'mouse') this.hover = this.toWorld(e.clientX, e.clientY);
+      return;
+    }
+    if (d.id !== e.pointerId) return;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
     if (!d.moved && Math.hypot(dx, dy) < 7) return;
     d.moved = true;
-    const v = this.hooks.view();
-    if (!d.grab) {
+    const [x, y] = this.toWorld(e.clientX, e.clientY);
+    d.to = [x, y];
+    if (d.mode === 'pan') {
       // nothing in hand: the map slides under the finger
-      s.cam.x = Math.max(0, Math.min(t.size.w, s.cam.x - (dx * v.dpr) / v.scale));
-      s.cam.y = Math.max(
-        0,
-        Math.min(t.size.h, s.cam.y - (dy * v.dpr) / (v.scale * Math.sin(PITCH))),
-      );
+      this.slide(dx, dy);
       d.x = e.clientX;
       d.y = e.clientY;
       return;
     }
+    if (d.mode === 'pencil') {
+      const last = this.stroke?.[this.stroke.length - 1];
+      if (last && Math.hypot(x - last[0], y - last[1]) >= 6) this.stroke!.push([x, y]);
+      return;
+    }
+    if (d.mode === 'lay' || !d.grab) return;
     if (!d.changed) {
       this.history.remember(t);
       d.changed = true;
     }
-    const [x, y] = this.toWorld(e.clientX, e.clientY);
     const g = d.grab;
     if (g.kind === 'point') {
       t.road.points[g.index] = clampPoint(t, x, y);
       this.line = null;
     } else if (g.kind === 'bridge') {
       // a bridge slides along the road, wherever the finger wanders
-      const T = (this.line ??= sampleTrack(t.road.points, 4));
+      const T = this.road();
       const i = nearestSample(T, x, y).i;
       Object.assign(t.bridges[g.index]!, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) });
-    } else {
-      const o = g.kind === 'item' ? t.items[g.index]! : t.pools[g.index]!;
+    } else if (g.kind !== 'surface') {
+      const o =
+        g.kind === 'item'
+          ? t.items[g.index]!
+          : g.kind === 'area'
+            ? t.areas[g.index]!
+            : t.pools[g.index]!;
       o.x = Math.round(Math.max(12, Math.min(t.size.w - 12, x)));
       o.y = Math.round(Math.max(12, Math.min(t.size.h - 12, y)));
     }
   }
 
   private up(e: PointerEvent): void {
+    this.touches.delete(e.pointerId);
+    if (this.pinch) {
+      // the pinch is over when either finger lifts; the one left does nothing more
+      this.pinch = null;
+      return;
+    }
     const d = this.drag;
-    if (!d || d.id !== e.pointerId) return;
+    const t = this.track;
+    if (!d || d.id !== e.pointerId || !t) return;
     this.drag = null;
-    if (d.changed) this.commit();
+    const stroke = this.stroke;
+    this.stroke = null;
+    if (d.mode === 'pencil') {
+      if (stroke) this.drawn(stroke);
+    } else if (d.mode === 'lay' && d.moved) this.lay(d.from, d.to);
+    else if (d.changed) this.commit();
     else if (!d.moved) this.use(...this.toWorld(e.clientX, e.clientY));
   }
 
   private cancel(): void {
     const d = this.drag;
     this.drag = null;
+    this.stroke = null;
     if (d?.changed) this.commit();
+  }
+
+  /** The pencil was lifted: make the line the road, if it can be one. */
+  private drawn(stroke: [number, number][]): void {
+    const t = this.track!;
+    const tried = structuredClone(t);
+    const what = drawRoad(tried, stroke);
+    if (!what) {
+      this.say('Draw a longer line: a whole loop, or from one place on the road to another.');
+      return;
+    }
+    this.pencil = false;
+    this.change(() => {
+      t.road.points = tried.road.points;
+      // a whole new road leaves the old one's bridges and surfaces behind
+      if (what === 'loop') {
+        t.bridges = [];
+        t.surfaces = [];
+      }
+      this.sel = null;
+    });
+    this.say(
+      this.problems.length
+        ? 'UNDO takes the line back.'
+        : what === 'loop'
+          ? 'A new road. Drag its points to tidy it.'
+          : 'A new way round. Drag its points to tidy it.',
+    );
+  }
+
+  /** Lay the surface in hand along the road between two points on the ground. */
+  private lay(p: readonly [number, number], q: readonly [number, number]): void {
+    const t = this.track!;
+    const material = this.palette.surface;
+    if (!this.content.material.has(material)) return;
+    if (t.surfaces.length >= 24) {
+      this.say('That is as many stretches of surface as a track can have.');
+      return;
+    }
+    this.change(() => {
+      t.surfaces.push(surfaceBetween(this.road(), material, p, q));
+      this.sel = { kind: 'surface', index: t.surfaces.length - 1 };
+    });
+  }
+
+  /** A thing or a material was picked from the tray. */
+  private chose(kind: 'prop' | 'material', id: string): void {
+    const t = this.track;
+    const sel = this.sel;
+    if (!t) return;
+    if (kind === 'prop') this.sel = null;
+    else if (sel?.kind === 'pool' && t.pools[sel.index] && t.pools[sel.index]!.material !== id)
+      // the chosen pool or stretch becomes what was picked
+      this.change(() => (t.pools[sel.index]!.material = id));
+    else if (sel?.kind === 'area' && t.areas[sel.index] && t.areas[sel.index]!.material !== id)
+      this.change(() => (t.areas[sel.index]!.material = id));
+    else if (
+      sel?.kind === 'surface' &&
+      t.surfaces[sel.index] &&
+      t.surfaces[sel.index]!.material !== id
+    )
+      this.change(() => (t.surfaces[sel.index]!.material = id));
+    this.showRow2();
+  }
+
+  /** Put a thing down at a point on the ground (a tap with THINGS, or a drop from the tray). */
+  put(prop: string, x: number, y: number): void {
+    const t = this.track;
+    const s = this.s;
+    const def = this.content.prop.get(prop);
+    if (!t || !s || !def) return;
+    if (!(x > 12 && y > 12 && x < t.size.w - 12 && y < t.size.h - 12)) return;
+    if (t.items.length >= 1200) {
+      this.say('That is as many things as a track can hold.');
+      return;
+    }
+    if (this.tool !== 'place') this.pick('place');
+    // on the road a thing lines up with it (an arrow points down the road); off it, as turned
+    const item = { prop: def.id, x: Math.round(x), y: Math.round(y), rot: this.rotAt(x, y) };
+    this.change(() => {
+      t.items.push(item);
+      this.sel = { kind: 'item', index: t.items.length - 1 };
+      // straight into the world as it stands: no need to build it all again for one thing
+      rangeProp(s.world, def, item.x, item.y, item.rot);
+    }, this.problems.length === 0);
   }
 
   /** Use the tool in hand (or the one named) at a point on the ground: what a tap does. */
@@ -578,22 +960,43 @@ export class TrackEditor {
       }
       this.change(() => (this.sel = { kind: 'point', index: insertPoint(t, x, y) }));
     } else if (tool === 'place') {
-      const def = this.content.prop.get(this.propSel.value);
-      if (!def) return;
-      if (t.items.length >= 1200) {
-        this.say('That is as many things as a track can hold.');
+      this.put(this.palette.prop, x, y);
+    } else if (tool === 'surface') {
+      // a tap lays a short stretch, the tap in the middle of it
+      const T = this.road();
+      const near = nearestSample(T, x, y);
+      if (near.d > t.road.width / 2 + this.reach('item')) {
+        this.sel = null;
+        this.showRow2();
         return;
       }
-      // on the road a thing lines up with it (an arrow points down the road); off it, as turned
-      const near = roadAt(t.road.points, x, y);
-      const rot = (near.d < t.road.width / 2 ? near.a : 0) + this.rot;
-      const item = { prop: def.id, x: Math.round(x), y: Math.round(y), rot };
+      const end = (by: number): [number, number] => {
+        const i = (near.i + by + T.n) % T.n;
+        return [T.x[i]!, T.y[i]!];
+      };
+      const half = Math.min(30, Math.floor(T.n / 4));
+      this.lay(end(-half), end(half));
+    } else if (tool === 'area') {
+      const material = this.content.material.has(this.palette.area) ? this.palette.area : '';
+      const sky = this.skySel.value;
+      if (!material && !sky) {
+        this.say('Pick a ground from the tray, or a weather, first.');
+        return;
+      }
+      if (t.areas.length >= 12) {
+        this.say('That is as many areas as a track can have.');
+        return;
+      }
       this.change(() => {
-        t.items.push(item);
-        this.sel = { kind: 'item', index: t.items.length - 1 };
-        // straight into the world as it stands: no need to build it all again for one thing
-        rangeProp(s.world, def, item.x, item.y, item.rot);
-      }, this.problems.length === 0);
+        t.areas.push({
+          x: Math.round(x),
+          y: Math.round(y),
+          r: Number(this.areaIn.value),
+          material,
+          sky,
+        });
+        this.sel = { kind: 'area', index: t.areas.length - 1 };
+      });
     } else if (tool === 'bridge') {
       const near = roadAt(t.road.points, x, y);
       if (near.d > t.road.width / 2 + this.reach()) return;
@@ -606,14 +1009,15 @@ export class TrackEditor {
         this.sel = { kind: 'bridge', index: t.bridges.length - 1 };
       });
     } else {
-      if (!this.content.material.has(this.matSel.value)) return;
+      const material = this.palette.pool;
+      if (!this.content.material.has(material)) return;
       if (t.pools.length >= 200) {
         this.say('That is as many pools as a track can hold.');
         return;
       }
       this.change(() => {
         t.pools.push({
-          material: this.matSel.value,
+          material,
           x: Math.round(x),
           y: Math.round(y),
           r: Number(this.sizeIn.value),
@@ -819,6 +1223,88 @@ export class TrackEditor {
       const [x0, y0] = this.toScreen(t.road.points[0]![0], t.road.points[0]![1]);
       this.label(g, 'START', x0, y0 - 16 * k, k);
     }
+    if (this.tool === 'area' || this.tool === 'erase')
+      t.areas.forEach((a, i) => {
+        const [x, y] = this.toScreen(a.x, a.y);
+        const on = this.sel?.kind === 'area' && this.sel.index === i;
+        const m = this.content.material.get(a.material);
+        g.beginPath();
+        g.ellipse(x, y, a.r * v.scale, a.r * v.scale * sq, 0, 0, Math.PI * 2);
+        // an area being moved or not yet built shows where its ground will lie
+        g.globalAlpha = 0.18;
+        g.fillStyle = m?.colour ?? '#9fd0ff';
+        g.fill();
+        g.globalAlpha = 1;
+        g.strokeStyle = on ? '#ff6a3d' : '#fff';
+        g.lineWidth = (on ? 3 : 2) * k;
+        g.setLineDash([8 * k, 6 * k]);
+        g.stroke();
+        g.setLineDash([]);
+        g.beginPath();
+        g.arc(x, y, (on ? 11 : 8) * k, 0, Math.PI * 2);
+        g.fillStyle = on ? '#ff6a3d' : '#9fd0ff';
+        g.fill();
+        g.strokeStyle = '#16141c';
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        const what = [m?.meta.name.toUpperCase(), a.sky && skyLabel(a.sky)].filter(Boolean);
+        this.label(g, what.join(' · '), x, y - 16 * k, k);
+      });
+    if (this.tool === 'surface' || this.tool === 'erase') {
+      // stretches of surface: a band along the road in the material's colour
+      const T = this.road();
+      const band = (a: number, b: number, color: string, on: boolean): void => {
+        g.beginPath();
+        for (let i = a, first = true; ; i = (i + 1) % T.n, first = false) {
+          const [x, y] = this.toScreen(T.x[i]!, T.y[i]!);
+          if (first) g.moveTo(x, y);
+          else g.lineTo(x, y);
+          if (i === b) break;
+        }
+        g.lineCap = 'butt';
+        g.strokeStyle = on ? '#ff6a3d' : '#fff';
+        g.lineWidth = Math.max(8 * k, t.road.width * v.scale * sq * 0.5) + 4 * k;
+        g.stroke();
+        g.strokeStyle = color;
+        g.lineWidth = Math.max(8 * k, t.road.width * v.scale * sq * 0.5);
+        g.stroke();
+        g.lineCap = 'round';
+      };
+      t.surfaces.forEach((sf, i) => {
+        const a = nearestSample(T, sf.x0, sf.y0).i;
+        const b = nearestSample(T, sf.x1, sf.y1).i;
+        const m = this.content.material.get(sf.material);
+        const on = this.sel?.kind === 'surface' && this.sel.index === i;
+        band(a, b, m?.colour ?? '#888', on);
+        const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
+        const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
+        this.label(g, (m?.meta.name ?? '').toUpperCase(), x, y + 4 * k, k);
+      });
+      const d = this.drag;
+      if (d?.mode === 'lay' && d.moved) {
+        const sf = surfaceBetween(T, '', d.from, d.to);
+        band(
+          nearestSample(T, sf.x0, sf.y0).i,
+          nearestSample(T, sf.x1, sf.y1).i,
+          this.content.material.get(this.palette.surface)?.colour ?? '#888',
+          true,
+        );
+      }
+    }
+    if (this.stroke && this.stroke.length > 1) {
+      g.beginPath();
+      this.stroke.forEach(([px, py], i) => {
+        const [x, y] = this.toScreen(px, py);
+        if (i === 0) g.moveTo(x, y);
+        else g.lineTo(x, y);
+      });
+      g.strokeStyle = 'rgba(255,210,74,0.35)';
+      g.lineWidth = t.road.width * v.scale * sq;
+      g.stroke();
+      g.strokeStyle = '#fff';
+      g.lineWidth = 3 * k;
+      g.stroke();
+    }
     if (this.tool === 'place' || this.tool === 'erase')
       t.items.forEach((it, i) => {
         const [x, y] = this.toScreen(it.x, it.y);
@@ -863,6 +1349,8 @@ export class TrackEditor {
         this.label(g, 'BRIDGE', x, y - 16 * k, k);
       });
 
+    this.ghost(g, v);
+
     // what is wrong, or what was just said
     this.noteT = Math.max(0, this.noteT - dt);
     const text = this.problems[0] ?? (this.noteT > 0 ? this.note : '');
@@ -870,13 +1358,65 @@ export class TrackEditor {
       g.font = `700 ${13 * k}px system-ui, sans-serif`;
       g.textAlign = 'center';
       const w = g.measureText(text).width + 20 * k;
-      const y = v.h - 26 * k;
+      const y = 104 * k;
       g.fillStyle = this.problems.length ? 'rgba(150,30,20,0.9)' : 'rgba(0,0,0,0.7)';
       g.fillRect(v.w / 2 - w / 2, y - 16 * k, w, 24 * k);
       g.fillStyle = '#fff';
       g.fillText(text, v.w / 2, y);
     }
     g.restore();
+  }
+
+  /**
+   * What is about to be put down, drawn as itself where it would go: a thing on its way from the
+   * tray, one being moved, or (with a mouse) the thing or pool in hand under the pointer.
+   */
+  private ghost(
+    g: CanvasRenderingContext2D,
+    v: { w: number; h: number; scale: number; dpr: number },
+  ): void {
+    const t = this.track!;
+    const s = this.s!;
+    const d = this.drag;
+    const sq = Math.sin(PITCH);
+    let thing: { prop: string; x: number; y: number; rot: number } | null = null;
+    if (this.carried) {
+      const { prop, x, y } = this.carried;
+      thing = { prop, x, y, rot: this.rotAt(x, y) };
+    } else if (d?.changed && d.grab?.kind === 'item') thing = t.items[d.grab.index] ?? null;
+    else if (!d && !this.pinch && this.hover && this.tool === 'place') {
+      const [x, y] = this.hover;
+      if (!this.hit(x, y)) thing = { prop: this.palette.prop, x, y, rot: this.rotAt(x, y) };
+    }
+    if (thing) {
+      try {
+        const R = (this.stacks ??= new StackRenderer(g));
+        R.setView(v.scale, PITCH);
+        R.begin(s.cam.x, s.cam.y, v.w, v.h);
+        R.group(0);
+        R.stack(this.art.prop(thing.prop), thing.x, thing.y, 0, thing.rot, 0.8);
+        R.flush();
+      } catch {
+        // a prop with nothing to draw: the ring below still shows where it goes
+      }
+      const [x, y] = this.toScreen(thing.x, thing.y);
+      const r = Math.max(6 * v.dpr, (this.content.prop.get(thing.prop)?.radius ?? 6) * v.scale);
+      g.beginPath();
+      g.ellipse(x, y, r, r * sq, 0, 0, Math.PI * 2);
+      g.strokeStyle = '#ff6a3d';
+      g.lineWidth = 2 * v.dpr;
+      g.stroke();
+    }
+    if (!d && !this.pinch && this.hover && this.tool === 'pool' && !this.hit(...this.hover)) {
+      const [x, y] = this.toScreen(...this.hover);
+      const r = Number(this.sizeIn.value) * v.scale;
+      g.beginPath();
+      g.ellipse(x, y, r, r * sq, 0, 0, Math.PI * 2);
+      g.globalAlpha = 0.55;
+      g.fillStyle = this.content.material.get(this.palette.pool)?.colour ?? '#888';
+      g.fill();
+      g.globalAlpha = 1;
+    }
   }
 
   private arrow(

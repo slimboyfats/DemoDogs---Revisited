@@ -24,6 +24,8 @@ const track = (id: string, name = 'My Track'): TrackFile => ({
   items: [{ prop: 'prop.cone', x: 500, y: 400, rot: 0 }],
   pools: [],
   bridges: [],
+  surfaces: [],
+  areas: [],
   bots: 4,
 });
 

@@ -111,6 +111,8 @@ export function newTrack(look: VenueManifest, id: string, name: string): TrackFi
     items: [],
     pools: [],
     bridges: [],
+    surfaces: [],
+    areas: [],
     bots: Math.min(10, look.bots.count),
     pickups: [...look.pickups],
   };
@@ -215,8 +217,14 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     }
     scenery.push(r.data);
   }
+  // an area's ground is one great pool, laid first so that the pools put down by hand lie on it
+  const grounds = t.areas
+    .filter((a) => a.material && (content.material.has(a.material) || !dropped.add(a.material)))
+    .map(({ material, x, y, r }) => ({ material, x, y, r }));
   const pools = t.pools.filter((p) => content.material.has(p.material) || !dropped.add(p.material));
-  if (pools.length) scenery.push({ rule: 'pools', items: pools.map((p) => ({ ...p })) });
+  if (grounds.length + pools.length)
+    scenery.push({ rule: 'pools', items: [...grounds, ...pools.map((p) => ({ ...p }))] });
+  const weather = t.areas.filter((a) => a.sky).map(({ x, y, r, sky }) => ({ x, y, r, sky }));
   // the place rule counts from the middle of the map
   const items = t.items.filter((i) => content.prop.has(i.prop) || !dropped.add(i.prop));
   if (items.length)
@@ -229,6 +237,25 @@ export function installTrack(content: Content, t: TrackFile): Installed {
         rot: i.rot,
       })),
     });
+  const near = (x: number, y: number): number => {
+    let best = 0;
+    let bd = Infinity;
+    for (let i = 0; i < T.n; i++) {
+      const d = (T.x[i]! - x) ** 2 + (T.y[i]! - y) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    return best;
+  };
+  const surfaces = t.surfaces
+    .filter((s) => content.material.has(s.material) || !dropped.add(s.material))
+    .map((s) => ({
+      from: near(s.x0, s.y0) / T.n,
+      to: near(s.x1, s.y1) / T.n,
+      material: s.material,
+    }));
   let pickups = (t.pickups ?? []).filter((p) => content.pickup.has(p) || !dropped.add(p));
   if (pickups.length === 0) pickups = [...content.pickup.keys()].sort();
 
@@ -244,8 +271,13 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     mode: mode.id,
     seed: t.seed,
     size: t.size,
-    track: { road: t.road.width, points: t.road.points },
+    track: {
+      road: t.road.width,
+      points: t.road.points,
+      ...(surfaces.length ? { surfaces } : {}),
+    },
     colors: t.colors,
+    ...(weather.length ? { weather } : {}),
     scenery,
     bots: { bot: bot.id, count: t.bots },
     pickups,

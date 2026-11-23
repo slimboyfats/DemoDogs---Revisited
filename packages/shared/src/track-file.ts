@@ -66,6 +66,39 @@ export const TrackFileSchema = z.object({
     .array(z.strictObject({ x: z.number(), y: z.number(), length: z.number().min(80).max(600) }))
     .max(6)
     .default([]),
+  /**
+   * Stretches of road with another surface (dirt, ice, sand): from the point of the road nearest
+   * to (x0, y0) on, in the direction of the race, to the one nearest to (x1, y1).
+   */
+  surfaces: z
+    .array(
+      z.strictObject({
+        material: z.string(),
+        x0: z.number(),
+        y0: z.number(),
+        x1: z.number(),
+        y1: z.number(),
+      }),
+    )
+    .max(24)
+    .default([]),
+  /**
+   * Areas of terrain and weather: within `r` of (x, y) the ground is `material` (snow, ice, sand;
+   * empty for the ground as it is) and the sky is `sky` (a name the game knows; empty for the
+   * sky as it is).
+   */
+  areas: z
+    .array(
+      z.strictObject({
+        x: z.number(),
+        y: z.number(),
+        r: z.number().min(40).max(700),
+        material: z.string(),
+        sky: z.string().max(24),
+      }),
+    )
+    .max(12)
+    .default([]),
   /** How many scrap bots wander it. */
   bots: z.number().int().min(0).max(40),
   /** The crates' pickups; none listed means all of them. */

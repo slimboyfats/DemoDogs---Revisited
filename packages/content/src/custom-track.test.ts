@@ -108,6 +108,88 @@ describe('custom tracks', () => {
     expect(up).toBeGreaterThan(15);
   });
 
+  it('lays a surface on a stretch of road, and a car on it has that grip', () => {
+    const t = newTrack(look('venue.kennel-loop'), 'surfaces', 'Surfaces');
+    const plain = world(t);
+    expect(plain.roadSurface).toBeNull();
+    const T = plain.track!;
+    const at = (f: number) => Math.floor(f * T.n);
+    const p = (f: number) => [Math.round(T.x[at(f)]!), Math.round(T.y[at(f)]!)] as const;
+    t.surfaces.push({
+      material: 'material.ice',
+      x0: p(0.3)[0],
+      y0: p(0.3)[1],
+      x1: p(0.4)[0],
+      y1: p(0.4)[1],
+    });
+    // one that runs over the start line, and one this build does not know
+    t.surfaces.push({
+      material: 'material.mud',
+      x0: p(0.95)[0],
+      y0: p(0.95)[1],
+      x1: p(0.05)[0],
+      y1: p(0.05)[1],
+    });
+    t.surfaces.push({
+      material: 'material.treacle',
+      x0: p(0.6)[0],
+      y0: p(0.6)[1],
+      x1: p(0.7)[0],
+      y1: p(0.7)[1],
+    });
+    const made = installTrack(C, t);
+    expect(made.dropped).toEqual(['material.treacle']);
+    const w = world(t);
+    const S = w.roadSurface!;
+    expect(S[at(0.35)]?.id).toBe('material.ice');
+    expect(S[at(0.5)]).toBeNull();
+    expect(S[at(0.65)]).toBeNull();
+    expect(S[at(0.99)]?.id).toBe('material.mud');
+    expect(S[at(0.02)]?.id).toBe('material.mud');
+    expect(S[at(0.2)]).toBeNull();
+    const back = parseTrackFile(JSON.stringify(t));
+    expect(back.ok && back.track.surfaces.length).toBe(3);
+    // an all-AI race over ice and mud still gets round
+    const race = world(t, { autopilot: true });
+    runUntil(race, (r) => r.cars.some((c) => c.lap >= 2), 60 * 240);
+    expect(race.cars.some((c) => c.lap >= 2)).toBe(true);
+  });
+
+  it('lays areas of terrain with their own weather', () => {
+    const t = newTrack(look('venue.kennel-loop'), 'areas', 'Areas');
+    t.areas.push(
+      { x: 400, y: 300, r: 260, material: 'material.snow', sky: 'snow' },
+      { x: 1000, y: 600, r: 200, material: 'material.ice', sky: '' },
+      // weather alone, and a ground this build does not know (its weather still holds)
+      { x: 700, y: 480, r: 120, material: '', sky: 'rain' },
+      { x: 200, y: 800, r: 100, material: 'material.treacle', sky: 'night' },
+    );
+    t.pools.push({ material: 'material.mud', x: 400, y: 300, r: 20 });
+    const made = installTrack(C, t);
+    expect(made.dropped).toEqual(['material.treacle']);
+    const w = world(t);
+    expect(w.venue.weather?.map((a) => a.sky)).toEqual(['snow', 'rain', 'night']);
+    const fixed = w.spills.filter((s) => s.fixed);
+    // the ground of each area, then the pool laid by hand on top of the snow
+    expect(fixed.slice(-3).map((s) => [s.def.id, s.r])).toEqual([
+      ['material.snow', 260],
+      ['material.ice', 200],
+      ['material.mud', 20],
+    ]);
+    const back = parseTrackFile(JSON.stringify(t));
+    expect(back.ok && back.track.areas).toEqual(t.areas);
+    // a file from before there were areas still loads
+    const old = JSON.parse(JSON.stringify(t)) as Record<string, unknown>;
+    delete old.areas;
+    delete old.surfaces;
+    const older = parseTrackFile(JSON.stringify(old));
+    expect(older.ok && older.track.areas).toEqual([]);
+    expect(newTrack(look('venue.kennel-loop'), 'plain', 'Plain').areas).toEqual([]);
+    expect(
+      world(newTrack(look('venue.kennel-loop'), 'plain', 'Plain')).venue.weather,
+    ).toBeUndefined();
+  });
+
   it('says when a bridge is on the start line or runs into another', () => {
     const t = newTrack(look('venue.kennel-loop'), 'bridge-bad', 'Bridge');
     const [x, y] = t.road.points[0]!;
