@@ -34,7 +34,8 @@
     "ground": "#4a5e36",
     "ground2": "#556a3e",
     "dirt": "#6e5536",
-    "outside": "#1f2a1a"
+    "outside": "#1f2a1a",
+    "road": "dirt"
   },
   "scenery": [
     {
@@ -252,7 +253,7 @@
       "items": [
         {
           "prop": "prop.deer",
-          "lane": 2.0,
+          "lane": 2,
           "ahead": 0
         }
       ]

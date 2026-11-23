@@ -22,7 +22,8 @@
     "ground": "#5b5a55",
     "ground2": "#64625c",
     "dirt": "#47453f",
-    "outside": "#14232a"
+    "outside": "#14232a",
+    "terrain": "paved"
   },
   "scenery": [
     {

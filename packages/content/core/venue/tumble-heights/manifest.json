@@ -40,7 +40,8 @@
     "ground": "#5d5f63",
     "ground2": "#676a6f",
     "dirt": "#45464a",
-    "outside": "#1e2024"
+    "outside": "#1e2024",
+    "terrain": "paved"
   },
   "scenery": [
     {
@@ -127,7 +128,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 1.2e-5,
+      "perArea": 0.000012,
       "clear": 34,
       "items": [
         {

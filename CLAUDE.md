@@ -16,6 +16,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
+| `pnpm ground [out-dir] [venue ...] [--maps]`                    | every venue's painted ground as one picture, a close-up and a race frame (`captures/ground/`)                 |
 | `pnpm bridge [out-dir] [--only=scene] [--frames]`               | knocks the legs out from under the overpass and the flyover and shoots the collapse (`captures/bridge/`)      |
 | `pnpm res [out-dir] [venue ...]`, RESOLUTION when paused        | frame time at each resolution step (`captures/resolution/`); `?res=auto`, `full`, `low`                       |
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
@@ -104,4 +105,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Custom tracks are data, not content.** A track from the track creator is a `TrackFile` (shared/track-file.ts);
   `installTrack` (sim/custom.ts) turns it into a venue in a copy of the content. It names props by id and must keep
   loading when ids go: unknown ones are left out, never an error. Every prop is placeable; nothing is added per prop.
+- **The ground is painted once, per pixel** (client `render/terrain.ts`, then decals in `render/ground.ts`). A venue's
+  `colors.terrain` (grass, dirt, sand, snow, gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are
+  optional and looks only, so the sim never reads them.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.

@@ -35,7 +35,8 @@
     "ground": "#6f5a4e",
     "ground2": "#7a6457",
     "dirt": "#5a4a42",
-    "outside": "#2e2826"
+    "outside": "#2e2826",
+    "terrain": "paved"
   },
   "scenery": [
     {
@@ -87,7 +88,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 2.9e-5,
+      "perArea": 0.000029,
       "clear": 30,
       "items": [
         {
@@ -273,7 +274,7 @@
       "items": [
         {
           "prop": "prop.chickens",
-          "lane": 1.0,
+          "lane": 1,
           "ahead": 0
         }
       ]
