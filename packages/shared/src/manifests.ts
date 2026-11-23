@@ -383,7 +383,18 @@ export const VenueSchema = z.strictObject({
   oval: z
     .strictObject({ cx: z.number(), cy: z.number(), rx: z.number(), ry: z.number() })
     .optional(),
-  colors: z.strictObject({ ground: hex, ground2: hex, dirt: hex, outside: hex }),
+  /**
+   * The ground's colours. `terrain` says what country it is (else the client reads it off the
+   * ground colour) and `road` what the road is made of (tarmac unless said): looks only.
+   */
+  colors: z.strictObject({
+    ground: hex,
+    ground2: hex,
+    dirt: hex,
+    outside: hex,
+    terrain: z.enum(['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved']).optional(),
+    road: z.enum(['tarmac', 'dirt']).optional(),
+  }),
   /**
    * Weather that lies over part of the map: within `r` of (x, y) the sky is the one named (a name
    * the client knows: snow, rain, night ...). The screen takes the sky of the area it is over;

@@ -1,4 +1,14 @@
 import type { World } from '@demodogs/sim';
+import {
+  type Fields,
+  makeFields,
+  paintBowl,
+  paintGully,
+  paintRoad,
+  paintTerrain,
+  rgbOf,
+  terrainOf,
+} from './terrain';
 
 const TAU = Math.PI * 2;
 
@@ -48,96 +58,24 @@ export function makeGround(w: World): Ground {
   cv.height = w.h;
   const g = cv.getContext('2d', { willReadFrequently: true })!;
   const r = mulberry(V.seed + 7);
-  g.fillStyle = C.ground;
-  g.fillRect(0, 0, w.w, w.h);
-  g.globalAlpha = 0.35;
-  for (let i = 0; i < (w.w * w.h) / 260; i++) {
-    g.fillStyle = r() < 0.5 ? C.ground2 : C.dirt;
-    const s = 2 + r() * 5;
-    g.fillRect(r() * w.w, r() * w.h, s, s * 0.7);
-  }
-  g.globalAlpha = 1;
   const T = w.track;
+  const D = w.deckH;
+  // where the road is up on a flyover there is no road on the ground under it
+  const up = (i: number) => D !== null && !!T && D[i % T.n]! > 3;
+  // the country, the road and the bowl, a pixel at a time
+  const F = makeFields(w.w, w.h, V.seed);
+  const img = g.createImageData(w.w, w.h);
+  paintTerrain(img.data, w.w, w.h, C, F);
+  if (T) {
+    if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
+    paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
+  }
+  if (w.oval) paintBowl(img.data, w.w, w.h, w.oval, C, F);
+  g.putImageData(img, 0, 0);
   if (T) {
     const road = w.road;
-    const D = w.deckH;
-    // where the road is up on a flyover there is no road on the ground under it
-    const up = (i: number) => D !== null && D[i % T.n]! > 3;
-    const path = () => {
-      g.beginPath();
-      if (!D) {
-        g.moveTo(T.x[0]!, T.y[0]!);
-        for (let i = 1; i < T.n; i++) g.lineTo(T.x[i]!, T.y[i]!);
-        g.closePath();
-        return;
-      }
-      let pen = false;
-      for (let i = 0; i <= T.n; i++) {
-        const k = i % T.n;
-        if (up(k)) {
-          pen = false;
-          continue;
-        }
-        if (pen) g.lineTo(T.x[k]!, T.y[k]!);
-        else g.moveTo(T.x[k]!, T.y[k]!);
-        pen = true;
-      }
-    };
-    if (D) {
-      // under a flyover: a trampled gully of dirt and gravel in the deck's shade
-      g.lineJoin = 'round';
-      g.lineCap = 'round';
-      for (const [col, wd] of [
-        [C.dirt, road + 34],
-        ['rgba(30,26,20,0.45)', road + 12],
-      ] as const) {
-        g.beginPath();
-        let pen = false;
-        for (let i = 0; i < T.n; i++) {
-          if (!up(i)) {
-            pen = false;
-            continue;
-          }
-          if (pen) g.lineTo(T.x[i]!, T.y[i]!);
-          else g.moveTo(T.x[i]!, T.y[i]!);
-          pen = true;
-        }
-        g.strokeStyle = col;
-        g.lineWidth = wd;
-        g.stroke();
-      }
-      g.globalAlpha = 0.5;
-      for (let i = 0; i < T.n; i++)
-        if (up(i))
-          for (let k = 0; k < 6; k++) {
-            g.fillStyle = r() < 0.5 ? '#3d3427' : '#7b6a4c';
-            const o = (r() - 0.5) * (road + 20);
-            g.fillRect(
-              T.x[i]! - Math.sin(T.a[i]!) * o + (r() - 0.5) * 4,
-              T.y[i]! + Math.cos(T.a[i]!) * o + (r() - 0.5) * 4,
-              1 + r() * 2,
-              1 + r() * 2,
-            );
-          }
-      g.globalAlpha = 1;
-    }
-    const stroke = (col: string, width: number, dash: number[] = []) => {
-      path();
-      g.strokeStyle = col;
-      g.lineWidth = width;
-      g.setLineDash(dash);
-      g.stroke();
-      g.setLineDash([]);
-    };
     g.lineJoin = 'round';
     g.lineCap = 'round';
-    stroke(C.dirt, road + 30);
-    stroke('#efeae0', road + 9);
-    stroke('#c8322e', road + 9, [9, 9]);
-    stroke('#47474d', road);
-    stroke('#4f4f56', road * 0.55);
-    // (a stretch with its own surface is painted over this below, before the start line)
-    stroke('rgba(230,224,200,0.7)', 2, [12, 16]);
     dressRoad(g, w, r, up);
     // stretches with a surface of their own: the road in that material's colour, roughened
     const S = w.roadSurface;
@@ -207,36 +145,13 @@ export function makeGround(w: World): Ground {
   }
   const O = w.oval;
   if (O) {
-    g.fillStyle = C.outside;
-    g.fillRect(0, 0, w.w, w.h);
-    g.beginPath();
-    g.ellipse(O.cx, O.cy, O.rx + 6, O.ry + 6, 0, 0, TAU);
-    g.fillStyle = C.dirt;
-    g.fill();
-    g.beginPath();
-    g.ellipse(O.cx, O.cy, O.rx - 2, O.ry - 2, 0, 0, TAU);
-    g.fillStyle = C.ground;
-    g.fill();
-    g.globalAlpha = 0.4;
-    for (let i = 0; i < 1600; i++) {
-      const t = r() * TAU;
-      const q = Math.sqrt(r()) * 0.97;
-      g.fillStyle = r() < 0.5 ? C.ground2 : C.dirt;
-      g.fillRect(
-        O.cx + Math.cos(t) * O.rx * q,
-        O.cy + Math.sin(t) * O.ry * q,
-        3 + r() * 6,
-        2 + r() * 3,
-      );
-    }
-    g.globalAlpha = 1;
     g.beginPath();
     g.ellipse(O.cx, O.cy, 70, 54, 0, 0, TAU);
     g.strokeStyle = 'rgba(240,230,200,0.35)';
     g.lineWidth = 3;
     g.stroke();
   }
-  dressVerge(g, w, r);
+  dressVerge(g, w, r, F);
   // a little grain per art pixel; the fine grain (blades, gravel, pebbles) is the shader's
   const id = g.getImageData(0, 0, w.w, w.h);
   const px = id.data;
@@ -250,16 +165,11 @@ export function makeGround(w: World): Ground {
   return { cv, g, dirty: null };
 }
 
-const rgbOf = (hex: string): [number, number, number] => [
-  parseInt(hex.slice(1, 3), 16),
-  parseInt(hex.slice(3, 5), 16),
-  parseInt(hex.slice(5, 7), 16),
-];
-
 /**
- * The road's own detail, painted once: a solid line down each edge, the dark band the tyres have
- * worn, patches where it has been mended, cracks, oil spots, and white arrows on the tarmac
- * before each sharp bend pointing the way it turns.
+ * The road's own detail, painted once over the laid road. On tarmac: the rubber of the racing
+ * line, skid marks into the bends, mended patches, cracks, oil spots, drain covers, and white
+ * arrows before each sharp bend pointing the way it turns. On a dirt road: long ruts, stones and
+ * damp hollows.
  */
 function dressRoad(
   g: CanvasRenderingContext2D,
@@ -270,6 +180,7 @@ function dressRoad(
   const T = w.track!;
   const road = w.road;
   const half = road / 2;
+  const dirtRoad = w.venue.colors.road === 'dirt';
   const at = (i: number, across: number, along = 0): [number, number] => {
     const k = ((i % T.n) + T.n) % T.n;
     const a = T.a[k]!;
@@ -278,14 +189,45 @@ function dressRoad(
       T.y[k]! + Math.cos(a) * across + Math.sin(a) * along,
     ];
   };
-  // edge lines, a pixel wide, just inside each kerb
-  g.fillStyle = 'rgba(236,232,214,0.55)';
-  for (let i = 0; i < T.n; i++) {
-    if (up(i)) continue;
-    for (const sd of [-1, 1]) {
-      const [x, y] = at(i, sd * (half - 2.5));
-      g.fillRect(Math.round(x), Math.round(y), 2, 2);
+  const turn = (i: number): number => {
+    let d = T.a[(i + 7) % T.n]! - T.a[(i - 7 + T.n) % T.n]!;
+    while (d > Math.PI) d -= TAU;
+    while (d < -Math.PI) d += TAU;
+    return d;
+  };
+  if (dirtRoad) {
+    // ruts: long dark lines that wander along the road
+    for (let n = 0; n < T.n / 30; n++) {
+      let i = Math.floor(r() * T.n);
+      let ac = (r() - 0.5) * (road - 12);
+      g.fillStyle = `rgba(20,14,8,${0.22 + r() * 0.2})`;
+      for (let k = 0; k < 20 + r() * 60; k++, i++) {
+        if (up(i)) break;
+        ac = Math.max(-half + 4, Math.min(half - 4, ac + (r() - 0.5) * 1.2));
+        const [x, y] = at(i, ac);
+        g.fillRect(Math.round(x), Math.round(y), 1, 1);
+        const [x2, y2] = at(i, ac, T.step / 2);
+        g.fillRect(Math.round(x2), Math.round(y2), 1, 1);
+      }
     }
+    // stones, lit on top, and damp hollows
+    for (let n = 0; n < T.n / 4; n++) {
+      const i = Math.floor(r() * T.n);
+      if (up(i)) continue;
+      const [x, y] = at(i, (r() - 0.5) * (road - 6));
+      if (r() < 0.12) {
+        g.fillStyle = 'rgba(18,12,8,0.26)';
+        g.beginPath();
+        g.ellipse(x, y, 3 + r() * 6, 2 + r() * 3, T.a[i]!, 0, TAU);
+        g.fill();
+      } else {
+        g.fillStyle = 'rgba(214,200,176,0.6)';
+        g.fillRect(Math.round(x), Math.round(y), 2, 1);
+        g.fillStyle = 'rgba(20,14,8,0.5)';
+        g.fillRect(Math.round(x), Math.round(y) + 1, 2, 1);
+      }
+    }
+    return;
   }
   // the racing line: rubber laid down where the cars run, wandering from side to side
   for (let i = 0; i < T.n; i++) {
@@ -298,30 +240,72 @@ function dressRoad(
       g.fillRect(Math.round(x), Math.round(y), 3, 3);
     }
   }
-  // mended patches: squares of newer, darker or paler tarmac
-  for (let n = 0; n < T.n / 22; n++) {
+  // skid marks: pairs of black lines where cars have braked into a bend and slid out wide
+  for (let i = 0; i < T.n; i += 3) {
+    const k = turn(i);
+    if (Math.abs(k) < 0.3 || r() > 0.2) continue;
+    const out = k > 0 ? -1 : 1;
+    let ac = (r() - 0.5) * half;
+    const len = Math.round((30 + r() * 70) / T.step);
+    const gap = 9 + r() * 3;
+    const start = i - Math.round(len * 0.6);
+    for (let q = 0; q < len; q++) {
+      const j = start + q;
+      if (up(j)) break;
+      ac += out * (0.25 + r() * 0.3);
+      if (Math.abs(ac) + gap / 2 > half - 5) break;
+      // dark in the middle of the slide, faint at both ends
+      g.fillStyle = `rgba(12,12,14,${0.38 * Math.sin((q / len) * Math.PI)})`;
+      for (const o of [-gap / 2, gap / 2])
+        for (const f of [0, T.step / 2]) {
+          const [x, y] = at(j, ac + o, f);
+          g.fillRect(Math.round(x), Math.round(y), 2, 2);
+        }
+    }
+  }
+  // mended patches: squares of newer, darker or paler tarmac, with a tar seam round some
+  for (let n = 0; n < T.n / 18; n++) {
     const i = Math.floor(r() * T.n);
     if (up(i)) continue;
-    const [x, y] = at(i, (r() - 0.5) * (road - 16));
+    const [x, y] = at(i, (r() - 0.5) * (road - 22));
     g.save();
-    g.translate(x, y);
+    g.translate(Math.round(x), Math.round(y));
     g.rotate(T.a[i]! + (r() - 0.5) * 0.2);
+    const pw = 8 + r() * 14;
+    const ph = 6 + r() * 9;
     g.fillStyle = r() < 0.5 ? 'rgba(30,30,34,0.35)' : 'rgba(120,120,126,0.22)';
-    g.fillRect(-4 - r() * 6, -3 - r() * 4, 8 + r() * 12, 6 + r() * 8);
+    g.fillRect(-pw / 2, -ph / 2, pw, ph);
+    if (r() < 0.6) {
+      g.strokeStyle = 'rgba(14,14,16,0.5)';
+      g.lineWidth = 1;
+      g.strokeRect(-pw / 2, -ph / 2, pw, ph);
+    }
     g.restore();
   }
-  // cracks: thin dark lines that wander across the tarmac
+  // cracks: thin dark lines that wander across the tarmac, some forking
   for (let n = 0; n < T.n / 9; n++) {
     const i = Math.floor(r() * T.n);
     if (up(i)) continue;
     let [x, y] = at(i, (r() - 0.5) * (road - 8));
     let a = r() * TAU;
-    g.fillStyle = 'rgba(16,16,18,0.5)';
-    for (let k = 0; k < 6 + r() * 14; k++) {
+    g.fillStyle = 'rgba(16,16,18,0.55)';
+    const len = 6 + r() * 22;
+    for (let k = 0; k < len; k++) {
       g.fillRect(Math.round(x), Math.round(y), 1, 1);
       a += (r() - 0.5) * 1.1;
       x += Math.cos(a);
       y += Math.sin(a);
+      if (r() < 0.06) {
+        let fx = x;
+        let fy = y;
+        let fa = a + (r() < 0.5 ? 1 : -1);
+        for (let q = 0; q < 3 + r() * 8; q++) {
+          g.fillRect(Math.round(fx), Math.round(fy), 1, 1);
+          fa += (r() - 0.5) * 0.9;
+          fx += Math.cos(fa);
+          fy += Math.sin(fa);
+        }
+      }
     }
   }
   // oil spots and a scatter of grit
@@ -339,13 +323,21 @@ function dressRoad(
       g.fillRect(Math.round(x), Math.round(y), 1, 1);
     }
   }
+  // drain covers by the edge: a dark grate in a pale frame
+  for (let n = 0; n < T.n / 110; n++) {
+    const i = Math.floor(r() * T.n);
+    if (up(i) || Math.abs(turn(i)) > 0.2) continue;
+    const [x, y] = at(i, (r() < 0.5 ? -1 : 1) * (half - 9));
+    g.save();
+    g.translate(Math.round(x), Math.round(y));
+    g.rotate(T.a[i]!);
+    g.fillStyle = 'rgba(150,150,154,0.7)';
+    g.fillRect(-4, -3, 8, 6);
+    g.fillStyle = 'rgba(16,16,20,0.85)';
+    for (let q = -3; q < 3; q += 2) g.fillRect(q, -2, 1, 4);
+    g.restore();
+  }
   // arrows before the sharp bends: three white chevrons across the road, pointing into the turn
-  const turn = (i: number): number => {
-    let d = T.a[(i + 7) % T.n]! - T.a[(i - 7 + T.n) % T.n]!;
-    while (d > Math.PI) d -= TAU;
-    while (d < -Math.PI) d += TAU;
-    return d;
-  };
   let last = -999;
   for (let i = 30; i < T.n - 30; i++) {
     const k = turn(i);
@@ -367,23 +359,163 @@ function dressRoad(
 }
 
 /**
- * The ground beside the road and in the arena, painted once, a pixel at a time: on grass, darker
- * tufts and specks of flowers; on sand, snow and dirt, pebbles, cracks and drifts. What it is
- * comes from the venue's own ground colour.
+ * The small things on the open ground and in the arena, painted once, a pixel at a time, each in
+ * its own kind of country: tufts and drifts of flowers on grass; stones, ruts and cracks on dirt;
+ * rocks and cracked crust on sand; tracks and capped rocks in snow; boulders in gravel; drains,
+ * manholes and cracked slabs on paving. They gather where the country's noise says, not evenly.
  */
-function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number): void {
+function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number, F: Fields): void {
   const C = w.venue.colors;
   const [R, G, B] = rgbOf(C.ground);
-  const grassy = G > R * 1.12 && G > B * 1.12;
+  const terrain = terrainOf(C);
   const pale = R + G + B > 520;
   const half = w.road / 2 + 6;
-  const off = (x: number, y: number): boolean => {
-    if (w.grid) return w.grid.at(x, y) > half;
+  const off = (x: number, y: number, clear = 0): boolean => {
+    if (w.grid) return w.grid.at(x, y) > half + clear;
     const O = w.oval;
-    return !O || Math.hypot((x - O.cx) / (O.rx - 6), (y - O.cy) / (O.ry - 6)) < 1;
+    return !O || Math.hypot((x - O.cx) / (O.rx - 6 - clear), (y - O.cy) / (O.ry - 6 - clear)) < 1;
   };
   const shade = (k: number, a: number) =>
-    `rgba(${Math.round(R * k)},${Math.round(G * k)},${Math.round(B * k)},${a})`;
+    `rgba(${Math.min(255, Math.round(R * k))},${Math.min(255, Math.round(G * k))},${Math.min(255, Math.round(B * k))},${a})`;
+  /** A rock: a lumpy blob lit from the top left, with a shadow under its far side. */
+  const rock = (x: number, y: number, s: number, cap?: string): void => {
+    const tone = 0.8 + r() * 0.3;
+    const base =
+      terrain === 'grass' || terrain === 'snow' ? [124, 126, 132] : [R * 0.78, G * 0.76, B * 0.74];
+    const col = (k: number) =>
+      `rgb(${Math.min(255, Math.round(base[0]! * tone * k))},${Math.min(255, Math.round(base[1]! * tone * k))},${Math.min(255, Math.round(base[2]! * tone * k))})`;
+    g.fillStyle = 'rgba(0,0,0,0.32)';
+    g.fillRect(x + 1, y + 1, s, s - 1);
+    g.fillStyle = col(1);
+    g.fillRect(x, y, s, s - 1);
+    g.fillRect(x + 1, y - 1, s - 2, s + 1);
+    g.fillStyle = col(0.7);
+    g.fillRect(x + 1, y + s - 2, s - 1, 1);
+    g.fillRect(x + s - 1, y + 1, 1, s - 2);
+    g.fillStyle = cap ?? col(1.35);
+    g.fillRect(x + 1, y - 1, Math.max(1, s - 3), 1);
+    g.fillRect(x, y, Math.max(1, s - 3), 1);
+  };
+  /** A line that wanders: a crack, a rut, a ripple. */
+  const wander = (
+    x: number,
+    y: number,
+    len: number,
+    bendy: number,
+    style: string,
+    flat = 1,
+  ): void => {
+    let a = r() * TAU;
+    g.fillStyle = style;
+    for (let q = 0; q < len; q++) {
+      g.fillRect(Math.round(x), Math.round(y), 1, 1);
+      a += (r() - 0.5) * bendy;
+      x += Math.cos(a);
+      y += Math.sin(a) * flat;
+    }
+  };
+  // the big things, a few to a screen
+  const big = (w.w * w.h) / 5200;
+  for (let i = 0; i < big; i++) {
+    const x = Math.floor(r() * w.w);
+    const y = Math.floor(r() * w.h);
+    if (!off(x, y, 8)) continue;
+    const k = r();
+    const m = F.mid.at(x, y);
+    switch (terrain) {
+      case 'grass':
+        if (k < 0.3) rock(x, y, 3 + Math.floor(r() * 3));
+        else if (k < 0.5 && m > 0.5) {
+          // a molehill, or a bald spot
+          g.fillStyle = C.dirt;
+          g.beginPath();
+          g.ellipse(x, y, 2 + r() * 3, 1.5 + r() * 2, 0, 0, TAU);
+          g.fill();
+        }
+        break;
+      case 'dirt':
+        if (k < 0.3) rock(x, y, 3 + Math.floor(r() * 4));
+        else if (k < 0.75) {
+          // an old pair of wheel ruts across the dirt
+          const a = r() * TAU;
+          const len = 30 + r() * 90;
+          const curl = (r() - 0.5) * 0.03;
+          for (const o of [-4, 4]) {
+            let px = x - Math.sin(a) * o;
+            let py = y + Math.cos(a) * o;
+            let aa = a;
+            g.fillStyle = shade(0.6, 0.45);
+            for (let q = 0; q < len; q++) {
+              if (!off(px, py)) break;
+              if (r() > 0.15) g.fillRect(Math.round(px), Math.round(py), 2, 1);
+              aa += curl;
+              px += Math.cos(aa);
+              py += Math.sin(aa);
+            }
+          }
+        } else wander(x, y, 10 + r() * 30, 0.9, shade(0.55, 0.6));
+        break;
+      case 'sand':
+        if (k < 0.35) rock(x, y, 3 + Math.floor(r() * 5));
+        else if (F.bare.at(x, y) > 0.7) {
+          // baked crust cracks into plates
+          for (let q = 0; q < 4; q++)
+            wander(x + (r() - 0.5) * 16, y + (r() - 0.5) * 12, 8 + r() * 16, 0.7, shade(0.5, 0.6));
+        } else wander(x, y, 14 + r() * 30, 0.35, shade(0.82, 0.6), 0.3);
+        break;
+      case 'snow':
+        if (k < 0.3) rock(x, y, 3 + Math.floor(r() * 4), '#f4f7fb');
+        else if (k < 0.6) {
+          // old tracks through the snow, blue in their shadow
+          const a = r() * TAU;
+          const len = 30 + r() * 80;
+          for (const o of [-4, 4])
+            for (let q = 0; q < len; q++) {
+              const px = x - Math.sin(a) * o + Math.cos(a) * q;
+              const py = y + Math.cos(a) * o + Math.sin(a) * q;
+              if (!off(px, py)) break;
+              g.fillStyle = 'rgba(120,150,190,0.4)';
+              g.fillRect(Math.round(px), Math.round(py), 2, 1);
+            }
+        } else wander(x, y, 12 + r() * 24, 0.4, 'rgba(255,255,255,0.7)', 0.3);
+        break;
+      case 'gravel':
+        if (k < 0.7) rock(x, y, 3 + Math.floor(r() * 5));
+        else wander(x, y, 10 + r() * 20, 0.8, shade(0.6, 0.5));
+        break;
+      case 'paved':
+        if (k < 0.16) {
+          // a manhole: a dark iron lid in a pale ring
+          g.fillStyle = shade(1.35, 0.9);
+          g.beginPath();
+          g.arc(x, y, 5, 0, TAU);
+          g.fill();
+          g.fillStyle = 'rgba(34,34,38,0.95)';
+          g.beginPath();
+          g.arc(x, y, 4, 0, TAU);
+          g.fill();
+          g.fillStyle = 'rgba(90,90,96,0.9)';
+          g.fillRect(x - 2, y - 1, 4, 1);
+          g.fillRect(x - 2, y + 1, 4, 1);
+        } else if (k < 0.3) {
+          // a drain grate
+          g.fillStyle = shade(1.3, 0.9);
+          g.fillRect(x - 4, y - 3, 9, 7);
+          g.fillStyle = 'rgba(16,16,20,0.9)';
+          for (let q = -3; q <= 3; q += 2) g.fillRect(x + q, y - 2, 1, 5);
+        } else if (k < 0.75) {
+          wander(x, y, 12 + r() * 36, 0.8, shade(0.45, 0.7));
+        } else {
+          // an oil stain
+          g.fillStyle = 'rgba(14,14,18,0.22)';
+          g.beginPath();
+          g.ellipse(x, y, 3 + r() * 7, 2 + r() * 4, r() * TAU, 0, TAU);
+          g.fill();
+        }
+        break;
+    }
+  }
+  // the small things, everywhere
   const n = (w.w * w.h) / 34;
   const FLOWERS = ['#f4f0e4', '#f2c81e', '#e8597a', '#b684f4', '#f4f0e4', '#f2c81e'];
   for (let i = 0; i < n; i++) {
@@ -391,19 +523,22 @@ function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number): voi
     const y = Math.floor(r() * w.h);
     if (!off(x, y)) continue;
     const k = r();
-    if (grassy) {
-      if (k < 0.55) {
+    if (terrain === 'grass') {
+      if (k < 0.5) {
         // a tuft: two or three blades, darker at the foot, lighter at the tip
         g.fillStyle = shade(0.72, 0.8);
         g.fillRect(x, y, 1, 2);
         g.fillStyle = shade(1.28, 0.8);
         g.fillRect(x + (r() < 0.5 ? 1 : -1), y - 1, 1, 1);
       } else if (k < 0.66) {
-        // flowers come in drifts: a few of one colour close together
-        g.fillStyle = FLOWERS[Math.floor(r() * FLOWERS.length)]!;
-        for (let q = 0; q < 1 + r() * 4; q++)
-          g.fillRect(x + Math.round((r() - 0.5) * 9), y + Math.round((r() - 0.5) * 7), 1, 1);
-      } else if (k < 0.72) {
+        // flowers grow in drifts: a patch of one colour here, none over there
+        const m = F.mid.at(x, y);
+        if (m < 0.58 || F.bare.at(x, y) > 0.72) continue;
+        const kind = Math.floor(F.big.at(x, y) * 2.99 + Math.floor(m * 40)) % FLOWERS.length;
+        g.fillStyle = FLOWERS[r() < 0.8 ? kind : Math.floor(r() * FLOWERS.length)]!;
+        for (let q = 0; q < 2 + r() * 5; q++)
+          g.fillRect(x + Math.round((r() - 0.5) * 11), y + Math.round((r() - 0.5) * 8), 1, 1);
+      } else if (k < 0.69) {
         g.fillStyle = r() < 0.5 ? '#8d8f94' : '#6a6c72';
         g.fillRect(x, y, 2, 1);
         g.fillStyle = '#b4b6ba';
@@ -412,24 +547,20 @@ function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number): voi
         g.fillStyle = shade(r() < 0.5 ? 0.82 : 1.16, 0.6);
         g.fillRect(x, y, 1, 1);
       }
-    } else if (k < 0.3) {
+    } else if (terrain === 'paved') {
+      // litter and grit, sparse: the slabs carry the detail
+      if (k > 0.25) continue;
+      g.fillStyle = shade(r() < 0.6 ? 0.6 : 1.4, 0.6);
+      g.fillRect(x, y, 1, 1);
+    } else if (k < (terrain === 'snow' ? 0.03 : 0.12)) {
       // a pebble with its lit side and its shadow
-      g.fillStyle = shade(pale ? 0.62 : 1.5, 0.85);
+      g.fillStyle = shade(pale ? 0.62 : 1.3, 0.85);
       g.fillRect(x, y, 2, 1);
       g.fillStyle = shade(pale ? 0.45 : 0.6, 0.7);
       g.fillRect(x, y + 1, 2, 1);
-    } else if (k < 0.36) {
+    } else if (k < 0.16) {
       // a crack, or a ripple in a drift
-      let cx = x;
-      let cy = y;
-      let a = r() * TAU;
-      g.fillStyle = shade(pale ? 0.8 : 0.6, 0.6);
-      for (let q = 0; q < 4 + r() * 10; q++) {
-        g.fillRect(Math.round(cx), Math.round(cy), 1, 1);
-        a += (r() - 0.5) * 0.9;
-        cx += Math.cos(a);
-        cy += Math.sin(a) * 0.6;
-      }
+      wander(x, y, 4 + r() * 10, 0.9, shade(pale ? 0.8 : 0.6, 0.6), 0.6);
     } else {
       g.fillStyle = shade(r() < 0.5 ? 0.84 : 1.14, 0.55);
       g.fillRect(x, y, 1, 1);
