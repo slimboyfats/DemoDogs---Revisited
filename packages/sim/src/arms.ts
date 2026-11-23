@@ -404,7 +404,7 @@ export function rail(w: World, c: Car, d: WeaponManifest, x0: number, y0: number
       if (Math.hypot(o.x - x, o.y - y) > CAR_RADIUS + 1.5) continue;
       struck.add(o.index);
       // a mirrored car turns the slug: half of it comes back down the line
-      const back = bounced(w, o, x, y, (d.damage ?? 30) * 0.5);
+      const back = bounced(w, o, c, x, y, (d.damage ?? 30) * 0.5);
       if (back) {
         damage(w, c, back, o, c.x, c.y);
         continue;
@@ -686,7 +686,7 @@ function updateStickies(w: World): void {
           c.z < 10 &&
           Math.hypot(c.x - s.x, c.y - s.y) < CAR_RADIUS + 2,
       );
-      if (hit && bounced(w, hit, s.x, s.y, 1)) {
+      if (hit && bounced(w, hit, w.cars[s.owner], s.x, s.y, 1)) {
         // a mirrored car bats the dart back: it is the thrower's problem now
         s.vx = -s.vx;
         s.vy = -s.vy;

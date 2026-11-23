@@ -46,7 +46,11 @@ export function queueGuards(
   if (G.decoy) onBody(G.decoy.def.id, -hl + 2.8, 0);
   if (G.soak) onBody(G.soak.def.id, hl - 4.4, 0);
   if (G.mirror)
-    for (const side of [-1, 1]) put(G.mirror.def.id, -0.5, side * (hw + 0.35), sill - 0.4);
+    // plates all the way round: both flanks, and across the nose and the tail
+    for (const side of [-1, 1]) {
+      put(G.mirror.def.id, -0.5, side * (hw + 0.35), sill - 0.4);
+      put(G.mirror.def.id, side * (hl + 0.4), 0, sill - 0.4, c.h + Math.PI / 2);
+    }
   if (G.sweep) {
     // the feelers quiver, and whip when they have just touched something
     const q = Math.sin(w.time * 31 + c.index) * (0.03 + fx.guards.twitch(c) * 0.25);

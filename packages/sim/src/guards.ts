@@ -82,13 +82,20 @@ function unfit(w: World, c: Car, kind: GuardKind): void {
 }
 
 /** Report a guard at work, and take one use off a counted one (it goes when the last is spent). */
-function used(w: World, c: Car, g: Guard, spend: boolean, tx?: number, ty?: number): void {
+function used(
+  w: World,
+  c: Car,
+  g: Guard,
+  spend: boolean,
+  tx?: number,
+  ty?: number,
+  to?: number,
+): void {
   const kind = g.def.kind;
-  w.emit(
-    tx === undefined || ty === undefined
-      ? { t: 'guard', car: c.index, id: g.def.id, kind, what: 'use', x: c.x, y: c.y }
-      : { t: 'guard', car: c.index, id: g.def.id, kind, what: 'use', x: c.x, y: c.y, tx, ty },
-  );
+  const e = { t: 'guard', car: c.index, id: g.def.id, kind, what: 'use', x: c.x, y: c.y } as const;
+  if (tx === undefined || ty === undefined) w.emit(e);
+  else if (to === undefined) w.emit({ ...e, tx, ty });
+  else w.emit({ ...e, tx, ty, to });
   if (!spend || g.def.charges === undefined) return;
   g.n--;
   if (g.n <= 0 && isGuard(kind)) unfit(w, c, kind);
@@ -155,10 +162,17 @@ export function padded(w: World, c: Car, x: number, y: number): boolean {
  * came and lands on the shooter instead. Returns the amount to hand the shooter (the caller deals
  * it, by its own rules), or 0 when the target has no mirror.
  */
-export function bounced(w: World, target: Car, x: number, y: number, amount: number): number {
+export function bounced(
+  w: World,
+  target: Car,
+  shooter: Car | undefined,
+  x: number,
+  y: number,
+  amount: number,
+): number {
   const g = guard(target, 'mirror');
   if (!g) return 0;
-  used(w, target, g, true, x, y);
+  used(w, target, g, true, x, y, shooter?.index);
   return amount;
 }
 
@@ -256,15 +270,25 @@ function decoy(w: World, c: Car, g: Guard): void {
   used(w, c, g, true, d.x, d.y);
 }
 
-/** flak: bring down the nearest rocket, shell or dart in reach that is not the car's own. */
-function flak(w: World, c: Car, g: Guard): void {
+/** What sets off a blast for a guard: the caller's `explode`, at a height off the ground. */
+type Pop = (x: number, y: number, power: number, z?: number) => void;
+
+/** The most a shot-down round bursts with: its blast must fall short of the car that shot it. */
+const AIR_BURST = 0.8;
+
+/**
+ * flak: the nearest rocket, shell or dart in reach that is not the car's own is hit and goes off
+ * where it is, in the air: half its blast, no crater and no fire on the ground.
+ */
+function flak(w: World, c: Car, g: Guard, pop: Pop): void {
   if (g.cd > 0) return;
   const reach = g.def.reach ?? 46;
   const A = w.arms;
   let bd = reach;
-  let from: { x: number; y: number }[] | null = null;
+  type Round = { x: number; y: number; z?: number; owner: number; def: { power: number } };
+  let from: Round[] | null = null;
   let at = -1;
-  const look = (list: { x: number; y: number; owner: number }[], ok: (i: number) => boolean) => {
+  const look = (list: Round[], ok: (i: number) => boolean) => {
     for (let i = 0; i < list.length; i++) {
       const s = list[i]!;
       if (s.owner === c.index || !ok(i)) continue;
@@ -280,13 +304,14 @@ function flak(w: World, c: Car, g: Guard): void {
   look(A.shells, () => true);
   look(A.stickies, (i) => A.stickies[i]!.flying);
   if (!from) return;
-  const [s] = (from as { x: number; y: number }[]).splice(at, 1);
+  const s = (from as Round[]).splice(at, 1)[0]!;
   g.cd = 0.18;
-  used(w, c, g, true, s!.x, s!.y);
+  used(w, c, g, true, s.x, s.y);
+  pop(s.x, s.y, Math.min(AIR_BURST, s.def.power * 0.5), (s.z ?? 0) + 8);
 }
 
 /** sweep: mines ahead are set off before the car reaches them, and spikes are flicked aside. */
-function sweep(w: World, c: Car, g: Guard, pop: (x: number, y: number, power: number) => void) {
+function sweep(w: World, c: Car, g: Guard, pop: Pop): void {
   const reach = g.def.reach ?? 34;
   const ahead = (x: number, y: number): boolean => {
     const d = Math.hypot(x - c.x, y - c.y);
@@ -331,7 +356,7 @@ function douse(w: World, c: Car, g: Guard): void {
  * (decoys, flak, feelers, a wet coat) do their work. `pop` sets off a small blast (the caller's
  * `explode`, handed in so this module does not import the damage rules).
  */
-export function updateGuards(w: World, pop: (x: number, y: number, power: number) => void): void {
+export function updateGuards(w: World, pop: Pop): void {
   for (const c of w.cars) {
     for (const k of GUARD_KINDS) {
       const g = c.guards[k];
@@ -351,7 +376,7 @@ export function updateGuards(w: World, pop: (x: number, y: number, power: number
       }
       if (w.phase !== 'race') continue;
       if (k === 'decoy') decoy(w, c, g);
-      else if (k === 'flak') flak(w, c, g);
+      else if (k === 'flak') flak(w, c, g, pop);
       else if (k === 'sweep') sweep(w, c, g, pop);
       else if (k === 'soak') douse(w, c, g);
     }

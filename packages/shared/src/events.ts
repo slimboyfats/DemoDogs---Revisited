@@ -105,7 +105,8 @@ export type SimEvent =
   /**
    * A car's guard (pickup `id`, a GuardKind `kind`): fitted (`on`), gone (`off`: spent, run out or
    * lost in a wreck) or at work (`use`) at (x, y). A `use` that reaches somewhere (a shot brought
-   * down, a round sent back, a blow passed on, a mine tripped) has that place in (tx, ty).
+   * down, a round sent back, a blow passed on, a mine tripped) has that place in (tx, ty), and
+   * the car it lands on instead (a round sent back to its shooter) in `to`.
    */
   | {
       t: 'guard';
@@ -117,6 +118,7 @@ export type SimEvent =
       y: number;
       tx?: number;
       ty?: number;
+      to?: number;
     }
   | { t: 'fire'; car: number; weapon: string }
   /** A car rolled over a spike at (x, y) and has a flat tyre. */

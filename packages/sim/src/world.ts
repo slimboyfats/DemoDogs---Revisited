@@ -538,7 +538,7 @@ export class World {
     updatePresses(this);
     updatePickups(this);
     updateDefence(this);
-    updateGuards(this, (x, y, power) => explode(this, x, y, power, null));
+    updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateRockets(this);
     updateMines(this);
     updateDrops(this);

@@ -7,7 +7,7 @@ import { rangeArms, rangeRocket } from '@demodogs/sim';
 const weapon = (id: string) => loadContent().weapon.get(id)!;
 
 describe('pickup.snapper', () => {
-  it('shoots a rocket out of the air before it reaches the car', () => {
+  it('shoots a rocket down: it goes off in the air, short of the car', () => {
     const { w, me, a, x, y } = guardArena();
     put(a, x - 220, y, 0);
     give(w, me, 'pickup.snapper');
@@ -18,7 +18,12 @@ describe('pickup.snapper', () => {
       events.push(...w.takeEvents());
     }
     expect(w.rockets.length).toBe(0);
-    expect(events.some((e) => e.t === 'explode')).toBe(false);
+    // one blast, up in the air, weaker than the rocket's own: no crater and no fire under it
+    const blasts = events.filter((e) => e.t === 'explode');
+    expect(blasts.length).toBe(1);
+    expect(blasts[0]!.z).toBeGreaterThan(4);
+    expect(blasts[0]!.power).toBeLessThan(weapon('weapon.rocket').power);
+    expect(w.blazes.length).toBe(0);
     const shot = events.find((e) => e.t === 'guard' && e.kind === 'flak' && e.what === 'use');
     expect(shot).toBeDefined();
     expect(me.hp).toBe(100);
