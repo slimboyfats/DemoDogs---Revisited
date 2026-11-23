@@ -12,5 +12,13 @@
     "heat": 7
   },
   "conducts": true,
+  "breaks": {
+    "piece": 12,
+    "grit": 0.12,
+    "bounce": 0.4,
+    "brittle": 0,
+    "dust": 0.2,
+    "sparks": true
+  },
   "colour": "#5d6168"
 }

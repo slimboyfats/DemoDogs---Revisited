@@ -19,3 +19,12 @@ export const TUNE_MAX = 3;
 
 /** Cars in a field: the player plus rivals. */
 export const FIELD_SIZE = 6;
+
+/**
+ * How far up a flyover deck piece's road surface is in its look, art px: a piece stands this far
+ * below the height cars ride at on it.
+ */
+export const DECK_SURFACE = 4;
+
+/** Seconds a rebuilding prop takes to fly back together before it stands again. */
+export const REBUILD_TIME = 2.4;

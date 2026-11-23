@@ -1,0 +1,13 @@
+{
+  "id": "prop.giant-oak",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Giant oak",
+    "description": "An old oak trunk as thick as a car, with great limbs reaching out over the road. Its crown is in pieces up in those limbs; bring the trunk down and the whole crown comes with it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.6,
+  "made": "material.wood",
+  "integrity": 170
+}

@@ -14,6 +14,7 @@ import {
   rangeRocket,
   rangeWreck,
   dig,
+  plantTree,
   type Car,
   type Content,
 } from '@demodogs/sim';
@@ -35,6 +36,7 @@ export type Tool =
   | 'car'
   | 'prop'
   | 'crater'
+  | 'tree'
   | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
@@ -52,6 +54,7 @@ const TOOLS: [Tool, string, string][] = [
   ['prop', 'PROP', 'Tap: put the chosen prop there'],
   ['give', 'GIVE', 'Tap a car (or anywhere for yours): hand it the chosen pickup'],
   ['crater', 'CRATER', 'Tap: dig a pit there, to try leaps and blades over rough ground'],
+  ['tree', 'BIG TREE', 'Tap: a great tree there, its crown leaning towards your car'],
   ['pan', 'PAN', 'Drag to move the camera'],
 ];
 const RATES: [number, string][] = [
@@ -318,6 +321,16 @@ export class DevPanel {
       case 'crater':
         dig(w, x, y, 2 + this.power * 4);
         break;
+      case 'tree': {
+        // the parts of a great tree, from whichever venue grows them
+        for (const v of this.content.venue.values())
+          for (const r of v.scenery)
+            if (r.rule === 'canopy') {
+              plantTree(w, r, x, y, Math.atan2(P.y - y, P.x - x));
+              return;
+            }
+        break;
+      }
       default:
         break;
     }

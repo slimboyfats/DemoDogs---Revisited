@@ -1,11 +1,22 @@
-import { DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
+import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
-import type { Strip } from './stack';
-import { char, clone, dent, restore, shatter, stripCrown, voxelsOf, type Chip } from './strips';
+import { tall, type Strip } from './stack';
+import {
+  char,
+  clone,
+  dent,
+  pixels,
+  stripOf,
+  restore,
+  shatter,
+  stripCrown,
+  voxelsOf,
+  type Chip,
+} from './strips';
 import {
   launch,
   launchTogether,
@@ -15,9 +26,18 @@ import {
   type Burst,
   type Voxel,
 } from './voxels';
-import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
+import {
+  HAZE,
+  SOOT,
+  WIND,
+  shade,
+  stepParticle,
+  type FxKind,
+  type Particle,
+} from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
 import { DefenceFx } from './defence-fx';
+import { PLAIN, Wreckage } from './wreckage';
 import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
@@ -71,9 +91,12 @@ export interface FloatText {
 }
 
 /** The most loose voxels in the air at once. */
-const MAX_VOXELS = 2400;
+const MAX_VOXELS = 4000;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
+/** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
+const BIG_STRIP = 120_000;
+const big = (s: Strip): boolean => s.cw * s.ch * s.n >= BIG_STRIP;
 /** mudders' soot tones: what a blast's smoke is made of. */
 const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
 /** The most particles alive at once. */
@@ -111,6 +134,27 @@ export class Effects {
   readonly flashes: Flash[] = [];
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
+  /** What is left of scenery that came down: pieces, heaps of grit, and all of it flying home. */
+  readonly wreck: Wreckage = new Wreckage(
+    {
+      voxels: this.voxels,
+      room: () => Math.max(0, MAX_VOXELS - this.voxels.length),
+      strip: stripOf,
+      changed: (s) => this.changed.add(s),
+      dropped: (s) => this.dropped.push(s),
+      dust: (x, y, z) => this.puff(x, y, z, 'dust'),
+      spark: (x, y, z) => this.spark(x, y, z, 60),
+      thud: (x, y, hit) => {
+        const v = this.vol(x, y);
+        if (v > 0 && hit > 110) this.sound.crash(hit * 0.02 * v);
+        if (this.near(x, y, 140)) this.shake = Math.max(this.shake, Math.min(5, hit * 0.02));
+      },
+      soak: (g) => this.soak(g.x, g.y, g.s, g.rgb),
+    },
+    Math.random,
+  );
+  /** Pieces told to mend this step: they rebuild as one, so the sweep runs across them all. */
+  private mends: { s: StaticProp; in: number }[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
@@ -138,7 +182,7 @@ export class Effects {
   /** Strips of its own that will not be drawn again (the renderer gives their room back). */
   readonly dropped: Strip[] = [];
   /** What each piece of shared art breaks into, worked out once. */
-  private readonly bits = new WeakMap<Strip, Chip[]>();
+  private readonly bits = new WeakMap<Strip, Map<number, Chip[]>>();
   readonly walkers: Walker[] = [];
   shake = 0;
   /** Shock pulses: the crackling rings, bolts and dead engines, as single spark cells. */
@@ -499,7 +543,7 @@ export class Effects {
         CKind.Leaf,
         s.x + c.x * cs - c.y * sn,
         s.y + c.x * sn + c.y * cs,
-        c.z,
+        c.z + (s.lift ?? 0),
         vx * k + rand(-1, 1) * spread,
         vy * k + rand(-1, 1) * spread,
         rand(-0.2, 1) * spread,
@@ -563,11 +607,23 @@ export class Effects {
     L.length = 0;
   }
 
+  /** Rebuild everything told to mend this step as one: its rubble flies home (see `Wreckage`). */
+  private mendAll(): void {
+    this.wreck.mend(
+      this.mends.map(({ s, in: dur }) => ({ o: s, dur, tall: tall(this.art.prop(s.def.id)) })),
+    );
+    this.mends = [];
+  }
+
   /** A piece of shared art as blocks, kept: many of a kind burst the same way. */
-  private chipsOf(art: Strip): Chip[] {
-    let c = this.bits.get(art);
-    if (!c) this.bits.set(art, (c = voxelsOf(art)));
-    return c;
+  private chipsOf(art: Strip, shared = true, block = art.res * 2): Chip[] {
+    if (!shared) return voxelsOf(art, block);
+    let byBlock = this.bits.get(art);
+    if (!byBlock) this.bits.set(art, (byBlock = new Map()));
+    let c = byBlock.get(block);
+    if (!c) byBlock.set(block, (c = voxelsOf(art, block)));
+    // a copy: `sample` shuffles and trims what it is given
+    return c.slice();
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
@@ -643,7 +699,7 @@ export class Effects {
       if (d > reach + s.def.radius || s.down || s.hp !== undefined) continue;
       let strip = this.scarred.get(s);
       if (!strip) {
-        if (this.scarred.size >= MAX_SCARRED) continue;
+        if (this.scarred.size >= MAX_SCARRED || big(this.art.prop(s.def.id))) continue;
         this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
       }
       // the blast in the prop's own frame, pulled in to its edge
@@ -654,7 +710,7 @@ export class Effects {
       const ly = (-dx * sn + dy * cs) * k;
       const broke = dent(strip, lx, ly, 2.5 + 2.5 * power, 0.85, Math.random, 1);
       this.changed.add(strip);
-      const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: x, oy: y, vx: 0, vy: 0 };
+      const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: x, oy: y, vx: 0, vy: 0 };
       this.burst(broke.chips, 60, { ...from, speed: 70 + 50 * power });
       this.burst(broke.loose, 50, { ...from, speed: 30 }, true);
     }
@@ -673,6 +729,11 @@ export class Effects {
 
   // ------------------------------------------------------------ events
   handle(events: SimEvent[]): void {
+    this.read(events);
+    if (this.mends.length) this.mendAll();
+  }
+
+  private read(events: SimEvent[]): void {
     const w = this.w;
     const S = this.sound;
     let smashAt = '';
@@ -792,10 +853,11 @@ export class Effects {
           break;
         case 'explode': {
           const { x, y, power } = e;
-          this.fireball(x, y, power);
+          const z = e.z ?? 0;
+          this.fireball(x, y, power, z);
           this.scar(x, y, power);
-          for (let i = 0; i < 16; i++) this.spark(x, y, 4, 120);
-          this.scorch(x, y, 16 * power);
+          for (let i = 0; i < 16; i++) this.spark(x, y, z + 4, 120);
+          if (z < 4) this.scorch(x, y, 16 * power);
           this.flashes.push({ x, y, r: 70 * power + 20, life: 0.45, max: 0.45, rgb: 0xffa040 });
           const v = this.vol(x, y);
           if (v > 0) S.boom(v);
@@ -832,7 +894,7 @@ export class Effects {
             // burnt off: the crown is in flames, and a few leaves get away alight
             for (let i = 0; i < 3; i++) {
               const c = off[Math.floor(Math.random() * off.length)];
-              if (c) this.flame(s.x + c.x, s.y + c.y, c.z, rand(3, 5));
+              if (c) this.flame(s.x + c.x, s.y + c.y, c.z + (s.lift ?? 0), rand(3, 5));
             }
             this.leaves(s, off, 12, 0, 0, 18);
             break;
@@ -859,6 +921,14 @@ export class Effects {
             break;
           }
           let strip = this.scarred.get(s);
+          if (!strip && big(this.art.prop(s.def.id))) {
+            // a deck piece is too big to keep a scarred copy of each: it throws grit and dust
+            // where it was struck, and shows its damage by coming down
+            const z = (s.lift ?? 0) + DECK_SURFACE;
+            for (let i = 0; i < 4; i++) this.puff(e.x, e.y, z, 'dust');
+            for (let i = 0; i < 6; i++) this.spark(e.x, e.y, z, 70);
+            break;
+          }
           if (!strip) {
             if (this.scarred.size >= MAX_SCARRED) break;
             this.scarred.set(s, (strip = clone(this.art.prop(s.def.id))));
@@ -878,10 +948,15 @@ export class Effects {
             e.by === 'heat' ? 1 : 0.4,
           );
           this.changed.add(strip);
-          const from = { x: s.x, y: s.y, h: s.rot, z: 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
+          const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
           if (e.by === 'heat') {
             if (Math.random() < 0.5)
-              this.flame(e.x + rand(-3, 3), e.y + rand(-3, 3), rand(3, 9), rand(3, 5));
+              this.flame(
+                e.x + rand(-3, 3),
+                e.y + rand(-3, 3),
+                (s.lift ?? 0) + rand(3, 9),
+                rand(3, 5),
+              );
             break;
           }
           this.burst(broke.chips, 50, { ...from, speed: 40 + 60 * part });
@@ -893,6 +968,16 @@ export class Effects {
         case 'topple':
           this.collapse(e);
           break;
+        case 'mend':
+          // gathered up and started together once this step's events are read
+          this.mends.push({ s: w.statics[e.prop]!, in: e.in });
+          break;
+        case 'stand': {
+          const s = w.statics[e.prop]!;
+          this.wreck.stand(s);
+          for (let i = 0; i < 8; i++) this.spark(s.x, s.y, (s.lift ?? 0) + 2, 60);
+          break;
+        }
         case 'fall': {
           // it comes down: every voxel it still has flies apart, and rubble marks the spot
           const s = w.statics[e.prop]!;
@@ -911,22 +996,36 @@ export class Effects {
             const C = s.def.crown;
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
-          this.burst(
-            this.scarred.has(s) || s.def.crown ? voxelsOf(strip) : this.chipsOf(strip),
-            220,
-            {
+          const own = this.scarred.delete(s) || strip !== this.art.prop(s.def.id);
+          if (Wreckage.cracks(strip)) {
+            // it cracks into pieces that keep their own pixels, and grit from the cracks
+            pixels(strip);
+            this.wreck.fall({
+              o: s,
+              strip,
+              own,
+              mat: s.made?.breaks ?? PLAIN,
+              rebuilds: s.def.rebuild !== undefined,
+              ox: e.x,
+              oy: e.y,
+            });
+          } else {
+            // something small: lumps that break smaller as they land, and bits
+            const from = {
               x: s.x,
               y: s.y,
               h: s.rot,
-              z: 0,
+              z: s.lift ?? 0,
               ox: e.x,
               oy: e.y,
-              speed: 55,
               vx: 0,
               vy: 0,
-            },
-          );
-          if (this.scarred.delete(s)) this.dropped.push(strip);
+            };
+            this.burst(this.chipsOf(strip, !own, strip.res * 4), 60, { ...from, speed: 110 });
+            this.burst(this.chipsOf(strip, !own, strip.res * 2), 130, { ...from, speed: 85 });
+            this.burst(this.chipsOf(strip, !own, strip.res), 200, { ...from, speed: 65 });
+            if (own) this.dropped.push(strip);
+          }
           const col = s.made?.colour ?? '#6a6660';
           const r = s.def.radius;
           this.paintGround(s.x, s.y, r + 3, (g) => {
@@ -945,8 +1044,7 @@ export class Effects {
             }
             g.globalAlpha = 1;
           });
-          for (let i = 0; i < 8; i++)
-            this.puff(s.x + rand(-r, r), s.y + rand(-r, r), rand(1, 6), 'dust');
+          this.puff(s.x + rand(-r, r), s.y + rand(-r, r), rand(1, 6), 'dust');
           const v = this.vol(s.x, s.y);
           if (v > 0) S.crash(6 * v);
           break;
@@ -1276,6 +1374,18 @@ export class Effects {
     else for (const c of some) this.voxels.push(launch(c, b, Math.random));
   }
 
+  /** A loose block that has stopped becomes a mark on the ground: a crumb a speck, a block its own size. */
+  private soak(vx: number, vy: number, size: number, rgb: number): void {
+    const g = this.ground.g;
+    const [x, y] = this.w.keepInside(vx, vy, 1);
+    const d = Math.max(1, Math.round(size));
+    g.globalAlpha = Math.min(1, 0.35 + size * 0.65);
+    g.fillStyle = `rgb(${((rgb >> 16) & 255) * 0.8},${((rgb >> 8) & 255) * 0.8},${(rgb & 255) * 0.8})`;
+    g.fillRect(Math.floor(x - d / 2 + 0.5), Math.floor(y - d / 2 + 0.5), d, d);
+    g.globalAlpha = 1;
+    markGround(this.ground, x, y, d);
+  }
+
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   /** A building loses its top floor, or falls over. */
   private collapse(e: Extract<SimEvent, { t: 'storey' | 'topple' }>): void {
@@ -1372,6 +1482,7 @@ export class Effects {
     const w = this.w;
     this.defence.afterStep();
     this.fallen();
+    this.wreck.step(DT, w.cars);
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
     // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
     for (const p of w.props) {
@@ -1393,33 +1504,40 @@ export class Effects {
     }
     // loose blocks fly and bounce. One that lands hard breaks into smaller ones while there is
     // room for them; one that stops is painted into the ground for good.
-    const g = this.ground.g;
+    const W = this.wreck;
     for (let i = this.voxels.length - 1; i >= 0; i--) {
       const v = this.voxels[i]!;
-      const fate = stepVoxel(v, DT);
+      // rubble lands on the rubble that is there, and light grit rides the wind on the way down
+      const floor = v.pile && v.z < 48 ? W.floor(v.x, v.y) : 0;
+      if (v.drift && v.z > floor + 0.5) {
+        v.vx += (WIND[0] * 2.5 - v.vx) * v.drift * DT * 1.2;
+        v.vy += (WIND[1] * 2.5 - v.vy) * v.drift * DT * 1.2;
+      }
+      const fate = stepVoxel(v, DT, floor);
       if (fate === 'fly') continue;
       if (fate === 'split') {
         if (this.voxels.length + 8 > MAX_VOXELS) continue;
         const bits = shards(v, Math.random);
+        for (const b of bits) {
+          b.z += floor;
+          if (v.pile) b.pile = true;
+          if (v.home) b.home = v.home;
+          if (v.drift) b.drift = v.drift;
+        }
         this.voxels[i] = bits[0]!;
         for (let k = 1; k < bits.length; k++) this.voxels.push(bits[k]!);
         continue;
       }
-      const [x, y] = w.keepInside(v.x, v.y, 1);
-      // a crumb leaves a faint speck, a block a mark its own size
-      const d = Math.max(1, Math.round(v.s));
-      g.globalAlpha = Math.min(1, 0.35 + v.s * 0.65);
-      g.fillStyle = `rgb(${((v.rgb >> 16) & 255) * 0.8},${((v.rgb >> 8) & 255) * 0.8},${(v.rgb & 255) * 0.8})`;
-      g.fillRect(Math.floor(x - d / 2 + 0.5), Math.floor(y - d / 2 + 0.5), d, d);
-      g.globalAlpha = 1;
-      markGround(this.ground, x, y, d);
+      // it has stopped: rubble stays as a grain on the heap, anything else soaks into the ground
+      if (!W.settle(v)) this.soak(v.x, v.y, v.s, v.rgb);
       this.voxels[i] = this.voxels[this.voxels.length - 1]!;
       this.voxels.pop();
     }
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
-      if (c.sliding)
+      // up on a deck, the marks would land on the ground below it
+      if (c.sliding && c.deck < 1)
         for (const sgn of [-1, 1]) {
           const wx = -7;
           const wy = 5.4 * sgn;

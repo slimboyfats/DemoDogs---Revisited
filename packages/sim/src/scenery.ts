@@ -1,4 +1,4 @@
-import type { PropManifest, SceneryRule } from '@demodogs/shared';
+import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { stand } from './stand';
@@ -8,6 +8,7 @@ import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
 import { layRiver } from './river';
+import { canopy, flyover } from './heights';
 
 export { stand };
 
@@ -64,6 +65,12 @@ function apply(
   const O = w.oval;
   if (buildDowntown(w, rng, rule, add)) return;
   switch (rule.rule) {
+    case 'flyover':
+      flyover(w, rule, add, DECK_SURFACE);
+      return;
+    case 'canopy':
+      canopy(w, rng, rule, add);
+      return;
     case 'bend-wall': {
       if (!T || !w.grid) return;
       for (let i = 0; i < T.n; i += 3) {

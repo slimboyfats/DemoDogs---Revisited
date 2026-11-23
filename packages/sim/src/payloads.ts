@@ -15,7 +15,8 @@ export function lockOn(w: World, r: Rocket): void {
   let best = -1;
   let bd = L.range;
   for (const c of w.cars) {
-    if (c.index === r.owner || c.wrecked || c.invuln > 0) continue;
+    // (not a car on another level: a flyover deck above it, or the road under it)
+    if (c.index === r.owner || c.wrecked || c.invuln > 0 || Math.abs(c.deck - r.z) > 8) continue;
     const d = Math.hypot(c.x - r.x, c.y - r.y);
     if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < L.cone) {
       bd = d;
@@ -45,6 +46,7 @@ export function burst(w: World, r: Rocket): void {
     w.rockets.push({
       x: r.x,
       y: r.y,
+      z: r.z,
       h: r.h + f * C.spread + w.rng.range(-0.1, 0.1),
       v: (b.speed ?? 160) * w.rng.range(0.6, 1.15),
       owner: r.owner,

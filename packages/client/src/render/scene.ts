@@ -139,7 +139,7 @@ export class Scene implements WorldRenderer {
 
     // shadows
     ctx.fillStyle = '#000';
-    queueShadows(R, this.art, w, (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a));
+    queueShadows(R, this.art, w, null, (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a));
     ctx.globalAlpha = 1;
 
     // stacks; still props are drawn as one baked image each
@@ -151,7 +151,7 @@ export class Scene implements WorldRenderer {
     R.flush();
 
     // loose voxels (drawn over the stacks here; the pixel engine depth-tests them)
-    for (const v of fx.voxels) {
+    for (const v of [...fx.voxels, ...fx.wreck.grains, ...fx.wreck.homing]) {
       const sx = R.sx(v.x);
       const sy = R.sy(v.y, v.z);
       if (sx < 0 || sx > W || sy < 0 || sy > H) continue;

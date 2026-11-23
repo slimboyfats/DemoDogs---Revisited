@@ -63,6 +63,39 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     offset: z.number(),
     minCurve: z.number(),
   }),
+  /**
+   * A flyover: the road climbs a ramp onto a raised deck at fraction `at` of the way round, runs
+   * flat for `length`, and comes down a ramp the other side (each ramp `ramp` long, art px). Cars
+   * on the deck ride at `height`; the rest of the track passes under it. The deck is laid in
+   * `deck` pieces, `span` of them to a span held up by a pair of `pillar`s (none where a road
+   * passes below). A span comes down when its pillars go.
+   */
+  z.strictObject({
+    rule: z.literal('flyover'),
+    at: unit,
+    length: z.number().positive(),
+    ramp: z.number().positive(),
+    height: z.number().min(8).max(40),
+    deck: id('prop'),
+    pillar: id('prop'),
+    span: z.number().int().min(1),
+  }),
+  /**
+   * Great trees beside the road whose crowns hang out over it: a `trunk` with `clumps` of
+   * `crowns` up in it, from `lift[0]` to `lift[1]` art px high and up to `reach` from the trunk,
+   * leaning out over the road. Cars drive under the crowns. The crowns fall with the trunk.
+   */
+  z.strictObject({
+    rule: z.literal('canopy'),
+    count: z.number().int().positive(),
+    trunk: id('prop'),
+    crowns: z.array(id('prop')).min(1),
+    clumps: z.tuple([z.number().int().min(1), z.number().int().min(1)]),
+    lift: z.tuple([z.number().min(0), z.number().min(0)]),
+    reach: z.number().positive(),
+    /** How far from the road's edge the trunk stands. */
+    edge: z.number(),
+  }),
   /** Random props on open ground at least `clear` from the road. */
   z.strictObject({
     rule: z.literal('scatter'),
@@ -522,6 +555,12 @@ export const PropSchema = z.strictObject({
       flash: z.number().min(0).max(1).default(0.15),
     })
     .optional(),
+  /**
+   * Static props that can be broken: seconds after it comes down that it is built again where it
+   * stood (a flyover span, so a race is never cut in two for good). The last `REBUILD_TIME` of
+   * that it is flying back together.
+   */
+  rebuild: z.number().positive().optional(),
   /** Sways in the wind (trees). */
   sway: z.boolean().default(false),
   /** Loose props: breaks into planks above this impact speed. */
@@ -714,6 +753,36 @@ export const MaterialSchema = z.strictObject({
       heat: z.number().positive().default(1),
     })
     .default({ blast: 1, impact: 1, heat: 1 }),
+  /**
+   * As something scenery is made of: how it comes apart when it falls. The client's rubble reads
+   * this; nothing in the race depends on it.
+   */
+  breaks: z
+    .strictObject({
+      /** About how big the pieces it cracks into are, art px. */
+      piece: z.number().min(2).max(30).default(7),
+      /** How wide the cracks are, art px: what was in them goes as grit. */
+      grit: z.number().min(0).max(3).default(0.45),
+      /** How much of its speed a piece keeps when it lands (0 dead, 0.9 rubber). */
+      bounce: z.number().min(0).max(0.9).default(0.22),
+      /** The chance a piece that lands hard splits again. */
+      brittle: z.number().min(0).max(1).default(0.6),
+      /** How much dust it throws up: 0 none, 1 ordinary. */
+      dust: z.number().min(0).max(3).default(1),
+      /** How much the wind carries its grit while it is in the air: 0 not at all, 1 like a leaf. */
+      drift: z.number().min(0).max(1).default(0),
+      /** It strikes sparks where it lands. */
+      sparks: z.boolean().default(false),
+    })
+    .default({
+      piece: 7,
+      grit: 0.45,
+      bounce: 0.22,
+      brittle: 0.6,
+      dust: 1,
+      drift: 0,
+      sparks: false,
+    }),
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),

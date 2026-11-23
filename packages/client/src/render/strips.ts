@@ -36,7 +36,7 @@ export const DETAIL = 3;
 /** Texels per art pixel for cars: twice as fine again, eight times the voxels. */
 export const CAR_DETAIL = 6;
 /** The widest a strip's image may be; longer strips wrap onto more rows. */
-const MAX_W = 2040;
+export const MAX_W = 2040;
 
 /**
  * How lit a voxel is, 0 (deep shade) to 1 (full light), in a few hard steps. The light comes from
@@ -562,7 +562,7 @@ export function allVoxels(v: Voxels, block = 1): Chip[] {
   return out.chips();
 }
 
-const voxels = (s: Strip, px: Uint8ClampedArray): Voxels => ({
+export const voxels = (s: Strip, px: Uint8ClampedArray): Voxels => ({
   px,
   W: s.img.width,
   cw: s.cw,
@@ -620,8 +620,16 @@ export function shatter(s: Strip, share: number, rand: () => number, keep = 1): 
 }
 
 /** A whole strip as blocks about two art px a side (for things that vanish as they burst). */
-export function voxelsOf(s: Strip): Chip[] {
-  return allVoxels(voxels(s, pixels(s)), s.res * 2);
+export function voxelsOf(s: Strip, block = s.res * 2): Chip[] {
+  return allVoxels(voxels(s, pixels(s)), block);
+}
+
+/** Voxels of its own (a piece cracked off something) as a strip that can be drawn. */
+export function stripOf(v: Voxels): Strip {
+  const cv = document.createElement('canvas');
+  cv.width = v.W;
+  cv.height = v.px.length / 4 / v.W;
+  return { img: cv, cw: v.cw, ch: v.ch, n: v.n, res: v.res, cols: v.cols, px: v.px, stale: true };
 }
 
 /** A burnt-out shell: everything charred dark. */

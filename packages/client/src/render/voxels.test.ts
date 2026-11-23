@@ -5,6 +5,10 @@ import {
   sample,
   shards,
   stepVoxel,
+  stepHoming,
+  front,
+  landing,
+  type Homing,
   launchTogether,
   type Burst,
   type Voxel,
@@ -109,5 +113,60 @@ describe('loose voxels', () => {
   it('sample keeps at most max items', () => {
     expect(sample([1, 2, 3, 4, 5], 3, mid)).toHaveLength(3);
     expect(sample([1, 2], 5, mid).sort()).toEqual([1, 2]);
+  });
+});
+
+describe('stepHoming', () => {
+  it('lifts a block off the ground and lands it exactly where it belongs, on time', () => {
+    const h: Homing = {
+      ...{ x0: 0, y0: 0, z0: 0, x1: 10, y1: 5, z1: 20, x: 0, y: 0, z: 0 },
+      ...{ rot: 1, rgb: 0, s: 1, t: 0, wait: 0.4, dur: 1.6 },
+    };
+    let done = false;
+    let top = 0;
+    for (let i = 0; i < 100 && !done; i++) {
+      done = stepHoming(h, 1 / 60);
+      top = Math.max(top, h.z);
+    }
+    expect(done).toBe(true);
+    expect([h.x, h.y, h.z]).toEqual([10, 5, 20]);
+    expect(top).toBeGreaterThan(20);
+  });
+});
+
+describe('a rebuild', () => {
+  it('lands what is further left and lower first, and everything by the end', () => {
+    expect(front(0, 0)).toBe(0);
+    expect(front(1, 1)).toBe(1);
+    expect(front(0.2, 0.5)).toBeLessThan(front(0.8, 0.5));
+    expect(front(0.5, 0.1)).toBeLessThan(front(0.5, 0.9));
+    // across counts for more than up
+    expect(front(1, 0)).toBeGreaterThan(front(0, 1));
+    for (const f of [0, 0.3, 0.7, 1]) {
+      const [off, land] = landing(f, 2.4);
+      expect(off).toBeLessThan(land);
+      expect(land).toBeLessThanOrEqual(2.4 + 1e-9);
+    }
+    expect(landing(1, 2.4)[1]).toBeCloseTo(2.4, 6);
+  });
+
+  it('a block on rubble stops on top of it', () => {
+    const v: Voxel = {
+      x: 0,
+      y: 0,
+      z: 9,
+      vx: 0,
+      vy: 0,
+      vz: -10,
+      rot: 0,
+      spin: 0,
+      rgb: 0,
+      s: 1,
+      age: 0,
+    };
+    let fate = stepVoxel(v, 1 / 60, 5);
+    for (let i = 0; i < 400 && fate === 'fly'; i++) fate = stepVoxel(v, 1 / 60, 5);
+    expect(fate).toBe('rest');
+    expect(v.z).toBe(5);
   });
 });

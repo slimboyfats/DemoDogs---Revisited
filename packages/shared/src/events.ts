@@ -33,7 +33,8 @@ export type SimEvent =
   | { t: 'wreck'; car: number; by: number }
   | { t: 'respawn'; car: number }
   | { t: 'land'; car: number; impact: number }
-  | { t: 'explode'; x: number; y: number; power: number }
+  /** z: up on a deck, art px; absent on the ground. */
+  | { t: 'explode'; x: number; y: number; power: number; z?: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }
   | { t: 'bot-spawn'; bot: number }
   /** A piece was knocked off scenery (world.statics[prop]) at (x, y). */
@@ -51,6 +52,10 @@ export type SimEvent =
   | { t: 'storey'; prop: number; left: number; x: number; y: number }
   /** It fell over with `left` floors standing, towards angle `a`, `len` art px long. */
   | { t: 'topple'; prop: number; left: number; a: number; len: number }
+  /** A fallen prop starts flying back together; it stands again `in` seconds from now. */
+  | { t: 'mend'; prop: number; in: number }
+  /** A rebuilt prop stands again. */
+  | { t: 'stand'; prop: number }
   /**
    * A tree lost `amount` of a full crown of leaves and has `left`: torn off by a blast at (x, y),
    * burnt off, or shaken loose by a ram there.

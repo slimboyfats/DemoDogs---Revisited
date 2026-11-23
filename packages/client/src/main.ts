@@ -256,8 +256,11 @@ function startGame(venue: string): void {
 /** The test range: a derby bowl with every other car parked as a target, and endless rockets. */
 function startDev(car: string): void {
   careerRace = null;
-  // the plain bowl, so new derby maps (crushers, towers) do not end up under the targets
+  // ?dev&venue=<id> opens the range on that venue (a flyover to test on, say); otherwise the
+  // plain bowl, so new derby maps (crushers, towers) do not end up under the targets
+  const pick = params.get('venue');
   const venue =
+    venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`)) ??
     venues.find((v) => v.id === 'venue.the-pit') ??
     venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ??
     venues[0]!;

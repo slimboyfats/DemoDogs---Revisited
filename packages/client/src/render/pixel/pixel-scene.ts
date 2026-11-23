@@ -1,4 +1,4 @@
-import type { World } from '@demodogs/sim';
+import type { StaticProp, World } from '@demodogs/sim';
 import { armsLights } from '../arms-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
@@ -9,6 +9,9 @@ import type { Strip } from '../stack';
 import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
+import { ShadowLayer } from './shadow-layer';
+import { ShadowMap, casts } from '../cast';
+import { pixels } from '../strips';
 import { Lights } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
 import { DETAIL } from '../strips';
@@ -21,7 +24,7 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * The world drawn by mudders' pixel engine with the sprite-stack addon: WebGL2, one instanced
  * draw for every slice on screen, depth-tested on the GPU, lit by the frame's point lights.
  *
- * Frame order: ground quad, shadows (QuadBatch), stacks (StackBatch, depth on), particles
+ * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
 export class PixelScene implements WorldRenderer, StackSink {
@@ -33,6 +36,8 @@ export class PixelScene implements WorldRenderer, StackSink {
   private readonly glow: QuadBatch;
   private readonly lights = new Lights();
   private groundLayer: GroundLayer | null = null;
+  private shadowLayer: ShadowLayer | null = null;
+  private shadows: ShadowMap | null = null;
   private ground: Ground | null = null;
   private scale = 4;
   private readonly ys = Math.sin(PITCH);
@@ -149,7 +154,20 @@ export class PixelScene implements WorldRenderer, StackSink {
     if (fx !== this.fx) {
       this.atlas.reset();
       this.fx = fx;
+      // and its tall scenery throws its shadows anew, from its own shape
+      this.shadowLayer?.dispose();
+      const art = this.art;
+      this.shadows = new ShadowMap(
+        w.w,
+        w.h,
+        (s) => fx.scarred.get(s) ?? art.prop(s.def.id),
+        pixels,
+      );
+      this.shadows.build(w.statics);
+      this.shadowLayer = new ShadowLayer(gl, this.shadows);
     }
+    this.shadows!.update(w);
+    this.shadowLayer!.sync();
     for (const s of fx.dropped) this.atlas.release(s);
     fx.dropped.length = 0;
     for (const s of fx.changed) this.atlas.refresh(s);
@@ -188,7 +206,10 @@ export class PixelScene implements WorldRenderer, StackSink {
     const quadOrigin: [number, number] = [this.ox, this.oy];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    queueShadows(this, this.art, w, (x, y, rx, ry, rot, a) =>
+    this.shadowLayer!.draw(view);
+    const art = this.art;
+    const cast = (s: StaticProp) => casts(s, fx.scarred.get(s) ?? art.prop(s.def.id));
+    queueShadows(this, this.art, w, cast, (x, y, rx, ry, rot, a, box) =>
       this.quads.push(
         x,
         this.my(y, 0),
@@ -196,7 +217,7 @@ export class PixelScene implements WorldRenderer, StackSink {
         ry * 2 * this.ys,
         0x000000,
         a,
-        Shape.Disc,
+        box ? Shape.Rect : Shape.Disc,
         Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
       ),
     );
@@ -211,6 +232,8 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 

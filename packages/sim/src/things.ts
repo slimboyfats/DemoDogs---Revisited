@@ -237,7 +237,8 @@ export function updatePickups(w: World): void {
       continue;
     }
     for (const c of w.cars) {
-      if (c.wrecked || Math.hypot(c.x - p.x, c.y - p.y) > 13) continue;
+      if (c.wrecked || Math.abs(c.deck - p.z) > 8 || Math.hypot(c.x - p.x, c.y - p.y) > 13)
+        continue;
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
@@ -297,6 +298,7 @@ export function fire(w: World, c: Car): void {
     const r = {
       x: c.x + cs * 15,
       y: c.y + sn * 15,
+      z: c.deck,
       h: c.h,
       v: (wpn.speed ?? 340) + Math.max(0, c.vf),
       owner: c.index,
@@ -318,7 +320,15 @@ export function fire(w: World, c: Car): void {
     drop(w, wpn, c.index, c.x - cs * 18, c.y - sn * 18, c.h);
   else if (wpn.kind === 'pulse') firePulse(w, c, wpn);
   else if (isArms(wpn.kind)) fireArms(w, c, wpn);
-  else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
+  else
+    w.mines.push({
+      x: c.x - cs * 15,
+      y: c.y - sn * 15,
+      z: c.deck,
+      owner: c.index,
+      t: 0,
+      def: wpn,
+    });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;
 }
@@ -337,7 +347,8 @@ export function shoot(w: World, c: Car): void {
   let best: Car | null = null;
   let bd = range;
   for (const o of w.cars) {
-    if (o === c || o.wrecked || o.invuln > 0 || o.z > 10 || inSmoke(w, o.x, o.y)) continue;
+    if (o === c || o.wrecked || o.invuln > 0 || o.z - o.deck > 10 || inSmoke(w, o.x, o.y)) continue;
+    if (Math.abs(o.deck - c.deck) > 8) continue;
     const d = Math.hypot(o.x - c.x, o.y - c.y);
     if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
       bd = d;
@@ -371,7 +382,7 @@ export function updateRockets(w: World): void {
     let bd = 160;
     if (!best)
       for (const c of w.cars) {
-        if (c.index === r.owner || c.wrecked) continue;
+        if (c.index === r.owner || c.wrecked || Math.abs(c.deck - r.z) > 8) continue;
         const d = Math.hypot(c.x - r.x, c.y - r.y);
         if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
           bd = d;
@@ -389,20 +400,25 @@ export function updateRockets(w: World): void {
     const armed = r.age >= (r.def.arm ?? 0);
     if (!hit && armed)
       hit = w.cars.some(
-        (c) => c.index !== r.owner && c.z < 10 && Math.hypot(c.x - r.x, c.y - r.y) < 10,
+        (c) =>
+          c.index !== r.owner &&
+          c.z - c.deck < 10 &&
+          Math.abs(c.deck - r.z) < 8 &&
+          Math.hypot(c.x - r.x, c.y - r.y) < 10,
       );
-    if (!hit && armed)
+    // a rocket fired off a deck flies over what stands on the ground
+    if (!hit && armed && r.z < 4)
       hit = w
         .near(r.x, r.y, 4)
         .some((s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2);
-    if (!hit && armed)
+    if (!hit && armed && r.z < 4)
       hit = w.props.some(
         (p) => p.alive && p.def.radius > 3 && Math.hypot(p.x - r.x, p.y - r.y) < p.def.radius + 2,
       );
     if (hit) {
       w.rockets.splice(i, 1);
       burst(w, r);
-      explode(w, r.x, r.y, r.def.power, w.cars[r.owner]!);
+      explode(w, r.x, r.y, r.def.power, w.cars[r.owner]!, r.z);
     }
   }
 }
@@ -417,12 +433,13 @@ export function updateMines(w: World): void {
       (c) =>
         !c.wrecked &&
         !(c.index === m.owner && m.t < 2) &&
-        c.z <= 6 &&
+        c.z - c.deck <= 6 &&
+        Math.abs(c.deck - m.z) < 4 &&
         Math.hypot(c.x - m.x, c.y - m.y) < trig,
     );
     if (victim) {
       w.mines.splice(i, 1);
-      explode(w, m.x, m.y, m.def.power, w.cars[m.owner]!);
+      explode(w, m.x, m.y, m.def.power, w.cars[m.owner]!, m.z);
     }
   }
   if (w.mines.length > 14) w.mines.splice(0, 1);

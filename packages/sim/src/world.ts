@@ -32,7 +32,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn, updateEmbers } from './damage';
+import { respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -113,6 +113,12 @@ export class World {
   readonly track: Track | null = null;
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
+  /**
+   * A flyover's deck along the track: the height of the road surface at each sample (0 on the
+   * ground), and the static piece of deck that carries it there (-1: none). Null without one.
+   */
+  deckH: Float32Array | null = null;
+  deckPiece: Int32Array | null = null;
   readonly road: number;
   readonly knockout: boolean;
   readonly sandbox: boolean;
@@ -131,6 +137,8 @@ export class World {
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
   readonly blazes: Blaze[] = [];
+  /** Fallen scenery waiting to be built again. */
+  readonly mending: StaticProp[] = [];
   /** Pits blasts have dug in the ground. */
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
@@ -235,6 +243,7 @@ export class World {
           this.pickups.push({
             x: T.x[i]! - Math.sin(a) * k * this.road * 0.3,
             y: T.y[i]! + Math.cos(a) * k * this.road * 0.3,
+            z: this.deckAt(i),
             on: true,
             t: 0,
           });
@@ -255,6 +264,7 @@ export class World {
         this.pickups.push({
           x: O.cx + Math.cos(t) * O.rx * q,
           y: O.cy + Math.sin(t) * O.ry * q,
+          z: 0,
           on: true,
           t: 0,
         });
@@ -283,6 +293,31 @@ export class World {
     c.y = T.y[i]! + Math.cos(a) * side * this.road * 0.22;
     c.h = a;
     c.idx = i;
+  }
+
+  /** The deck's height at track sample i: 0 off the deck, or where its piece has come down. */
+  deckAt(i: number): number {
+    const H = this.deckH;
+    if (!H) return 0;
+    const h = H[i]!;
+    if (h <= 0) return 0;
+    const k = this.deckPiece![i]!;
+    return k >= 0 && this.statics[k]!.down ? 0 : h;
+  }
+
+  /**
+   * The height of what holds car c up: the deck if it is on it (within the road's width of its
+   * place on the track and not already down underneath it), else the ground.
+   */
+  support(c: Car): number {
+    if (!this.deckH || !this.track) return 0;
+    const i = c.idx;
+    const h = this.deckAt(i);
+    if (h <= 0 || c.z < h - 5) return 0;
+    const T = this.track;
+    const a = T.a[i]!;
+    const off = -(c.x - T.x[i]!) * Math.sin(a) + (c.y - T.y[i]!) * Math.cos(a);
+    return Math.abs(off) > this.road / 2 + 2 ? 0 : h;
   }
 
   get kind(): 'race' | 'derby' {
@@ -444,6 +479,7 @@ export class World {
     updateArms(this);
     updateEmbers(this);
     updateRivers(this);
+    if (this.mending.length) updateMending(this);
 
     if (this.sandbox) return;
     if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
