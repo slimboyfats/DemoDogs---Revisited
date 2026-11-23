@@ -3,11 +3,29 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Arms crate",
-    "description": "A weapon: rockets or mines.",
+    "description": "A weapon: rockets, a Sniffer seeker or a Litter cluster, mines, oil, smoke, tacks, glue, or one of the heavy arms (flame, hose, rail, ball, fire shell, bomb, sticky bomb, lightning, suction orb).",
     "since": "core@0.1.0"
   },
   "kind": "arms",
   "weight": 0.68,
   "hurtWeight": 0.45,
-  "weapons": ["weapon.rocket", "weapon.mine"]
+  "weapons": [
+    "weapon.rocket",
+    "weapon.mine",
+    "weapon.oil-can",
+    "weapon.smoke-pot",
+    "weapon.tacks",
+    "weapon.glue-pot",
+    "weapon.sniffer",
+    "weapon.litter",
+    "weapon.hot-breath",
+    "weapon.hydrant",
+    "weapon.long-bark",
+    "weapon.bowler",
+    "weapon.hot-dish",
+    "weapon.tick",
+    "weapon.zap-collar",
+    "weapon.lobster",
+    "weapon.gulp"
+  ]
 }

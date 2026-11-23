@@ -1,3 +1,4 @@
+import { updateDefence } from './defence';
 import {
   DT,
   FIELD_SIZE,
@@ -6,15 +7,32 @@ import {
   type ModeManifest,
   type SimEvent,
   type VenueManifest,
+  type MaterialManifest,
+  type WeaponManifest,
 } from '@demodogs/shared';
 import type { Content } from './content';
-import type { Bot, Car, LooseProp, Mine, Pickup, Rocket, StaticProp } from './entities';
+import type {
+  Blaze,
+  Bot,
+  Car,
+  Crater,
+  Ember,
+  Entrant,
+  LooseProp,
+  Mine,
+  Pickup,
+  Rocket,
+  Setup,
+  Spill,
+  StaticProp,
+} from './entities';
 import { Hasher, TAU, angDiff, clamp } from './math';
 import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
+import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn } from './damage';
+import { respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -23,9 +41,15 @@ import {
   updateMines,
   updatePickups,
   updateProps,
+  shoot,
   updateRockets,
 } from './things';
 import { standings, trackIndex } from './race';
+import { blinded, updateDrops, type Cloud, type Spike } from './drops';
+import { stallControls, updatePulses, type Pulse } from './shock';
+import { newArms, updateArms, type Arms } from './arms';
+import { updateRivers } from './river';
+import { updatePresses } from './hazards';
 
 export interface WorldOptions {
   content: Content;
@@ -37,6 +61,32 @@ export interface WorldOptions {
   autopilot?: boolean;
   /** Rivals in the field (default: fill to FIELD_SIZE). */
   rivals?: number;
+  /** The rivals by name, front of the grid first, instead of a drawn field. */
+  field?: Entrant[];
+  /** The player's upgrades and extras. */
+  player?: Setup;
+  /**
+   * Online play: the other human drivers, seats 1, 2, ... (the player is seat 0). Each peer builds
+   * the same world from the same options; only `you` differs.
+   */
+  humans?: Entrant[];
+  /** The player's name and paint, instead of YOU and the car's own (online seat 0). */
+  name?: string;
+  paint?: string;
+  /**
+   * Which seat `player` points at (default 0): the car this screen follows. It is a viewpoint
+   * only: no rule reads `player`, so every peer simulates the same race whatever its `you`.
+   */
+  you?: number;
+  /** A wrecked car is out for good, and the race ends when the player is. */
+  knockout?: boolean;
+  /** Laps, instead of the mode's. */
+  laps?: number;
+  /**
+   * A test range: no countdown and no end, and the rivals are parked targets that nobody drives.
+   * See range.ts for what can be done to them.
+   */
+  sandbox?: boolean;
 }
 
 export interface Oval {
@@ -76,15 +126,50 @@ export class World {
   readonly track: Track | null = null;
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
+  /**
+   * A flyover's deck along the track: the height of the road surface at each sample (0 on the
+   * ground), and the static piece of deck that carries it there (-1: none). Null without one.
+   */
+  deckH: Float32Array | null = null;
+  deckPiece: Int32Array | null = null;
   readonly road: number;
+  readonly knockout: boolean;
+  readonly sandbox: boolean;
+  /** The gun every car carries: the pack's gun, if it has one. */
+  readonly gun: WeaponManifest | null;
+  private readonly lapsOpt: number | undefined;
   readonly cars: Car[] = [];
   readonly bots: Bot[] = [];
   readonly statics: StaticProp[] = [];
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
+  /** Shock pulses still spreading. */
+  readonly pulses: Pulse[] = [];
   readonly pickups: Pickup[] = [];
+  /** Burning bits in the air, and pools of fire on the ground. */
+  readonly embers: Ember[] = [];
+  readonly blazes: Blaze[] = [];
+  /** Fallen scenery waiting to be built again. */
+  readonly mending: StaticProp[] = [];
+  /** Pits blasts have dug in the ground. */
+  readonly craters: Crater[] = [];
+  /** Pools of oil, fuel, water and the like on the ground. */
+  readonly spills: Spill[] = [];
+  /** Smoke clouds and spikes dropped behind cars. */
+  readonly clouds: Cloud[] = [];
+  readonly spikes: Spike[] = [];
+  /** Sprays, rail slugs, wrecking balls, fire shells and sticky bombs in play. */
+  readonly arms: Arms = newArms();
+  /** What a wrecked car leaks: the pack's material that says so, if any. */
+  readonly leak: MaterialManifest | null;
+  /**
+   * The car this screen follows (seat `you`). Rules never read it: in online play it differs
+   * between peers. Rules use `humans`.
+   */
   readonly player: Car;
+  /** Human-driven cars by seat: the player first, then any online drivers. */
+  readonly humans: Car[] = [];
   /** Car indices in finishing order. */
   readonly finishers: number[] = [];
   phase: Phase = 'countdown';
@@ -94,6 +179,8 @@ export class World {
   timeLeft = 0;
   /** Seconds until the result screen, once the end is decided; -1 before. */
   endT = -1;
+  /** Online race: once one human has finished, the race ends at this race time; 0 before. */
+  finishBy = 0;
   private events: SimEvent[] = [];
   private lastBeep = 4;
 
@@ -111,6 +198,18 @@ export class World {
     this.w = venue.size.w;
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
+    this.knockout = opts.knockout ?? false;
+    this.sandbox = opts.sandbox ?? false;
+    this.leak =
+      [...C.material.values()]
+        .filter((d) => d.wreck !== undefined)
+        .sort((a, b) => (a.id < b.id ? -1 : 1))[0] ?? null;
+    this.gun =
+      [...C.weapon.values()]
+        .filter((d) => d.kind === 'gun')
+        .sort((a, b) => (a.id < b.id ? -1 : 1))[0] ?? null;
+    if (this.sandbox) this.phase = 'race';
+    this.lapsOpt = opts.laps;
     if (venue.track) {
       this.track = sampleTrack(venue.track.points, 4);
       this.grid = new DistanceGrid(this.track, this.w, this.h, 6, this.road / 2 + 80);
@@ -124,9 +223,32 @@ export class World {
     const aiDef = C.ai.get(mode.ai)!;
     const paints = this.rng.shuffle(RIVAL_PAINTS);
     const names = this.rng.shuffle(RIVAL_NAMES);
-    const player = makeCar(this, carDef, carDef.paint, 'YOU', true, opts.autopilot ? aiDef : null);
+    const player = makeCar(
+      this,
+      carDef,
+      opts.paint ?? carDef.paint,
+      opts.name ?? 'YOU',
+      true,
+      opts.autopilot ? aiDef : null,
+      opts.player,
+    );
+    player.seat = 0;
+    this.humans.push(player);
+    for (const e of opts.humans ?? []) {
+      const def = C.car.get(e.car);
+      if (!def) throw new Error(`no car ${e.car}`);
+      const h = makeCar(this, def, e.paint, e.name, true, null, e);
+      h.seat = this.humans.length;
+      this.humans.push(h);
+    }
+    const others = this.humans.slice(1);
     const rivals: Car[] = [];
-    const count = opts.rivals ?? FIELD_SIZE - 1;
+    for (const e of opts.field ?? []) {
+      const def = C.car.get(e.car);
+      if (!def) throw new Error(`no car ${e.car}`);
+      rivals.push(makeCar(this, def, e.paint, e.name, false, this.sandbox ? null : aiDef, e));
+    }
+    const count = opts.field ? 0 : (opts.rivals ?? Math.max(0, FIELD_SIZE - this.humans.length));
     for (let i = 0; i < count; i++) {
       const t = types[(types.indexOf(opts.car) + 1 + i) % types.length]!;
       rivals.push(
@@ -136,12 +258,12 @@ export class World {
           paints[i % paints.length]!,
           names[i % names.length]!,
           false,
-          aiDef,
+          this.sandbox ? null : aiDef,
         ),
       );
     }
     if (mode.kind === 'race' && this.track) {
-      const order = [...rivals.slice(0, 3), player, ...rivals.slice(3)];
+      const order = [...rivals.slice(0, 3), player, ...others, ...rivals.slice(3)];
       order.forEach((c, k) => this.placeOnTrack(c, this.gridSlot(k), k % 2 ? 1 : -1));
       this.cars.push(...order);
       for (let q = 1; q <= 4; q++) {
@@ -152,13 +274,14 @@ export class World {
           this.pickups.push({
             x: T.x[i]! - Math.sin(a) * k * this.road * 0.3,
             y: T.y[i]! + Math.cos(a) * k * this.road * 0.3,
+            z: this.deckAt(i),
             on: true,
             t: 0,
           });
       }
     } else if (this.oval) {
       const O = this.oval;
-      const all = [player, ...rivals];
+      const all = [player, ...others, ...rivals];
       all.forEach((c, k) => {
         const t = (k / all.length) * TAU + 0.3;
         c.x = O.cx + Math.cos(t) * O.rx * 0.7;
@@ -172,13 +295,14 @@ export class World {
         this.pickups.push({
           x: O.cx + Math.cos(t) * O.rx * q,
           y: O.cy + Math.sin(t) * O.ry * q,
+          z: 0,
           on: true,
           t: 0,
         });
       }
     }
     this.cars.forEach((c, i) => (c.index = i));
-    this.player = player;
+    this.player = this.humans[opts.you ?? 0] ?? player;
     const botDef = C.bot.get(venue.bots.bot)!;
     for (let i = 0; i < venue.bots.count; i++) {
       const b = makeBot(this, botDef, i);
@@ -202,6 +326,31 @@ export class World {
     c.idx = i;
   }
 
+  /** The deck's height at track sample i: 0 off the deck, or where its piece has come down. */
+  deckAt(i: number): number {
+    const H = this.deckH;
+    if (!H) return 0;
+    const h = H[i]!;
+    if (h <= 0) return 0;
+    const k = this.deckPiece![i]!;
+    return k >= 0 && this.statics[k]!.down ? 0 : h;
+  }
+
+  /**
+   * The height of what holds car c up: the deck if it is on it (within the road's width of its
+   * place on the track and not already down underneath it), else the ground.
+   */
+  support(c: Car): number {
+    if (!this.deckH || !this.track) return 0;
+    const i = c.idx;
+    const h = this.deckAt(i);
+    if (h <= 0 || c.z < h - 5) return 0;
+    const T = this.track;
+    const a = T.a[i]!;
+    const off = -(c.x - T.x[i]!) * Math.sin(a) + (c.y - T.y[i]!) * Math.cos(a);
+    return Math.abs(off) > this.road / 2 + 2 ? 0 : h;
+  }
+
   get kind(): 'race' | 'derby' {
     return this.mode.kind;
   }
@@ -211,7 +360,7 @@ export class World {
   }
 
   get laps(): number {
-    return this.mode.laps ?? 0;
+    return this.lapsOpt ?? this.mode.laps ?? 0;
   }
 
   emit(e: SimEvent): void {
@@ -242,11 +391,46 @@ export class World {
     return [O.cx + ((x - O.cx) * lim) / q, O.cy + ((y - O.cy) * lim) / q];
   }
 
+  private readonly cells = new Map<number, StaticProp[]>();
+  private celled = 0;
+
+  /**
+   * The static props that could be within r of (x, y): those in the grid cells round it, in a
+   * fixed order. A town has thousands of pieces, and nothing should look at all of them.
+   */
+  near(x: number, y: number, r: number): StaticProp[] {
+    const S = this.statics;
+    if (S.length < this.celled) {
+      this.cells.clear();
+      this.celled = 0;
+    }
+    for (; this.celled < S.length; this.celled++) {
+      const s = S[this.celled]!;
+      const k = Math.floor(s.x / 64) * 4096 + Math.floor(s.y / 64);
+      const c = this.cells.get(k);
+      if (c) c.push(s);
+      else this.cells.set(k, [s]);
+    }
+    // 12: the widest static's radius
+    const x0 = Math.floor((x - r - 12) / 64);
+    const x1 = Math.floor((x + r + 12) / 64);
+    const y0 = Math.floor((y - r - 12) / 64);
+    const y1 = Math.floor((y + r + 12) / 64);
+    const out: StaticProp[] = [];
+    for (let cx = x0; cx <= x1; cx++)
+      for (let cy = y0; cy <= y1; cy++) {
+        const c = this.cells.get(cx * 4096 + cy);
+        if (c) for (const s of c) out.push(s);
+      }
+    return out;
+  }
+
   /** Is there no static prop within d of (x, y)? */
   free(x: number, y: number, d: number): boolean {
-    for (const s of this.statics) {
+    for (const s of this.near(x, y, d)) {
       const r = s.def.radius;
       if (
+        !s.down &&
         Math.abs(s.x - x) < d + r &&
         Math.abs(s.y - y) < d + r &&
         Math.hypot(s.x - x, s.y - y) < d + r
@@ -256,12 +440,29 @@ export class World {
     return true;
   }
 
+  /** The furthest any human has got round the track (rivals rubber-band to it). */
+  humanProgress(): number {
+    let best = -Infinity;
+    for (const c of this.humans) best = Math.max(best, c.progress);
+    return best;
+  }
+
   standings(): Car[] {
     return standings(this);
   }
 
-  /** Advance one tick. `player` is ignored when the player's car is on autopilot. */
+  /** Advance one tick. `player` drives the car this screen follows (ignored on autopilot). */
   step(player: Controls = NO_CONTROLS): void {
+    if (this.humans.length === 1) this.stepSeats([player]);
+    else {
+      const all = this.humans.map(() => NO_CONTROLS);
+      all[this.player.seat] = player;
+      this.stepSeats(all);
+    }
+  }
+
+  /** Advance one tick with each human seat's controls (online play: seat order, not `you`). */
+  stepSeats(seats: readonly Controls[]): void {
     this.tick++;
     if (this.phase === 'countdown') {
       this.countdown -= DT;
@@ -285,18 +486,30 @@ export class World {
       let ctl: Controls = NO_CONTROLS;
       if (c.wrecked) {
         c.wreckT += DT;
-        if (this.mode.respawnSeconds !== undefined && c.wreckT > this.mode.respawnSeconds)
+        if (
+          !this.knockout &&
+          this.mode.respawnSeconds !== undefined &&
+          c.wreckT > this.mode.respawnSeconds
+        )
           respawn(this, c);
       } else if (live) {
-        ctl = c.ai ? c.ai.behaviour.drive(this, c) : player;
+        ctl = c.ai
+          ? c.ai.behaviour.drive(this, c)
+          : c.isPlayer
+            ? (seats[c.seat] ?? NO_CONTROLS)
+            : NO_CONTROLS;
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
-      } else if (c.isPlayer) c.throttle = player.throttle;
+        ctl = blinded(this, c, ctl);
+        ctl = stallControls(c, ctl);
+      } else if (c.isPlayer) c.throttle = (seats[c.seat] ?? NO_CONTROLS).throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
         c.roll *= 0.9;
         c.bounce = c.isPlayer && c.throttle > 0 ? this.rng.range(0, 0.4) : 0;
       }
+      updateMovers(this, c);
       if (ctl.fire) fire(this, c);
+      if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
     for (let i = 0; i < this.cars.length; i++)
       for (let j = i + 1; j < this.cars.length; j++)
@@ -308,16 +521,44 @@ export class World {
     }
     for (const b of this.bots) updateBot(this, b);
     updateProps(this);
+    updatePresses(this);
     updatePickups(this);
+    updateDefence(this);
     updateRockets(this);
     updateMines(this);
+    updateDrops(this);
+    updatePulses(this);
+    updateArms(this);
+    updateEmbers(this);
+    updateRivers(this);
+    if (this.mending.length) updateMending(this);
 
+    if (this.sandbox) return;
+    if (this.knockout && this.kind === 'race' && live && this.endT < 0) {
+      // the race is over once every human is wrecked, and won when no rival is left running
+      const H = this.humans;
+      const running = H.filter((c) => !c.wrecked);
+      if (running.length === 0) this.endT = 2.6;
+      else if (this.cars.length > 1 && this.cars.every((c) => c.isPlayer || c.wrecked)) {
+        if (running.length === 1) {
+          const P = running[0]!;
+          if (!P.finished) {
+            P.finished = true;
+            P.finishTime = this.raceTime;
+            this.finishers.push(P.index);
+            this.emit({ t: 'finish', car: P.index, place: this.finishers.length });
+          }
+          this.endT = 2.8;
+        }
+      }
+    }
     if (this.kind === 'derby' && live) {
       this.timeLeft -= DT;
       const alive = this.cars.filter((c) => !c.wrecked).length;
-      if (this.endT < 0 && (alive <= 1 || this.player.wrecked || this.timeLeft <= 0))
-        this.endT = this.player.wrecked ? 2.6 : 2;
+      const out = this.humans.every((c) => c.wrecked);
+      if (this.endT < 0 && (alive <= 1 || out || this.timeLeft <= 0)) this.endT = out ? 2.6 : 2;
     }
+    if (this.endT < 0 && this.finishBy > 0 && this.raceTime >= this.finishBy) this.endT = 0.5;
     if (this.endT > 0) {
       this.endT -= DT;
       if (this.endT <= 0) {
@@ -350,6 +591,18 @@ export class World {
         .num(p.y)
         .num(p.alive ? 1 : 0);
     H.num(this.rockets.length).num(this.mines.length);
+    H.num(this.embers.length)
+      .num(this.blazes.length)
+      .num(this.spills.length)
+      .num(this.craters.length)
+      .num(this.clouds.length)
+      .num(this.spikes.length);
+    const A = this.arms;
+    H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
+    for (const b of A.balls) H.num(b.x).num(b.y);
+    let down = 0;
+    for (const s of this.statics) if (s.down) down++;
+    H.num(down);
     return H.hex();
   }
 

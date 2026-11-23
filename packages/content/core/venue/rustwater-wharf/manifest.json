@@ -1,0 +1,117 @@
+{
+  "id": "venue.rustwater-wharf",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rustwater Wharf",
+    "description": "Derby. A dead container port cut in two by a deep basin: three plank piers across it, gantry cranes over it, fuel barges moored in it, and yards of stacked boxes on both quays that tip over when you hit them.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.derby",
+  "seed": 5150,
+  "size": {
+    "w": 1400,
+    "h": 1000
+  },
+  "oval": {
+    "cx": 700,
+    "cy": 500,
+    "rx": 640,
+    "ry": 450
+  },
+  "colors": {
+    "ground": "#5b5a55",
+    "ground2": "#64625c",
+    "dirt": "#47453f",
+    "outside": "#14232a"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.block",
+      "spacing": 12
+    },
+    {
+      "rule": "harbour",
+      "material": "material.brine",
+      "y": 0,
+      "half": 56,
+      "r": 16,
+      "piers": {
+        "deck": "prop.pier-deck",
+        "post": "prop.pier-pile",
+        "at": [-330, 0, 330],
+        "wide": 40
+      },
+      "bollard": "prop.bollard",
+      "spacing": 30,
+      "barges": {
+        "prop": "prop.fuel-barge",
+        "count": 4
+      },
+      "cranes": {
+        "leg": "prop.crane-leg",
+        "beam": "prop.crane-beam",
+        "at": [-170, 170]
+      }
+    },
+    {
+      "rule": "stacks",
+      "count": 16,
+      "bottom": ["prop.container-red", "prop.container-teal"],
+      "top": ["prop.container-red-top", "prop.container-teal-top"],
+      "high": 0.55,
+      "cols": [1, 3],
+      "rows": [2, 4],
+      "step": [16, 8.6],
+      "clear": 12
+    },
+    {
+      "rule": "patches",
+      "material": "material.oil",
+      "count": 5,
+      "r": [10, 18],
+      "on": "any"
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 34,
+      "qMin": 0.12,
+      "qMax": 0.92,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.crate",
+          "weight": 3
+        },
+        {
+          "prop": "prop.barrel",
+          "weight": 2
+        },
+        {
+          "prop": "prop.oil-drum",
+          "weight": 2
+        },
+        {
+          "prop": "prop.tyres",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 8
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

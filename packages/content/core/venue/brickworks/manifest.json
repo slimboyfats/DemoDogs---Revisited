@@ -1,0 +1,153 @@
+{
+  "id": "venue.brickworks",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Brickworks",
+    "description": "Race. A dead factory town: every wall, roof and window comes apart, and the fuel depot is still full.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 4411,
+  "size": {
+    "w": 1900,
+    "h": 1300
+  },
+  "track": {
+    "road": 72,
+    "points": [
+      [260, 300],
+      [620, 200],
+      [980, 300],
+      [1240, 180],
+      [1620, 260],
+      [1700, 560],
+      [1420, 700],
+      [1640, 960],
+      [1380, 1120],
+      [1000, 1000],
+      [760, 1140],
+      [400, 1080],
+      [220, 800],
+      [480, 600]
+    ]
+  },
+  "colors": {
+    "ground": "#6f5a4e",
+    "ground2": "#7a6457",
+    "dirt": "#5a4a42",
+    "outside": "#2e2826"
+  },
+  "scenery": [
+    {
+      "rule": "barricade",
+      "every": 90,
+      "prop": "prop.plank-fence",
+      "step": 8
+    },
+    {
+      "rule": "build",
+      "count": 95,
+      "clear": 10,
+      "kinds": [
+        {
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "shape": "house",
+          "weight": 5,
+          "roof": "prop.roof-tile",
+          "long": [5, 10],
+          "deep": [4, 6]
+        },
+        {
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "shape": "yard",
+          "weight": 3,
+          "inside": ["prop.barrel", "prop.crate", "prop.oil-drum", "prop.fuel-tank"],
+          "long": [6, 10],
+          "deep": [4, 7]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.concrete-wall",
+          "long": [3, 8]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "post": "prop.brick-post",
+          "long": [3, 7]
+        }
+      ],
+      "along": 70
+    },
+    {
+      "rule": "scatter",
+      "perArea": 2.9e-5,
+      "clear": 30,
+      "items": [
+        {
+          "prop": "prop.water-tower",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.husk-van",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.tree",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.25
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 19,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.fuel-tank", "prop.water-butt"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 12
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

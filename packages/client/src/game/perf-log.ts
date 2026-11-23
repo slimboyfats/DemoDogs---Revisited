@@ -1,0 +1,563 @@
+/**
+ * Performance recorder, from mudders (packages/client/src/game/perf-log.ts): what the frames of a
+ * race cost on the device they ran on, as a small text file to send back. One line per second
+ * with frame times, sim, per-tick effects and draw CPU time, and what the world was doing at the
+ * time, so a slow second can be traced to its cause. Started with REC on the pause menu or in
+ * the test range, or with `?perf` in the address.
+ *
+ * Plain data in, text out: no DOM, no clock of its own (the caller passes `now`).
+ */
+
+/** Frames longer than this (ms) are listed one by one. */
+const LONG_FRAME = 50;
+const MAX_LONG = 150;
+/** An hour of seconds; past it the oldest rows drop. */
+const MAX_ROWS = 3600;
+/** Upper edges (ms) of the frame-time histogram's bars; the last bar takes the rest. */
+const BARS = [17, 21, 26, 34, 50, 100, 250] as const;
+
+/** What the world and the renderer were doing in a second (asked once a second). */
+export interface PerfContext {
+  /** countdown, race, over, or range for the test range. */
+  phase: string;
+  /** How much of the full effects are drawn (1 = all of them). */
+  quality: string;
+  /** Cells of fire and smoke alive, and the other particles. */
+  cells: number;
+  particles: number;
+  /** Loose voxels in the air, and slices the renderer drew last frame. */
+  voxels: number;
+  slices: number;
+  /** Fires burning, pools on the ground and pieces of scenery brought down. */
+  fires: number;
+  pools: number;
+  fallen: number;
+  /** Free text: the venue, the car, anything worth seeing next to a slow second. */
+  note: string;
+  /** JS heap in use, MB (0 where the browser doesn't say). A drop is a garbage collection. */
+  heap: number;
+  /**
+   * The overdraw meter's last counts, fragments per pixel, when it is on (`?overdraw`): covered,
+   * solid, written, front-to-back, floor, shelled written, particles. Empty when off.
+   */
+  overdraw?: string;
+}
+
+interface Row extends PerfContext {
+  t: number;
+  frames: number;
+  fps: number;
+  frameAvg: number;
+  frameP95: number;
+  frameMax: number;
+  ticks: number;
+  simAvg: number;
+  simMax: number;
+  stepAvg: number;
+  /** The renderer's slowest tick intake of the second (a look scan, a big upload). */
+  stepMax: number;
+  renderAvg: number;
+  renderMax: number;
+  /** JS ms a frame outside sim, step and render (HUD, markers, input). */
+  otherAvg: number;
+  otherMax: number;
+  /** Sim time that passed, in percent of the wall time (100 = real time). */
+  speed: number;
+  /** Sim time the frame loop asked for, in percent (under 100: a hit pause or slow motion). */
+  asked: number;
+  /** Times the player pressed Slow now in this second. */
+  marks: number;
+  /** Draw calls a frame (0 where they weren't counted). */
+  draws: number;
+}
+
+/** Something that happened once: a shader built during play, a console error, the tab hidden. */
+interface Note {
+  t: number;
+  kind: string;
+  detail: string;
+}
+const MAX_NOTES = 120;
+/** Frame times kept for the percentiles (an hour at 120 Hz is 432 000). */
+const MAX_WALLS = 500_000;
+
+/** The browser reported the page blocked: a long task or a long animation frame. */
+interface Stall {
+  t: number;
+  kind: string;
+  ms: number;
+  detail: string;
+}
+const MAX_STALLS = 200;
+
+interface LongFrame {
+  t: number;
+  ms: number;
+  sim: number;
+  step: number;
+  render: number;
+  other: number;
+  ticks: number;
+  phase: string;
+  /** The frame before: a frame is late because the one before it ran long. */
+  before: readonly [sim: number, step: number, render: number, other: number, ticks: number];
+}
+
+const f1 = (v: number): string => (Math.round(v * 10) / 10).toString();
+
+export class PerfRecorder {
+  private readonly rows: Row[] = [];
+  private readonly long: LongFrame[] = [];
+  private readonly bars = new Array<number>(BARS.length + 1).fill(0);
+  private readonly times: number[] = [];
+  private t0 = -1;
+  private secStart = -1;
+  private ticks = 0;
+  private sim = 0;
+  private simMax = 0;
+  private step = 0;
+  private stepMax = 0;
+  private before: LongFrame['before'] = [0, 0, 0, 0, 0];
+  private render = 0;
+  private renderMax = 0;
+  private phase = '';
+  private dropped = 0;
+  private asked = 0;
+  private marks = 0;
+  private other = 0;
+  private otherMax = 0;
+  private fastest = Infinity;
+  private readonly stalls: Stall[] = [];
+  private readonly marked: number[] = [];
+  private readonly notes: Note[] = [];
+  private readonly walls: number[] = [];
+  private draws = 0;
+
+  /** @param meta facts about the device and the match, printed at the top as `key: value`. */
+  constructor(
+    private readonly meta: Readonly<Record<string, string | number>>,
+    /** Wall ms one sim tick stands for at full speed. */
+    private readonly tickMs = 1000 / 60,
+  ) {}
+
+  /** Seconds recorded so far. */
+  get seconds(): number {
+    return this.t0 < 0 ? 0 : Math.round((this.last - this.t0) / 1000);
+  }
+
+  private last = 0;
+
+  /**
+   * One frame: `wall` ms since the frame before, `ticks` sim ticks it ran in `simMs` (the world
+   * alone), `stepMs` the renderer spent taking those ticks in, and `renderMs` of CPU time to build
+   * and submit the picture, `otherMs` the rest of the frame's JS, and `askedMs` the sim time the
+   * frame loop wanted to run. `context` is asked once a second.
+   */
+  frame(
+    now: number,
+    wall: number,
+    ticks: number,
+    simMs: number,
+    stepMs: number,
+    renderMs: number,
+    otherMs: number,
+    askedMs: number,
+    context: () => PerfContext,
+  ): void {
+    if (this.t0 < 0) {
+      this.t0 = now;
+      this.secStart = now;
+    }
+    this.last = now;
+    // the first frame, or the one after the tab was hidden, has no real length
+    if (wall > 0 && wall < 5000) {
+      this.times.push(wall);
+      if (this.walls.length < MAX_WALLS) this.walls.push(wall);
+      if (wall < this.fastest) this.fastest = wall;
+      let b = 0;
+      while (b < BARS.length && wall > (BARS[b] ?? Infinity)) b++;
+      this.bars[b] = (this.bars[b] ?? 0) + 1;
+      if (wall > LONG_FRAME && this.long.length < MAX_LONG) {
+        this.long.push({
+          t: (now - this.t0) / 1000,
+          ms: wall,
+          sim: simMs,
+          step: stepMs,
+          render: renderMs,
+          other: otherMs,
+          ticks,
+          phase: this.phase,
+          before: this.before,
+        });
+      }
+    }
+    this.before = [simMs, stepMs, renderMs, otherMs, ticks];
+    if (ticks > 0 && stepMs / ticks > this.stepMax) this.stepMax = stepMs / ticks;
+    this.ticks += ticks;
+    this.sim += simMs;
+    if (ticks > 0 && simMs / ticks > this.simMax) this.simMax = simMs / ticks;
+    this.step += stepMs;
+    this.asked += askedMs;
+    this.other += otherMs;
+    if (otherMs > this.otherMax) this.otherMax = otherMs;
+    this.render += renderMs;
+    if (renderMs > this.renderMax) this.renderMax = renderMs;
+    const span = now - this.secStart;
+    if (span < 1000) return;
+    const c = context();
+    this.phase = c.phase;
+    const ts = this.times;
+    const n = ts.length;
+    const sorted = [...ts].sort((a, b) => a - b);
+    const frames = Math.max(1, n);
+    this.rows.push({
+      ...c,
+      t: Math.round((now - this.t0) / 1000),
+      frames: n,
+      fps: (n * 1000) / span,
+      frameAvg: n > 0 ? sorted.reduce((a, b) => a + b, 0) / n : 0,
+      frameP95: n > 0 ? (sorted[Math.min(n - 1, Math.floor(n * 0.95))] ?? 0) : 0,
+      frameMax: n > 0 ? (sorted[n - 1] ?? 0) : 0,
+      ticks: this.ticks,
+      simAvg: this.ticks > 0 ? this.sim / this.ticks : 0,
+      simMax: this.simMax,
+      stepAvg: this.ticks > 0 ? this.step / this.ticks : 0,
+      stepMax: this.stepMax,
+      renderAvg: this.render / frames,
+      renderMax: this.renderMax,
+      otherAvg: this.other / frames,
+      otherMax: this.otherMax,
+      speed: (this.ticks * this.tickMs * 100) / span,
+      asked: (this.asked * 100) / span,
+      marks: this.marks,
+      draws: this.draws / frames,
+    });
+    if (this.rows.length > MAX_ROWS) {
+      this.rows.shift();
+      this.dropped++;
+    }
+    ts.length = 0;
+    this.secStart = now;
+    this.ticks = 0;
+    this.sim = this.simMax = this.step = this.stepMax = this.render = this.renderMax = 0;
+    this.asked = this.marks = this.other = this.otherMax = this.draws = 0;
+  }
+
+  /** The player says it feels slow right now: the second gets a mark in the log. */
+  mark(now: number): void {
+    if (this.t0 < 0) return;
+    this.marks++;
+    this.marked.push((now - this.t0) / 1000);
+  }
+
+  /** The browser says the page was blocked for `ms` (a long task, a long animation frame). */
+  stall(now: number, kind: string, ms: number, detail: string): void {
+    // (the browser also hands over entries from before the recording began)
+    if (this.t0 < 0 || now < this.t0 || this.stalls.length >= MAX_STALLS) return;
+    this.stalls.push({ t: (now - this.t0) / 1000, kind, ms, detail });
+  }
+
+  /** Draw calls the renderer made since the last call. */
+  drew(calls: number): void {
+    this.draws += calls;
+  }
+
+  /** Something worth seeing next to the frames: a shader built mid-play, a console error. */
+  note(now: number, kind: string, detail: string): void {
+    if (this.t0 < 0 || now < this.t0 || this.notes.length >= MAX_NOTES) return;
+    this.notes.push({ t: (now - this.t0) / 1000, kind, detail: detail.slice(0, 300) });
+  }
+
+  /** The whole recording as text: facts, a summary, the slowest seconds, then every second. */
+  report(): string {
+    const rows = this.rows;
+    const out: string[] = ['# demodogs performance log v1'];
+    for (const [k, v] of Object.entries(this.meta)) out.push(`${k}: ${v}`);
+    out.push(
+      `seconds: ${rows.length}${this.dropped > 0 ? ` (first ${this.dropped} dropped)` : ''}`,
+    );
+
+    const frames = this.bars.reduce((a, b) => a + b, 0);
+    if (rows.length > 0 && frames > 0) {
+      const avg = (pick: (r: Row) => number): number =>
+        rows.reduce((a, r) => a + pick(r), 0) / rows.length;
+      const max = (pick: (r: Row) => number): number =>
+        rows.reduce((a, r) => Math.max(a, pick(r)), 0);
+      const fps = [...rows].map((r) => r.fps).sort((a, b) => a - b);
+      out.push('', '## summary');
+      out.push(
+        `fps: avg ${f1(avg((r) => r.fps))}, median ${f1(fps[fps.length >> 1] ?? 0)}, worst second ${f1(fps[0] ?? 0)}`,
+      );
+      const w = [...this.walls].sort((a, b) => a - b);
+      const pct = (p: number): number =>
+        w[Math.min(w.length - 1, Math.max(0, Math.ceil((p / 100) * w.length) - 1))] ?? 0;
+      out.push(
+        `frame ms: p50 ${f1(pct(50))}, p95 ${f1(pct(95))}, p99 ${f1(pct(99))}, max ${f1(w[w.length - 1] ?? 0)}`,
+      );
+      const drawn = rows.filter((r) => r.draws > 0);
+      if (drawn.length > 0) {
+        out.push(
+          `draw calls/frame: avg ${f1(drawn.reduce((a, r) => a + r.draws, 0) / drawn.length)}, most ${f1(drawn.reduce((a, r) => Math.max(a, r.draws), 0))}`,
+        );
+      }
+      out.push(
+        `sim ms/tick: avg ${f1(avg((r) => r.simAvg))}, worst tick ${f1(max((r) => r.simMax))}`,
+      );
+      out.push(
+        `renderer step ms/tick: avg ${f1(avg((r) => r.stepAvg))}, worst tick ${f1(max((r) => r.stepMax))}`,
+      );
+      out.push(
+        `render cpu ms/frame: avg ${f1(avg((r) => r.renderAvg))}, worst ${f1(max((r) => r.renderMax))}`,
+      );
+      out.push(
+        `other js ms/frame: avg ${f1(avg((r) => r.otherAvg))}, worst ${f1(max((r) => r.otherMax))}`,
+      );
+      if (Number.isFinite(this.fastest)) {
+        out.push(
+          `fastest frame: ${f1(this.fastest)} ms (the screen runs at up to about ${Math.round(1000 / this.fastest)} Hz)`,
+        );
+      }
+      const heaps = rows.map((r) => r.heap).filter((h) => h > 0);
+      if (heaps.length > 1) {
+        let drops = 0;
+        for (let i = 1; i < rows.length; i++) {
+          if ((rows[i]?.heap ?? 0) < (rows[i - 1]?.heap ?? 0) - 1) drops++;
+        }
+        out.push(
+          `js heap MB: ${f1(Math.min(...heaps))} to ${f1(Math.max(...heaps))}, ${drops} drops (garbage collections seen)`,
+        );
+      }
+      out.push(
+        `browser stalls: ${this.stalls.length}${this.stalls.length > 0 ? `, longest ${f1(this.stalls.reduce((a, x) => Math.max(a, x.ms), 0))} ms` : ''}`,
+      );
+      out.push(
+        'gpu ms/frame: not measured (a low fps with low sim, step and render times means the GPU is the limit)',
+      );
+      const edges = BARS.map((b, i) => `${i === 0 ? '≤' : `${BARS[i - 1] ?? 0}-`}${b}`);
+      edges.push(`>${BARS[BARS.length - 1] ?? 0}`);
+      out.push(
+        `frame ms: ${this.bars.map((n, i) => `${edges[i] ?? ''}: ${f1((n * 100) / frames)}%`).join(', ')}`,
+      );
+
+      const slow = rows.filter((r) => r.speed < 90).length;
+      out.push(
+        `game speed: avg ${f1(avg((r) => r.speed))}%, slowest second ${f1(rows.reduce((a, r) => Math.min(a, r.speed), 1000))}%, ${slow} of ${rows.length} seconds under 90%`,
+      );
+      if (this.marked.length > 0) {
+        out.push(`marked slow by the player at: ${this.marked.map(f1).join(', ')}`);
+        out.push('', '## marked seconds, and the two before each');
+        out.push(HEAD);
+        const seen = new Set<Row>();
+        for (const m of this.marked) {
+          for (const r of rows) {
+            if (r.t >= m - 2 && r.t < m + 1 && !seen.has(r)) {
+              seen.add(r);
+              out.push(line(r));
+            }
+          }
+        }
+      }
+
+      out.push('', '## slowest seconds');
+      out.push(HEAD);
+      for (const r of [...rows].sort((a, b) => a.fps - b.fps).slice(0, 12)) out.push(line(r));
+    }
+
+    if (this.stalls.length > 0) {
+      out.push('', '## browser stalls (t, kind, ms, detail)');
+      for (const x of this.stalls) {
+        out.push(`${f1(x.t)},${x.kind},${f1(x.ms)},${x.detail.replace(/[,\n]/g, ' ')}`);
+      }
+      if (this.stalls.length === MAX_STALLS) out.push('(more not listed)');
+    }
+
+    out.push('', '## events (t, kind, detail)');
+    if (this.notes.length === 0) out.push('none');
+    for (const x of this.notes) out.push(`${f1(x.t)},${x.kind},${x.detail.replace(/[,\n]/g, ' ')}`);
+    if (this.notes.length === MAX_NOTES) out.push('(more not listed)');
+
+    if (this.long.length > 0) {
+      out.push(
+        '',
+        `## frames over ${LONG_FRAME} ms (t, ms, sim ms, step ms, render ms, other js ms, ticks, phase; then sim, step, render, other js and ticks of the frame before, whose work made this one late)`,
+      );
+      for (const l of this.long) {
+        out.push(
+          `${f1(l.t)},${f1(l.ms)},${f1(l.sim)},${f1(l.step)},${f1(l.render)},${f1(l.other)},${l.ticks},${l.phase || '-'},${l.before.map(f1).join(',')}`,
+        );
+      }
+      if (this.long.length === MAX_LONG) out.push('(more not listed)');
+    }
+
+    out.push('', '## every second');
+    out.push(HEAD);
+    for (const r of rows) out.push(line(r));
+
+    // a paste that lacks this line was cut short
+    out.push('', 'END');
+    return out.join('\n') + '\n';
+  }
+}
+
+const HEAD =
+  't,fps,frame avg,frame p95,frame max,ticks,sim avg,sim max,step avg,step max,render avg,render max,other avg,other max,speed %,asked %,' +
+  'quality,phase,cells,particles,voxels,slices,fires,pools,fallen,heap MB,draws,overdraw (cov sol wri front floor shell par),note';
+
+function line(r: Row): string {
+  return [
+    r.t,
+    f1(r.fps),
+    f1(r.frameAvg),
+    f1(r.frameP95),
+    f1(r.frameMax),
+    r.ticks,
+    f1(r.simAvg),
+    f1(r.simMax),
+    f1(r.stepAvg),
+    f1(r.stepMax),
+    f1(r.renderAvg),
+    f1(r.renderMax),
+    f1(r.otherAvg),
+    f1(r.otherMax),
+    f1(r.speed),
+    f1(r.asked),
+    r.quality,
+    r.phase,
+    r.cells,
+    r.particles,
+    r.voxels,
+    r.slices,
+    r.fires,
+    r.pools,
+    r.fallen,
+    r.heap > 0 ? f1(r.heap) : '',
+    r.draws > 0 ? Math.round(r.draws) : '',
+    r.overdraw ?? '',
+    (r.marks > 0 ? 'SLOW-NOW ' : '') + r.note.replace(/[,\n]/g, ' '),
+  ].join(',');
+}
+
+/** The fields of a long-animation-frame entry the log uses (Chromium; absent elsewhere). */
+interface LongFrameEntry {
+  duration: number;
+  startTime: number;
+  blockingDuration?: number;
+  styleAndLayoutStart?: number;
+  scripts?: readonly {
+    duration: number;
+    invoker?: string;
+    sourceFunctionName?: string;
+    sourceURL?: string;
+    sourceCharPosition?: number;
+    forcedStyleAndLayoutDuration?: number;
+  }[];
+}
+
+/** What a browser stall entry says about its cause, in a few words ('' for a plain long task). */
+export function stallDetail(entry: unknown): string {
+  const e = entry as LongFrameEntry;
+  if (!e.scripts) return '';
+  const out: string[] = [];
+  if (e.blockingDuration !== undefined) out.push(`blocking ${f1(e.blockingDuration)}`);
+  let script = 0;
+  let top: NonNullable<LongFrameEntry['scripts']>[number] | undefined;
+  for (const sc of e.scripts) {
+    script += sc.duration;
+    if (!top || sc.duration > top.duration) top = sc;
+  }
+  out.push(`script ${f1(script)}`);
+  if (e.styleAndLayoutStart !== undefined && e.styleAndLayoutStart > 0) {
+    out.push(`style+layout ${f1(e.startTime + e.duration - e.styleAndLayoutStart)}`);
+  }
+  if (top) {
+    out.push(`longest ${top.sourceFunctionName || top.invoker || 'script'} ${f1(top.duration)}`);
+    // where that function is, so a shortened name can be looked up in the build's source map
+    const file = top.sourceURL?.split(/[?#]/)[0]?.split('/').pop();
+    if (file) out.push(`at ${file}:${top.sourceCharPosition ?? -1}`);
+    if (top.invoker && top.sourceFunctionName) out.push(`from ${top.invoker.split('/').pop()}`);
+    const forced = top.forcedStyleAndLayoutDuration ?? 0;
+    if (forced >= 1) out.push(`forced layout ${f1(forced)}`);
+  }
+  return out.join(' ');
+}
+
+/** File name for a recording made at `date`: `demodogs-perf-20261117-0612.txt`. */
+export function perfFileName(date: Date): string {
+  const p = (n: number): string => String(n).padStart(2, '0');
+  return `demodogs-perf-${date.getFullYear()}${p(date.getMonth() + 1)}${p(date.getDate())}-${p(date.getHours())}${p(date.getMinutes())}.txt`;
+}
+
+/** A frame slower than this counts as slow for {@link SlowWatch} (a 60 Hz frame is 16.7 ms). */
+const SLOW_FRAME_MS = 24;
+/** At least this long between two steps down. */
+const WATCH_GAP_MS = 6000;
+/** Frames this soon after a step down are not counted: let it take effect first. */
+const WATCH_BLIND_MS = 2000;
+
+/**
+ * Decides when the effects should be thinned out: a few slow frames close together, and not
+ * again for a while. The player presses nothing.
+ */
+export class SlowWatch {
+  private score = 0;
+  private last = -Infinity;
+
+  /** Feed every frame; true when the device is falling behind and something should give. */
+  frame(now: number, wallMs: number): boolean {
+    if (now - this.last < WATCH_BLIND_MS) return false;
+    this.score = this.score * 0.9 + (wallMs > SLOW_FRAME_MS ? 1 : 0);
+    if (this.score < 2.5 || now - this.last < WATCH_GAP_MS) return false;
+    this.last = now;
+    this.score = 0;
+    return true;
+  }
+}
+
+/** The WebGL calls the recorder counts and times. */
+const DRAW_CALLS = [
+  'drawArrays',
+  'drawElements',
+  'drawArraysInstanced',
+  'drawElementsInstanced',
+  'drawRangeElements',
+] as const;
+
+/**
+ * While a recording runs: counts the context's draw calls and times every shader program linked
+ * (a program built in the middle of play is a freeze of 100 ms and more on a phone). The link is
+ * made to finish inside the call so its time is seen. Returns `take` (draw calls since the last
+ * take) and `stop`, which puts the context back as it was.
+ */
+export function watchGl(
+  gl: WebGL2RenderingContext,
+  linked: (ms: number) => void,
+  clock: () => number = () => performance.now(),
+): { take: () => number; stop: () => void } {
+  let draws = 0;
+  // own properties shadow the prototype's methods; deleting them restores the context
+  const own = gl as unknown as Record<string, unknown>;
+  for (const name of DRAW_CALLS) {
+    const orig = gl[name] as (...a: unknown[]) => void;
+    own[name] = (...a: unknown[]): void => {
+      draws++;
+      orig.apply(gl, a);
+    };
+  }
+  const link = gl.linkProgram;
+  own['linkProgram'] = (p: WebGLProgram): void => {
+    const t = clock();
+    link.call(gl, p);
+    gl.getProgramParameter(p, gl.LINK_STATUS);
+    linked(clock() - t);
+  };
+  return {
+    take: () => {
+      const n = draws;
+      draws = 0;
+      return n;
+    },
+    stop: () => {
+      for (const name of [...DRAW_CALLS, 'linkProgram']) Reflect.deleteProperty(own, name);
+    },
+  };
+}

@@ -1,0 +1,19 @@
+{
+  "id": "prop.oil-drum",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Oil drum",
+    "description": "A drum of engine oil. Knock it over and it spills a slick.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 4.2,
+  "mass": 0.5,
+  "breaksAt": 60,
+  "launch": 0.2,
+  "spills": {
+    "material": "material.oil",
+    "r": 10,
+    "n": 3
+  }
+}

@@ -31,6 +31,13 @@
       "spacing": 12
     },
     {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 7,
+      "r": [16, 28],
+      "on": "any"
+    },
+    {
       "rule": "place",
       "items": [
         {
@@ -100,11 +107,52 @@
           "weight": 1
         }
       ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 8,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.powder-keg",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 12,
+      "qMin": 0.25,
+      "qMax": 0.9,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.bush",
+          "weight": 3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 1
+        }
+      ]
     }
   ],
   "bots": {
     "bot": "bot.scrap",
     "count": 14
   },
-  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms"]
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
 }

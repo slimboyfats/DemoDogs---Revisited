@@ -1,0 +1,158 @@
+{
+  "id": "venue.frostbite-quarry",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Frostbite Quarry",
+    "description": "Race. A frozen quarry: sheet ice across the road, powder kegs by the verge, and stacks and pylons to bring down.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 4411,
+  "size": {
+    "w": 2000,
+    "h": 1340
+  },
+  "track": {
+    "road": 76,
+    "points": [
+      [300, 700],
+      [280, 360],
+      [520, 200],
+      [860, 260],
+      [1040, 480],
+      [1300, 300],
+      [1640, 240],
+      [1760, 520],
+      [1600, 820],
+      [1700, 1080],
+      [1340, 1160],
+      [1040, 900],
+      [760, 1100],
+      [440, 1060]
+    ]
+  },
+  "colors": {
+    "ground": "#c4ced4",
+    "ground2": "#d3dce1",
+    "dirt": "#8a8f96",
+    "outside": "#59626b"
+  },
+  "scenery": [
+    {
+      "rule": "bend-wall",
+      "props": ["prop.rock", "prop.block"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "patches",
+      "material": "material.ice",
+      "count": 11,
+      "r": [13, 22],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.ice",
+      "count": 14,
+      "r": [18, 34],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 44,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.concrete-wall",
+          "inside": ["prop.powder-keg", "prop.powder-keg", "prop.crate", "prop.barrel"],
+          "long": [5, 8],
+          "deep": [4, 6]
+        },
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.concrete-wall",
+          "long": [3, 8]
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000408,
+      "clear": 32,
+      "items": [
+        {
+          "prop": "prop.pine",
+          "weight": 0.45
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 0.12
+        },
+        {
+          "prop": "prop.pylon",
+          "weight": 0.07
+        },
+        {
+          "prop": "prop.chimney",
+          "weight": 0.06
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 21,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.powder-keg",
+      "tanks": ["prop.water-butt", "prop.oil-drum"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 12
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

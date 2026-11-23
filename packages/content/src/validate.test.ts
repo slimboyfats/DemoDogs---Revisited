@@ -29,7 +29,16 @@ describe('content validate', () => {
   it('everything drawn has a look', () => {
     const C = loadContent();
     const looks = loadLooks();
-    const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...C.weapon.keys()];
+    // a gun is part of the car, a slick is paint on the ground, smoke is cells, a pulse is all
+    // sparks, a spray is a jet of single cells, a rail is a line of light, an arc is lightning and
+    // a vortex is a swirl of cells; the rest are drawn
+    const bare = new Set(['gun', 'slick', 'smoke', 'pulse', 'spray', 'rail', 'arc', 'vortex']);
+    const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
+    // pickups that bolt something onto the car draw it
+    const fitted = [...C.pickup.values()]
+      .filter((p) => p.kind === 'blade' || p.kind === 'springs')
+      .map((p) => p.id);
+    const drawn = [...C.car.keys(), ...C.prop.keys(), ...C.bot.keys(), ...shown, ...fitted];
     expect(drawn.filter((id) => !looks.has(id))).toEqual([]);
     for (const id of looks.keys()) expect(drawn).toContain(id);
   });

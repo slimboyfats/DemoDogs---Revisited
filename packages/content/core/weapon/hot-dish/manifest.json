@@ -1,0 +1,18 @@
+{
+  "id": "weapon.hot-dish",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hot Dish",
+    "description": "A fire shell lobbed high over everything onto the car ahead. It digs a crater and splashes a ring of burning fuel round it.",
+    "since": "core@0.5.0"
+  },
+  "kind": "lob",
+  "label": "LOB",
+  "ammo": 2,
+  "power": 0.6,
+  "cooldown": 0.8,
+  "range": 240,
+  "count": 6,
+  "radius": 8,
+  "material": "material.fuel"
+}

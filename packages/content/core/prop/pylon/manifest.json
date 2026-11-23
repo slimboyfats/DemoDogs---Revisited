@@ -1,0 +1,13 @@
+{
+  "id": "prop.pylon",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pylon",
+    "description": "A steel lattice mast. Cars bounce off it; only explosives bring it down.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "made": "material.steel",
+  "integrity": 170
+}

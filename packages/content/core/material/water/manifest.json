@@ -1,0 +1,15 @@
+{
+  "id": "material.water",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Water",
+    "description": "A flooded patch. Puts out fire and turns the ground to mud that bogs cars down.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.7,
+  "drag": 1.7,
+  "quenches": true,
+  "conducts": true,
+  "colour": "#3b4a52",
+  "alpha": 0.5
+}

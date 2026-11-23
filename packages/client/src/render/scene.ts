@@ -3,8 +3,9 @@ import type { Art } from './art';
 import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { WorldRenderer } from './overlay';
+import { drawParticle, overSmoke, type Put } from './pixel/particles';
 import { queueShadows, queueStacks } from './stacks';
-import { StackRenderer, type Strip } from './stack';
+import { StackRenderer, tall, type Strip } from './stack';
 
 const TAU = Math.PI * 2;
 export const PITCH = (56 * Math.PI) / 180;
@@ -61,9 +62,9 @@ export class Scene implements WorldRenderer {
     let b = this.bakes.get(key);
     if (b) return b;
     const S = this.scale;
-    const diag = Math.hypot(strip.cw, strip.ch);
+    const diag = Math.hypot(strip.cw, strip.ch) / strip.res;
     const w = Math.ceil(diag * S) + 4;
-    const gy = Math.ceil(strip.n * this.R.zk + (diag * S * this.R.ys) / 2) + 3;
+    const gy = Math.ceil(tall(strip) * this.R.zk + (diag * S * this.R.ys) / 2) + 3;
     const cv = document.createElement('canvas');
     cv.width = w;
     cv.height = gy * 2;
@@ -98,6 +99,13 @@ export class Scene implements WorldRenderer {
     const ctx = this.ctx;
     const R = this.R;
     const S = this.scale;
+    // a strip that was redrawn (scenery with a bite out of it) is baked again
+    for (const s of fx.changed) {
+      const id = this.ids.get(s);
+      if (id) for (let q = 0; q < 32; q++) this.bakes.delete(`${id}:${q}`);
+    }
+    fx.changed.clear();
+    fx.dropped.length = 0;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 1;
     ctx.fillStyle = w.venue.colors.outside;
@@ -131,7 +139,7 @@ export class Scene implements WorldRenderer {
 
     // shadows
     ctx.fillStyle = '#000';
-    queueShadows(R, this.art, w, (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a));
+    queueShadows(R, this.art, w, null, (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a));
     ctx.globalAlpha = 1;
 
     // stacks; still props are drawn as one baked image each
@@ -142,31 +150,37 @@ export class Scene implements WorldRenderer {
     });
     R.flush();
 
-    // particles
-    for (const f of fx.fx) {
-      const sx = R.sx(f.x);
-      const sy = R.sy(f.y, f.z);
-      if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) continue;
-      const k = f.life / f.max;
-      let s = f.size * S;
-      if (f.kind === 'smoke') {
-        s *= 1 + (1 - k) * 1.8;
-        ctx.globalAlpha = 0.45 * k;
-        ctx.fillStyle = '#3a3836';
-      } else if (f.kind === 'dust') {
-        s *= 1 + (1 - k) * 1.5;
-        ctx.globalAlpha = 0.4 * k;
-        ctx.fillStyle = '#9a8460';
-      } else if (f.kind === 'fire') {
-        ctx.globalAlpha = Math.min(1, k * 1.5);
-        ctx.fillStyle = k > 0.6 ? '#ffe27a' : k > 0.3 ? '#ff8a2a' : '#c0321c';
-      } else {
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = k > 0.5 ? '#fff6c0' : '#ffb03a';
-        s = Math.max(2, S * 0.8);
-      }
-      ctx.fillRect(sx - s / 2, sy - s / 2, s, s);
+    // loose voxels (drawn over the stacks here; the pixel engine depth-tests them)
+    for (const v of [...fx.voxels, ...fx.wreck.grains, ...fx.wreck.homing]) {
+      const sx = R.sx(v.x);
+      const sy = R.sy(v.y, v.z);
+      if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+      ctx.fillStyle = `#${v.rgb.toString(16).padStart(6, '0')}`;
+      const d = Math.max(1, Math.round(v.s * S));
+      ctx.fillRect(Math.round(sx - d / 2), Math.round(sy - d / 2), d, d);
     }
+
+    // particles: the same blobs as the pixel engine, drawn here as plain squares
+    const put =
+      (lighter: boolean): Put =>
+      (x, y, z, d, rgb, a) => {
+        const sx = R.sx(x);
+        const sy = R.sy(y, z);
+        if (sx < -40 || sx > W + 40 || sy < -40 || sy > H + 40) return;
+        const s = Math.max(lighter ? 2 : 1, d * S);
+        ctx.globalCompositeOperation = lighter ? 'lighter' : 'source-over';
+        ctx.globalAlpha = a;
+        ctx.fillStyle = `#${rgb.toString(16).padStart(6, '0')}`;
+        ctx.fillRect(Math.round(sx - s / 2), Math.round(sy - s / 2), Math.round(s), Math.round(s));
+      };
+    const normal = put(false);
+    const glow = put(true);
+    for (const f of fx.fx) if (!overSmoke(f)) drawParticle(f, normal, glow);
+    for (const f of fx.fx) if (overSmoke(f)) drawParticle(f, normal, glow);
+    fx.cells.draw(normal, glow, () => true);
+    fx.shock.sparks.draw(normal, glow, () => true);
+    fx.defence.draw(glow, () => true);
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = 1;
   }
 }

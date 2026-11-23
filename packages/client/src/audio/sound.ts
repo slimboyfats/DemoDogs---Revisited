@@ -178,6 +178,57 @@ export class Sound {
     this.tone(300, 0.3, 0.12, 'sawtooth', 0.3);
   }
 
+  /** One round from a gun: a short crack. */
+  gun(v = 1): void {
+    this.noise(0.05, 1900, 0.8, 0.16 * v, 'bandpass');
+    this.tone(210, 0.04, 0.05 * v, 'square', 0.5);
+  }
+
+  /** A fuel drum taking off: a rising rush of fire. */
+  whoosh(v = 1): void {
+    this.noise(0.7, 700, 0.6, 0.45 * v, 'bandpass');
+    this.tone(120, 0.6, 0.12 * v, 'sawtooth', 2.4);
+  }
+
+  /** A burning star landing: a small crack. */
+  pop(v = 1): void {
+    this.noise(0.12, 1400, 1, 0.22 * v);
+    this.tone(90, 0.1, 0.15 * v, 'sine', 0.5);
+  }
+
+  /** A shock: a buzzing crack; `big` for a whole pulse going out, a snap for one bolt. */
+  zap(v = 1, big = false): void {
+    this.noise(big ? 0.35 : 0.09, 4200, 1.2, (big ? 0.35 : 0.18) * v, 'highpass');
+    this.tone(big ? 95 : 140, big ? 0.32 : 0.08, (big ? 0.14 : 0.07) * v, 'sawtooth', 0.6);
+    if (big) this.tone(1900, 0.18, 0.05 * v, 'square', 0.3, 0.02);
+  }
+
+  /** A spray burst: a roar of burning fuel, or the hiss of a water cannon. */
+  hiss(v = 1, lit = false): void {
+    if (lit) {
+      this.noise(0.9, 420, 0.5, 0.5 * v, 'lowpass');
+      this.noise(0.8, 1600, 0.7, 0.18 * v);
+    } else this.noise(0.9, 2800, 0.6, 0.3 * v, 'highpass');
+  }
+
+  /** A rail slug: a charged whine that cracks. */
+  railCrack(v = 1): void {
+    this.tone(260, 0.12, 0.12 * v, 'sawtooth', 6);
+    this.noise(0.35, 3400, 0.9, 0.5 * v, 'bandpass', 0.1);
+    this.tone(70, 0.4, 0.4 * v, 'sine', 0.4, 0.1);
+  }
+
+  /** One lightning strike: a dry, buzzing crack. */
+  crackle(v = 1): void {
+    this.noise(0.09, 4200, 1.2, 0.3 * v, 'bandpass');
+    this.tone(95, 0.08, 0.08 * v, 'sawtooth', 1.4);
+  }
+
+  /** A sticky bomb's lamp: a tiny blip, higher the nearer it is to going off. */
+  tick(hi: boolean, v = 1): void {
+    this.tone(hi ? 1760 : 1320, 0.05, 0.1 * v, 'square');
+  }
+
   drop(): void {
     this.tone(160, 0.12, 0.2, 'square', 0.6);
   }
@@ -192,5 +243,24 @@ export class Sound {
 
   nitro(): void {
     this.noise(0.5, 600, 0.5, 0.2, 'lowpass');
+  }
+
+  /** Springs letting go: a rising twang. */
+  boing(v = 1): void {
+    this.tone(150, 0.32, 0.16 * v, 'triangle', 3.2);
+    this.tone(300, 0.2, 0.05 * v, 'square', 2.2);
+  }
+
+  /** A heavy car coming down on its wheels. */
+  thud(v = 1): void {
+    this.noise(0.22, 320, 0.8, 0.35 * v, 'lowpass');
+    this.tone(70, 0.16, 0.18 * v, 'sine', 0.6);
+  }
+
+  /** A blade bolted on or falling off: a clang of steel. */
+  clang(v = 1): void {
+    this.tone(620, 0.25, 0.1 * v, 'square', 0.92);
+    this.tone(930, 0.18, 0.06 * v, 'triangle', 0.9);
+    this.noise(0.1, 2600, 1.2, 0.12 * v, 'highpass');
   }
 }

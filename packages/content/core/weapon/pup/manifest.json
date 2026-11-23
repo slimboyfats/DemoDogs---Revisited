@@ -1,0 +1,17 @@
+{
+  "id": "weapon.pup",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pup",
+    "description": "One bomblet out of a Litter canister. Never handed out on its own.",
+    "since": "core@0.5.0"
+  },
+  "kind": "rocket",
+  "label": "PUP",
+  "ammo": 1,
+  "power": 0.48,
+  "cooldown": 0.1,
+  "speed": 170,
+  "life": 0.55,
+  "arm": 0.2
+}

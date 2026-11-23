@@ -1,0 +1,14 @@
+{
+  "id": "prop.scrap-slab",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Scrap slab",
+    "description": "A car crushed flat into a block. Heavy to shove, and it hurts whatever it lands on.",
+    "since": "core@0.5.0"
+  },
+  "body": "loose",
+  "radius": 6,
+  "mass": 3.2,
+  "launch": 0.05,
+  "crush": 32
+}

@@ -1,0 +1,22 @@
+{
+  "id": "material.brick",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Brick",
+    "description": "Brick walls. Take a few hits, then come down as rubble. Do not burn.",
+    "since": "core@0.4.0"
+  },
+  "strength": {
+    "blast": 1.2,
+    "impact": 1.5,
+    "heat": 6
+  },
+  "breaks": {
+    "piece": 4,
+    "grit": 0.7,
+    "bounce": 0.15,
+    "brittle": 0.9,
+    "dust": 1.4
+  },
+  "colour": "#8a4a36"
+}

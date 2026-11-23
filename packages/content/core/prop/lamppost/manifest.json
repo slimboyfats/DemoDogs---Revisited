@@ -1,0 +1,14 @@
+{
+  "id": "prop.lamppost",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lamppost",
+    "description": "A thin steel street lamp leaning out over the road. Any car can fold it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 1.8,
+  "hardness": 0.5,
+  "made": "material.steel",
+  "integrity": 8
+}

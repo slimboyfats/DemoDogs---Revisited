@@ -1,0 +1,14 @@
+{
+  "id": "prop.overpass-pillar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Overpass pillar",
+    "description": "A concrete leg of the raised road over the track. Knock out the legs on both sides and the deck comes down on the road.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "hardness": 1.5,
+  "made": "material.concrete",
+  "integrity": 260
+}

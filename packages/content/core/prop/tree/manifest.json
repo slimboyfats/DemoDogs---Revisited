@@ -3,10 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Tree",
-    "description": "A leafy tree that sways in the wind.",
+    "description": "A broadleaf tree that sways in the wind. A blast tears the leaves off the side facing it, fire eats the crown, and a ram shakes leaves loose.",
     "since": "core@0.1.0"
   },
   "body": "static",
   "radius": 4,
-  "sway": true
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 55,
+  "crown": {
+    "trunk": 1.9,
+    "top": 12.5,
+    "hold": 0.3,
+    "flash": 0.15
+  }
 }

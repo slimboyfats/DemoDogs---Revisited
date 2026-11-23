@@ -46,8 +46,39 @@
       "minCurve": 0.2
     },
     {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 10,
+      "r": [16, 28],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 14,
+      "clear": 14,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "long": [4, 8]
+        }
+      ]
+    },
+    {
       "rule": "scatter",
-      "perArea": 0.000192,
+      "perArea": 0.000307,
       "clear": 34,
       "items": [
         {
@@ -65,6 +96,22 @@
         {
           "prop": "prop.husk",
           "weight": 0.02
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.5
         }
       ]
     },
@@ -73,7 +120,8 @@
       "every": 23,
       "pair": "prop.cone",
       "stack": "prop.crate",
-      "drum": "prop.barrel"
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
     },
     {
       "rule": "border",
@@ -85,5 +133,16 @@
     "bot": "bot.scrap",
     "count": 16
   },
-  "pickups": ["pickup.repair", "pickup.nitro", "pickup.arms"]
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
 }

@@ -1,0 +1,154 @@
+{
+  "id": "venue.gravel-gulch",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Gravel Gulch",
+    "description": "Race. A quarry: hairpins between rocks and concrete.",
+    "since": "core@0.3.0"
+  },
+  "mode": "mode.race",
+  "seed": 1373,
+  "size": {
+    "w": 1720,
+    "h": 1400
+  },
+  "track": {
+    "road": 68,
+    "points": [
+      [220, 400],
+      [420, 200],
+      [760, 220],
+      [900, 440],
+      [1140, 260],
+      [1440, 240],
+      [1520, 520],
+      [1280, 700],
+      [1480, 920],
+      [1380, 1200],
+      [1040, 1180],
+      [900, 920],
+      [640, 1100],
+      [340, 1160],
+      [220, 880],
+      [460, 700]
+    ]
+  },
+  "colors": {
+    "ground": "#7d7a70",
+    "ground2": "#8a877c",
+    "dirt": "#6a665c",
+    "outside": "#3b3a36"
+  },
+  "scenery": [
+    {
+      "rule": "bend-wall",
+      "props": ["prop.block", "prop.tyres"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 5,
+      "r": [14, 22],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 14,
+      "r": [18, 34],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 26,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "yard",
+          "weight": 3,
+          "wall": "prop.concrete-wall",
+          "inside": ["prop.powder-keg", "prop.crate", "prop.barrel"],
+          "long": [5, 8],
+          "deep": [4, 6]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.concrete-wall",
+          "long": [3, 7]
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000325,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.rock",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.block",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.husk-van",
+          "weight": 0.05
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.1
+        },
+        {
+          "prop": "prop.pylon",
+          "weight": 0.05
+        },
+        {
+          "prop": "prop.chimney",
+          "weight": 0.04
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.15
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 14
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

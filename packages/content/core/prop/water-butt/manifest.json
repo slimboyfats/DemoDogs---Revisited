@@ -1,0 +1,19 @@
+{
+  "id": "prop.water-butt",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Water butt",
+    "description": "A big tub of water. Burst it and it floods the ground: fires go out and cars bog down in the mud.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 6.5,
+  "mass": 1.4,
+  "breaksAt": 85,
+  "launch": 0.1,
+  "spills": {
+    "material": "material.water",
+    "r": 14,
+    "n": 5
+  }
+}

@@ -1,4 +1,5 @@
-import type { World } from '@demodogs/sim';
+import type { StaticProp, World } from '@demodogs/sim';
+import { armsLights } from '../arms-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
 import type { Ground } from '../ground';
@@ -8,27 +9,36 @@ import type { Strip } from '../stack';
 import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
+import { ShadowLayer } from './shadow-layer';
+import { ShadowMap, casts } from '../cast';
+import { pixels } from '../strips';
 import { Lights } from './lighting';
+import { drawParticle, overSmoke, type Put } from './particles';
+import { DETAIL } from '../strips';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
+import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
-const FIRE = [0xffe27a, 0xff8a2a, 0xc0321c] as const;
 
 /**
  * The world drawn by mudders' pixel engine with the sprite-stack addon: WebGL2, one instanced
  * draw for every slice on screen, depth-tested on the GPU, lit by the frame's point lights.
  *
- * Frame order: ground quad, shadows (QuadBatch), stacks (StackBatch, depth on), particles
- * (QuadBatch with mudders' pixel-blob and stipple shapes). Words and the HUD go on the overlay.
+ * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
+ * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
-export class PixelScene implements WorldRenderer, StackSink {
-  private readonly gl: WebGL2RenderingContext;
+export class PixelScene implements WorldRenderer, StackSink, CountSource {
+  readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
+  private fx: Effects | null = null;
   private readonly stacks: StackBatch;
   private readonly quads: QuadBatch;
+  private readonly glow: QuadBatch;
   private readonly lights = new Lights();
   private groundLayer: GroundLayer | null = null;
+  private shadowLayer: ShadowLayer | null = null;
+  private shadows: ShadowMap | null = null;
   private ground: Ground | null = null;
   private scale = 4;
   private readonly ys = Math.sin(PITCH);
@@ -37,6 +47,13 @@ export class PixelScene implements WorldRenderer, StackSink {
   private oy = 0;
   private vw = 1;
   private vh = 1;
+  /** The overdraw meter (made on first use), the heat map shown, and a read-back asked for. */
+  private meter: OverdrawMeter | null = null;
+  private heat: Channel | null = null;
+  private metering = false;
+  private wantRead = false;
+  private last: OverdrawStats | null = null;
+  private frameW: World | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -53,6 +70,7 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.atlas = new StackAtlas(gl);
     this.stacks = new StackBatch(gl, this.atlas);
     this.quads = new QuadBatch(gl);
+    this.glow = new QuadBatch(gl, 1024);
   }
 
   /** Can this browser run the pixel engine? */
@@ -117,6 +135,15 @@ export class PixelScene implements WorldRenderer, StackSink {
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    armsLights(L, w);
+    for (const f of fx.fires)
+      L.add(
+        f.x,
+        f.y,
+        30 + f.r * 3,
+        (0.5 + Math.sin(t * 31 + f.x) * 0.2) * (f.life / f.max) + 0.3,
+        0xff8a30,
+      );
     for (const m of w.mines)
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
@@ -131,6 +158,26 @@ export class PixelScene implements WorldRenderer, StackSink {
       this.groundLayer = new GroundLayer(gl, ground);
       this.ground = ground;
     }
+    // a new race: nothing of the last one's damaged art will be drawn again
+    if (fx !== this.fx) {
+      this.atlas.reset();
+      this.fx = fx;
+      // and its tall scenery throws its shadows anew, from its own shape
+      this.shadowLayer?.dispose();
+      const art = this.art;
+      this.shadows = new ShadowMap(
+        w.w,
+        w.h,
+        (s) => fx.scarred.get(s) ?? art.prop(s.def.id),
+        pixels,
+      );
+      this.shadows.build(w.statics);
+      this.shadowLayer = new ShadowLayer(gl, this.shadows);
+    }
+    this.shadows!.update(w);
+    this.shadowLayer!.sync();
+    for (const s of fx.dropped) this.atlas.release(s);
+    fx.dropped.length = 0;
     for (const s of fx.changed) this.atlas.refresh(s);
     fx.changed.clear();
     this.groundLayer!.sync();
@@ -167,18 +214,8 @@ export class PixelScene implements WorldRenderer, StackSink {
     const quadOrigin: [number, number] = [this.ox, this.oy];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    queueShadows(this, this.art, w, (x, y, rx, ry, rot, a) =>
-      this.quads.push(
-        x,
-        this.my(y, 0),
-        rx * 2,
-        ry * 2 * this.ys,
-        0x000000,
-        a,
-        Shape.Disc,
-        Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
-      ),
-    );
+    this.shadowLayer!.draw(view);
+    this.queueShadows(w, fx);
     this.quads.flush(quadView, quadOrigin, S);
 
     // stacks: one instanced draw, sorted by the depth buffer
@@ -189,33 +226,140 @@ export class PixelScene implements WorldRenderer, StackSink {
     this.gatherLights(w, fx);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 
-    // particles: mudders' pixel shapes (stippled smoke, solid fire blobs, single-pixel sparks)
+    // particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art
+    // pixel) so smoke and fire have the same grain as what they come off. Smoke first, fire over
+    // it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
-    for (const f of fx.fx) {
-      const k = f.life / f.max;
-      const x = f.x;
-      const y = this.my(f.y, f.z);
-      if (f.kind === 'smoke') {
-        const d = f.size * (1 + (1 - k) * 1.8) * 1.6;
-        this.quads.push(x, y, d, d, 0x3a3836, 0.7 * k, Shape.Stipple);
-      } else if (f.kind === 'dust') {
-        const d = f.size * (1 + (1 - k) * 1.5) * 1.6;
-        this.quads.push(x, y, d, d, 0x9a8460, 0.6 * k, Shape.Stipple);
-      } else if (f.kind === 'fire') {
-        const col = FIRE[k > 0.6 ? 0 : k > 0.3 ? 1 : 2];
-        this.quads.push(x, y, f.size * 1.4, f.size * 1.4, col, 1, Shape.Solid);
-      } else {
-        this.quads.push(x, y, 0.9, 0.9, k > 0.5 ? 0xfff6c0 : 0xffb03a, 1, Shape.Rect);
-      }
-    }
-    this.quads.flush(quadView, quadOrigin, S);
+    this.queueParticles(fx);
+    this.quads.flush(quadView, quadOrigin, S / DETAIL);
+    gl.blendFunc(gl.ONE, gl.ONE);
+    this.glow.flush(quadView, quadOrigin, S / DETAIL);
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
+
+    this.frameW = w;
+    if (this.metering && (this.heat || this.wantRead)) {
+      this.meter ??= new OverdrawMeter(gl);
+      this.meter.count(this, W, H);
+      if (this.wantRead) {
+        this.last = this.meter.read(this.stacks.count);
+        this.wantRead = false;
+      }
+      if (this.heat) this.meter.drawHeat(this.heat, W, H);
+    }
+  }
+
+  private queueShadows(w: World, fx: Effects): void {
+    const art = this.art;
+    const cast = (s: StaticProp) => casts(s, fx.scarred.get(s) ?? art.prop(s.def.id));
+    queueShadows(this, art, w, cast, (x, y, rx, ry, rot, a, box) =>
+      this.quads.push(
+        x,
+        this.my(y, 0),
+        rx * 2,
+        ry * 2 * this.ys,
+        0x000000,
+        a,
+        box ? Shape.Rect : Shape.Disc,
+        Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
+      ),
+    );
+  }
+
+  /**
+   * Particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art pixel)
+   * so smoke and fire have the same grain as what they come off. Smoke first, fire over it; the
+   * additive cells (sparks, embers, the hot core of a flame) go to the glow batch.
+   */
+  private queueParticles(fx: Effects): void {
+    const G = DETAIL;
+    const cell = (v: number) => Math.floor(v * G) + 0.5;
+    const normal: Put = (x, y, z, d, rgb, a, shape) =>
+      this.quads.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, shape);
+    const glow: Put = (x, y, z, d, rgb, a) =>
+      this.glow.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, Shape.Rect);
+    for (const f of fx.fx)
+      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
+    for (const f of fx.fx)
+      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
+    fx.cells.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
+    fx.shock.sparks.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
+    fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
+  }
+
+  // ---- the overdraw meter (?dev OVERDRAW, ?overdraw with the perf recorder, __dd.overdraw())
+
+  /** Draw slices nearest first (the default) or in the order they are queued (to compare). */
+  set frontToBack(on: boolean) {
+    this.stacks.frontToBack = on;
+  }
+
+  get frontToBack(): boolean {
+    return this.stacks.frontToBack;
+  }
+
+  /** Turn the meter on (it keeps a shelled copy of the atlas while on) or off. */
+  setMeter(on: boolean): void {
+    if (on === this.metering) return;
+    this.metering = on;
+    this.atlas.setShell(on);
+    if (!on) {
+      this.heat = null;
+      this.last = null;
+    }
+  }
+
+  get meterOn(): boolean {
+    return this.metering;
+  }
+
+  /** Show one count as a heat map over the world, or none. */
+  setHeat(ch: Channel | null): void {
+    if (ch) this.setMeter(true);
+    this.heat = ch;
+  }
+
+  get heatShown(): Channel | null {
+    return this.heat;
+  }
+
+  /** Ask for a read-back with the next frame; `overdraw` has it after that frame is drawn. */
+  measureNext(): void {
+    if (this.metering) this.wantRead = true;
+  }
+
+  /** The last read-back, if any. */
+  get overdraw(): OverdrawStats | null {
+    return this.last;
+  }
+
+  // CountSource: the frame's slices and particles drawn again with counting shaders
+  slices(cover: boolean, shell: boolean, front: boolean, step: number): void {
+    this.stacks.drawCount({ cover, shell, front, step }, this.lights);
+  }
+  particles(step: number): void {
+    if (!this.frameW || !this.fx) return;
+    const q: [number, number] = [this.vw, this.vh];
+    const o: [number, number] = [this.ox, this.oy];
+    this.queueShadows(this.frameW, this.fx);
+    this.quads.flush(q, o, this.scale, step);
+    this.queueParticles(this.fx);
+    this.quads.flush(q, o, this.scale / DETAIL, step);
+    this.glow.flush(q, o, this.scale / DETAIL, step);
   }
 
   /** Slices drawn last frame (for the perf readout and tests). */
+  /** The sprite atlas: how full it is, and how often it filled up and was started again. */
+  get atlasState(): { fill: number; flushes: number } {
+    return { fill: this.atlas.fill, flushes: this.atlas.flushes };
+  }
+
   get instances(): number {
     return this.stacks.count;
   }

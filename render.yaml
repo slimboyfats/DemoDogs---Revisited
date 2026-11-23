@@ -1,0 +1,30 @@
+# Render Blueprint for the online lobby server (packages/signal), set up the way mudders does it.
+# Render builds this from the repo on its own side (no GitHub Actions). Connect it once:
+#   Render dashboard → New → Blueprint → pick this repo → Apply.
+# The GitHub Pages client looks for https://demodogs-signal.onrender.com; if Render gave the
+# service another URL, deploy the client with VITE_SIGNAL_URL=<that URL> pnpm deploy:pages.
+#
+# Free tier: the service sleeps after ~15 min idle and takes up to a minute to wake. The client
+# says "Waking up the lobby server…" and keeps trying. Rooms live in memory and are lost on a
+# restart. Races themselves run between the players' phones; the server only introduces them
+# (and relays for players who can't reach each other directly).
+services:
+  - type: web
+    name: demodogs-signal
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: corepack enable && pnpm install --frozen-lockfile --filter @demodogs/signal...
+    startCommand: pnpm --filter @demodogs/signal start
+    healthCheckPath: /health
+    autoDeploy: true
+    # redeploy (which drops the rooms in memory) only when the server or its protocol changes
+    buildFilter:
+      paths:
+        - packages/signal/**
+        - packages/shared/**
+        - pnpm-lock.yaml
+        - render.yaml
+    envVars:
+      - key: NODE_VERSION
+        value: '22'

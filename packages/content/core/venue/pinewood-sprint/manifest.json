@@ -1,0 +1,155 @@
+{
+  "id": "venue.pinewood-sprint",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pinewood Sprint",
+    "description": "Race. Long fast sweepers through the pines.",
+    "since": "core@0.3.0"
+  },
+  "mode": "mode.race",
+  "seed": 811,
+  "size": {
+    "w": 2040,
+    "h": 1200
+  },
+  "track": {
+    "road": 76,
+    "points": [
+      [240, 600],
+      [300, 300],
+      [560, 180],
+      [900, 240],
+      [1180, 400],
+      [1480, 260],
+      [1760, 340],
+      [1800, 640],
+      [1640, 900],
+      [1340, 980],
+      [1100, 820],
+      [840, 760],
+      [640, 960],
+      [380, 960]
+    ]
+  },
+  "colors": {
+    "ground": "#3f6a3a",
+    "ground2": "#4a7842",
+    "dirt": "#7a6240",
+    "outside": "#22301f"
+  },
+  "scenery": [
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres", "prop.tyres-red"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 6,
+      "r": [14, 24],
+      "on": "road"
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 12,
+      "r": [18, 32],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 24,
+      "clear": 10,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "window": "prop.window-wall",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "yard",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "inside": ["prop.crate", "prop.barrel", "prop.oil-drum"],
+          "long": [4, 7],
+          "deep": [4, 5]
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000442,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.pine",
+          "weight": 0.7
+        },
+        {
+          "prop": "prop.tree",
+          "weight": 0.15
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.12
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 0.02
+        },
+        {
+          "prop": "prop.log-pile",
+          "weight": 0.1
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 0.04
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 14
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

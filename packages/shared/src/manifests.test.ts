@@ -10,6 +10,7 @@ describe('manifest schemas', () => {
       schemaVersion: 1,
       meta,
       paint: '#ff0000',
+      price: 1000,
       stats: { speed: 1, accel: 1, grip: 1, mass: 1, armor: 1 },
       body: { halfLength: 11, halfWidth: 5.5 },
       wheels: [

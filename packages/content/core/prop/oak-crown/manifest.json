@@ -1,0 +1,21 @@
+{
+  "id": "prop.oak-crown",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Oak crown",
+    "description": "A mass of oak leaves up in a great tree, high over the road. Cars drive under it; blasts tear it ragged and fire strips it bare.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "solid": false,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 45,
+  "crown": {
+    "trunk": 0,
+    "top": 0,
+    "hold": 0.4,
+    "flash": 0.12
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "id": "prop.crane-leg",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crane leg",
+    "description": "One leg of a gantry crane, on its wheeled bogie. Take two of them out and the whole crane comes down.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4,
+  "made": "material.steel",
+  "integrity": 80
+}

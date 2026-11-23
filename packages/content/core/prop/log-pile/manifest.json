@@ -1,0 +1,13 @@
+{
+  "id": "prop.log-pile",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Log pile",
+    "description": "A stack of felled logs. Stops a car dead, burns well, and rolls apart under a blast.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "made": "material.wood",
+  "integrity": 110
+}

@@ -7,5 +7,7 @@
     "since": "core@0.1.0"
   },
   "body": "static",
-  "radius": 6
+  "radius": 6,
+  "made": "material.stone",
+  "integrity": 150
 }

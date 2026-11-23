@@ -1,0 +1,17 @@
+{
+  "id": "weapon.smoke-pot",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Smoke pot",
+    "description": "Sets down a thick cloud of smoke behind. It hides the road, drivers who go into it are blind for a moment after, and guns cannot pick out a car inside it.",
+    "since": "core@0.4.0"
+  },
+  "kind": "smoke",
+  "label": "SMOKE",
+  "ammo": 2,
+  "power": 1,
+  "cooldown": 1.2,
+  "radius": 30,
+  "life": 6,
+  "blind": 1.2
+}

@@ -130,6 +130,16 @@ export class Hud {
       'ARMOR',
     );
     bar(pad + 72 * u, P.nitro, '#4fb8ff', 'BOOST');
+    if (P.gun)
+      text(`AMMO ${P.rounds}`, left, pad + 90 * u, small, P.rounds > 0 ? '#fff' : '#ff7a6a');
+    // what is bolted on: the blade's seconds left, the leaps left in the springs
+    const fitted = [
+      P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
+      P.springs && P.springs.n > 0 ? `SPRINGS x${P.springs.n}` : '',
+    ]
+      .filter(Boolean)
+      .join('  ');
+    if (fitted) text(fitted, left, pad + (P.gun ? 106 : 90) * u, small, '#ffd84a');
 
     const m = this.mini;
     if (m) {
@@ -138,8 +148,8 @@ export class Hud {
       ctx.drawImage(m.cv, mx, my);
       for (const c of w.cars) {
         if (c.wrecked && w.kind === 'derby') continue;
-        ctx.fillStyle = c.isPlayer ? '#fff' : c.paint;
-        const s = (c.isPlayer ? 6 : 4.5) * u;
+        ctx.fillStyle = c === w.player ? '#fff' : c.paint;
+        const s = (c === w.player ? 6 : 4.5) * u;
         ctx.fillRect(mx + 4 + c.x * m.k - s / 2, my + 4 + c.y * m.k - s / 2, s, s);
       }
       // standings under the minimap
@@ -154,7 +164,7 @@ export class Hud {
           W - pad - 12 * u,
           y,
           `800 ${Math.round(10 * u)}px system-ui, sans-serif`,
-          c.isPlayer ? '#ffd24a' : c.wrecked ? '#999' : '#fff',
+          c === w.player ? '#ffd24a' : c.wrecked ? '#999' : '#fff',
           'right',
         );
         y += 13 * u;

@@ -1,0 +1,14 @@
+{
+  "id": "pickup.dome",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Spark Dome",
+    "description": "A crackling bubble round the car that soaks up blows, then bursts.",
+    "since": "core@0.4.0"
+  },
+  "kind": "shield",
+  "weight": 0.1,
+  "hurtWeight": 0.14,
+  "amount": 40,
+  "seconds": 8
+}

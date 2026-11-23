@@ -8,7 +8,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @demodogs/client dev",
+    "dev": "pnpm --parallel --filter @demodogs/client --filter @demodogs/signal dev",
     "build": "pnpm --filter @demodogs/client build",
     "preview": "pnpm --filter @demodogs/client preview",
     "typecheck": "pnpm -r typecheck",
@@ -20,8 +20,11 @@
     "content:validate": "vitest run --project content validate",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
+    "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "verify": "pnpm check && pnpm play:smoke",
-    "deploy:pages": "bash scripts/deploy-pages.sh"
+    "deploy:pages": "bash scripts/deploy-pages.sh",
+    "signal": "pnpm --filter @demodogs/signal start",
+    "play:net": "pnpm build && node scripts/play-net.mjs && node scripts/play-net.mjs relay"
   },
   "browserslist": [
     "baseline 2026"

@@ -1,0 +1,20 @@
+{
+  "id": "prop.dynamite-crate",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dynamite crate",
+    "description": "A mining crate packed with blasting sticks. A knock, a spark or a nearby blast sets it off: a big blast that showers sparks and sets off the crates stacked beside it.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 4.6,
+  "mass": 0.7,
+  "explodesAt": 60,
+  "blast": 1.9,
+  "launch": 0.25,
+  "points": 40,
+  "throws": {
+    "stars": 14,
+    "globs": 0
+  }
+}

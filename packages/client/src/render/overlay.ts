@@ -44,7 +44,7 @@ export function drawOverlay(
   // off-screen rival arrows in the derby
   if (w.kind === 'derby')
     for (const c of w.cars) {
-      if (c.isPlayer || c.wrecked) continue;
+      if (c === w.player || c.wrecked) continue;
       const sx = P.sx(c.x);
       const sy = P.sy(c.y, 4);
       if (sx > 0 && sx < W && sy > 0 && sy < H) continue;

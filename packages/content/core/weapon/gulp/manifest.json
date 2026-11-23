@@ -1,0 +1,18 @@
+{
+  "id": "weapon.gulp",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Gulp",
+    "description": "A suction orb. It drifts out, anchors, and drags cars, drums, bots, debris and leaves into a knot, then bursts in the middle of them.",
+    "since": "core@0.5.0"
+  },
+  "kind": "vortex",
+  "label": "GULP",
+  "ammo": 2,
+  "power": 1.1,
+  "cooldown": 1.0,
+  "speed": 160,
+  "life": 2.8,
+  "radius": 75,
+  "push": 260
+}

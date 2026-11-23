@@ -1,0 +1,19 @@
+{
+  "id": "prop.powder-keg",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Powder keg",
+    "description": "A small keg of blasting powder with a fuse. Any knock or spark sets it off, and it throws sparks that set off the next one.",
+    "since": "core@0.4.0"
+  },
+  "body": "loose",
+  "radius": 3.6,
+  "mass": 0.4,
+  "explodesAt": 45,
+  "blast": 1.5,
+  "launch": 0.3,
+  "throws": {
+    "stars": 12,
+    "globs": 0
+  }
+}

@@ -159,3 +159,19 @@ export function uploadChanged(
   gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
   return true;
 }
+
+/**
+ * A counting copy of a fragment shader, for the overdraw meter (after loktar00's sprite-stack-engine
+ * count pass): the shader runs as before, discards where it did, but writes `u_count` instead of its
+ * colour, so additive blending adds one per fragment. With `cover`, nothing is discarded: every
+ * fragment the quads cover is counted. Needs the shader's output to be `out vec4 o;`.
+ */
+export function countingShader(fs: string, cover = false): string {
+  if (!fs.includes('out vec4 o;') || !fs.includes('void main()'))
+    throw new Error('countingShader: no `out vec4 o;` or main');
+  let src = fs
+    .replace('out vec4 o;', 'out vec4 o_count;\nvec4 o;')
+    .replace('void main()', 'void dd_main()');
+  if (cover) src = src.replace(/\bdiscard;/g, '{}');
+  return `${src}\nuniform float u_count;\nvoid main() { dd_main(); o_count = vec4(u_count); }\n`;
+}

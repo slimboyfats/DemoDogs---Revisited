@@ -27,6 +27,7 @@ export interface Content {
   weapon: Map<string, ManifestByType['weapon']>;
   pickup: Map<string, ManifestByType['pickup']>;
   prop: Map<string, ManifestByType['prop']>;
+  material: Map<string, ManifestByType['material']>;
   bot: Map<string, ManifestByType['bot']>;
   ai: Map<string, ManifestByType['ai']>;
   behaviours: Map<string, AiBehaviour>;
@@ -64,6 +65,7 @@ export function resolveContent(src: ContentSource): Content {
     weapon: new Map(),
     pickup: new Map(),
     prop: new Map(),
+    material: new Map(),
     bot: new Map(),
     ai: new Map(),
     behaviours: new Map(),
@@ -142,11 +144,55 @@ export function resolveContent(src: ContentSource): Content {
         for (const p of r.props) need(v.id, 'prop', p);
       if (r.rule === 'scatter' || r.rule === 'oval-scatter')
         for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'border' || r.rule === 'oval-wall') need(v.id, 'prop', r.prop);
+      if (r.rule === 'border' || r.rule === 'oval-wall' || r.rule === 'barricade')
+        need(v.id, 'prop', r.prop);
+      if (r.rule === 'build')
+        for (const k of r.kinds)
+          for (const p of [k.wall, k.window, k.post, k.roof, ...k.inside])
+            if (p) need(v.id, 'prop', p);
+      if (r.rule === 'patches') need(v.id, 'material', r.material);
+      if (r.rule === 'river') {
+        for (const m of [r.material, r.bank]) need(v.id, 'material', m);
+        for (const b of r.bridges) for (const p of [b.deck, b.rail]) need(v.id, 'prop', p);
+        if (r.dam) need(v.id, 'prop', r.dam.wall);
+        for (const i of r.edge?.items ?? []) need(v.id, 'prop', i.prop);
+      }
       if (r.rule === 'place') for (const i of r.items) need(v.id, 'prop', i.prop);
-      if (r.rule === 'roadside') for (const p of [r.pair, r.stack, r.drum]) need(v.id, 'prop', p);
+      if (r.rule === 'harbour') {
+        need(v.id, 'material', r.material);
+        for (const p of [r.piers.deck, r.piers.post, r.bollard, r.barges?.prop])
+          if (p) need(v.id, 'prop', p);
+        if (r.cranes) for (const p of [r.cranes.leg, r.cranes.beam]) need(v.id, 'prop', p);
+      }
+      if (r.rule === 'stacks') for (const p of [...r.bottom, ...r.top]) need(v.id, 'prop', p);
+      if (r.rule === 'roadside')
+        for (const p of [r.pair, r.stack, r.drum, ...r.tanks]) need(v.id, 'prop', p);
     }
     if (!v.track && !v.oval) problems.push(`${v.id}: needs a track or an oval`);
+  }
+  for (const p of out.prop.values()) {
+    if (p.spills) need(p.id, 'material', p.spills.material);
+    if (p.made) need(p.id, 'material', p.made);
+    if (p.topples) {
+      if (p.body !== 'static') problems.push(`${p.id}: only static props topple`);
+      if (out.prop.get(p.topples.into)?.body !== 'loose')
+        problems.push(`${p.id}: topples into ${p.topples.into}, which is not a loose prop`);
+    }
+    if (p.throws?.drums) {
+      if (!p.throws.drum) problems.push(`${p.id}: throws drums but names none`);
+      else if (!out.prop.get(p.throws.drum)?.rocket)
+        problems.push(`${p.id}: throws ${p.throws.drum}, which cannot rocket`);
+    }
+  }
+  for (const w of out.weapon.values()) {
+    if (w.material) need(w.id, 'material', w.material);
+    else if (w.kind === 'slick') problems.push(`${w.id}: a slick needs a material`);
+    if (w.cluster) {
+      const b = out.weapon.get(w.cluster.bomblet);
+      if (!b) need(w.id, 'weapon', w.cluster.bomblet);
+      else if (b.kind !== 'rocket' || b.cluster)
+        problems.push(`${w.id}: bomblet ${b.id} must be a rocket that does not split again`);
+    }
   }
   for (const m of out.mode.values()) need(m.id, 'ai', m.ai);
   for (const a of out.ai.values())

@@ -1,7 +1,18 @@
-import type { PropManifest, SceneryRule } from '@demodogs/shared';
+import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/shared';
+import type { StaticProp } from './entities';
+import { spill } from './damage';
+import { stand } from './stand';
+import { harbour, stacks } from './docks';
+import { buildDowntown } from './downtown';
 import { TAU, angDiff } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
+import { layRiver } from './river';
+import { canopy, flyover } from './heights';
+
+export { stand };
+
+type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
 
 /**
  * Lays out a venue's scenery from its rules, using the venue's own seed so a venue always looks the
@@ -9,9 +20,9 @@ import type { World } from './world';
  */
 export function buildScenery(w: World, rng: Rng): void {
   const prop = (id: string): PropManifest => w.content.prop.get(id)!;
-  const add = (id: string, x: number, y: number, rot: number) => {
+  const add: Add = (id, x, y, rot) => {
     const def = prop(id);
-    if (def.body === 'static') w.statics.push({ def, x, y, rot, seed: rng.range(0, 10) });
+    if (def.body === 'static') return stand(w, def, x, y, rot, rng.range(0, 10));
     else
       w.props.push({
         index: w.props.length,
@@ -28,6 +39,7 @@ export function buildScenery(w: World, rng: Rng): void {
         fuse: 0,
         owner: -1,
       });
+    return null;
   };
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
@@ -44,14 +56,21 @@ function apply(
   w: World,
   rng: Rng,
   rule: SceneryRule,
-  add: (id: string, x: number, y: number, rot: number) => void,
+  add: Add,
   weighted: (items: { prop: string; weight: number }[]) => string,
   prop: (id: string) => PropManifest,
 ): void {
   const T = w.track;
   const half = w.road / 2;
   const O = w.oval;
+  if (buildDowntown(w, rng, rule, add)) return;
   switch (rule.rule) {
+    case 'flyover':
+      flyover(w, rule, add, DECK_SURFACE);
+      return;
+    case 'canopy':
+      canopy(w, rng, rule, add);
+      return;
     case 'bend-wall': {
       if (!T || !w.grid) return;
       for (let i = 0; i < T.n; i += 3) {
@@ -64,6 +83,162 @@ function apply(
         const y = T.y[i]! + ny * (half + rule.offset);
         if (w.grid.at(x, y) < half + 12 || !w.free(x, y, 6)) continue;
         add(rule.props[(i / 3) % rule.props.length]!, x, y, 0);
+      }
+      return;
+    }
+    case 'build': {
+      let group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
+      const total = rule.kinds.reduce((s, k) => s + k.weight, 0);
+      for (let n = 0, tries = 0; n < rule.count && tries < rule.count * 30; tries++) {
+        let pick = rng.next() * total;
+        const K = rule.kinds.find((k) => (pick -= k.weight) < 0) ?? rule.kinds[0]!;
+        const L = rng.int(K.long[1] - K.long[0] + 1) + K.long[0];
+        const Dp = K.shape === 'wall' ? 1 : rng.int(K.deep[1] - K.deep[0] + 1) + K.deep[0];
+        const st = K.step;
+        const reach = (Math.hypot(L, Dp) * st) / 2 + 6;
+        let cx = 60 + rng.next() * (w.w - 120);
+        let cy = 60 + rng.next() * (w.h - 120);
+        let rot = rng.next() * TAU;
+        if (T && rule.along !== undefined) {
+          // on a street: beside the road somewhere along it, its long side to the kerb
+          const i = rng.int(T.n);
+          const side = rng.next() < 0.5 ? -1 : 1;
+          const off = half + rule.clear + (Dp * st) / 2 + rng.next() * rule.along;
+          rot = T.a[i]! + (side > 0 ? Math.PI : 0);
+          cx = T.x[i]! - Math.sin(T.a[i]!) * side * off;
+          cy = T.y[i]! + Math.cos(T.a[i]!) * side * off;
+          if (cx < 40 + reach || cy < 40 + reach || cx > w.w - 40 - reach || cy > w.h - 40 - reach)
+            continue;
+        }
+        const cs = Math.cos(rot);
+        const sn = Math.sin(rot);
+        // the ground it would stand on must be clear of the road and of everything else
+        if (w.grid && w.grid.at(cx, cy) < half + rule.clear + (Dp * st) / 2) continue;
+        if (O && Math.hypot((cx - O.cx) / O.rx, (cy - O.cy) / O.ry) > 1 - (reach + 20) / O.rx)
+          continue;
+        if (!w.free(cx, cy, reach + 6)) continue;
+        if (w.cars.some((c) => Math.hypot(c.x - cx, c.y - cy) < reach + 30)) continue;
+        const at = (i: number, j: number): [number, number] => {
+          const lx = (i - (L - 1) / 2) * st;
+          const ly = (j - (Dp - 1) / 2) * st;
+          return [cx + lx * cs - ly * sn, cy + lx * sn + ly * cs];
+        };
+        // no corner of it may reach the road (the inside of a bend comes closer than its middle)
+        const corners: [number, number][] = [
+          at(0, 0),
+          at(L - 1, 0),
+          at(0, Dp - 1),
+          at(L - 1, Dp - 1),
+        ];
+        if (w.grid && corners.some(([x, y]) => w.grid!.at(x, y) < half + Math.max(8, rule.clear)))
+          continue;
+        const piece = (id: string, i: number, j: number, r: number, bears: boolean) => {
+          const s = add(id, ...at(i, j), r);
+          if (s) {
+            s.group = group;
+            s.bears = bears;
+          }
+        };
+        if (K.shape === 'wall') {
+          for (let i = 0; i < L; i++)
+            piece((i === 0 || i === L - 1) && K.post ? K.post : K.wall, i, 0, rot, true);
+        } else {
+          const door = 1 + rng.int(Math.max(1, L - 2));
+          const wide = K.shape === 'yard' ? 2 : 1;
+          for (let i = 0; i < L; i++)
+            for (let j = 0; j < Dp; j++) {
+              const ex = i === 0 || i === L - 1;
+              const ey = j === 0 || j === Dp - 1;
+              if (!ex && !ey) {
+                if (K.shape === 'house' && K.roof) piece(K.roof, i, j, rot, false);
+                else if (K.inside.length && rng.next() < 0.45)
+                  add(rng.pick(K.inside), ...at(i, j), rng.next() * TAU);
+                continue;
+              }
+              if (ex && ey) {
+                piece(K.post ?? K.wall, i, j, rot, true);
+                continue;
+              }
+              // the doorway, in the near long side
+              if (j === 0 && i >= door && i < door + wide) continue;
+              const glass = K.window && rng.next() < 0.3;
+              piece(glass ? K.window! : K.wall, i, j, ey ? rot : rot + Math.PI / 2, true);
+            }
+        }
+        group++;
+        n++;
+      }
+      return;
+    }
+    case 'arch': {
+      if (!T) return;
+      let group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
+      // never over the starting grid
+      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every) {
+        const a = T.a[i]!;
+        const nx = -Math.sin(a);
+        const ny = Math.cos(a);
+        const legOff = half + rule.offset + prop(rule.leg).radius;
+        const legs: [number, number][] = [-1, 1].map((sd) => [
+          T.x[i]! + nx * legOff * sd,
+          T.y[i]! + ny * legOff * sd,
+        ]);
+        // a leg must stand clear of the road everywhere, also across the inside of a bend
+        if (w.grid && legs.some(([x, y]) => w.grid!.at(x, y) < legOff - 4)) continue;
+        if (!legs.every(([x, y]) => w.free(x, y, prop(rule.leg).radius + 2))) continue;
+        for (const [x, y] of legs) {
+          const s = add(rule.leg, x, y, a);
+          if (s) {
+            s.group = group;
+            s.bears = true;
+          }
+        }
+        const n = Math.max(1, Math.round((legOff * 2) / rule.step) - 1);
+        for (let k = 1; k <= n; k++) {
+          const o = -legOff + (k * legOff * 2) / (n + 1);
+          const s = add(rule.span, T.x[i]! + nx * o, T.y[i]! + ny * o, a + Math.PI / 2);
+          if (s) {
+            s.group = group;
+            s.bears = false;
+          }
+        }
+        group++;
+      }
+      return;
+    }
+    case 'patches': {
+      const def = w.content.material.get(rule.material)!;
+      for (let n = 0, tries = 0; n < rule.count && tries < rule.count * 40; tries++) {
+        const r = rng.range(rule.r[0], rule.r[1]);
+        let x = 40 + rng.next() * (w.w - 80);
+        let y = 40 + rng.next() * (w.h - 80);
+        if (T && rule.on === 'road') {
+          const i = 25 + rng.int(T.n - 50);
+          const o = rng.range(-1, 1) * Math.max(0, half - r * 0.6);
+          x = T.x[i]! - Math.sin(T.a[i]!) * o;
+          y = T.y[i]! + Math.cos(T.a[i]!) * o;
+        } else if (rule.on === 'off' && w.grid && w.grid.at(x, y) < half + r + 4) continue;
+        if (O && Math.hypot((x - O.cx) / O.rx, (y - O.cy) / O.ry) > 0.9) continue;
+        // not under the cars on the grid
+        if (w.cars.some((c) => Math.hypot(c.x - x, c.y - y) < r + 40)) continue;
+        spill(w, def, x, y, r, -1, true);
+        n++;
+      }
+      return;
+    }
+    case 'barricade': {
+      if (!T) return;
+      // never on the starting grid: the first one stands half a gap down the road
+      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every) {
+        const nx = -Math.sin(T.a[i]!);
+        const ny = Math.cos(T.a[i]!);
+        const n = Math.max(1, Math.floor((half * 2) / rule.step));
+        const open = rule.gap > 0 ? rng.int(n - rule.gap + 1) : -1;
+        for (let k = 0; k < n; k++) {
+          if (open >= 0 && k >= open && k < open + rule.gap) continue;
+          const o = (k - (n - 1) / 2) * rule.step;
+          add(rule.prop, T.x[i]! + nx * o, T.y[i]! + ny * o, T.a[i]! + Math.PI / 2);
+        }
       }
       return;
     }
@@ -101,6 +276,8 @@ function apply(
           add(rule.stack, x, y, rng.next() * TAU);
           add(rule.stack, x + 10, y + 3, rng.next() * TAU);
           add(rule.drum, x + 4, y - 10, 0);
+        } else if (rule.tanks.length && rng.next() < 0.5) {
+          add(rng.pick(rule.tanks), x, y, 0);
         } else {
           add(rule.drum, x, y, 0);
           add(rule.drum, x + 8, y + 4, 0);
@@ -154,6 +331,15 @@ function apply(
       for (const i of rule.items) add(i.prop, cx + i.x, cy + i.y, i.rot);
       return;
     }
+    case 'river':
+      layRiver(w, rng, rule, add);
+      return;
+    case 'harbour':
+      harbour(w, rng, rule, add);
+      return;
+    case 'stacks':
+      stacks(w, rng, rule, add);
+      return;
     case 'oval-scatter': {
       if (!O) return;
       for (let k = 0; k < rule.count; k++) {

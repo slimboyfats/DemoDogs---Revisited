@@ -15,6 +15,8 @@ const runs: [string, string][] = [
   ['venue.kennel-loop', 'car.mutt'],
   ['venue.scrapyard-run', 'car.whippet'],
   ['venue.the-pit', 'car.bruiser'],
+  ['venue.pinewood-sprint', 'car.terrier'],
+  ['venue.gravel-gulch', 'car.wolfhound'],
 ];
 
 describe('golden hashes', () => {

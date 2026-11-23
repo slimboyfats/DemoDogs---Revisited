@@ -20,3 +20,26 @@ export function hash3(x: number, y: number, z: number): number {
 
 /** Car bodies are all 26 x 14 cells, 9 layers; layer 0 is the undertray. */
 export const CAR_CELL = { w: 26, h: 14, layers: 9 } as const;
+
+/** Smooth noise in [0, 1): hash3 at the whole points around (x, y, z), blended between them. */
+export function noise3(x: number, y: number, z: number): number {
+  const x0 = Math.floor(x);
+  const y0 = Math.floor(y);
+  const z0 = Math.floor(z);
+  const s = (t: number) => t * t * (3 - 2 * t);
+  const fx = s(x - x0);
+  const fy = s(y - y0);
+  const fz = s(z - z0);
+  let out = 0;
+  for (let k = 0; k < 8; k++) {
+    const dx = k & 1;
+    const dy = (k >> 1) & 1;
+    const dz = k >> 2;
+    out +=
+      hash3(x0 + dx, y0 + dy, z0 + dz) *
+      (dx ? fx : 1 - fx) *
+      (dy ? fy : 1 - fy) *
+      (dz ? fz : 1 - fz);
+  }
+  return out;
+}

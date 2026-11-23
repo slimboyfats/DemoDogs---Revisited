@@ -1,0 +1,19 @@
+{
+  "id": "weapon.tacks",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tacks",
+    "description": "Throws a spray of four-pointed tacks across the road behind. A car that rolls over one has a flat: slow and twitchy for a few seconds.",
+    "since": "core@0.4.0"
+  },
+  "kind": "caltrops",
+  "label": "TACKS",
+  "ammo": 3,
+  "power": 1,
+  "cooldown": 0.6,
+  "count": 9,
+  "radius": 16,
+  "life": 25,
+  "flat": 4,
+  "damage": 3
+}

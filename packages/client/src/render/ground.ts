@@ -60,12 +60,67 @@ export function makeGround(w: World): Ground {
   const T = w.track;
   if (T) {
     const road = w.road;
+    const D = w.deckH;
+    // where the road is up on a flyover there is no road on the ground under it
+    const up = (i: number) => D !== null && D[i % T.n]! > 3;
     const path = () => {
       g.beginPath();
-      g.moveTo(T.x[0]!, T.y[0]!);
-      for (let i = 1; i < T.n; i++) g.lineTo(T.x[i]!, T.y[i]!);
-      g.closePath();
+      if (!D) {
+        g.moveTo(T.x[0]!, T.y[0]!);
+        for (let i = 1; i < T.n; i++) g.lineTo(T.x[i]!, T.y[i]!);
+        g.closePath();
+        return;
+      }
+      let pen = false;
+      for (let i = 0; i <= T.n; i++) {
+        const k = i % T.n;
+        if (up(k)) {
+          pen = false;
+          continue;
+        }
+        if (pen) g.lineTo(T.x[k]!, T.y[k]!);
+        else g.moveTo(T.x[k]!, T.y[k]!);
+        pen = true;
+      }
     };
+    if (D) {
+      // under a flyover: a trampled gully of dirt and gravel in the deck's shade
+      g.lineJoin = 'round';
+      g.lineCap = 'round';
+      for (const [col, wd] of [
+        [C.dirt, road + 34],
+        ['rgba(30,26,20,0.45)', road + 12],
+      ] as const) {
+        g.beginPath();
+        let pen = false;
+        for (let i = 0; i < T.n; i++) {
+          if (!up(i)) {
+            pen = false;
+            continue;
+          }
+          if (pen) g.lineTo(T.x[i]!, T.y[i]!);
+          else g.moveTo(T.x[i]!, T.y[i]!);
+          pen = true;
+        }
+        g.strokeStyle = col;
+        g.lineWidth = wd;
+        g.stroke();
+      }
+      g.globalAlpha = 0.5;
+      for (let i = 0; i < T.n; i++)
+        if (up(i))
+          for (let k = 0; k < 6; k++) {
+            g.fillStyle = r() < 0.5 ? '#3d3427' : '#7b6a4c';
+            const o = (r() - 0.5) * (road + 20);
+            g.fillRect(
+              T.x[i]! - Math.sin(T.a[i]!) * o + (r() - 0.5) * 4,
+              T.y[i]! + Math.cos(T.a[i]!) * o + (r() - 0.5) * 4,
+              1 + r() * 2,
+              1 + r() * 2,
+            );
+          }
+      g.globalAlpha = 1;
+    }
     const stroke = (col: string, width: number, dash: number[] = []) => {
       path();
       g.strokeStyle = col;

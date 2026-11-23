@@ -39,7 +39,11 @@ export function trackIndex(w: World, c: Car): void {
     c.finishTime = w.raceTime;
     w.finishers.push(c.index);
     w.emit({ t: 'finish', car: c.index, place: w.finishers.length });
-    if (c.isPlayer) w.endT = 2.8;
+    // the race ends when every human is home; after the first, the rest get FINISH_GRACE seconds
+    if (c.isPlayer) {
+      if (w.humans.every((h) => h.finished || (w.knockout && h.wrecked))) w.endT = 2.8;
+      else if (w.finishBy === 0) w.finishBy = w.raceTime + FINISH_GRACE;
+    }
   }
   if (c.isPlayer) {
     const wrong = Math.abs(angDiff(c.h, T.a[best]!)) > 2.1 && c.vf > 15;
@@ -47,13 +51,18 @@ export function trackIndex(w: World, c: Car): void {
   }
 }
 
+/** Seconds the other humans get to finish an online race once the first one is home. */
+export const FINISH_GRACE = 30;
+
 /** Race: finishers in order, then the rest by progress. Derby: survivors by score, then the wrecked, last out first. */
 export function standings(w: World): Car[] {
   if (w.kind === 'race') {
     const done = w.finishers.map((i) => w.cars[i]!);
+    // in a knockout race a wreck is out for good, behind everyone still running
+    const out = (c: Car) => (w.knockout && c.wrecked ? 1 : 0);
     const rest = w.cars
       .filter((c) => !c.finished)
-      .sort((a, b) => b.progress - a.progress || a.index - b.index);
+      .sort((a, b) => out(a) - out(b) || b.progress - a.progress || a.index - b.index);
     return [...done, ...rest];
   }
   return w.cars.slice().sort((a, b) => {

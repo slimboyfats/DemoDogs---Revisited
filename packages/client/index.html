@@ -26,6 +26,10 @@
       <button id="btnBoost" class="pad">BOOST</button>
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
+    <div id="recDot"></div>
+    <div id="netDot"></div>
+    <div id="devTap" class="hidden"></div>
+    <div id="devPanel" class="hidden"></div>
 
     <section id="menu" class="screen">
       <div class="panel">
@@ -55,6 +59,13 @@
             </div>
           </div>
           <div class="events">
+            <button id="toCareer" class="career">
+              <b>CAREER</b><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
+            </button>
+            <button id="toOnline" class="career online">
+              <b>ONLINE</b
+              ><small>Race friends over the internet: host a room, share the code.</small>
+            </button>
             <div id="venues"></div>
             <p class="help">
               <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
@@ -63,8 +74,26 @@
               repairs.
             </p>
             <button class="muteBtn small">SOUND ON</button>
+            <button id="toDev" class="small">TEST RANGE</button>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section id="online" class="screen hidden">
+      <div class="panel narrow" id="onlinePanel"></div>
+    </section>
+
+    <section id="career" class="screen hidden">
+      <div class="panel" id="careerPanel"></div>
+    </section>
+
+    <section id="loader" class="screen hidden">
+      <div class="panel narrow">
+        <h2 id="loadTitle">GETTING READY</h2>
+        <div class="loadBar"><b id="loadFill"></b></div>
+        <p id="loadLine">&nbsp;</p>
+        <small id="loadCount">&nbsp;</small>
       </div>
     </section>
 
@@ -74,6 +103,7 @@
         <button id="resume">RESUME</button>
         <button id="restart">RESTART</button>
         <button class="muteBtn">SOUND ON</button>
+        <button class="recBtn small">RECORD PERFORMANCE</button>
         <button id="quit">QUIT TO MENU</button>
       </div>
     </section>
@@ -82,6 +112,7 @@
       <div class="panel">
         <h2 id="resTitle">RESULTS</h2>
         <p id="resSub" class="tag"></p>
+        <div id="payout"></div>
         <div class="tableWrap"><table id="resTable"></table></div>
         <div class="row"><button id="again">GO AGAIN</button><button id="toMenu">MENU</button></div>
       </div>

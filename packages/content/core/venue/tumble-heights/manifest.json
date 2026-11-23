@@ -1,0 +1,173 @@
+{
+  "id": "venue.tumble-heights",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tumble Heights",
+    "description": "Race. Downtown: glass towers, shopfronts and a raised road over the track. Blow the floors off a block and it comes down across the street.",
+    "since": "core@0.4.0"
+  },
+  "mode": "mode.race",
+  "seed": 9137,
+  "size": {
+    "w": 2000,
+    "h": 1400
+  },
+  "track": {
+    "road": 76,
+    "points": [
+      [300, 260],
+      [760, 240],
+      [1100, 260],
+      [1420, 240],
+      [1720, 300],
+      [1760, 620],
+      [1520, 700],
+      [1280, 680],
+      [1240, 920],
+      [1500, 1000],
+      [1700, 1140],
+      [1300, 1180],
+      [860, 1160],
+      [520, 1180],
+      [260, 1100],
+      [240, 820],
+      [560, 720],
+      [600, 520],
+      [260, 480]
+    ]
+  },
+  "colors": {
+    "ground": "#5d5f63",
+    "ground2": "#676a6f",
+    "dirt": "#45464a",
+    "outside": "#1e2024"
+  },
+  "scenery": [
+    {
+      "rule": "overpass",
+      "at": [0.3, 0.72],
+      "pillar": "prop.overpass-pillar",
+      "deck": "prop.overpass-deck",
+      "step": 12,
+      "out": 6,
+      "width": 2
+    },
+    {
+      "rule": "kerb",
+      "every": 14,
+      "offset": 3,
+      "chance": 0.8,
+      "items": [
+        {
+          "prop": "prop.lamppost",
+          "weight": 3
+        },
+        {
+          "prop": "prop.parked-car",
+          "weight": 1.2
+        },
+        {
+          "prop": "prop.cone",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "rule": "towers",
+      "count": 30,
+      "column": ["prop.tower-glass", "prop.tower-glass", "prop.tower-steel"],
+      "front": "prop.shopfront",
+      "cols": [2, 4],
+      "rows": [2, 4],
+      "step": 11,
+      "clear": 14,
+      "along": 24
+    },
+    {
+      "rule": "build",
+      "count": 30,
+      "clear": 22,
+      "along": 60,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 3,
+          "wall": "prop.concrete-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "long": [4, 8],
+          "deep": [3, 5]
+        },
+        {
+          "shape": "yard",
+          "weight": 2,
+          "wall": "prop.concrete-wall",
+          "post": "prop.brick-post",
+          "inside": ["prop.parked-car", "prop.crate", "prop.oil-drum", "prop.fuel-tank"],
+          "long": [6, 9],
+          "deep": [5, 7]
+        }
+      ]
+    },
+    {
+      "rule": "patches",
+      "material": "material.oil",
+      "count": 10,
+      "r": [8, 14],
+      "on": "road"
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.fuel-tank", "prop.water-butt"]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 1.2e-5,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.parked-car",
+          "weight": 0.4
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.water-tower",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.concrete-wall",
+      "spacing": 10
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
+  ]
+}

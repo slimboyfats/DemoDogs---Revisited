@@ -1,0 +1,19 @@
+{
+  "name": "@demodogs/signal",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lobby server for online races: rooms, WebRTC set-up relay and a WebSocket data relay. Runs on Render.",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@demodogs/shared": "workspace:*",
+    "@hono/node-server": "^2.1.11",
+    "@hono/node-ws": "^1.3.2",
+    "hono": "^4.13.20",
+    "tsx": "^4.23.15"
+  }
+}

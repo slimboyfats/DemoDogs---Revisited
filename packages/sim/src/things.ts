@@ -1,8 +1,16 @@
-import { DT, GRAVITY, type BotManifest } from '@demodogs/shared';
+import { DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { grantDefence } from './defence';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { explode, light } from './damage';
+import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
+import { fitMover } from './movers';
+import { burst, lockOn, lockedOn } from './payloads';
+import { smash } from './docks';
 import type { World } from './world';
+import { drop, inSmoke } from './drops';
+import { firePulse } from './shock';
+import { fireArms, isArms } from './arms';
+import { land } from './hazards';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -97,9 +105,10 @@ export function updateBot(w: World, b: Bot): void {
   b.h += clamp(angDiff(want, b.h), -5 * DT, 5 * DT);
   let nx = b.x + Math.cos(b.h) * b.speed * DT;
   let ny = b.y + Math.sin(b.h) * b.speed * DT;
-  for (const s of w.statics) {
+  for (const s of w.near(nx, ny, 6)) {
     const r = s.def.radius;
-    if (!s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4) continue;
+    if (s.down || !s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4)
+      continue;
     const d = Math.hypot(nx - s.x, ny - s.y) || 1;
     if (d < r + 3.5) {
       nx = s.x + ((nx - s.x) / d) * (r + 3.5);
@@ -146,12 +155,29 @@ export function updateProps(w: World): void {
   for (const p of w.props) {
     if (!p.alive) continue;
     if (p.fuse > 0) {
+      // lit: whatever it holds is already pouring out
+      pour(w, p);
       p.fuse -= DT;
       if (p.fuse <= 0) {
-        p.alive = false;
-        explode(w, p.x, p.y, p.def.blast ?? 1, p.owner >= 0 ? w.cars[p.owner]! : null);
-        continue;
+        if (p.def.rocket) launch(w, p);
+        else {
+          p.alive = false;
+          explode(w, p.x, p.y, p.def.blast ?? 1, p.owner >= 0 ? w.cars[p.owner]! : null);
+          throwOut(w, p);
+          continue;
+        }
       }
+    }
+    if (p.flying) {
+      // a burst drum climbs on its own fire, and blows apart at the top or on whatever it hits
+      p.x += p.vx * DT;
+      p.y += p.vy * DT;
+      p.rot += p.spin * DT;
+      p.vz -= GRAVITY * 0.55 * DT;
+      p.z += p.vz * DT;
+      const k = w.keepInside(p.x, p.y, p.def.radius);
+      if (p.vz <= 0 || p.z <= 0 || k[0] !== p.x || k[1] !== p.y) airburst(w, p);
+      continue;
     }
     p.x += p.vx * DT;
     p.y += p.vy * DT;
@@ -159,7 +185,9 @@ export function updateProps(w: World): void {
     if (p.z > 0 || p.vz) {
       p.vz -= GRAVITY * 0.95 * DT;
       p.z += p.vz * DT;
+      if (p.def.smash && p.vz < -20 && p.z < 9) smash(w, p);
       if (p.z <= 0) {
+        if (p.def.crush && p.vz < -60) land(w, p, -p.vz);
         p.z = 0;
         p.vz = p.vz < -60 ? -p.vz * 0.35 : 0;
       }
@@ -176,8 +204,10 @@ export function updateProps(w: World): void {
       p.vx *= -0.4;
       p.vy *= -0.4;
     }
-    for (const s of w.statics) {
-      if (!s.def.solid) continue;
+    // something heavy still in the air comes down on top of scenery instead of bouncing off it
+    const over = p.def.crush !== undefined && p.z > 4;
+    for (const s of w.near(p.x, p.y, p.def.radius)) {
+      if (over || s.down || !s.def.solid) continue;
       const m = s.def.radius + p.def.radius;
       if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
       const dx = p.x - s.x;
@@ -207,7 +237,8 @@ export function updatePickups(w: World): void {
       continue;
     }
     for (const c of w.cars) {
-      if (c.wrecked || Math.hypot(c.x - p.x, c.y - p.y) > 13) continue;
+      if (c.wrecked || Math.abs(c.deck - p.z) > 8 || Math.hypot(c.x - p.x, c.y - p.y) > 13)
+        continue;
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
@@ -221,23 +252,39 @@ export function updatePickups(w: World): void {
           break;
         }
       }
-      let label: string;
-      if (got.kind === 'repair') {
-        c.hp = Math.min(100, c.hp + (got.amount ?? 40));
-        label = `REPAIR +${got.amount ?? 40}`;
-      } else if (got.kind === 'nitro') {
-        c.nitro = 1;
-        label = 'BOOST REFILL';
-      } else {
-        const wpn = w.content.weapon.get(w.rng.pick(got.weapons ?? []))!;
-        c.weapon = wpn;
-        c.ammo = wpn.ammo;
-        label = `${wpn.meta.name.toUpperCase()} x${wpn.ammo}`;
-      }
+      const label = grant(w, c, got);
       w.emit({ t: 'pickup', car: c.index, x: p.x, y: p.y, label, kind: got.kind });
       break;
     }
   }
+}
+
+/** Give car `c` what pickup `got` holds; returns the words to float over it. */
+export function grant(w: World, c: Car, got: PickupManifest): string {
+  const defence = grantDefence(w, c, got);
+  if (defence) return defence;
+  const mover = fitMover(w, c, got);
+  if (mover !== null) return mover;
+  let label: string;
+  if (got.kind === 'repair') {
+    c.hp = Math.min(100, c.hp + (got.amount ?? 40));
+    label = `REPAIR +${got.amount ?? 40}`;
+  } else if (got.kind === 'nitro') {
+    c.nitro = 1;
+    label = 'BOOST REFILL';
+  } else if (got.kind === 'ammo') {
+    c.rounds += got.amount ?? 30;
+    label = `AMMO +${got.amount ?? 30}`;
+  } else if (got.kind === 'cash') {
+    c.cash += got.amount ?? 100;
+    label = `+${got.amount ?? 100} CASH`;
+  } else {
+    const wpn = w.content.weapon.get(w.rng.pick(got.weapons ?? []))!;
+    c.weapon = wpn;
+    c.ammo = wpn.ammo;
+    label = `${wpn.meta.name.toUpperCase()} x${wpn.ammo}`;
+  }
+  return label;
 }
 
 export function fire(w: World, c: Car): void {
@@ -247,58 +294,131 @@ export function fire(w: World, c: Car): void {
   const sn = Math.sin(c.h);
   c.fireCd = wpn.cooldown;
   c.ammo--;
-  if (wpn.kind === 'rocket')
-    w.rockets.push({
+  if (wpn.kind === 'rocket') {
+    const r = {
       x: c.x + cs * 15,
       y: c.y + sn * 15,
+      z: c.deck,
       h: c.h,
       v: (wpn.speed ?? 340) + Math.max(0, c.vf),
       owner: c.index,
       life: wpn.life ?? 2,
       def: wpn,
+    };
+    lockOn(w, r);
+    w.rockets.push(r);
+  } else if (wpn.kind === 'slick')
+    spill(
+      w,
+      w.content.material.get(wpn.material!)!,
+      c.x - cs * 17,
+      c.y - sn * 17,
+      wpn.radius ?? 12,
+      c.index,
+    );
+  else if (wpn.kind === 'smoke' || wpn.kind === 'caltrops')
+    drop(w, wpn, c.index, c.x - cs * 18, c.y - sn * 18, c.h);
+  else if (wpn.kind === 'pulse') firePulse(w, c, wpn);
+  else if (isArms(wpn.kind)) fireArms(w, c, wpn);
+  else
+    w.mines.push({
+      x: c.x - cs * 15,
+      y: c.y - sn * 15,
+      z: c.deck,
+      owner: c.index,
+      t: 0,
+      def: wpn,
     });
-  else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;
+}
+
+/**
+ * The gun fires by itself when a rival is in the sights: the nearest running car within the gun's
+ * range and a narrow cone off the nose. Rounds are few, so none are spent on an empty road. Most
+ * rounds strike; a hit is a small blow where the round lands.
+ */
+export function shoot(w: World, c: Car): void {
+  const g = c.gun;
+  c.gunCd -= DT;
+  if (!g || c.rounds <= 0 || c.gunCd > 0) return;
+  const range = g.range ?? 110;
+  const aim = g.aim ?? 0.12;
+  let best: Car | null = null;
+  let bd = range;
+  for (const o of w.cars) {
+    if (o === c || o.wrecked || o.invuln > 0 || o.z - o.deck > 10 || inSmoke(w, o.x, o.y)) continue;
+    if (Math.abs(o.deck - c.deck) > 8) continue;
+    const d = Math.hypot(o.x - c.x, o.y - c.y);
+    if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
+      bd = d;
+      best = o;
+    }
+  }
+  if (!best) return;
+  c.rounds--;
+  c.gunCd = g.cooldown;
+  const cs = Math.cos(c.h);
+  const sn = Math.sin(c.h);
+  const x = c.x + cs * (c.def.body.halfLength + 1);
+  const y = c.y + sn * (c.def.body.halfLength + 1);
+  const hit = w.rng.next() < 0.8;
+  // a hit lands on the near side of the target, a miss flies on past it
+  const off = w.rng.range(-3, 3);
+  const reach = hit ? bd - 5 : range;
+  const tx = c.x + cs * reach - sn * off;
+  const ty = c.y + sn * reach + cs * off;
+  w.emit({ t: 'shot', car: c.index, x, y, tx, ty, hit: hit ? best.index : -1 });
+  if (hit) damage(w, best, g.damage ?? 1.5, c, tx, ty);
 }
 
 export function updateRockets(w: World): void {
   for (let i = w.rockets.length - 1; i >= 0; i--) {
     const r = w.rockets[i]!;
     r.life -= DT;
-    // homing: lean towards a car in front
-    let best: Car | null = null;
+    r.age = (r.age ?? 0) + DT;
+    // homing: chase the car it locked onto, or else lean towards a car in front
+    let best: Car | null = lockedOn(w, r);
     let bd = 160;
-    for (const c of w.cars) {
-      if (c.index === r.owner || c.wrecked) continue;
-      const d = Math.hypot(c.x - r.x, c.y - r.y);
-      if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
-        bd = d;
-        best = c;
+    if (!best)
+      for (const c of w.cars) {
+        if (c.index === r.owner || c.wrecked || Math.abs(c.deck - r.z) > 8) continue;
+        const d = Math.hypot(c.x - r.x, c.y - r.y);
+        if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
+          bd = d;
+          best = c;
+        }
       }
-    }
     const turn = (r.def.homing ?? 0) * DT;
     if (best) r.h += clamp(angDiff(Math.atan2(best.y - r.y, best.x - r.x), r.h), -turn, turn);
     r.x += Math.cos(r.h) * r.v * DT;
     r.y += Math.sin(r.h) * r.v * DT;
-    let hit = r.life <= 0;
+    let hit = r.life <= 0 || (r.def.cluster !== undefined && r.age >= r.def.cluster.fuse);
     const k = w.keepInside(r.x, r.y, 2);
     if (k[0] !== r.x || k[1] !== r.y) hit = true;
-    if (!hit)
+    // until it arms it flies through whatever it meets (bomblets leaving the burst)
+    const armed = r.age >= (r.def.arm ?? 0);
+    if (!hit && armed)
       hit = w.cars.some(
-        (c) => c.index !== r.owner && c.z < 10 && Math.hypot(c.x - r.x, c.y - r.y) < 10,
+        (c) =>
+          c.index !== r.owner &&
+          c.z - c.deck < 10 &&
+          Math.abs(c.deck - r.z) < 8 &&
+          Math.hypot(c.x - r.x, c.y - r.y) < 10,
       );
-    if (!hit)
-      hit = w.statics.some(
-        (s) => s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2,
-      );
-    if (!hit)
+    // a rocket fired off a deck flies over what stands on the ground
+    if (!hit && armed && r.z < 4)
+      hit = w
+        .near(r.x, r.y, 4)
+        .some((s) => !s.down && s.def.solid && Math.hypot(s.x - r.x, s.y - r.y) < s.def.radius + 2);
+    if (!hit && armed && r.z < 4)
       hit = w.props.some(
         (p) => p.alive && p.def.radius > 3 && Math.hypot(p.x - r.x, p.y - r.y) < p.def.radius + 2,
       );
     if (hit) {
       w.rockets.splice(i, 1);
-      explode(w, r.x, r.y, r.def.power, w.cars[r.owner]!);
+      burst(w, r);
+      explode(w, r.x, r.y, r.def.power, w.cars[r.owner]!, r.z);
     }
   }
 }
@@ -313,12 +433,13 @@ export function updateMines(w: World): void {
       (c) =>
         !c.wrecked &&
         !(c.index === m.owner && m.t < 2) &&
-        c.z <= 6 &&
+        c.z - c.deck <= 6 &&
+        Math.abs(c.deck - m.z) < 4 &&
         Math.hypot(c.x - m.x, c.y - m.y) < trig,
     );
     if (victim) {
       w.mines.splice(i, 1);
-      explode(w, m.x, m.y, m.def.power, w.cars[m.owner]!);
+      explode(w, m.x, m.y, m.def.power, w.cars[m.owner]!, m.z);
     }
   }
   if (w.mines.length > 14) w.mines.splice(0, 1);

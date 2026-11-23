@@ -1,0 +1,12 @@
+{
+  "id": "material.ice",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ice",
+    "description": "Sheet ice. No grip at all: a car keeps going the way it was going.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.06,
+  "colour": "#bcd9e6",
+  "alpha": 0.6
+}

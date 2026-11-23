@@ -1,5 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
-import { tyreRing } from '../tyres/look';
+import { tyreStack } from '../tyres/look';
 
 /** The tyre stack painted red and white, a tyre each. */
 const look: LookModule = {
@@ -10,7 +10,8 @@ const look: LookModule = {
       w: 10,
       h: 10,
       layers: 6,
-      fn: (x, y, z) => (tyreRing(x, y) ? ((z >> 1) % 2 ? 'paintw' : 'paintr') : null),
+      smooth: true,
+      fn: tyreStack((n) => (n % 2 ? 'paintw' : 'paintr'), 'paintr2'),
     },
   },
 };

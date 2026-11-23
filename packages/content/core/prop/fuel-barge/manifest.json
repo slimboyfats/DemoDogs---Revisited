@@ -1,0 +1,25 @@
+{
+  "id": "prop.fuel-barge",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fuel barge",
+    "description": "A rusty barge moored in the basin with two tanks of fuel on deck. Holed, it goes up, throws blazing drums and leaves fuel burning on the water.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "made": "material.steel",
+  "integrity": 60,
+  "blast": 2.2,
+  "spills": {
+    "material": "material.fuel",
+    "r": 12,
+    "n": 6
+  },
+  "throws": {
+    "stars": 8,
+    "globs": 6,
+    "drums": 3,
+    "drum": "prop.barrel"
+  }
+}

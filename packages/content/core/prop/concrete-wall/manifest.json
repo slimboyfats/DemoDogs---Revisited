@@ -1,0 +1,13 @@
+{
+  "id": "prop.concrete-wall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Concrete wall",
+    "description": "A slab of cast concrete with rusty bars in it. Takes a lot of blasting.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "made": "material.concrete",
+  "integrity": 110
+}

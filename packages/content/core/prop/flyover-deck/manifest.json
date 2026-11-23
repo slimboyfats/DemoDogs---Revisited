@@ -1,0 +1,15 @@
+{
+  "id": "prop.flyover-deck",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Flyover deck",
+    "description": "A length of raised road on steel girders, railed at both edges. Cars ride on it and under it. Blast it out and there is a hole in the road, and what was under it gets a slab on its roof.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 10,
+  "solid": false,
+  "made": "material.concrete",
+  "integrity": 150,
+  "rebuild": 14
+}

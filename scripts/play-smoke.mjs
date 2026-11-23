@@ -60,6 +60,7 @@ const runs = [
   ['kennel-loop', 'mutt', 'pixel'],
   ['scrapyard-run', 'whippet', 'pixel'],
   ['the-pit', 'bruiser', 'pixel'],
+  ['knotwood', 'terrier', 'pixel'],
   ['kennel-loop', 'pug', 'canvas'],
 ];
 for (const [venue, car, renderer] of runs) {

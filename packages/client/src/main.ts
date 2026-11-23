@@ -1,21 +1,47 @@
+import {
+  PerfRecorder,
+  SlowWatch,
+  perfFileName,
+  stallDetail,
+  watchGl,
+  type PerfContext,
+} from './game/perf-log';
 import './styles.css';
 import { loadContent, loadLooks } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
-import { Session } from './game/session';
+import {
+  forfeit,
+  newCareer,
+  parseCareer,
+  raceSetup,
+  readOutcome,
+  settle,
+  type Career,
+  type Outcome,
+  type RaceId,
+} from './game/career';
+import { Session, type SessionOptions } from './game/session';
 import { Input } from './input/input';
 import { Art } from './render/art';
 import { Hud } from './render/hud';
 import { drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
+import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { Scene } from './render/scene';
+import { CareerScreen, money } from './ui/career-screen';
+import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { results } from './ui/results';
+import { signalUrl } from './net/config';
+import { OnlineScreen } from './ui/online';
 
 /**
  * The app: menu with the garage turntable, the game loop, pause and results. URL hooks for testing:
  * ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
- * player's car with the rivals' AI). window.__dd exposes the running session.
+ * player's car with the rivals' AI); ?career opens the career, ?career=<easy|medium|hard|final>
+ * enters that race; ?dev opens the test range. window.__dd exposes the running session, the
+ * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const params = new URLSearchParams(location.search);
@@ -44,11 +70,122 @@ let carIdx = Math.max(
 );
 let session: Session | null = null;
 let lastVenue = venues[0]!.id;
-let screen: 'menu' | 'game' | 'results' = 'menu';
+let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' = 'menu';
+/** The game on screen is the test range. */
+let devMode = false;
+const SAVE = 'dd-career-v1';
+let career: Career | null = null;
+/** The career race being run, or null in a quick race. */
+let careerRace: RaceId | null = null;
+
+function saveCareer(k: Career): void {
+  career = k;
+  try {
+    localStorage.setItem(SAVE, JSON.stringify(k));
+  } catch {
+    /* private mode: the career lasts as long as the page */
+  }
+}
+function loadCareer(): Career {
+  if (career) return career;
+  let saved: string | null = null;
+  try {
+    saved = localStorage.getItem(SAVE);
+  } catch {
+    /* ignore */
+  }
+  career = parseCareer(content, saved) ?? newCareer(content, Math.floor(Math.random() * 2 ** 31));
+  return career;
+}
+const careerScreen = new CareerScreen($('careerPanel'), content, art, {
+  change: saveCareer,
+  race: startCareerRace,
+  back: () => setScreen('menu'),
+  reset: () => {
+    saveCareer(newCareer(content, Math.floor(Math.random() * 2 ** 31)));
+    openCareer();
+  },
+});
+function openCareer(): void {
+  careerRace = null;
+  careerScreen.open(loadCareer());
+  setScreen('career');
+}
+const dev = new DevPanel($('devPanel'), $('devTap'), content, {
+  view: () => ({ w: W, h: H, scale, dpr: DPR }),
+  restart: startDev,
+  exit: () => setScreen('menu'),
+  record: () => (perf ? stopPerf() : startPerf()),
+  stats: () => {
+    if (!(scene instanceof PixelScene)) return 'canvas';
+    const o = scene.meterOn ? scene.overdraw : null;
+    return `slices ${scene.instances}${o ? `\nfragments/px  ${overdrawLine(o)}` : ''}`;
+  },
+  heat: () => {
+    if (!(scene instanceof PixelScene)) return 'NO GL';
+    // off -> written -> solid -> covered -> particles -> numbers only -> off
+    const order: (Channel | null)[] = ['written', 'solid', 'covered', 'particles', null];
+    if (!scene.meterOn) {
+      scene.setHeat('written');
+      return 'HEAT WRITTEN';
+    }
+    const i = order.indexOf(scene.heatShown);
+    if (scene.heatShown === null) {
+      scene.setMeter(false);
+      return 'OVERDRAW';
+    }
+    const next = order[i + 1] ?? null;
+    scene.setHeat(next);
+    return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
+  },
+});
+// online races: the lobby screen, and the room it holds while racing
+const online = new OnlineScreen(
+  $('onlinePanel'),
+  content,
+  cars,
+  venues,
+  signalUrl(import.meta.env.VITE_SIGNAL_URL, import.meta.env.DEV, location),
+  {
+    race: (s, race) => {
+      careerRace = null;
+      const host = s.seats[0]!;
+      void launch(
+        {
+          venue: s.venue,
+          car: host.car,
+          name: host.name,
+          paint: host.paint,
+          seed: s.seed,
+          autopilot: false,
+          humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
+          you: s.you,
+        },
+        `ONLINE · ${content.venue.get(s.venue)?.meta.name.toUpperCase() ?? ''}`,
+        (made) => {
+          made.net = race;
+          document.body.classList.add('online');
+        },
+      );
+    },
+    back: () => setScreen('menu'),
+    show: () => {
+      document.body.classList.remove('online');
+      if (screen !== 'online') setScreen('online');
+    },
+  },
+);
+function openOnline(join?: string): void {
+  setScreen('online');
+  online.open(cars[carIdx]!.id, join);
+}
 let paused = false;
+/** The results on screen are a career race's: CONTINUE goes back to the career. */
+let lastCareer = false;
 let W = 0;
 let H = 0;
 let DPR = 1;
+let scale = 4;
 
 function resize(): void {
   DPR = Math.min(2, devicePixelRatio || 1);
@@ -60,18 +197,29 @@ function resize(): void {
   overlay.height = H;
   const short = Math.min(W, H);
   const long = Math.max(W, H);
-  scene.setScale(Math.max(2, Math.round(Math.min(short / 180, long / 300) * 2) / 2));
-  if (session) hud.layout(session.world, DPR);
+  // close enough to see what the cars are made of: about 130 art pixels up the short side
+  scale = Math.max(2, Math.round(Math.min(short / 130, long / 230) * 2) / 2);
+  scene.setScale(scale);
+  if (session) {
+    session.setView(W / scale, H / scale);
+    hud.layout(session.world, DPR);
+  }
 }
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu']) $(k).classList.toggle('hidden', k !== id);
+  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online'])
+    $(k).classList.toggle('hidden', k !== id);
 }
 
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
-  if (s === 'game') {
+  if (s !== 'game' && devMode) {
+    devMode = false;
+    dev.close();
+  }
+  if (s === 'loading') show('loader');
+  else if (s === 'game') {
     show(null);
     sound.engineStart();
   } else {
@@ -88,8 +236,7 @@ function updateFireButton(): void {
   b.classList.toggle('empty', !P.weapon);
 }
 
-function startGame(venue: string): void {
-  sound.init();
+function goFullscreen(): void {
   try {
     if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement)
       document.documentElement
@@ -103,41 +250,155 @@ function startGame(venue: string): void {
   } catch {
     /* not allowed */
   }
+}
+
+type Launch = Pick<SessionOptions, 'venue' | 'car' | 'seed'> & Partial<SessionOptions>;
+let launching = 0;
+
+/**
+ * Build a session behind the loader, which says what is being built as it goes, then show it.
+ * A newer launch (or leaving the loader) drops an older one.
+ */
+async function launch(o: Launch, title: string, ready?: (s: Session) => void): Promise<void> {
+  const mine = ++launching;
+  sound.init();
+  goFullscreen();
+  $('loadTitle').textContent = title;
+  $('loadFill').style.width = '0';
+  setScreen('loading');
+  const t0 = performance.now();
+  const built0 = art.built;
+  const made = await Session.load(
+    { content, art, sound, input, autopilot: params.has('autoplay'), ...o },
+    (text, done, of) => {
+      $('loadLine').textContent = `${text}…`;
+      $('loadFill').style.width = `${Math.round((done / of) * 100)}%`;
+      const px = art.built - built0;
+      $('loadCount').textContent =
+        `Step ${Math.min(done + 1, of)} of ${of} · ${px.toLocaleString('en')} pixels built · ` +
+        `${((performance.now() - t0) / 1000).toFixed(1)} s`;
+      // let the screen show the line before the next piece is built
+      return new Promise((r) => {
+        const go = () => setTimeout(r, 0);
+        requestAnimationFrame(go);
+        setTimeout(go, 60);
+      });
+    },
+  );
+  if (mine !== launching || screen !== 'loading') return;
+  session = made;
+  session.setView(W / scale, H / scale);
+  hud.layout(session.world, DPR);
+  paused = false;
+  setScreen('game');
+  ready?.(made);
+}
+
+function startCareerRace(race: RaceId): void {
+  const k = loadCareer();
+  const s = raceSetup(content, k, race);
+  careerRace = race;
+  const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
+  void launch(
+    { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
+    venue,
+  );
+}
+
+function startGame(venue: string): void {
+  careerRace = null;
   lastVenue = venue;
   const seed = params.has('seed')
     ? Number(params.get('seed'))
     : Math.floor(Math.random() * 2 ** 31);
-  session = new Session({
-    content,
-    art,
-    sound,
-    input,
-    venue,
-    car: cars[carIdx]!.id,
-    seed,
-    autopilot: params.has('autoplay'),
-  });
-  hud.layout(session.world, DPR);
-  paused = false;
-  setScreen('game');
+  void launch(
+    { venue, car: cars[carIdx]!.id, seed },
+    content.venue.get(venue)!.meta.name.toUpperCase(),
+  );
 }
 
-function finish(): void {
+/** The test range: a derby bowl with every other car parked as a target, and endless rockets. */
+function startDev(car: string): void {
+  careerRace = null;
+  // ?dev&venue=<id> opens the range on that venue (a flyover to test on, say); otherwise the
+  // plain bowl, so new derby maps (crushers, towers) do not end up under the targets
+  const pick = params.get('venue');
+  const venue =
+    venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`)) ??
+    venues.find((v) => v.id === 'venue.the-pit') ??
+    venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ??
+    venues[0]!;
+  const rocket = [...content.weapon.values()].find((w) => w.kind === 'rocket');
+  void launch(
+    {
+      venue: venue.id,
+      car,
+      seed: 1,
+      autopilot: false,
+      sandbox: true,
+      field: cars
+        .filter((c) => c.id !== car)
+        .map((c) => ({ car: c.id, name: c.meta.name.toUpperCase(), paint: c.paint })),
+      ...(rocket ? { player: { weapon: { id: rocket.id, ammo: 9999 } } } : {}),
+    },
+    'TEST RANGE',
+    (s) => {
+      devMode = true;
+      dev.open(s, car);
+    },
+  );
+}
+
+function finish(gaveUp = false): void {
   if (!session) return;
   const w = session.world;
   const r = results(w);
   $('resTitle').textContent = r.title;
   let sub = r.sub;
-  try {
-    const k = `dd-best-${w.venue.id}`;
-    const best = Number(localStorage.getItem(k)) || 0;
-    if (w.player.score > best) {
-      localStorage.setItem(k, String(w.player.score));
-      sub += ' · NEW BEST SCORE!';
-    }
-  } catch {
-    /* ignore */
+  const pay = $('payout');
+  pay.replaceChildren();
+  $('again').textContent = careerRace ? 'CONTINUE' : 'GO AGAIN';
+  $('toMenu').classList.toggle('hidden', careerRace !== null);
+  $('toMenu').textContent = 'MENU';
+  if (online.room) {
+    $('again').textContent = online.isHost ? 'BACK TO THE ROOM' : 'WAITING FOR THE HOST…';
+    $('toMenu').textContent = 'LEAVE ROOM';
   }
+  if (careerRace) {
+    // settle once: the race is spent, so leaving the results cannot pay twice
+    const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
+    const { career: next, payout } = settle(loadCareer(), careerRace, o);
+    saveCareer(next);
+    careerRace = null;
+    lastCareer = true;
+    if (payout.champion) $('resTitle').textContent = 'TOP DOG!';
+    else if (gaveUp) $('resTitle').textContent = 'GAVE UP';
+    else if (o.wrecked) $('resTitle').textContent = 'WRECKED';
+    const line = (label: string, cash: string, cls = '') => {
+      const d = document.createElement('div');
+      d.className = cls;
+      d.append(
+        Object.assign(document.createElement('span'), { textContent: label }),
+        Object.assign(document.createElement('b'), { textContent: cash }),
+      );
+      pay.append(d);
+    };
+    for (const l of payout.lines) line(l.label, money(l.cash), l.cash < 0 ? 'neg' : '');
+    if (payout.lines.length === 0)
+      line(o.wrecked ? 'A WRECK EARNS NOTHING' : 'OUT OF THE MONEY', money(0));
+    line(`CASH ${money(next.cash)} · +${payout.points} PTS`, money(payout.total), 'sum');
+  } else lastCareer = false;
+  if (!lastCareer)
+    try {
+      const k = `dd-best-${w.venue.id}`;
+      const best = Number(localStorage.getItem(k)) || 0;
+      if (w.player.score > best) {
+        localStorage.setItem(k, String(w.player.score));
+        sub += ' · NEW BEST SCORE!';
+      }
+    } catch {
+      /* ignore */
+    }
   $('resSub').textContent = sub;
   const table = $<HTMLTableElement>('resTable');
   table.replaceChildren();
@@ -163,6 +424,12 @@ function togglePause(): void {
   if (screen !== 'game') return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
+  $('restart').classList.toggle('hidden', careerRace !== null || devMode || online.room !== null);
+  $('quit').textContent = careerRace
+    ? 'GIVE UP THE RACE'
+    : online.room
+      ? 'LEAVE THE ONLINE RACE'
+      : 'QUIT TO MENU';
   if (paused) sound.engineStop();
   else {
     sound.engineStart();
@@ -201,27 +468,168 @@ function buildMenu(): void {
   }
 }
 
+// ---- the performance recorder (from mudders): REC on the pause menu, or ?perf
+let perf: PerfRecorder | null = null;
+let glWatch: { take: () => number; stop: () => void } | null = null;
+const slow = new SlowWatch();
+
+function perfContext(): PerfContext {
+  const s = session!;
+  const w = s.world;
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  return {
+    phase: devMode ? 'range' : w.phase,
+    quality: s.fx.quality.toFixed(2),
+    cells: s.fx.cells.n,
+    particles: s.fx.fx.length,
+    voxels: s.fx.voxels.length,
+    slices: scene instanceof PixelScene ? scene.instances : 0,
+    fires: s.fx.fires.length,
+    pools: w.spills.length,
+    fallen: w.statics.reduce((n, p) => n + (p.down ? 1 : 0), 0),
+    overdraw:
+      scene instanceof PixelScene && scene.meterOn && scene.overdraw
+        ? overdrawShort(scene.overdraw)
+        : '',
+    note: `${w.venue.id} ${w.player.def.id}${scene instanceof PixelScene ? ` atlas ${Math.round(scene.atlasState.fill * 100)}% x${scene.atlasState.flushes}` : ''}`,
+    heap: mem ? mem.usedJSHeapSize / 1048576 : 0,
+  };
+}
+
+/** Fragments per pixel for the perf log: covered, solid, written, front-to-back, the floor, shelled written, particles. */
+function overdrawShort(o: OverdrawStats): string {
+  const a = o.avg;
+  return [a.covered, a.solid, a.written, a.front, o.visible, a.shellWritten, a.particles]
+    .map((v) => v.toFixed(2))
+    .join(' ');
+}
+
+function startPerf(): void {
+  if (perf) return;
+  perf = new PerfRecorder({
+    game: `demodogs ${content.packs.map((p) => `${p.name}@${p.version}`).join(' ')}`,
+    when: new Date().toISOString(),
+    agent: navigator.userAgent,
+    screen: `${innerWidth}x${innerHeight} css px, dpr ${devicePixelRatio}`,
+    renderer: rendererName,
+    cores: navigator.hardwareConcurrency ?? 0,
+  });
+  const rec = perf;
+  if (scene instanceof PixelScene)
+    glWatch = watchGl(scene.gl, (ms) =>
+      rec.note(performance.now(), 'shader linked', `${ms.toFixed(1)} ms`),
+    );
+  document.body.classList.add('recording');
+  setRecLabel();
+}
+
+/** Stop recording and hand the log over: shared where the device can, downloaded otherwise. */
+function stopPerf(): void {
+  if (!perf) return;
+  const text = perf.report();
+  const name = perfFileName(new Date());
+  perf = null;
+  glWatch?.stop();
+  glWatch = null;
+  document.body.classList.remove('recording');
+  setRecLabel();
+  const file = new File([text], name, { type: 'text/plain' });
+  const save = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  };
+  (window as unknown as { __dd: { perfLog?: string } }).__dd.perfLog = text;
+  if (navigator.canShare?.({ files: [file] }))
+    navigator.share({ files: [file], title: name }).catch(save);
+  else save();
+}
+
+function setRecLabel(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.recBtn'))
+    b.textContent = perf ? `STOP AND SAVE LOG (${perf.seconds} s)` : 'RECORD PERFORMANCE';
+  $('recDot').textContent = perf ? `REC ${perf.seconds}s` : '';
+}
+
+if ('PerformanceObserver' in window)
+  for (const type of ['long-animation-frame', 'longtask'])
+    try {
+      new PerformanceObserver((list) => {
+        for (const e of list.getEntries())
+          perf?.stall(e.startTime, type, e.duration, stallDetail(e));
+      }).observe({ type, buffered: false });
+    } catch {
+      // this browser does not report that kind of stall
+    }
+addEventListener('error', (e) => perf?.note(performance.now(), 'error', e.message));
+document.addEventListener('visibilitychange', () =>
+  perf?.note(performance.now(), 'tab', document.hidden ? 'hidden' : 'shown'),
+);
+
 let last = performance.now();
+let meterFrames = 0;
 function frame(t: number): void {
   requestAnimationFrame(frame);
-  const dt = Math.min(0.1, Math.max(0, (t - last) / 1000));
+  const wall = t - last;
+  const dt = Math.min(0.1, Math.max(0, wall / 1000));
   last = t;
   if (screen === 'game' && session) {
+    const f0 = performance.now();
     if (input.takePause()) togglePause();
-    if (!paused && session.advance(dt)) {
+    session.ticks = session.simMs = session.stepMs = 0;
+    // an online race never stops for one player's pause menu
+    if ((!paused || online.racing) && session.advance(dt)) {
       finish();
       return;
     }
+    const r0 = performance.now();
+    // the overdraw meter reads its counts back about twice a second (a GPU stall, so not every frame)
+    if (scene instanceof PixelScene && scene.meterOn && ++meterFrames % 30 === 0)
+      scene.measureNext();
     scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
+    const r1 = performance.now();
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
-    hud.draw(session.world, session.fx, W, H, DPR);
+    if (devMode) dev.frame(dt);
+    else hud.draw(session.world, session.fx, W, H, DPR);
     updateFireButton();
+    if (online.racing) $('netDot').textContent = online.status();
+    // a device that keeps falling behind gets thinner fire and smoke, by itself
+    if (!paused && slow.frame(t, wall) && session.fx.quality > 0.3) {
+      session.fx.quality = Math.max(0.3, session.fx.quality * 0.65);
+      perf?.note(t, 'quality', `effects thinned to ${session.fx.quality.toFixed(2)}`);
+    }
+    if (perf && !paused) {
+      if (glWatch) perf.drew(glWatch.take());
+      const { ticks, simMs, stepMs } = session;
+      const other = performance.now() - f0 - simMs - stepMs - (r1 - r0);
+      const before = perf.seconds;
+      perf.frame(
+        t,
+        wall,
+        ticks,
+        simMs,
+        stepMs,
+        r1 - r0,
+        Math.max(0, other),
+        dt * 1000 * session.rate,
+        perfContext,
+      );
+      if (perf.seconds !== before) setRecLabel();
+    }
   } else if (screen === 'menu') garage.draw(cars[carIdx]!, dt);
+  else if (screen === 'career') careerScreen.draw(dt);
 }
 
 function boot(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.recBtn'))
+    b.onclick = () => (perf ? stopPerf() : startPerf());
+  if (params.has('perf')) startPerf();
+  if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
+  if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
   resize();
   addEventListener('resize', resize);
   buildMenu();
@@ -233,14 +641,32 @@ function boot(): void {
     carIdx = (carIdx + 1) % cars.length;
     showCar();
   };
-  $('again').onclick = () => startGame(lastVenue);
-  $('toMenu').onclick = () => setScreen('menu');
+  $('again').onclick = () => {
+    if (online.room) {
+      if (online.isHost) online.backToLobby();
+    } else if (lastCareer) openCareer();
+    else startGame(lastVenue);
+  };
+  $('toOnline').onclick = () => openOnline();
+  $('toCareer').onclick = openCareer;
+  $('toDev').onclick = () => startDev(cars[carIdx]!.id);
+  $('toMenu').onclick = () => {
+    if (online.room) online.leave();
+    document.body.classList.remove('online');
+    setScreen('menu');
+  };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
   $('restart').onclick = () => startGame(lastVenue);
   $('quit').onclick = () => {
     paused = false;
-    setScreen('menu');
+    if (online.room) {
+      online.leave();
+      document.body.classList.remove('online');
+    }
+    // walking out of a career race is a last place, not a free retry
+    if (careerRace) finish(true);
+    else setScreen('menu');
   };
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () =>
@@ -248,7 +674,7 @@ function boot(): void {
   muteBtns.forEach((b) => (b.onclick = () => (sound.toggle(), label())));
   label();
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && screen === 'game' && !paused) togglePause();
+    if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
   });
   showCar();
   setScreen('menu');
@@ -263,6 +689,17 @@ function boot(): void {
       );
     if (v) startGame(v.id);
   }
+  if (params.has('dev')) {
+    const c = params.get('car');
+    startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
+  }
+  if (params.has('room')) openOnline(params.get('room') ?? '');
+  if (params.has('career')) {
+    const race = params.get('career');
+    if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
+      startCareerRace(race);
+    else openCareer();
+  }
   Object.assign(window, {
     __dd: {
       renderer: rendererName,
@@ -270,8 +707,51 @@ function boot(): void {
         return session;
       },
       finish,
+      get career() {
+        return loadCareer();
+      },
+      setCareer(k: Career) {
+        saveCareer(k);
+        if (screen === 'career') openCareer();
+      },
+      get atlas() {
+        return scene instanceof PixelScene ? scene.atlasState : null;
+      },
       get screen() {
         return screen;
+      },
+      dev,
+      online,
+      /**
+       * The overdraw meter for scripts: `measure()` draws the current frame again with the counts
+       * and returns them (fragments per pixel); `heat(channel | null)` shows a heat map.
+       */
+      overdraw: {
+        measure(): OverdrawStats | null {
+          if (!(scene instanceof PixelScene) || !session) return null;
+          scene.setMeter(true);
+          scene.measureNext();
+          scene.draw(session.world, session.fx, session.ground, session.cam, W, H);
+          return scene.overdraw;
+        },
+        heat(ch: Channel | null): void {
+          if (scene instanceof PixelScene) scene.setHeat(ch);
+        },
+        off(): void {
+          if (scene instanceof PixelScene) scene.setMeter(false);
+        },
+        /** The world as last drawn, read from the canvas (RGBA rows, bottom first), to compare looks. */
+        pixels(): Uint8Array | null {
+          if (!(scene instanceof PixelScene) || !session) return null;
+          scene.draw(session.world, session.fx, session.ground, session.cam, W, H);
+          const out = new Uint8Array(W * H * 4);
+          scene.gl.readPixels(0, 0, W, H, scene.gl.RGBA, scene.gl.UNSIGNED_BYTE, out);
+          return out;
+        },
+        /** Draw slices nearest first (true, the default) or as queued (false). */
+        order(front: boolean): void {
+          if (scene instanceof PixelScene) scene.frontToBack = front;
+        },
       },
     },
   });

@@ -1,0 +1,13 @@
+{
+  "id": "pickup.cash",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cash",
+    "description": "Money lying on the track.",
+    "since": "core@0.3.0"
+  },
+  "kind": "cash",
+  "weight": 0.2,
+  "hurtWeight": 0.12,
+  "amount": 150
+}

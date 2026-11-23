@@ -1,0 +1,14 @@
+{
+  "id": "prop.rockfall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rockfall",
+    "description": "A slab of fallen sandstone lying across the lane. Cars stop dead on it; a hard ram or a blast breaks it up.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 7,
+  "made": "material.sandstone",
+  "integrity": 42,
+  "points": 15
+}

@@ -1,0 +1,24 @@
+{
+  "id": "prop.crusher",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Car crusher",
+    "description": "A steel bed under a hydraulic ram that slams down on a beat. It shudders first; anything under it when it lands is flattened.",
+    "since": "core@0.5.0"
+  },
+  "body": "static",
+  "radius": 12,
+  "solid": false,
+  "made": "material.steel",
+  "integrity": 480,
+  "press": {
+    "period": 4.2,
+    "shut": 0.5,
+    "rise": 1.1,
+    "warn": 0.7,
+    "lift": 15,
+    "reach": 11,
+    "hurt": 220,
+    "plate": "prop.crusher-plate"
+  }
+}

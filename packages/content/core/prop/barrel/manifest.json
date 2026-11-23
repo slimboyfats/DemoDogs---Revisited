@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Barrel",
-    "description": "Fuel drum. Explodes when hit hard or caught in a blast.",
+    "description": "Fuel drum. Broken open it bursts, rockets up and rains fire.",
     "since": "core@0.1.0"
   },
   "body": "loose",
@@ -11,5 +11,6 @@
   "mass": 0.45,
   "explodesAt": 75,
   "blast": 1.1,
-  "launch": 0.25
+  "launch": 0.25,
+  "rocket": { "up": 170, "burst": 0.7, "stars": 6, "globs": 3 }
 }

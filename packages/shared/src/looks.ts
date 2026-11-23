@@ -2,7 +2,8 @@
  * Looks: how an item is drawn as a sprite stack. A part is a block of voxels described by a
  * function: w runs front to back (+x is forward), h side to side, layers is the height, all in art
  * pixels. fn(x, y, z) names the material at that point (x and y from the middle of the cell) or
- * returns null for empty. The client turns parts into slice strips; the sim never reads looks.
+ * returns null for empty. The client samples it several times finer than an art pixel, so shapes
+ * can carry detail smaller than one. The client turns parts into slice strips; the sim never reads looks.
  */
 export type ShapeFn = (x: number, y: number, z: number) => string | null;
 
@@ -11,6 +12,12 @@ export interface Part {
   h: number;
   layers: number;
   fn: ShapeFn;
+  /**
+   * The shape is smooth in height too: fn gets z as a real number (the middle of whatever fine
+   * layer is being sampled), from 0 to `layers`. Without it fn gets whole layer numbers, as the
+   * first looks were written, and only the outline of each layer is drawn finer.
+   */
+  smooth?: boolean;
 }
 
 /** Three tones per material: side in shade, side, top. */

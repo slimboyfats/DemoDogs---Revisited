@@ -1,0 +1,14 @@
+{
+  "id": "material.sand",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sand",
+    "description": "Drifts of loose sand. Wheels dig in: a car loses speed fast and slews a little, and it smothers fire.",
+    "since": "core@0.4.0"
+  },
+  "grip": 0.82,
+  "drag": 1.1,
+  "quenches": true,
+  "colour": "#e0b07a",
+  "alpha": 0.75
+}

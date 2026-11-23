@@ -1,0 +1,14 @@
+{
+  "id": "prop.deck-plank",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Plank deck",
+    "description": "A square of a wooden bridge's deck. Cars drive over it; a blast or a fire puts a hole in the bridge, and the river comes through.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 3.6,
+  "solid": false,
+  "made": "material.wood",
+  "integrity": 26
+}

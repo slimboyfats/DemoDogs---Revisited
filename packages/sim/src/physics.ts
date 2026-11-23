@@ -1,14 +1,17 @@
+import { batter, footing } from './damage';
 import {
   BASE_SPEED,
   CAR_OFFSET,
   CAR_RADIUS,
   DT,
   GRAVITY,
+  TUNE_MAX,
+  TUNE_STEP,
   type AiManifest,
   type CarManifest,
   type Controls,
 } from '@demodogs/shared';
-import type { Car } from './entities';
+import type { Car, Setup } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import type { World } from './world';
@@ -20,21 +23,36 @@ export function makeCar(
   name: string,
   isPlayer: boolean,
   ai: AiManifest | null,
+  setup: Setup = {},
 ): Car {
   const behaviour = ai ? w.content.behaviours.get(ai.behaviour)! : null;
+  const t = setup.tune ?? {};
+  const lv = (n: number | undefined) => clamp(Math.floor(n ?? 0), 0, TUNE_MAX);
+  const hp = clamp(setup.hp ?? 100, 1, 100);
+  const gun = setup.weapon ? (w.content.weapon.get(setup.weapon.id) ?? null) : null;
   return {
     index: 0,
     def,
+    stats: {
+      speed: def.stats.speed * (1 + TUNE_STEP.speed * lv(t.engine)),
+      accel: def.stats.accel * (1 + TUNE_STEP.accel * lv(t.engine)),
+      grip: def.stats.grip * (1 + TUNE_STEP.grip * lv(t.tyres)),
+      mass: def.stats.mass,
+      armor: def.stats.armor * (1 + TUNE_STEP.armor * lv(t.armor)),
+    },
+    ram: setup.ram ?? 1,
+    fuel: setup.fuel ?? 1,
     name,
     paint,
     isPlayer,
+    seat: -1,
     ai:
       ai && behaviour
         ? {
             behaviour,
             lane: w.rng.range(-0.5, 0.5),
             phase: w.rng.range(0, 100),
-            skill: w.rng.range(ai.skill[0], ai.skill[1]),
+            skill: setup.skill ?? w.rng.range(ai.skill[0], ai.skill[1]),
             aggro: w.rng.range(ai.aggro[0], ai.aggro[1]),
             stuckT: 0,
             revT: 0,
@@ -47,6 +65,7 @@ export function makeCar(
     y: 0,
     z: 0,
     vz: 0,
+    deck: 0,
     h: 0,
     vx: 0,
     vy: 0,
@@ -59,7 +78,8 @@ export function makeCar(
     sliding: false,
     offroad: false,
     nitro: 1,
-    hp: 100,
+    hp,
+    hp0: hp,
     roll: 0,
     lurch: 0,
     bounce: 0,
@@ -76,15 +96,28 @@ export function makeCar(
     score: 0,
     wrecks: 0,
     smashed: 0,
-    weapon: null,
-    ammo: 0,
+    weapon: gun,
+    ammo: gun ? setup.weapon!.ammo : 0,
     invuln: 0,
+    shield: 0,
+    shieldMax: 0,
+    shieldT: 0,
+    weldRate: 0,
+    weldT: 0,
+    gun: w.gun,
+    rounds: setup.rounds ?? w.gun?.ammo ?? 0,
+    gunCd: 0,
+    cash: 0,
+    pit: false,
     fireCd: 0,
     hitCd: 0,
     scrapeCd: 0,
     has: { front: true, rear: true, top: true },
     aiSpeed: 1,
     smokeT: 0,
+    blade: null,
+    springs: null,
+    hop: -1,
   };
 }
 
@@ -112,15 +145,33 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
  * and grip pulls it round, so a car drifts when it turns hard or the handbrake is on.
  */
 export function drive(w: World, c: Car, ctl: Controls): void {
-  const S = c.def.stats;
+  const S = c.stats;
   const off = w.offroad(c.x, c.y);
-  const airborne = c.z > 0.6;
+  const floor = (c.deck = w.support(c));
+  // climbing a ramp: the deck lifts the car with it
+  if (floor > 0 && c.z < floor) {
+    c.z = floor;
+    c.vz = Math.max(0, c.vz);
+  }
+  const airborne = c.z - floor > 0.6;
   c.offroad = off;
   let vf = c.vx * Math.cos(c.h) + c.vy * Math.sin(c.h);
   const weak = c.hp < 35 ? 0.86 : 1;
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
-  let turn = ctl.steer * 3.0 * S.grip * grip * Math.sign(vf || 1) * (c.handbrake ? 1.4 : 1);
+  // the deck is clean: pools and pits are on the ground below it
+  const [hold, bog, pit] = airborne || floor > 0 ? [1, 0, false] : footing(w, c.x, c.y);
+  // dropping into a crater at speed throws the car up off its far lip
+  if (pit && !c.pit && Math.abs(vf) > 70) c.vz = Math.max(c.vz, Math.min(70, Math.abs(vf) * 0.3));
+  if (!airborne) c.pit = pit;
+  let turn =
+    ctl.steer *
+    3.0 *
+    S.grip *
+    grip *
+    Math.sign(vf || 1) *
+    (c.handbrake ? 1.4 : 1) *
+    (0.45 + 0.55 * hold);
   if (c.hp < 30) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
   if (airborne) turn *= 0.15;
   c.h += (turn + c.spin) * DT;
@@ -132,7 +183,8 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const boost = ctl.boost && c.nitro > 0.02 && !airborne;
   c.boosting = boost;
   c.nitro = boost ? Math.max(0, c.nitro - 0.32 * DT) : Math.min(1, c.nitro + 0.025 * DT);
-  const maxS = BASE_SPEED * S.speed * weak * (off ? 0.56 : 1) * (boost ? 1.33 : 1) * c.aiSpeed;
+  const maxS =
+    BASE_SPEED * S.speed * weak * (off ? 0.56 : 1) * (boost ? 1.33 * c.fuel : 1) * c.aiSpeed;
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
@@ -142,20 +194,24 @@ export function drive(w: World, c: Car, ctl: Controls): void {
       const acc = 240 * S.accel * (boost ? 1.8 : 1);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
-    vf -= vf * (off ? 1.4 : 0.42) * DT;
+    vf -= vf * ((off ? 1.4 : 0.42) + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
-    vl *= Math.exp(-8 * S.grip * (off ? 0.55 : 1) * (c.handbrake ? 0.22 : 1) * DT);
+    vl *= Math.exp(-8 * S.grip * hold * (off ? 0.55 : 1) * (c.handbrake ? 0.22 : 1) * DT);
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
   c.vf = vf;
   c.x += c.vx * DT;
   c.y += c.vy * DT;
-  if (c.z > 0 || c.vz !== 0) {
+  if (floor > 0 && c.vz <= 0 && c.z - floor < 1.5) {
+    // running down a ramp keeps the wheels on it
+    c.z = floor;
+    c.vz = 0;
+  } else if (c.z > floor || c.vz !== 0) {
     c.vz -= GRAVITY * DT;
     c.z += c.vz * DT;
-    if (c.z <= 0) {
-      c.z = 0;
+    if (c.z <= floor) {
+      c.z = floor;
       if (c.vz < -90) {
         w.emit({ t: 'land', car: c.index, impact: -c.vz });
         c.vz = -c.vz * 0.3;
@@ -205,11 +261,11 @@ function bump(
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
       damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
-      w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c.isPlayer });
+      w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c === w.player });
     }
   } else if (impact > 8 && c.scrapeCd <= 0) {
     c.scrapeCd = 0.12;
-    w.emit({ t: 'scrape', x: px, y: py, player: c.isPlayer });
+    w.emit({ t: 'scrape', x: px, y: py, player: c === w.player });
   }
 }
 
@@ -237,17 +293,63 @@ export function collideWorld(w: World, c: Car): void {
       }
     }
   }
-  for (const s of w.statics) {
+  if (c.deck > 4) {
+    rails(w, c);
+    return;
+  }
+  for (const s of w.near(c.x, c.y, 20)) {
     const r = s.def.radius;
-    if (!s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16) continue;
+    if (s.down || !s.def.solid || Math.abs(s.x - c.x) > r + 16 || Math.abs(s.y - c.y) > r + 16)
+      continue;
     for (const p of circles(c)) {
       const dx = p[0] - s.x;
       const dy = p[1] - s.y;
       const d = Math.hypot(dx, dy);
       const m = r + R;
-      if (d < m && d > 0.001)
-        bump(w, c, s.x + (dx / d) * r, s.y + (dy / d) * r, dx / d, dy / d, m - d, s.def.hardness);
+      if (d >= m || d <= 0.001) continue;
+      // a hard enough ram knocks pieces off it, and may bring it down: then the car ploughs
+      // on through, slower, instead of bouncing off
+      const vn = -(c.vx * dx + c.vy * dy) / d;
+      const px = s.x + (dx / d) * r;
+      const py = s.y + (dy / d) * r;
+      if (
+        vn > 22 + 23 * s.def.hardness &&
+        c.z < 6 &&
+        batter(w, s, (vn - 35) * 0.5 * c.def.stats.mass, 'impact', px, py)
+      ) {
+        c.vx *= 0.72;
+        c.vy *= 0.72;
+        damage(w, c, (vn - 28) * 0.1 * s.def.hardness, null, px, py);
+        w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c === w.player });
+        break;
+      }
+      bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
     }
+  }
+}
+
+/** A car up on a deck is kept on it by the rails along its edges; nothing below is in its way. */
+function rails(w: World, c: Car): void {
+  const T = w.track!;
+  const i = c.idx;
+  const a = T.a[i]!;
+  const nx = -Math.sin(a);
+  const ny = Math.cos(a);
+  const lim = w.road / 2 - CAR_RADIUS;
+  for (const p of circles(c)) {
+    const off = (p[0] - T.x[i]!) * nx + (p[1] - T.y[i]!) * ny;
+    if (Math.abs(off) <= lim) continue;
+    const sg = Math.sign(off);
+    bump(
+      w,
+      c,
+      p[0] + nx * sg * CAR_RADIUS,
+      p[1] + ny * sg * CAR_RADIUS,
+      -nx * sg,
+      -ny * sg,
+      Math.abs(off) - lim,
+      0.7,
+    );
   }
 }
 
@@ -273,8 +375,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
       }
     }
   if (!best) return;
-  const ma = a.def.stats.mass * (a.wrecked ? 1.6 : 1);
-  const mb = b.def.stats.mass * (b.wrecked ? 1.6 : 1);
+  const ma = a.stats.mass * (a.wrecked ? 1.6 : 1);
+  const mb = b.stats.mass * (b.wrecked ? 1.6 : 1);
   const tot = ma + mb;
   a.x -= (best.nx * best.ov * mb) / tot;
   a.y -= (best.ny * best.ov * mb) / tot;
@@ -293,9 +395,10 @@ export function collideCars(w: World, a: Car, b: Car): void {
   a.spin += clamp(((-ra[1] * j * 0.0016) / ma) * Math.sign(ra[0] + 0.01), -5, 5);
   b.spin += clamp(((rb[1] * j * 0.0016) / mb) * Math.sign(rb[0] + 0.01), -5, 5);
   const impact = -vrel;
-  const player = a.isPlayer || b.isPlayer;
+  // `player` is only what the events say (the screen's own car); the rules use isPlayer
+  const player = a === w.player || b === w.player;
   if (impact < 20) {
-    if (impact > 8 && player && a.scrapeCd <= 0) {
+    if (impact > 8 && (a.isPlayer || b.isPlayer) && a.scrapeCd <= 0) {
       a.scrapeCd = 0.1;
       w.emit({ t: 'scrape', x: best.px, y: best.py, player });
     }
@@ -306,8 +409,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
   const fresh = a.hitCd <= 0 && b.hitCd <= 0;
   a.hitCd = b.hitCd = 0.3;
   if (fresh) {
-    damage(w, a, (base * zoneFactor(ra[0]) * mb) / 1.1, b, best.px, best.py);
-    damage(w, b, (base * zoneFactor(rb[0]) * ma) / 1.1, a, best.px, best.py);
+    damage(w, a, ((base * zoneFactor(ra[0]) * mb) / 1.1) * b.ram, b, best.px, best.py);
+    damage(w, b, ((base * zoneFactor(rb[0]) * ma) / 1.1) * a.ram, a, best.px, best.py);
   }
   if (w.kind === 'derby' && impact > 60) {
     if (a.ai) a.ai.revT = w.rng.range(0.3, 0.7);
@@ -318,7 +421,14 @@ export function collideCars(w: World, a: Car, b: Car): void {
 
 export function collideProps(w: World, c: Car): void {
   for (const p of w.props) {
-    if (!p.alive || p.z > 10 || Math.abs(p.x - c.x) > 22 || Math.abs(p.y - c.y) > 22) continue;
+    if (
+      !p.alive ||
+      p.z - c.deck > 10 ||
+      c.deck - p.z > 10 ||
+      Math.abs(p.x - c.x) > 22 ||
+      Math.abs(p.y - c.y) > 22
+    )
+      continue;
     const pr = p.def.radius;
     const pm = p.def.mass ?? 0.5;
     for (const q of circles(c)) {
@@ -333,7 +443,7 @@ export function collideProps(w: World, c: Car): void {
       p.y += ny * (m - d);
       const vrel = (p.vx - c.vx) * nx + (p.vy - c.vy) * ny;
       if (vrel >= 0) continue;
-      const mc = c.def.stats.mass * 3;
+      const mc = c.stats.mass * 3;
       const j = (-1.5 * vrel) / (1 / mc + 1 / pm);
       p.vx += (j / pm) * nx;
       p.vy += (j / pm) * ny;
@@ -347,7 +457,7 @@ export function collideProps(w: World, c: Car): void {
       }
       if (p.def.explodesAt !== undefined && impact > p.def.explodesAt) light(p, c.index, 0.05);
       p.vz = Math.max(p.vz, impact * p.def.launch);
-      if (impact > 40) w.emit({ t: 'scrape', x: p.x, y: p.y, player: c.isPlayer });
+      if (impact > 40) w.emit({ t: 'scrape', x: p.x, y: p.y, player: c === w.player });
     }
   }
 }

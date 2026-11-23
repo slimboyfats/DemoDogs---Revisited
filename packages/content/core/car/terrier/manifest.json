@@ -1,0 +1,30 @@
+{
+  "id": "car.terrier",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Terrier",
+    "description": "Rusty hatchback. Cheap, slow, and yours.",
+    "since": "core@0.2.0"
+  },
+  "paint": "#8fa05a",
+  "price": 0,
+  "stats": {
+    "speed": 0.9,
+    "accel": 0.88,
+    "grip": 0.96,
+    "mass": 0.82,
+    "armor": 0.8
+  },
+  "body": {
+    "halfLength": 10,
+    "halfWidth": 5.3
+  },
+  "wheels": [
+    [6.2, 4.05],
+    [-6.2, 4.05]
+  ],
+  "top": {
+    "x": -2.5,
+    "z": 7
+  }
+}

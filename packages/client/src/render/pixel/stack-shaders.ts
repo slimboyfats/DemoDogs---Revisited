@@ -17,6 +17,7 @@ layout(location = 0) in vec4 a_pos;   // x, y, z (art px), lift (whole device px
 layout(location = 1) in float a_rot;
 layout(location = 2) in vec4 a_uv;    // slice texel x, y, width, height
 layout(location = 3) in float a_alpha;
+layout(location = 4) in float a_res;   // texels per art px
 uniform vec2 u_view;
 uniform vec2 u_origin;   // device px of the world origin on the ground (whole pixels)
 uniform float u_scale;
@@ -30,7 +31,7 @@ flat out float v_alpha;
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
-  vec2 local = (corner - 0.5) * a_uv.zw;
+  vec2 local = (corner - 0.5) * a_uv.zw / a_res;
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5) - vec2(0.0, a_pos.w);
@@ -55,6 +56,7 @@ uniform highp sampler2D u_atlas;
 uniform vec4 u_lpos[8];  // x, y, radius, strength
 uniform vec3 u_lcol[8];
 uniform int u_lcount;
+uniform float u_scale;
 out vec4 o;
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
@@ -62,12 +64,22 @@ float bayer(ivec2 p) {
   return (float(t[i]) + 0.5) / 16.0;
 }
 void main() {
-  ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
-  vec4 c = texelFetch(u_atlas, t, 0);
-  if (c.a < 0.5) discard;
-  ivec2 cell = ivec2(floor(v_world.xy)) + ivec2(0, int(floor(v_world.z)));
+  vec4 c;
+  if (v_uv.y < 0.0) {
+    // a loose voxel: flat colour packed as 0xRRGGBB in the texel-x slot
+    int p = int(v_uv.x + 0.5);
+    c = vec4(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255), 255.0) / 255.0;
+  } else {
+    ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
+    c = texelFetch(u_atlas, t, 0);
+    if (c.a < 0.5) discard;
+  }
+  // the dither and the light bands step on a grid three to the art pixel, as fine as the art
+  ivec2 cell = ivec2(floor(v_world.xy * 3.0)) + ivec2(0, int(floor(v_world.z * 3.0)));
   float b = bayer(cell);
-  if (v_alpha < 1.0 && b >= v_alpha) discard;
+  // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
+  // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
+  if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
   vec3 l = vec3(0.0);
   for (int i = 0; i < 8; i++) {
     if (i >= u_lcount) break;
@@ -102,7 +114,42 @@ export const GROUND_FS = `#version 300 es
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
+uniform vec2 u_size;
 out vec4 o;
 void main() {
-  o = vec4(texture(u_tex, v_uv).rgb, 1.0);
+  // The ground is painted one texel to the art pixel, and drawn on the art's finer grid (three
+  // cells to the art pixel): each fine cell takes a colour blended between the texels around it,
+  // sharpened so edges stay crisp, so a kerb steps in fine cells instead of whole art pixels.
+  vec2 cell = floor(v_uv * u_size * 3.0);
+  vec2 a = (cell + 0.5) / 3.0 - 0.5;
+  vec2 i = floor(a);
+  vec2 f = smoothstep(0.2, 0.8, a - i);
+  vec3 c = texture(u_tex, (i + 0.5 + f) / u_size).rgb;
+  // a little grain, in three flat steps, so tarmac and grass are not flat fills
+  float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
+  o = vec4(c * (0.955 + 0.045 * floor(h * 3.0)), 1.0);
+}`;
+
+/**
+ * Shadows cast from the shape of tall scenery: a one-byte mask over the ground, drawn on the
+ * ground's fine grid. Where the mask is part covered (its edge, blended between art px) it is
+ * dithered on the Bayer grid, so the edge steps in fine cells instead of blurring.
+ */
+export const SHADOW_FS = `#version 300 es
+precision highp float;
+in vec2 v_uv;
+uniform sampler2D u_tex;
+uniform vec2 u_size;
+uniform float u_alpha;
+out vec4 o;
+float bayer(ivec2 p) {
+  int i = (p.y & 3) * 4 + (p.x & 3);
+  int t[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+  return (float(t[i]) + 0.5) / 16.0;
+}
+void main() {
+  vec2 cell = floor(v_uv * u_size * 3.0);
+  float a = texture(u_tex, (cell + 0.5) / (u_size * 3.0)).r;
+  if (a < 0.05 || a < bayer(ivec2(cell))) discard;
+  o = vec4(0.0, 0.0, 0.0, u_alpha);
 }`;

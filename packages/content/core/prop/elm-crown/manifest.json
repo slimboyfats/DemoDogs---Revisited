@@ -1,0 +1,21 @@
+{
+  "id": "prop.elm-crown",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Elm crown",
+    "description": "A tall, airy spray of elm leaves high up in a great tree, paler than the oak's and quicker to burn.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 10,
+  "solid": false,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 40,
+  "crown": {
+    "trunk": 0,
+    "top": 0,
+    "hold": 0.3,
+    "flash": 0.2
+  }
+}

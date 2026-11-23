@@ -1,6 +1,6 @@
 // Copied from mudders: packages/client/src/render/pixel/batch.ts.
 import { QUAD_FS, QUAD_VS } from './shaders';
-import { compile, uniforms } from './gl';
+import { compile, compileKept, countingShader, uniforms } from './gl';
 
 /** Per-instance floats: pos.xy, size.xy, rot, color.rgba, shape. */
 const STRIDE = 10;
@@ -28,6 +28,8 @@ export class QuadBatch {
   private readonly vao: WebGLVertexArrayObject;
   private readonly buf: WebGLBuffer;
   private readonly u;
+  private counter: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null> } | null =
+    null;
   private gpuBytes: number;
 
   constructor(
@@ -115,13 +117,31 @@ export class QuadBatch {
     this.push((x0 + x1) / 2, (y0 + y1) / 2, len, width, rgb, alpha, Shape.Rect, Math.atan2(dy, dx));
   }
 
-  flush(view: [number, number], origin: [number, number], scale: number): void {
+  /**
+   * Draw what was pushed and empty the batch. With `count`, the overdraw meter's counting shader
+   * draws instead: each fragment adds `count` (see overdraw.ts).
+   */
+  flush(view: [number, number], origin: [number, number], scale: number, count?: number): void {
     if (this.n === 0) return;
     const gl = this.gl;
-    gl.useProgram(this.prog);
-    gl.uniform2f(this.u.u_view, view[0], view[1]);
-    gl.uniform2f(this.u.u_origin, origin[0], origin[1]);
-    gl.uniform1f(this.u.u_scale, scale);
+    let prog = this.prog;
+    let u: Record<string, WebGLUniformLocation | null> = this.u;
+    if (count !== undefined) {
+      if (!this.counter) {
+        const p = compileKept(gl, QUAD_VS, countingShader(QUAD_FS));
+        this.counter = {
+          prog: p,
+          u: uniforms(gl, p, ['u_view', 'u_origin', 'u_scale', 'u_count']),
+        };
+      }
+      prog = this.counter.prog;
+      u = this.counter.u;
+    }
+    gl.useProgram(prog);
+    if (count !== undefined) gl.uniform1f(u.u_count!, count);
+    gl.uniform2f(u.u_view!, view[0], view[1]);
+    gl.uniform2f(u.u_origin!, origin[0], origin[1]);
+    gl.uniform1f(u.u_scale!, scale);
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
     if (this.data.byteLength > this.gpuBytes) {

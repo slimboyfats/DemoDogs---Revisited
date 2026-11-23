@@ -1,0 +1,18 @@
+{
+  "id": "prop.water-tower",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Water tower",
+    "description": "A steel tank high on four legs. Bring it down and it floods the ground round it.",
+    "since": "core@0.4.0"
+  },
+  "body": "static",
+  "radius": 7,
+  "made": "material.steel",
+  "integrity": 160,
+  "spills": {
+    "material": "material.water",
+    "r": 16,
+    "n": 9
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "pickup.welder",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Field Welder",
+    "description": "Welds the dents shut and lost panels back on over a few seconds.",
+    "since": "core@0.4.0"
+  },
+  "kind": "weld",
+  "weight": 0.08,
+  "hurtWeight": 0.3,
+  "amount": 60,
+  "seconds": 4
+}
