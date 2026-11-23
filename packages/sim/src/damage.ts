@@ -117,6 +117,7 @@ export function respawn(w: World, c: Car): void {
   c.has = { front: true, rear: true, top: true };
   c.hp = 100;
   c.wrecked = false;
+  c.buried = false;
   w.placeOnTrack(c, i, 0);
   c.vx = c.vy = c.vz = c.z = c.spin = 0;
   c.z = c.deck = w.deckAt(i);

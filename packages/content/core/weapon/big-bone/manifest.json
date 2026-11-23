@@ -1,0 +1,18 @@
+{
+  "id": "weapon.big-bone",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big Bone",
+    "description": "A great bone out of the sky, called down on whoever is winning. Its shadow follows the car until just before it lands, and it leaves a hole in the map.",
+    "since": "core@0.7.0"
+  },
+  "kind": "meteor",
+  "label": "BIG BONE",
+  "ammo": 1,
+  "power": 2.0,
+  "cooldown": 2.0,
+  "arm": 2.2,
+  "fuse": 0.6,
+  "count": 5,
+  "damage": 45
+}

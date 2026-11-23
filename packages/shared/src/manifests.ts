@@ -426,6 +426,12 @@ export const WeaponSchema = z.strictObject({
     'beam',
     'swap',
     'trail',
+    'twister',
+    'flail',
+    'meteor',
+    'fissure',
+    'frost',
+    'pit',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -544,6 +550,20 @@ export const WeaponSchema = z.strictObject({
    * `power`. Swaps: a bolt at `speed` over `range` that bends (`homing`) towards a car within `aim`
    * of its path and changes places with it. Trails: for `life` seconds the car leaves a fire of
    * `radius` every `reach` it travels, each burning `fuse` seconds.
+   *
+   * Five more (sim `wild.ts`). Twisters: a whirlwind of `radius` that wanders at `speed` for `life`
+   * seconds, leaning (`homing`) towards cars within `range`; what it reaches is dragged round and
+   * in with strength `push`, thrown up at `lift` and takes `damage` twice a second. Flails: for
+   * `life` seconds a ball of `radius` swings round the car on `reach` of chain at `speed` rad/s,
+   * striking for `damage` and knocking cars on by `push`. Meteors: one blast of `power` that
+   * lands `arm` seconds after it is called, its mark following the leading car until `fuse`
+   * seconds before, with `count` small pits round it; a car right under it takes `damage` more. Fissures: a crack that runs `range` at
+   * `speed`, opening a pit of `power` every `reach`; cars within `radius` are thrown up at `lift`
+   * for `damage`. Frosts: engines within `radius` die for `stall` seconds and take `damage`, fires
+   * there go out, and `count` pools of `material` are left behind the car. Pits: a hole of
+   * `radius` dug behind the car that lasts `life` seconds; a car that drives in is down it for
+   * `stall` seconds and takes `damage` in a race, and is out for good in a derby. AI drivers dig one for a car within
+   * `range` behind them.
    */
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;

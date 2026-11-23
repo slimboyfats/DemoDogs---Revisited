@@ -1,0 +1,20 @@
+{
+  "id": "weapon.dig",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dig",
+    "description": "The ground splits in a line ahead of the car, pit after pit. Cars on it are thrown into the air, and whatever is built beside it comes down.",
+    "since": "core@0.7.0"
+  },
+  "kind": "fissure",
+  "label": "DIG",
+  "ammo": 2,
+  "power": 0.8,
+  "cooldown": 1.2,
+  "speed": 320,
+  "range": 240,
+  "reach": 11,
+  "radius": 11,
+  "damage": 20,
+  "lift": 150
+}

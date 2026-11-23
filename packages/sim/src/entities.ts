@@ -146,6 +146,15 @@ export interface Car {
   blind?: number;
   /** Seconds its engine stays dead after a shock; absent or 0 when it runs. */
   stall?: number;
+  /** Down a pit: seconds until it is thrown back out, and how long it went down for. */
+  sunk?: number;
+  sunkFrom?: number;
+  /** Which way it tipped in, in its own frame: [nose first, right side first], length 1. */
+  sunkTip?: [number, number];
+  /** How fast it turns as it drops, rad/s. */
+  sunkTurn?: number;
+  /** Wrecked by going down a pit that closed over it: there is no hulk left to see or hit. */
+  buried?: boolean;
   /** A blade bolted to the nose (see movers.ts): seconds left, and seconds until its next bite. */
   blade: { def: PickupManifest; t: number; cd: number } | null;
   /** Springs under the car: leaps left. `hop` is seconds into a sprung leap, -1 when not in one. */

@@ -1,0 +1,19 @@
+{
+  "id": "weapon.pit-stop",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pit Stop",
+    "description": "Digs a deep hole behind the car. Whoever drives into it falls in. In a race they are thrown back out after a moment; in a derby the hole closes over them and they are out. It fills itself in after a while.",
+    "since": "core@0.7.0"
+  },
+  "kind": "pit",
+  "label": "PIT",
+  "ammo": 3,
+  "power": 0.5,
+  "cooldown": 0.8,
+  "radius": 15,
+  "life": 14,
+  "stall": 1.6,
+  "damage": 14,
+  "range": 90
+}
