@@ -55,6 +55,7 @@ import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
+import { buildRelief, type Relief } from './relief';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
 import { updateGuards, type Decoy } from './guards';
@@ -145,6 +146,8 @@ export class World {
   readonly track: Track | null = null;
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
+  /** The lie of the land, or null where the venue is flat. */
+  readonly relief: Relief | null = null;
   /**
    * A flyover's deck along the track: the height of the road surface at each sample (0 on the
    * ground), and the static piece of deck that carries it there (-1: none). Null without one.
@@ -275,6 +278,16 @@ export class World {
       }
     }
     if (venue.oval) this.oval = { ...venue.oval };
+    if (venue.relief && (venue.relief.hills > 0 || venue.relief.banks > 0))
+      this.relief = buildRelief(
+        venue.relief,
+        venue.seed,
+        this.w,
+        this.h,
+        this.track,
+        this.road,
+        this.oval,
+      );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
 

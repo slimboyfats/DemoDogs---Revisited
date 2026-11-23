@@ -48,6 +48,11 @@ export class Scene implements WorldRenderer {
     return this.R.sy(y, z);
   }
 
+  /** The canvas renderer draws the ground flat. */
+  rise(): number {
+    return 0;
+  }
+
   setScale(s: number): void {
     if (s !== this.scale) this.bakes.clear();
     this.scale = s;

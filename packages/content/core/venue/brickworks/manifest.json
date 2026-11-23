@@ -38,6 +38,12 @@
     "outside": "#2e2826",
     "terrain": "paved"
   },
+  "relief": {
+    "banks": 22,
+    "step": 22,
+    "from": 40,
+    "spread": 60
+  },
   "scenery": [
     {
       "rule": "gantry",

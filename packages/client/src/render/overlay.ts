@@ -7,6 +7,8 @@ import type { Camera } from './scene';
 export interface Projector {
   sx(x: number): number;
   sy(y: number, z?: number): number;
+  /** How high the ground it draws stands at (x, y); 0 where it draws the ground flat. */
+  rise(x: number, y: number): number;
 }
 
 /** Anything that draws a world: the canvas sprite-stack scene or the WebGL pixel engine. */
@@ -32,7 +34,7 @@ export function drawOverlay(
     ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2.5);
     ctx.font = `900 ${Math.round((tx.big ? 22 : 15) * dpr)}px system-ui, sans-serif`;
     const sx = P.sx(tx.x);
-    const sy = P.sy(tx.y, tx.z);
+    const sy = P.sy(tx.y, tx.z + P.rise(tx.x, tx.y));
     ctx.lineWidth = 4 * dpr;
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
     ctx.strokeText(tx.text, sx, sy);
@@ -46,7 +48,7 @@ export function drawOverlay(
     for (const c of w.cars) {
       if (c === w.player || c.wrecked) continue;
       const sx = P.sx(c.x);
-      const sy = P.sy(c.y, 4);
+      const sy = P.sy(c.y, 4 + P.rise(c.x, c.y));
       if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
       const a = Math.atan2(sy - H / 2, sx - W / 2);
       const ex = W / 2 + Math.cos(a) * (W / 2 - 24 * dpr);
@@ -92,7 +94,7 @@ export function drawNames(
     if (c.wrecked || c === skip) continue;
     const on = c === watched;
     const sx = P.sx(c.x);
-    const sy = P.sy(c.y, c.z + 16) - 4 * dpr;
+    const sy = P.sy(c.y, c.z + 16 + P.rise(c.x, c.y)) - 4 * dpr;
     if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
     ctx.font = `900 ${Math.round((on ? 13 : 10) * dpr)}px system-ui, sans-serif`;
     ctx.lineWidth = 3.5 * dpr;

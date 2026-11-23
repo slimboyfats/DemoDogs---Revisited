@@ -41,6 +41,13 @@
     "terrain": "gravel",
     "road": "dirt"
   },
+  "relief": {
+    "hills": 20,
+    "banks": 60,
+    "step": 20,
+    "from": 34,
+    "spread": 110
+  },
   "scenery": [
     {
       "rule": "gantry",

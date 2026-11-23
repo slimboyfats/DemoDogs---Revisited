@@ -14,6 +14,7 @@
 
 import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
+import { RELIEF_GLSL } from './relief-layer';
 
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
 const MIRROR_TALL = 14;
@@ -33,7 +34,7 @@ uniform vec2 u_dir;      // depth along the view: y * dir.x + z * dir.y
 uniform vec2 u_drange;   // nearest depth, 1 / depth range
 uniform float u_mirror;  // 1: the stacks upside down under the ground line (wet ground)
 uniform float u_time;
-uniform vec3 u_grow;     // a race rising out of the ground: focus x, y and how far it has got; z < 0: off
+uniform vec3 u_grow;     // a race rising out of the ground: focus x, y and how far it has got; z < 0: off${RELIEF_GLSL}
 out vec2 v_tex;
 out vec3 v_world;
 flat out vec4 v_uv;
@@ -47,6 +48,9 @@ void main() {
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5);
+  // whatever it is stands on the ground, however high the ground is there
+  float gz = groundAt(a_pos.xy);
+  anchor.y -= floor(gz * u_scale * u_dir.x + 0.5);
   float lift = a_pos.w;
   float zz = a_pos.z;
   if (u_grow.z >= 0.0) {
@@ -69,7 +73,7 @@ void main() {
   }
   vec2 px = anchor + vec2(r.x * u_scale, r.y * u_scale * u_ys);
   v_world = vec3(a_pos.xy + r, zz);
-  float d = v_world.y * u_dir.x + up * v_world.z * u_dir.y;
+  float d = v_world.y * u_dir.x + (gz + up * v_world.z) * u_dir.y;
   // an outline copy sits a shade further off than the thing it outlines, so only its rim shows
   if (a_tint > 0.5) d -= 5.0;
   float far = clamp(1.0 - (d - u_drange.x) * u_drange.y, 0.0, 1.0);
@@ -270,7 +274,9 @@ void main() {
   v_uv = corner;
 }`;
 
-export const GROUND_FS = `#version 300 es
+/** `relief`: the ground stands at different heights (a define, so flat venues pay nothing). */
+export const groundFs = (relief: boolean): string => `#version 300 es
+${relief ? '#define RELIEF' : ''}
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
@@ -282,6 +288,11 @@ uniform int u_lcount;
 uniform vec3 u_amb;    // the sky's light on flat ground (ambient plus the sun on a flat top)
 uniform float u_snow;
 uniform float u_wet;
+#ifdef RELIEF
+uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
+uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
+uniform float u_hk;        // height for one row of the map's shift
+#endif
 out vec4 o;${SKY_GLSL}
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
@@ -293,6 +304,12 @@ void main() {
   // on the Bayer grid, so a kerb or a road edge steps in fine cells, crisp, as in mudders.
   vec2 cell = floor(v_uv * u_size * u_fine);
   vec2 p = (cell + 0.5) / u_fine - 0.5;
+#ifdef RELIEF
+  // raised ground: this cell of the picture shows ground that lies some rows further south
+  vec4 rl = texelFetch(u_map, ivec2(clamp(floor((cell + 0.5) / u_fine), vec2(0.0), u_size - 1.0)), 0);
+  float shift = floor(rl.r * 255.0 + 0.5);
+  p.y += shift;
+#endif
   vec2 i = floor(p);
   vec2 f = p - i;
   ivec2 ci = ivec2(cell);
@@ -326,6 +343,17 @@ void main() {
   float m = grass * g + tar * t + dirt * pebble * grit;
   c = clamp(c * k * m, 0.0, 1.0);
   vec2 wp = (cell + 0.5) / u_fine;
+#ifdef RELIEF
+  wp.y += shift;
+  // the face of a drop is bare earth or rock in beds; all of it takes the light as it lies
+  if (rl.b > 0.5) {
+    float bed = mod(shift, 4.0) < 1.0 ? 0.8 : 1.0;
+    float lum = dot(c, vec3(0.3, 0.5, 0.2));
+    c = mix(c, mix(vec3(0.5, 0.4, 0.3), vec3(0.42), tar) * (0.5 + lum), 0.6) * bed;
+  }
+  c = min(vec3(1.0), c * rl.g * (255.0 / 128.0));
+  gl_FragDepth = clamp(1.0 - (wp.y * u_depth.x + shift * u_hk * u_depth.y - 4.0 - u_depth.z) * u_depth.w, 0.0, 1.0);
+#endif
   // Snow settles in patches, a cell at a time, and last on the tarmac where the cars keep it off.
   if (u_snow > 0.0) {
     // on grass and dirt it lies in drifts with dithered edges; on tarmac the cars keep it to a
@@ -376,13 +404,17 @@ void main() {
  * ground's fine grid. Where the mask is part covered (its edge, blended between art px) it is
  * dithered on the Bayer grid, so the edge steps in fine cells instead of blurring.
  */
-export const SHADOW_FS = `#version 300 es
+export const shadowFs = (relief: boolean): string => `#version 300 es
+${relief ? '#define RELIEF' : ''}
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform vec2 u_size;
 uniform float u_alpha;
 uniform float u_fine;
+#ifdef RELIEF
+uniform sampler2D u_map;
+#endif
 out vec4 o;
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
@@ -391,7 +423,12 @@ float bayer(ivec2 p) {
 }
 void main() {
   vec2 cell = floor(v_uv * u_size * u_fine);
-  float a = texture(u_tex, (cell + 0.5) / (u_size * u_fine)).r;
+  vec2 at = (cell + 0.5) / u_fine;
+#ifdef RELIEF
+  // a shadow lies on the ground, so it is found where the ground under this cell is
+  at.y += floor(texelFetch(u_map, ivec2(clamp(floor(at), vec2(0.0), u_size - 1.0)), 0).r * 255.0 + 0.5);
+#endif
+  float a = texture(u_tex, at / u_size).r;
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
   o = vec4(0.0, 0.0, 0.0, u_alpha);
 }`;

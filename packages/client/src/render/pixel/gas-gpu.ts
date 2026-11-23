@@ -2,6 +2,7 @@ import { compile, uniforms } from './gl';
 import { BANG_RAMP, CKind, FIRE_RAMP, HOT, ringStrength, type Gust, type Ring } from './cells';
 import { LIGHT_BANDS, MAX_LIGHTS, type Lights } from './lighting';
 import { WIND } from './particles';
+import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
 
 /**
  * Fire and smoke on the GPU, after mudders' GPU particle engine (render/pixel/gpu-particles.ts):
@@ -262,7 +263,7 @@ uniform vec2 u_origin;
 uniform float u_cell;  // device px per fine cell
 uniform float u_grid;  // fine cells per art px
 uniform float u_ys;
-uniform float u_cosP;
+uniform float u_cosP;${RELIEF_GLSL}
 uniform int u_pass;
 uniform vec3 u_fire[13];
 uniform vec3 u_bang[9];
@@ -343,7 +344,7 @@ void main() {
     c = min(vec3(1.0), c + L * 0.55);
   }
   // on the fine grid: odd sizes sit on a cell, even ones on the line between cells
-  vec2 m = vec2(a0.x, a0.y * u_ys - a0.z * u_cosP) * u_grid;
+  vec2 m = vec2(a0.x, a0.y * u_ys - (a0.z + groundAt(a0.xy)) * u_cosP) * u_grid;
   vec2 at = mod(n, 2.0) > 0.5 ? floor(m) + 0.5 : floor(m + 0.5);
   vec2 px = u_origin + at * u_cell;
   gl_Position = vec4(px.x / u_view.x * 2.0 - 1.0, 1.0 - px.y / u_view.y * 2.0, 0.0, 1.0);
@@ -381,6 +382,9 @@ const DRAW_U = [
   'u_grid',
   'u_ys',
   'u_cosP',
+  'u_relief',
+  'u_rgrid',
+  'u_rface',
   'u_pass',
   'u_fire',
   'u_bang',
@@ -656,7 +660,13 @@ export class GasGpu {
    * Draw one pass (0 smoke and cool fire, 1 hot fire and bang, 2 glow). Blending is the
    * caller's: premultiplied for 0 and 1, additive for 2.
    */
-  draw(v: GasView, lights: Lights, pass: 0 | 1 | 2, amb?: Float32Array): void {
+  draw(
+    v: GasView,
+    lights: Lights,
+    pass: 0 | 1 | 2,
+    amb?: Float32Array,
+    relief?: ReliefLayer,
+  ): void {
     this.upload();
     this.unseen = 0;
     const runs = this.runs;
@@ -670,6 +680,7 @@ export class GasGpu {
     gl.uniform1f(u.u_grid, v.grid);
     gl.uniform1f(u.u_ys, v.ys);
     gl.uniform1f(u.u_cosP, v.cosP);
+    relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
     gl.uniform1i(u.u_pass, pass);
     gl.uniform3fv(u.u_fire, this.fireRamp);
     gl.uniform3fv(u.u_bang, this.bangRamp);

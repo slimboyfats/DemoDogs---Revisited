@@ -43,6 +43,12 @@
     "outside": "#1e2024",
     "terrain": "paved"
   },
+  "relief": {
+    "banks": 26,
+    "step": 26,
+    "from": 44,
+    "spread": 60
+  },
   "scenery": [
     {
       "rule": "overpass",

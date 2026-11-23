@@ -1,9 +1,10 @@
 import { fineGrid } from '../strips';
 import type { Ground } from '../ground';
 import { compile, texture, uniforms } from './gl';
-import { GROUND_FS, GROUND_VS } from './stack-shaders';
+import { groundFs, GROUND_VS } from './stack-shaders';
+import type { ReliefLayer } from './relief-layer';
 import type { Lights } from './lighting';
-import type { StackView } from './stack-batch';
+import { depthRange, type StackView } from './stack-batch';
 
 /**
  * The ground canvas as a texture, drawn as one quad behind everything. Marks painted onto the
@@ -19,12 +20,14 @@ export class GroundLayer {
   constructor(
     private readonly gl: WebGL2RenderingContext,
     private readonly ground: Ground,
+    /** The venue's raised ground: with it the ground is drawn where it stands, and writes depth. */
+    private readonly relief: ReliefLayer | null = null,
   ) {
     // read texel by texel (texelFetch): the shader dithers between texels, never blends them
     this.tex = texture(gl, gl.NEAREST);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, ground.cv);
     ground.dirty = null;
-    this.prog = compile(gl, GROUND_VS, GROUND_FS);
+    this.prog = compile(gl, GROUND_VS, groundFs(!!relief?.map));
     this.u = uniforms(gl, this.prog, [
       'u_view',
       'u_origin',
@@ -41,6 +44,9 @@ export class GroundLayer {
       'u_wet',
       'u_cone',
       'u_ccount',
+      'u_map',
+      'u_depth',
+      'u_hk',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -89,6 +95,17 @@ export class GroundLayer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);
+    const map = this.relief?.map;
+    if (map) {
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, map);
+      gl.uniform1i(u.u_map, 1);
+      gl.activeTexture(gl.TEXTURE0);
+      const dir0 = v.zk / v.scale;
+      const [lo, hi] = depthRange(v);
+      gl.uniform4f(u.u_depth, dir0, v.ys, lo, 1 / (hi - lo));
+      gl.uniform1f(u.u_hk, v.ys / dir0);
+    }
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);

@@ -41,6 +41,13 @@
     "outside": "#3a3226",
     "road": "dirt"
   },
+  "relief": {
+    "hills": 12,
+    "banks": 32,
+    "step": 16,
+    "from": 36,
+    "spread": 90
+  },
   "scenery": [
     {
       "rule": "gantry",

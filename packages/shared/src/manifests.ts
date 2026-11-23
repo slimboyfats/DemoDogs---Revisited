@@ -173,7 +173,7 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
           post: id('prop').optional(),
           roof: id('prop').optional(),
           inside: z.array(id('prop')).default([]),
-          step: z.number().positive().default(8),
+          step: z.number().positive().default(12),
           long: z.tuple([z.number().int().min(2), z.number().int().min(2)]),
           deep: z.tuple([z.number().int().min(2), z.number().int().min(2)]).default([2, 2]),
         }),
@@ -421,6 +421,22 @@ export const VenueSchema = z.strictObject({
     terrain: z.enum(['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved']).optional(),
     road: z.enum(['tarmac', 'dirt']).optional(),
   }),
+  /**
+   * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so
+   * cars climb and coast; and `banks` that rise in sheer terraces `step` high, beginning `from` past the
+   * road's edge (or a derby bowl's wall) and reaching full height `spread` further on. Left out,
+   * the venue is flat.
+   */
+  relief: z
+    .strictObject({
+      hills: z.number().min(0).max(60).default(0),
+      wave: z.number().min(120).default(520),
+      banks: z.number().min(0).max(120).default(0),
+      from: z.number().min(0).default(60),
+      spread: z.number().positive().default(150),
+      step: z.number().positive().default(8),
+    })
+    .optional(),
   /**
    * Weather that lies over part of the map: within `r` of (x, y) the sky is the one named (a name
    * the client knows: snow, rain, night ...). The screen takes the sky of the area it is over;

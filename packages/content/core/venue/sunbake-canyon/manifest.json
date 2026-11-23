@@ -41,6 +41,13 @@
     "outside": "#7a4026",
     "road": "dirt"
   },
+  "relief": {
+    "hills": 16,
+    "banks": 84,
+    "step": 28,
+    "from": 32,
+    "spread": 130
+  },
   "scenery": [
     {
       "rule": "arch",

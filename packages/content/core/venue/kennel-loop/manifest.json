@@ -38,6 +38,13 @@
     "dirt": "#8a6d45",
     "outside": "#2d3a24"
   },
+  "relief": {
+    "hills": 24,
+    "banks": 28,
+    "step": 14,
+    "from": 44,
+    "spread": 90
+  },
   "scenery": [
     {
       "rule": "gantry",

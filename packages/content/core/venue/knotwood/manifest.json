@@ -37,6 +37,12 @@
     "dirt": "#6a5638",
     "outside": "#1d2a1a"
   },
+  "relief": {
+    "banks": 36,
+    "step": 18,
+    "from": 40,
+    "spread": 90
+  },
   "scenery": [
     {
       "rule": "flyover",
