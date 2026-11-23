@@ -147,7 +147,17 @@ export function makeGround(w: World): Ground {
         if (!m || up(i)) continue;
         const rgb = parseInt(m.colour.slice(1), 16);
         const a = T.a[i]!;
-        for (let k = 0; k < road * 1.6; k++) {
+        // a stretch comes in and goes out over a car's length or so: thin at its ends, where the
+        // road under it still shows, and solid from there on
+        const fade = Math.max(2, Math.round(70 / T.step));
+        let near = fade;
+        for (let d = 1; d < fade; d++)
+          if (S[(i + d) % T.n] !== m || S[(i - d + T.n) % T.n] !== m) {
+            near = d;
+            break;
+          }
+        const full = (near / fade) ** 1.5;
+        for (let k = 0; k < road * 1.6 * full; k++) {
           const o = (r() - 0.5) * (road - 2);
           const f = (r() - 0.5) * T.step * 1.6;
           const sh = 0.86 + r() * 0.28;
