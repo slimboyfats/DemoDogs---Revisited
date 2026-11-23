@@ -78,7 +78,7 @@ export default defineAi({
       out.fire = true;
     // rubber band: rivals far ahead of the player ease off, far behind push harder
     if (!c.isPlayer) {
-      const gap = c.progress - w.player.progress;
+      const gap = c.progress - w.humanProgress();
       c.aiSpeed = ai.skill * (gap > 300 ? 0.9 : gap < -300 ? 1.07 : 1);
     }
     return unstick(c, out);

@@ -148,8 +148,8 @@ export class Hud {
       ctx.drawImage(m.cv, mx, my);
       for (const c of w.cars) {
         if (c.wrecked && w.kind === 'derby') continue;
-        ctx.fillStyle = c.isPlayer ? '#fff' : c.paint;
-        const s = (c.isPlayer ? 6 : 4.5) * u;
+        ctx.fillStyle = c === w.player ? '#fff' : c.paint;
+        const s = (c === w.player ? 6 : 4.5) * u;
         ctx.fillRect(mx + 4 + c.x * m.k - s / 2, my + 4 + c.y * m.k - s / 2, s, s);
       }
       // standings under the minimap
@@ -164,7 +164,7 @@ export class Hud {
           W - pad - 12 * u,
           y,
           `800 ${Math.round(10 * u)}px system-ui, sans-serif`,
-          c.isPlayer ? '#ffd24a' : c.wrecked ? '#999' : '#fff',
+          c === w.player ? '#ffd24a' : c.wrecked ? '#999' : '#fff',
           'right',
         );
         y += 13 * u;

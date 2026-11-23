@@ -667,3 +667,111 @@ tr.me td {
 body.recording[data-screen='game'] #recDot {
   display: block;
 }
+
+/* ---- online */
+#netDot {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(6px + env(safe-area-inset-bottom));
+  font: 700 11px/1 monospace;
+  color: #9fe0ff;
+  text-shadow: 0 1px 2px #000;
+  pointer-events: none;
+  display: none;
+}
+body.online[data-screen='game'] #netDot {
+  display: block;
+}
+.events button.online {
+  border-color: rgba(63, 169, 245, 0.7);
+  background: rgba(63, 169, 245, 0.12);
+}
+#onlinePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 100%;
+  overflow-y: auto;
+}
+#onlinePanel input,
+#onlinePanel select {
+  font:
+    800 16px system-ui,
+    sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 0;
+  text-transform: uppercase;
+}
+#onlinePanel .row {
+  display: flex;
+  gap: 8px;
+}
+#onlinePanel .row input {
+  flex: 1;
+}
+.onlineMe {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.onlineMe input {
+  flex: 1;
+}
+.onlineMe b {
+  min-width: 90px;
+  text-align: center;
+}
+#onlinePanel button.arrow {
+  padding: 8px 12px;
+}
+#onlinePanel button.small {
+  font-size: 12px;
+  padding: 8px;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+#onlinePanel button.go {
+  background: rgba(255, 210, 74, 0.35);
+}
+.roomCode {
+  margin: 0;
+  text-align: center;
+  font-weight: 800;
+}
+.roomCode b {
+  font: 900 28px monospace;
+  letter-spacing: 4px;
+  color: #ffd24a;
+}
+.seats {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-weight: 700;
+}
+.seats li {
+  padding: 4px 0;
+}
+.seats li.me {
+  color: #ffd24a;
+}
+.seats li.away {
+  opacity: 0.5;
+}
+.seats .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 8px;
+}
+#onlinePanel .note {
+  color: #9fe0ff;
+  font-size: 13px;
+  margin: 0;
+  word-break: break-all;
+}

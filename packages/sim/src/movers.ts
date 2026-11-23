@@ -177,7 +177,7 @@ function plough(w: World, c: Car): void {
           x: c.x + cs * reach,
           y: c.y + sn * reach,
           impact: push,
-          player: c.isPlayer || o.isPlayer,
+          player: c === w.player || o === w.player,
         });
     }
   }

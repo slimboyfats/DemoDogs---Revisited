@@ -27,7 +27,7 @@ export function results(w: World): Results {
   const sub = `${w.venue.meta.name} · ${w.kind === 'race' ? fmtTime(P.finished ? P.finishTime : w.raceTime) : `Score ${P.score}`}`;
   const head = ['#', 'Driver', w.kind === 'race' ? 'Time' : 'Status', 'Wrecks', 'Bots', 'Score'];
   const rows = st.map((c, i) => ({
-    me: c.isPlayer,
+    me: c === P,
     paint: c.paint,
     cells: [
       String(i + 1),

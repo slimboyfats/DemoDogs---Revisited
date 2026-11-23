@@ -214,7 +214,7 @@ export function smash(w: World, p: LooseProp): void {
     if (!circles(c).some((q) => Math.hypot(q[0] - p.x, q[1] - p.y) < m)) continue;
     damage(w, c, C * k, null, p.x, p.y);
     hit = true;
-    player ||= c.isPlayer;
+    player ||= c === w.player;
   }
   if (!hit && p.z > 0) return;
   const r = p.def.radius + 4;

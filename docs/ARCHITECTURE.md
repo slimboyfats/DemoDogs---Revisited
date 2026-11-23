@@ -169,3 +169,41 @@ the outside in and from the side facing the blast (`stripCrown`), and lets each 
 `CKind.Leaf` cell: flung out, braking, then fluttering down on the wind and flipping between a
 light and a dark face. Where a leaf lands it is painted into the ground and stays. Now and then a
 leaf lets go of a tree near the player by itself.
+
+## Online play (`packages/signal`, `client/src/net`, `client/src/ui/online.ts`)
+
+Set up the way mudders does it: a small lobby server on Render, peers talking directly.
+
+- **Lobby server** (`packages/signal`, ported from mudders): Hono + WebSocket. Identities that
+  survive a dropped socket, rooms with 6-character codes, the WebRTC offer/answer/ICE relay, and a
+  WebSocket data relay for players who can't reach each other directly. `GET /health`, `GET /stats`.
+  Rooms live in memory. Deployed from `render.yaml` (Render Blueprint, free plan); the client finds
+  it at `VITE_SIGNAL_URL`, else `/signal` on its own origin in dev (Vite proxies it to :8787), else
+  `https://demodogs-signal.onrender.com`.
+- **Links** (`net/rtc.ts`, `net/link.ts`, from mudders): star around the host. The host dials each
+  guest over WebRTC with public STUN; if the data channel isn't open in 5 s both switch to the
+  server relay. `?relay=1` forces the relay, `?ice=none` skips STUN (tests on one machine).
+- **Lockstep** (`net/lockstep.ts`): only controls cross the wire (14 bits each, `packControls`).
+  The host stamps every change with the tick it applies before and sends guests `tick {upTo, log}`
+  30 times a second; guests never run past `upTo`, so there is no prediction or rollback. Guests
+  trail the host by half a round trip and feel their own steering after a whole one. Fire is a
+  press: its bit drops after the tick it was stamped in. Every 120 ticks guests send `world.hash()`;
+  a mismatch (or a change stamped in a guest's past) makes the host send `start` again and the guest
+  rebuilds and fast-forwards. A guest that drops and comes back gets the log from where it was.
+  Bandwidth is about 1–2 kB/s per guest whatever is exploding.
+- **Several humans in one world**: `WorldOptions.humans` adds drivers on seats 1, 2, …;
+  `world.humans` lists them by seat and `stepSeats(controls[])` drives them. `you` picks which seat
+  `world.player` points at, the car this screen follows. **Rules never read `world.player`**:
+  it differs between peers. Race end, knockout and derby rules, and the racer AI's rubber band, use
+  `world.humans` (a race ends when every human is home, or `FINISH_GRACE` s after the first).
+  With one human everything is as before, so golden hashes are unchanged.
+- **Cross-browser determinism**: engines disagree in the last bit of `Math.sin`/`cos`/`atan2`/
+  `exp`/`hypot` (Safari vs Chrome). `sim/src/dmath.ts` has fdlibm ports built only from exactly
+  rounded operations; an online race installs them over `Math` before building its world
+  (`net/det-math.ts`). Single-player keeps the native ones.
+- **Join check**: guests send the protocol version and a hash of the manifests and AI code; the
+  host refuses a mismatch with "reload the page". The server refuses another protocol version.
+- `node scripts/play-net.mjs [relay] [seconds]` (after `pnpm build`): a local lobby server and two
+  headless phones race; fails if the guest's world drifts from the host's.
+- **Not yet**: host migration (the host leaving ends the room), a hidden host tab stalls the race
+  (phones stop the page), and guests feel a round trip of input delay (no prediction).

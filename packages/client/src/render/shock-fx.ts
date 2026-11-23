@@ -40,7 +40,7 @@ export class ShockFx {
           this.sparks.bolt(c.x, c.y, c.z + 6, c.x + Math.cos(a) * d, c.y + Math.sin(a) * d, 1);
         }
         this.sparks.shower(c.x, c.y, c.z + 6, 24, 110);
-        if (c.isPlayer) this.shake(3);
+        if (c === w.player) this.shake(3);
         const v = this.vol(e.x, e.y);
         if (v > 0) this.sound.zap(v, true);
         break;
@@ -58,7 +58,7 @@ export class ShockFx {
       case 'stall': {
         const c = w.cars[e.car]!;
         this.sparks.shower(c.x, c.y, c.z + 5, 14, 60);
-        if (c.isPlayer) this.shake(4);
+        if (c === w.player) this.shake(4);
         break;
       }
     }

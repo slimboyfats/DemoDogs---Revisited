@@ -540,7 +540,7 @@ function updateBalls(w: World): void {
         x: b.x + (dx / dl) * r,
         y: b.y + (dy / dl) * r,
         impact: rel,
-        player: c.isPlayer,
+        player: c === w.player,
       });
     }
     for (const bt of w.bots) {

@@ -599,7 +599,7 @@ function drop(w: World, s: StaticProp): void {
     if (Math.abs(along) > r + 6 || Math.abs(side) > across + 4) continue;
     damage(w, c, leafy ? 6 : 22, null, c.x, c.y);
     if (!leafy) c.vz = Math.max(c.vz, 40);
-    w.emit({ t: 'crash', x: c.x, y: c.y, impact: 90, player: c.isPlayer });
+    w.emit({ t: 'crash', x: c.x, y: c.y, impact: 90, player: c === w.player });
   }
 }
 
