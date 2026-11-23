@@ -32,7 +32,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn, updateEmbers, updateMending } from './damage';
+import { explode, respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -46,11 +46,14 @@ import {
 } from './things';
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
+import { updateCatchup } from './catchup';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
+import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
+import { updateGuards, type Decoy } from './guards';
 
 export interface WorldOptions {
   content: Content;
@@ -81,6 +84,11 @@ export interface WorldOptions {
   you?: number;
   /** A wrecked car is out for good, and the race ends when the player is. */
   knockout?: boolean;
+  /**
+   * A derby runs on to its last car (or the clock) after every human is scrapped, so they can
+   * watch the end. Off, it ends a moment after the last human is out.
+   */
+  playOn?: boolean;
   /** Laps, instead of the mode's. */
   laps?: number;
   /**
@@ -135,6 +143,7 @@ export class World {
   deckPiece: Int32Array | null = null;
   readonly road: number;
   readonly knockout: boolean;
+  readonly playOn: boolean;
   readonly sandbox: boolean;
   /** The gun every car carries: the pack's gun, if it has one. */
   readonly gun: WeaponManifest | null;
@@ -149,6 +158,9 @@ export class World {
   readonly pulses: Pulse[] = [];
   /** Howls: shockwaves still running out. */
   readonly howls: Howl[] = [];
+  /** Decoys thrown out for rockets to chase, and the id the next one gets. */
+  readonly decoys: Decoy[] = [];
+  decoySeq = 0;
   readonly pickups: Pickup[] = [];
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
@@ -164,6 +176,8 @@ export class World {
   readonly spikes: Spike[] = [];
   /** Sprays, rail slugs, wrecking balls, fire shells and sticky bombs in play. */
   readonly arms: Arms = newArms();
+  /** Sticks, skipping bombs, hooks, shells, diggers, turrets, fleas, rays, bolts and fire trails. */
+  readonly arsenal: Arsenal = newArsenal();
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   /**
@@ -202,6 +216,7 @@ export class World {
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
+    this.playOn = opts.playOn ?? false;
     this.sandbox = opts.sandbox ?? false;
     this.leak =
       [...C.material.values()]
@@ -481,6 +496,7 @@ export class World {
     } else if (this.phase === 'race') this.raceTime += DT;
     const live = this.phase === 'race';
 
+    updateCatchup(this);
     for (const c of this.cars) {
       c.invuln = Math.max(0, c.invuln - DT);
       c.fireCd -= DT;
@@ -527,12 +543,14 @@ export class World {
     updatePresses(this);
     updatePickups(this);
     updateDefence(this);
+    updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateRockets(this);
     updateMines(this);
     updateDrops(this);
     updatePulses(this);
     updateHowls(this);
     updateArms(this);
+    updateArsenal(this);
     updateEmbers(this);
     updateRivers(this);
     if (this.mending.length) updateMending(this);
@@ -559,7 +577,7 @@ export class World {
     if (this.kind === 'derby' && live) {
       this.timeLeft -= DT;
       const alive = this.cars.filter((c) => !c.wrecked).length;
-      const out = this.humans.every((c) => c.wrecked);
+      const out = !this.playOn && this.humans.every((c) => c.wrecked);
       if (this.endT < 0 && (alive <= 1 || out || this.timeLeft <= 0)) this.endT = out ? 2.6 : 2;
     }
     if (this.endT < 0 && this.finishBy > 0 && this.raceTime >= this.finishBy) this.endT = 0.5;
@@ -585,6 +603,7 @@ export class World {
         .num(c.hp)
         .num(c.lap)
         .num(c.score)
+        .num(c.size)
         .num(c.wrecked ? 1 : 0);
     for (const b of this.bots)
       H.num(b.x)
@@ -600,10 +619,15 @@ export class World {
       .num(this.spills.length)
       .num(this.craters.length)
       .num(this.clouds.length)
-      .num(this.spikes.length);
+      .num(this.spikes.length)
+      .num(this.decoys.length);
     const A = this.arms;
     H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
     for (const b of A.balls) H.num(b.x).num(b.y);
+    const K = this.arsenal;
+    H.num(K.sticks.length).num(K.toys.length).num(K.hooks.length).num(K.tethers.length);
+    H.num(K.strikes.length).num(K.moles.length).num(K.sentries.length).num(K.fleas.length);
+    H.num(K.beams.length).num(K.bolts.length).num(K.trails.length);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

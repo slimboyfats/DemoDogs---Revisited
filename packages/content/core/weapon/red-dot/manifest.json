@@ -1,0 +1,17 @@
+{
+  "id": "weapon.red-dot",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Red Dot",
+    "description": "A cutting ray held on whatever is ahead for a second and a half. It burns a car, and eats through fences, trees and walls a pixel at a time.",
+    "since": "core@0.7.0"
+  },
+  "kind": "beam",
+  "label": "RED DOT",
+  "ammo": 2,
+  "power": 1.0,
+  "cooldown": 2.0,
+  "life": 1.6,
+  "range": 190,
+  "damage": 26
+}

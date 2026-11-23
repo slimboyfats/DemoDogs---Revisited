@@ -15,6 +15,7 @@ import { toLocal } from './physics';
 import { tumble } from './rubble';
 import { fallOver, settleFloors } from './downtown';
 import { stand } from './stand';
+import { fireproof, held, padded, shared } from './guards';
 import type { World } from './world';
 
 /** Damage a car at (px, py), credited to `by`. Scaled by the mode and the car's armour. */
@@ -27,12 +28,20 @@ export function damage(
   py: number,
 ): void {
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
-  const dealt = absorb(w, c, (amount * w.mode.damageScale) / c.stats.armor, px, py);
+  // a swollen car shrugs blows off; one zapped small feels them more
+  const tough = c.size > 1.05 ? 0.6 : c.size < 0.95 ? 1.25 : 1;
+  const [dealt, other, pass] = shared(
+    w,
+    c,
+    absorb(w, c, (amount * tough * w.mode.damageScale) / c.stats.armor, px, py),
+  );
+  // a leash hands part of the blow on: that car takes exactly what this one was spared
+  if (other) damage(w, other, (pass * other.stats.armor) / w.mode.damageScale, c, other.x, other.y);
   if (dealt <= 0) return;
   c.hp -= dealt;
   const L = toLocal(c, px, py);
-  const lx = clamp(L[0], -12, 12);
-  const ly = clamp(L[1], -6, 6);
+  const lx = clamp(L[0] / c.size, -12, 12);
+  const ly = clamp(L[1] / c.size, -6, 6);
   w.emit({ t: 'hit', car: c.index, by: by ? by.index : -1, x: px, y: py, lx, ly, amount: dealt });
   if (c.hp < 74 || (dealt > 14 && lx < -7)) detach(w, c, 'rear');
   if (c.hp < 52 || (dealt > 18 && lx > 7)) detach(w, c, 'front');
@@ -171,11 +180,13 @@ export function explode(
     if (d > rad) continue;
     // a deck between the blast and the car takes the worst of it
     const k = (1 - d / rad) * (Math.abs(c.deck - z) > 12 ? 0.35 : 1);
-    c.vx += (dx / (d || 1)) * 230 * k;
-    c.vy += (dy / (d || 1)) * 230 * k;
-    c.vz = Math.max(c.vz, 150 * k);
+    // (claws that are dug in hold the car against the blast: it is hurt, not thrown)
+    const hold = held(w, c);
+    c.vx += (dx / (d || 1)) * 230 * k * hold;
+    c.vy += (dy / (d || 1)) * 230 * k * hold;
+    c.vz = Math.max(c.vz, 150 * k * hold);
     c.z = Math.max(c.z, c.deck + 0.5);
-    c.spin += w.rng.range(-6, 6) * k;
+    c.spin += w.rng.range(-6, 6) * k * hold;
     damage(w, c, 36 * k * power, owner && owner !== c ? owner : null, x, y);
   }
   for (const b of w.bots) {
@@ -355,7 +366,7 @@ export function updateEmbers(w: World): void {
     b.bite = 0.3;
     const owner = b.owner >= 0 ? w.cars[b.owner]! : null;
     for (const c of w.cars)
-      if (c.z < 4 && Math.hypot(c.x - b.x, c.y - b.y) < b.r + 4)
+      if (c.z < 4 && !fireproof(c) && Math.hypot(c.x - b.x, c.y - b.y) < b.r + 4)
         damage(w, c, 2.2, owner && owner !== c ? owner : null, c.x, c.y);
     for (const p of w.props)
       if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
@@ -597,7 +608,7 @@ function drop(w: World, s: StaticProp): void {
     const along = dx * cs + dy * sn;
     const side = -dx * sn + dy * cs;
     if (Math.abs(along) > r + 6 || Math.abs(side) > across + 4) continue;
-    damage(w, c, leafy ? 6 : 22, null, c.x, c.y);
+    if (!padded(w, c, c.x, c.y)) damage(w, c, leafy ? 6 : 22, null, c.x, c.y);
     if (!leafy) c.vz = Math.max(c.vz, 40);
     w.emit({ t: 'crash', x: c.x, y: c.y, impact: 90, player: c === w.player });
   }

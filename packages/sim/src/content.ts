@@ -197,7 +197,14 @@ export function resolveContent(src: ContentSource): Content {
   for (const m of out.mode.values()) need(m.id, 'ai', m.ai);
   for (const a of out.ai.values())
     if (!out.behaviours.has(a.behaviour)) problems.push(`${a.id}: no behaviour ${a.behaviour}`);
-  for (const p of out.pickup.values()) for (const w of p.weapons ?? []) need(p.id, 'weapon', w);
+  for (const p of out.pickup.values()) {
+    for (const w of p.weapons ?? []) need(p.id, 'weapon', w);
+    if (p.kind === 'kit' && !p.kits) problems.push(`${p.id}: a kit needs pickups to hold`);
+    for (const k of p.kits ?? []) {
+      need(p.id, 'pickup', k);
+      if (out.pickup.get(k)?.kind === 'kit') problems.push(`${p.id}: holds ${k}, another kit`);
+    }
+  }
 
   if (problems.length) throw new ContentError(problems);
   return out;

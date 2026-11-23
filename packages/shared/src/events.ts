@@ -102,6 +102,24 @@ export type SimEvent =
     }
   /** A car's welding: under way (`start`), a lost `part` put back on, or finished (`done`). */
   | { t: 'weld'; car: number; what: 'start' | 'part' | 'done'; part?: CarPart }
+  /**
+   * A car's guard (pickup `id`, a GuardKind `kind`): fitted (`on`), gone (`off`: spent, run out or
+   * lost in a wreck) or at work (`use`) at (x, y). A `use` that reaches somewhere (a shot brought
+   * down, a round sent back, a blow passed on, a mine tripped) has that place in (tx, ty), and
+   * the car it lands on instead (a round sent back to its shooter) in `to`.
+   */
+  | {
+      t: 'guard';
+      car: number;
+      id: string;
+      kind: string;
+      what: 'on' | 'off' | 'use';
+      x: number;
+      y: number;
+      tx?: number;
+      ty?: number;
+      to?: number;
+    }
   | { t: 'fire'; car: number; weapon: string }
   /** A car rolled over a spike at (x, y) and has a flat tyre. */
   | { t: 'puncture'; car: number; x: number; y: number }
@@ -127,6 +145,21 @@ export type SimEvent =
     }
   /** A car's engine was cut by a shock for `time` seconds. */
   | { t: 'stall'; car: number; by: number; time: number }
+  /**
+   * A catch-up item at work on `car` at (x, y), set off by car `by` (-1: nobody): it swelled up
+   * (`grow`) or was zapped small (`shrink`), came back to its own size (`back`), was flattened
+   * under a much bigger car (`squash`), got a second wind (`wind`), had a lead collar clamped on or
+   * drop off (`collar`, `collar-off`; `id` is the pickup), or bones were called down on it (`bones`).
+   */
+  | {
+      t: 'catchup';
+      what: 'grow' | 'shrink' | 'back' | 'squash' | 'wind' | 'collar' | 'collar-off' | 'bones';
+      car: number;
+      by: number;
+      id: string;
+      x: number;
+      y: number;
+    }
   /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */
   | { t: 'blade'; car: number; id: string; on: boolean; x: number; y: number }
   /** A car's springs threw it up at (x, y) to clear the ground ahead. */
@@ -143,6 +176,24 @@ export type SimEvent =
   | { t: 'lightning'; car: number; pts: number[] }
   /** A suction orb anchored at (x, y) and began to pull everything within r. */
   | { t: 'orb'; x: number; y: number; r: number }
+  /** A thrown stick came back to the hand of the car that threw it. */
+  | { t: 'catch'; car: number; x: number; y: number }
+  /** A hook bit car `to` at (x, y) and tied it to car `from`. */
+  | { t: 'leash'; from: number; to: number; x: number; y: number }
+  /** A line between two cars parted, at (x, y). */
+  | { t: 'snap'; x: number; y: number }
+  /** A shell is on its way down to (x, y) and lands `in` seconds from now. */
+  | { t: 'incoming'; x: number; y: number; in: number }
+  /** A turret at (x, y) was set down, was run over, or ran out of rounds or time. */
+  | { t: 'sentry'; what: 'up' | 'crushed' | 'spent'; x: number; y: number }
+  /** A flea jumped onto a car at (x, y). */
+  | { t: 'flea'; car: number; x: number; y: number }
+  /** A car's cutting ray came on or went off. */
+  | { t: 'beam'; car: number; on: boolean }
+  /** Cars a and b changed places: a was at (ax, ay) and b at (bx, by). */
+  | { t: 'swap'; a: number; b: number; ax: number; ay: number; bx: number; by: number }
+  /** Something thrown (a stick, a hook, a bolt) was spent against something at (x, y). */
+  | { t: 'fizz'; x: number; y: number }
   /** A spray's drop struck something at (x, y): `lit` drops burn, others splash. */
   | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */

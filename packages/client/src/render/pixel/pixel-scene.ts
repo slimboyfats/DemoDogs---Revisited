@@ -1,5 +1,6 @@
 import type { StaticProp, World } from '@demodogs/sim';
 import { armsLights } from '../arms-fx';
+import { arsenalLights } from '../arsenal-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
 import type { Ground } from '../ground';
@@ -179,6 +180,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha?: number): void {
     this.stacks.stack(s, x, y, z, rot, alpha);
   }
+  zoom(k: number): void {
+    this.stacks.zoom(k);
+  }
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     this.stacks.limb(s, a, b, n);
   }
@@ -203,6 +207,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);
+    arsenalLights(L, w);
     for (const f of fx.fires)
       L.add(
         f.x,

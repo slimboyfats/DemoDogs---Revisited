@@ -1,0 +1,13 @@
+{
+  "id": "pickup.dog-whistle",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dog Whistle",
+    "description": "A whistle only gunsights hear: guns, seeker rockets and lobbed shells cannot pick the car out.",
+    "since": "core@0.7.0"
+  },
+  "kind": "jam",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 10
+}

@@ -1,0 +1,16 @@
+{
+  "id": "prop.big-bone",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big bone",
+    "description": "A bone the size of a bumper. It comes down hard, and splinters when a car hits it at speed.",
+    "since": "core@0.7.0"
+  },
+  "body": "loose",
+  "radius": 4.5,
+  "mass": 0.8,
+  "breaksAt": 62,
+  "launch": 0.25,
+  "crush": 8,
+  "points": 15
+}

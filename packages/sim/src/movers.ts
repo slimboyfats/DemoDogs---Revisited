@@ -1,8 +1,8 @@
-import { CAR_RADIUS, DT, GRAVITY, type PickupManifest } from '@demodogs/shared';
+import { DT, GRAVITY, type PickupManifest } from '@demodogs/shared';
 import { batter, breakProp, damage, footing, light } from './damage';
 import type { Car } from './entities';
 import { clamp } from './math';
-import { circles, toLocal } from './physics';
+import { circles, hull, toLocal } from './physics';
 import type { World } from './world';
 
 /**
@@ -39,7 +39,7 @@ export function fitMover(w: World, c: Car, got: PickupManifest): string | null {
 
 /** The middle of the blade's edge, in the world. */
 export function nose(c: Car): [number, number] {
-  const a = c.def.body.halfLength + 2.5;
+  const a = (c.def.body.halfLength + 2.5) * c.size;
   return [c.x + Math.cos(c.h) * a, c.y + Math.sin(c.h) * a];
 }
 
@@ -85,8 +85,8 @@ function plough(w: World, c: Car): void {
   if (c.z > 6) return;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const reach = c.def.body.halfLength + 2.5;
-  const half = c.def.body.halfWidth + 2;
+  const reach = (c.def.body.halfLength + 2.5) * c.size;
+  const half = (c.def.body.halfWidth + 2) * c.size;
   const vf = c.vx * cs + c.vy * sn;
   const bite = B.def.bite ?? 60;
   const ready = B.cd <= 0;
@@ -146,7 +146,7 @@ function plough(w: World, c: Car): void {
     if (o === c || Math.abs(o.z - c.z) > 8 || Math.abs(o.x - c.x) > 40 || Math.abs(o.y - c.y) > 40)
       continue;
     let L: [number, number] | null = null;
-    for (const q of circles(o)) L ??= under(q[0], q[1], CAR_RADIUS);
+    for (const q of circles(o)) L ??= under(q[0], q[1], hull(o));
     if (!L) continue;
     const closing = vf - (o.vx * cs + o.vy * sn);
     if (closing <= 2) continue;

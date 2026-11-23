@@ -1,0 +1,13 @@
+{
+  "id": "pickup.ground-lead",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ground Lead",
+    "description": "A chain dragged behind that takes shock pulses and lightning to ground: the engine never cuts out.",
+    "since": "core@0.7.0"
+  },
+  "kind": "earth",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 15
+}

@@ -1,0 +1,21 @@
+{
+  "id": "weapon.mole",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mole",
+    "description": "A digger that runs under the ground, under fences and walls, nosing after the nearest car. It comes up underneath and throws the car into the air.",
+    "since": "core@0.7.0"
+  },
+  "kind": "burrow",
+  "label": "MOLE",
+  "ammo": 2,
+  "power": 1.0,
+  "cooldown": 1.0,
+  "speed": 200,
+  "life": 4,
+  "range": 220,
+  "homing": 2.2,
+  "arm": 0.35,
+  "trigger": 11,
+  "lift": 190
+}

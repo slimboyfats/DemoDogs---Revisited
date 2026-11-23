@@ -30,6 +30,11 @@ fragile), **Bruiser** (van, heavy and tough) and **Pug** (buggy, quick and nimbl
   you push the harder it accelerates. On the right: **BRAKE** (reverse when stopped, handbrake slide at speed),
   **BOOST** (nitro) and **FIRE** (uses your pickup).
 - **Keyboard:** arrows or WASD, Space to boost, X to fire, P or Esc to pause.
+- **Names:** the other drivers' names float over their cars. Tab, or **NAMES** on the pause menu, turns them off
+  and on.
+- **Scrapped?** When your car is out for good and the others carry on (any derby, or you are home first in an
+  online race), the camera moves on: tap anywhere or press Tab for the next car, **ZOOM** or Z to pull back, as far
+  as the whole arena in a derby. Offline, **SKIP** or Enter goes straight to the results.
 
 ## How the sprite stacks are animated
 
