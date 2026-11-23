@@ -37,6 +37,8 @@ export class Atmosphere {
   snow = 0;
   /** Light everything flat, as before there was a sky (weak phones, and to compare). */
   flat = false;
+  /** The least darkness and wet the race itself asks for (world modifiers: night, rain). */
+  readonly ask = { dark: 0, wet: 0 };
   /** Where it is now (these follow the three above). */
   readonly now = { dark: 0, wet: 0, snow: 0 };
   /** What the shaders are given. */
@@ -71,8 +73,8 @@ export class Atmosphere {
   update(dt: number): void {
     const n = this.now;
     const k = Math.min(1, dt * 1.6);
-    n.dark = ease(n.dark, Math.min(1, Math.max(0, this.dark)), k);
-    n.wet = ease(n.wet, Math.min(1, Math.max(0, this.wet)), k);
+    n.dark = ease(n.dark, Math.min(1, Math.max(this.ask.dark, this.dark)), k);
+    n.wet = ease(n.wet, Math.min(1, Math.max(this.ask.wet, this.wet)), k);
     // snow settles slowly and goes slowly
     n.snow = ease(n.snow, Math.min(1, Math.max(0, this.snow)), Math.min(1, dt * 0.5));
     this.time += dt;

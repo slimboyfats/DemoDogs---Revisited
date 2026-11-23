@@ -30,6 +30,7 @@ export interface Content {
   material: Map<string, ManifestByType['material']>;
   bot: Map<string, ManifestByType['bot']>;
   ai: Map<string, ManifestByType['ai']>;
+  modifier: Map<string, ManifestByType['modifier']>;
   behaviours: Map<string, AiBehaviour>;
 }
 
@@ -68,6 +69,7 @@ export function resolveContent(src: ContentSource): Content {
     material: new Map(),
     bot: new Map(),
     ai: new Map(),
+    modifier: new Map(),
     behaviours: new Map(),
   };
   for (const p of src.packs) {
@@ -198,6 +200,14 @@ export function resolveContent(src: ContentSource): Content {
       if (!b) need(w.id, 'weapon', w.cluster.bomblet);
       else if (b.kind !== 'rocket' || b.cluster)
         problems.push(`${w.id}: bomblet ${b.id} must be a rocket that does not split again`);
+    }
+  }
+  for (const m of out.modifier.values()) {
+    if (m.pools) need(m.id, 'material', m.pools.material);
+    if (m.leaves) {
+      need(m.id, 'prop', m.leaves.prop);
+      if (out.prop.get(m.leaves.prop)?.body === 'loose')
+        problems.push(`${m.id}: leaves ${m.leaves.prop}, which is not a static prop`);
     }
   }
   for (const m of out.mode.values()) need(m.id, 'ai', m.ai);

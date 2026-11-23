@@ -1,0 +1,14 @@
+{
+  "id": "modifier.moon-bounce",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Moon Bounce",
+    "description": "A third of the usual gravity. Cars, wrecks and scenery hang in the air, kerbs are ramps and rough ground throws a fast car up.",
+    "since": "core@0.7.0"
+  },
+  "kind": "gravity",
+  "label": "LOW G",
+  "colour": "#b39ddb",
+  "gravity": 0.3,
+  "tint": "#d2c2ff"
+}

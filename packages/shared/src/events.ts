@@ -192,6 +192,22 @@ export type SimEvent =
   | { t: 'beam'; car: number; on: boolean }
   /** Cars a and b changed places: a was at (ax, ay) and b at (bx, by). */
   | { t: 'swap'; a: number; b: number; ax: number; ay: number; bx: number; by: number }
+  /** The ground split open at (x, y), the crack running along heading h. */
+  | { t: 'crack'; x: number; y: number; h: number }
+  /** A bone out of the sky landed at (x, y) (its blast is an `explode` of its own). */
+  | { t: 'meteor'; x: number; y: number }
+  /** A pit of radius r was dug at (x, y); it will be there for `life` seconds. */
+  | { t: 'pit'; x: number; y: number; r: number; life: number }
+  /** A car fell into the pit at (x, y): down for `time` seconds, or `gone` for good. */
+  | { t: 'trap'; car: number; x: number; y: number; time: number; gone: boolean }
+  /** A car was thrown back out of the pit at (x, y). */
+  | { t: 'unpit'; car: number; x: number; y: number }
+  /** A car went down a pit that closed over it: it is out, with no wreck left. */
+  | { t: 'buried'; car: number; by: number }
+  /** The pit at (x, y) filled itself in. */
+  | { t: 'fill'; x: number; y: number; r: number }
+  /** A snap of cold went out from a car at (x, y) to radius r. */
+  | { t: 'frost'; car: number; x: number; y: number; r: number }
   /** Something thrown (a stick, a hook, a bolt) was spent against something at (x, y). */
   | { t: 'fizz'; x: number; y: number }
   /** A spray's drop struck something at (x, y): `lit` drops burn, others splash. */
@@ -227,6 +243,22 @@ export type SimEvent =
     }
   /** A car flattened a plant (world.statics[prop]) it drove over. */
   | { t: 'trample'; prop: number; car: number; x: number; y: number }
+  /** A world modifier (its content id) came on or went off. */
+  | { t: 'weather'; id: string; on: boolean }
+  /** Something lands at (x, y) in `in` seconds and reaches r: a bolt, scrap from the sky, a quake. */
+  | { t: 'omen'; what: 'bolt' | 'scrap' | 'quake'; x: number; y: number; r: number; in: number }
+  /** Lightning out of the sky struck (x, y). */
+  | { t: 'bolt'; x: number; y: number }
+  /** Burning scrap out of the sky came down at (x, y). */
+  | { t: 'skyfall'; x: number; y: number; power: number }
+  /** The ground shakes for `time` seconds, hardest at (x, y) and out to r. */
+  | { t: 'quake'; x: number; y: number; r: number; time: number }
+  /** The ground split open along the points [x0, y0, x1, y1, ...]. */
+  | { t: 'split'; pts: number[] }
+  /** A gust: the wind (see world.wind) rises for `time` seconds. */
+  | { t: 'gust'; time: number }
+  /** Flood water at (x, y) has risen to radius r. */
+  | { t: 'flood'; material: string; x: number; y: number; r: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }
   | { t: 'countdown'; n: number }
   | { t: 'go' }

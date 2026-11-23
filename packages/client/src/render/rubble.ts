@@ -6,6 +6,7 @@
  * effects.ts turns pieces into strips and draws them.
  */
 import { MAX_W, at, type Chip, type Voxels } from './strips';
+import { PULL } from './voxels';
 
 /** A piece cut out of a strip: its own voxels, and where its box sits in the source. */
 export interface Cut {
@@ -387,7 +388,7 @@ export function stepSlab(
 ): number {
   if (s.still) return 0;
   s.age += dt;
-  s.vz -= GRAVITY * dt;
+  s.vz -= GRAVITY * PULL.g * dt;
   s.x += s.vx * dt;
   s.y += s.vy * dt;
   s.z += s.vz * dt;

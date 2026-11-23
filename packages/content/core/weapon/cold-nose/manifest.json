@@ -1,0 +1,19 @@
+{
+  "id": "weapon.cold-nose",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cold Nose",
+    "description": "A snap of cold. Engines near the car die for a moment, fires go out, leaves fall, and the road behind is left a sheet of ice.",
+    "since": "core@0.7.0"
+  },
+  "kind": "frost",
+  "label": "COLD",
+  "ammo": 2,
+  "power": 0.2,
+  "cooldown": 1.5,
+  "radius": 60,
+  "stall": 1.4,
+  "damage": 6,
+  "count": 6,
+  "material": "material.ice"
+}

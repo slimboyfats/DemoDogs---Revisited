@@ -196,6 +196,8 @@ export const PeerMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('lobby'),
     venue: ContentId,
+    /** World modifiers the host has switched on (absent from an older host: none). */
+    mods: z.array(ContentId).max(16).optional(),
     seats: z.array(SeatSchema).max(MAX_HUMANS),
     you: z.number().int(),
   }),
@@ -204,6 +206,7 @@ export const PeerMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('start'),
     seed: z.number().int(),
     venue: ContentId,
+    mods: z.array(ContentId).max(16).optional(),
     seats: z.array(SeatSchema).max(MAX_HUMANS),
     you: z.number().int(),
     log: LogSchema,

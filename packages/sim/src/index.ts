@@ -34,6 +34,8 @@ export * from './arms';
 export { light } from './damage';
 export * from './arcs';
 export * from './arsenal';
+export * from './wild';
 export { breached, riversOf, type River } from './river';
 export { inWater } from './docks';
 export * from './dmath';
+export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';

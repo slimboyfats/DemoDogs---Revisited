@@ -118,6 +118,7 @@ export function respawn(w: World, c: Car): void {
   c.has = { front: true, rear: true, top: true };
   c.hp = 100;
   c.wrecked = false;
+  c.buried = false;
   w.placeOnTrack(c, i, 0);
   c.vx = c.vy = c.vz = c.z = c.spin = 0;
   c.z = c.deck = w.deckAt(i);
@@ -324,7 +325,7 @@ export function updateEmbers(w: World): void {
     const e = w.embers[i]!;
     const star = e.kind === 'star';
     // stars drift down slowly, as a firework's do
-    e.vz -= GRAVITY * (star ? 0.4 : 0.9) * DT;
+    e.vz -= GRAVITY * w.gravity * (star ? 0.4 : 0.9) * DT;
     e.x += e.vx * DT;
     e.y += e.vy * DT;
     e.z += e.vz * DT;

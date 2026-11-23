@@ -1004,3 +1004,47 @@ body.online[data-screen='game'] #netDot {
   margin: 0;
   word-break: break-all;
 }
+
+/* ---- world modifiers: a row of chips that toggle */
+#worldPick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#worldPick > b {
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+#worldPick > small {
+  font-size: 11px;
+  opacity: 0.7;
+}
+.modChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+.events .modChips button,
+.panel.narrow .modChips button {
+  width: auto;
+  text-align: center;
+  font:
+    800 11px/1 system-ui,
+    sans-serif;
+  letter-spacing: 0.04em;
+  color: #fff;
+  padding: 7px 10px;
+  border-radius: 999px;
+  border: 2px solid color-mix(in srgb, var(--chip) 55%, transparent);
+  background: transparent;
+  opacity: 0.75;
+}
+.events .modChips button.on,
+.panel.narrow .modChips button.on {
+  background: var(--chip);
+  border-color: var(--chip);
+  color: #16141c;
+  opacity: 1;
+}

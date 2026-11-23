@@ -19,6 +19,9 @@ import {
   rangeWreck,
   dig,
   plantTree,
+  addModifier,
+  removeModifier,
+  rangeEvent,
   type Car,
   type Content,
 } from '@demodogs/sim';
@@ -42,6 +45,7 @@ export type Tool =
   | 'prop'
   | 'crater'
   | 'tree'
+  | 'world'
   | 'pan';
 
 const TOOLS: [Tool, string, string][] = [
@@ -61,6 +65,11 @@ const TOOLS: [Tool, string, string][] = [
   ['give', 'GIVE', 'Tap a car (or anywhere for yours): hand it the chosen pickup'],
   ['crater', 'CRATER', 'Tap: dig a pit there, to try leaps and blades over rough ground'],
   ['tree', 'BIG TREE', 'Tap: a great tree there, its crown leaning towards your car'],
+  [
+    'world',
+    'WORLD',
+    'Tap: the chosen world modifier strikes there (a bolt, a quake, scrap from the sky, a pool, a fire)',
+  ],
   ['pan', 'PAN', 'Drag to move the camera'],
 ];
 const RATES: [number, string][] = [
@@ -106,6 +115,9 @@ export class DevPanel {
   readonly rocketSel = document.createElement('select');
   private readonly armsSel = document.createElement('select');
   private readonly carSel = document.createElement('select');
+  /** Which world modifier the WORLD tool and the ON/OFF button act on. */
+  readonly modSel = document.createElement('select');
+  private modBtn: HTMLButtonElement | null = null;
   private fps = 60;
 
   constructor(
@@ -147,6 +159,13 @@ export class DevPanel {
     for (const p of [...content.pickup.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
       this.pickupSel.append(new Option(p.meta.name, p.id));
     root.append(this.pickupSel);
+    for (const m of [...content.modifier.values()].sort((a, b) => (a.id < b.id ? -1 : 1)))
+      this.modSel.append(new Option(m.meta.name, m.id));
+    this.modSel.onchange = () => this.modLabel();
+    root.append(this.modSel);
+    this.modBtn = btn('SWITCH ON', 'Switch the chosen world modifier on or off', () =>
+      this.toggleMod(this.modSel.value),
+    );
     gap();
     const power = Object.assign(document.createElement('input'), {
       type: 'range',
@@ -230,6 +249,7 @@ export class DevPanel {
     this.root.classList.remove('hidden');
     this.pick('drive');
     this.setRate(0);
+    this.modLabel();
   }
 
   close(): void {
@@ -243,6 +263,20 @@ export class DevPanel {
     for (const [k, b] of this.toolBtns) b.classList.toggle('on', k === t);
     this.tap.classList.toggle('hidden', t === 'drive');
     if (this.s) this.s.follow = t === 'drive';
+  }
+
+  /** Switch a world modifier on or off (by content id). */
+  toggleMod(id: string): void {
+    const def = this.content.modifier.get(id);
+    if (!this.s || !def) return;
+    if (!removeModifier(this.s.world, id)) addModifier(this.s.world, def);
+    this.modLabel();
+  }
+
+  private modLabel(): void {
+    const on = this.s?.world.mods.some((m) => m.def.id === this.modSel.value);
+    if (this.modBtn) this.modBtn.textContent = on ? 'SWITCH OFF' : 'SWITCH ON';
+    this.modBtn?.classList.toggle('on', !!on);
   }
 
   setRate(i: number): void {
@@ -345,6 +379,12 @@ export class DevPanel {
         if (def) rangeGive(w, this.carAt(x, y) ?? P, def);
         break;
       }
+      case 'world': {
+        const def = this.content.modifier.get(this.modSel.value);
+        if (def) rangeEvent(w, def, x, y);
+        this.modLabel();
+        break;
+      }
       case 'crater':
         dig(w, x, y, 2 + this.power * 4);
         break;
@@ -383,6 +423,7 @@ export class DevPanel {
       .join('  ');
     this.statsEl.textContent =
       `${this.fps.toFixed(0)} fps  ${this.hooks.stats()}  loose blocks ${s.fx.voxels.length}  ` +
-      `particles ${s.fx.fx.length}  fires ${s.fx.fires.length}\n${hp}`;
+      `particles ${s.fx.fx.length}  fires ${s.fx.fires.length}\n${hp}` +
+      (s.world.mods.length ? `\nworld: ${s.world.mods.map((m) => m.def.label).join(' ')}` : '');
   }
 }

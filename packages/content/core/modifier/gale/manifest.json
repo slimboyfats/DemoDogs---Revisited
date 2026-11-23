@@ -1,0 +1,18 @@
+{
+  "id": "modifier.gale",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Gale",
+    "description": "A wind that swings round and comes in gusts. It leans on cars, hardest on one in the air, rolls loose scenery along, blows rockets, fire and smoke off line and tears the leaves off trees.",
+    "since": "core@0.7.0"
+  },
+  "kind": "wind",
+  "label": "GALE",
+  "colour": "#cfd8dc",
+  "wind": {
+    "steady": 26,
+    "gust": 110
+  },
+  "every": [5, 9],
+  "tint": "#e6dfc6"
+}

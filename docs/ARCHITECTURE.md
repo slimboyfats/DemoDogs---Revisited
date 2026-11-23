@@ -171,6 +171,41 @@ the outside in and from the side facing the blast (`stripCrown`), and lets each 
 light and a dark face. Where a leaf lands it is painted into the ground and stays. Now and then a
 leaf lets go of a tree near the player by itself.
 
+## World modifiers (`sim/src/modifiers.ts`, `client/src/render/weather-fx.ts`)
+
+A modifier is a content item (`modifier.<name>`) that changes a whole race: rain, a gale, lightning,
+night, low gravity, quakes, a rising flood, falling scrap, oil on the road, tinder-dry ground. A
+world is made with a list of them (`WorldOptions.modifiers`, sorted so every screen adds them in the
+same order); any number run together. `World.mods` holds one `Mod` each, and four numbers the rest of
+the sim reads: `grip` (tyres), `gravity` (cars, loose things, embers), `blindPace` (how much slower
+rivals drive when they cannot see) and `wind`. `updateModifiers` runs each kind's rule once a tick,
+drawing only from `world.rng`. A world with no modifiers draws nothing from it and hashes as it
+always did, so the golden hashes do not know modifiers exist.
+
+Events with a warning (a bolt, falling scrap, a quake) are queued as `Pending` and announced with an
+`omen` event, so there is something to see and dodge before `bolt`, `skyfall` or `quake` lands. What
+they do, they do through the rules already there: `explode`, `batter`, `crater`, `spill`, blazes.
+
+Online, the host's picks ride in the room's `lobby` and `start` messages (`mods`), and a guest's
+screen shows them. The menu keeps the last picks in `localStorage`; `WILD` there, or `?mods=wild`,
+draws two or three from the race's seed. `?mods=downpour,gale` or `?mods=all` sets them from the URL.
+
+The client shows all of it from events and world state (`WeatherFx`, owned by `Effects`):
+
+- Rain, wind-blown grit, rising embers and the glints on flood water are stateless: each cell's place
+  is a hash of its number and the time (after mudders' ambient layers), so nothing is stored or
+  stepped. Counts scale with `Effects.quality`.
+- A bolt is mudders' sky bolt: a jagged channel walked down from far above the screen with a few
+  branches, flickering in hard steps (its `BOLT_FLICK` table).
+- Night and wet ground are the sky's (`render/atmosphere.ts`): a modifier's `sky` asks for at
+  least that much `dark` and `wet` (`Atmosphere.ask`), so headlamps, reflections and puddles come
+  with it. A modifier's own colour (`tint`: dust, heat, the lilac of low gravity) is one multiply
+  over the finished picture (`pixel/dusk.ts`), lifted round fires and flashes in dithered bands.
+- Wind sets `WIND` (leaves, smoke, grit and swaying crowns lean with it) and low gravity sets
+  `PULL.g`, so debris hangs as long as the cars do.
+
+`scripts/capture-world.mjs` takes one staged shot of each (`pnpm world`).
+
 ## Online play (`packages/signal`, `client/src/net`, `client/src/ui/online.ts`)
 
 Set up the way mudders does it: a small lobby server on Render, peers talking directly.

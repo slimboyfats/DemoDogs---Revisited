@@ -429,6 +429,12 @@ export const WeaponSchema = z.strictObject({
     'beam',
     'swap',
     'trail',
+    'twister',
+    'flail',
+    'meteor',
+    'fissure',
+    'frost',
+    'pit',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -547,6 +553,20 @@ export const WeaponSchema = z.strictObject({
    * `power`. Swaps: a bolt at `speed` over `range` that bends (`homing`) towards a car within `aim`
    * of its path and changes places with it. Trails: for `life` seconds the car leaves a fire of
    * `radius` every `reach` it travels, each burning `fuse` seconds.
+   *
+   * Five more (sim `wild.ts`). Twisters: a whirlwind of `radius` that wanders at `speed` for `life`
+   * seconds, leaning (`homing`) towards cars within `range`; what it reaches is dragged round and
+   * in with strength `push`, thrown up at `lift` and takes `damage` twice a second. Flails: for
+   * `life` seconds a ball of `radius` swings round the car on `reach` of chain at `speed` rad/s,
+   * striking for `damage` and knocking cars on by `push`. Meteors: one blast of `power` that
+   * lands `arm` seconds after it is called, its mark following the leading car until `fuse`
+   * seconds before, with `count` small pits round it; a car right under it takes `damage` more. Fissures: a crack that runs `range` at
+   * `speed`, opening a pit of `power` every `reach`; cars within `radius` are thrown up at `lift`
+   * for `damage`. Frosts: engines within `radius` die for `stall` seconds and take `damage`, fires
+   * there go out, and `count` pools of `material` are left behind the car. Pits: a hole of
+   * `radius` dug behind the car that lasts `life` seconds; a car that drives in is down it for
+   * `stall` seconds and takes `damage` in a race, and is out for good in a derby. AI drivers dig one for a car within
+   * `range` behind them.
    */
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
@@ -912,6 +932,90 @@ export const MaterialSchema = z.strictObject({
 });
 export type MaterialManifest = z.infer<typeof MaterialSchema>;
 
+/** What a world modifier does: the kernel has one rule per kind (sim/src/modifiers.ts). */
+export const MODIFIER_KINDS = [
+  'rain',
+  'wind',
+  'lightning',
+  'night',
+  'gravity',
+  'quake',
+  'flood',
+  'meteors',
+  'slick',
+  'tinder',
+] as const;
+export type ModifierKind = (typeof MODIFIER_KINDS)[number];
+
+const span = z.tuple([z.number().positive(), z.number().positive()]);
+
+/**
+ * A world modifier: weather, or something else that changes the whole venue for a race (night,
+ * low gravity, quakes). Any venue can run with any set of them; they are picked in race setup, by
+ * the host of an online room, or switched on and off in the test range. Each kind reads only the
+ * fields it needs.
+ */
+export const ModifierSchema = z.strictObject({
+  ...base,
+  id: id('modifier'),
+  kind: z.enum(MODIFIER_KINDS),
+  /** The word on its chip in the HUD and in race setup. */
+  label: z.string().min(1).max(12),
+  colour: hex,
+  /** Seconds between its events (a strike, a quake, a fall, a new pool, a spot fire): a range. */
+  every: span.optional(),
+  /** Seconds of warning the sim gives before an event lands. */
+  warn: z.number().min(0).default(1),
+  /** How hard an event hits: a blast's power. */
+  power: z.number().positive().default(1),
+  /** How far an event reaches, art px (a quake's shaking, a strike's dead engines). */
+  reach: z.number().positive().default(60),
+  /** Seconds an event lasts (a quake's shaking, a dead engine). */
+  time: z.number().positive().default(1),
+  /** The share of their grip cars keep while it is on. */
+  grip: z.number().min(0.2).max(1).default(1),
+  /** Gravity, as a share of the usual. */
+  gravity: z.number().min(0.1).max(2).default(1),
+  /** How fast rivals who cannot see drive (night, with their lamps smashed). */
+  pace: z.number().min(0.5).max(1).default(1),
+  /** Wind, art px per second squared: the steady blow, and a gust. */
+  wind: z.strictObject({ steady: z.number().min(0), gust: z.number().min(0) }).optional(),
+  /** The pools it lays: of what, how many, and how wide (a flood's grow from the first to the last). */
+  pools: z
+    .strictObject({
+      material: id('material'),
+      /** There from the start. */
+      start: z.number().int().min(0).default(0),
+      /** The most it lays in all. */
+      max: z.number().int().positive(),
+      r: span,
+      /** Seconds a flood pool takes to rise to its full width. */
+      rise: z.number().positive().optional(),
+    })
+    .optional(),
+  /** What an event may leave standing where it landed, and the most of them at once. */
+  leaves: z
+    .strictObject({ prop: id('prop'), chance: unit.default(0.5), max: z.number().int().positive() })
+    .optional(),
+  /** The chance each second that a fire on the ground is put out. */
+  douse: z.number().min(0).default(0),
+  /** The chance each second that a fire on the ground throws a burning glob on. */
+  spread: z.number().min(0).default(0),
+  /**
+   * How the client shows it; nothing in the race depends on these. `tint` multiplies the whole
+   * picture (dust is yellow), and `sky` asks the client's sky for at least this much darkness
+   * (0 day, 0.5 dusk, 1 night: headlamps come on) and wet (rain on the ground, reflections).
+   */
+  tint: hex.default('#ffffff'),
+  sky: z
+    .strictObject({
+      dark: z.number().min(0).max(1).default(0),
+      wet: z.number().min(0).max(1).default(0),
+    })
+    .optional(),
+});
+export type ModifierManifest = z.infer<typeof ModifierSchema>;
+
 export const PackSchema = z.strictObject({
   name: z.string(),
   version: z.string().regex(/^\d+\.\d+\.\d+$/),
@@ -929,6 +1033,7 @@ export const SCHEMAS = {
   material: MaterialSchema,
   bot: BotSchema,
   ai: AiSchema,
+  modifier: ModifierSchema,
 } as const;
 export type ContentType = keyof typeof SCHEMAS;
 export const CONTENT_TYPES = Object.keys(SCHEMAS) as ContentType[];
@@ -943,4 +1048,5 @@ export interface ManifestByType {
   material: MaterialManifest;
   bot: BotManifest;
   ai: AiManifest;
+  modifier: ModifierManifest;
 }

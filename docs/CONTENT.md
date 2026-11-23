@@ -2,7 +2,7 @@
 
 Everything in the game is an item in a pack: `packages/content/core/<type>/<name>/`. The item's id is
 `<type>.<name>` and must match its folder. Types: `car`, `venue`, `mode`, `weapon`, `pickup`, `prop`,
-`bot`, `ai`. The schemas are in `packages/shared/src/manifests.ts`.
+`bot`, `ai`, `modifier`. The schemas are in `packages/shared/src/manifests.ts`.
 
 Each folder holds:
 
@@ -27,6 +27,13 @@ or a reference points at nothing.
   points (a closed Catmull-Rom curve), and pick scenery rules. It appears on the menu automatically.
 - **A new prop:** set `body` (`static` or `loose`), `radius`, and for loose props `mass`, `breaksAt` or
   `explodesAt`. Use it from a venue's scenery rules.
+- **A new world modifier:** copy one in `modifier/`. `kind` picks its rule in `sim/src/modifiers.ts`
+  (`rain`, `wind`, `lightning`, `night`, `gravity`, `quake`, `flood`, `meteors`, `slick`, `tinder`) and
+  the rest are that rule's numbers: `every` (seconds between events), `warn`, `power`, `reach`, `grip`,
+  `gravity`, `pace`, `wind`, `pools`, `leaves`, and for the picture `tint` and `sky`. `label` and
+  `colour` are its chip on the menu and the HUD. It appears on the menu's WORLD row, the online host's
+  screen and the test range automatically. A new `kind` needs a rule in the sim and, if it should show,
+  a case in `client/src/render/weather-fx.ts`.
 
 ## Track pieces
 

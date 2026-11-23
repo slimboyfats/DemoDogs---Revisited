@@ -1,0 +1,25 @@
+{
+  "id": "modifier.downpour",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Downpour",
+    "description": "Heavy rain. Every car has less grip, fires on the ground are put out, and puddles gather on the road.",
+    "since": "core@0.7.0"
+  },
+  "kind": "rain",
+  "label": "RAIN",
+  "colour": "#6fa8dc",
+  "grip": 0.78,
+  "douse": 0.35,
+  "every": [5, 9],
+  "pools": {
+    "material": "material.water",
+    "max": 8,
+    "r": [8, 13]
+  },
+  "tint": "#b8c4e0",
+  "sky": {
+    "dark": 0.3,
+    "wet": 1
+  }
+}

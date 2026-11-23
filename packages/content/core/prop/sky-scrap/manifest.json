@@ -1,0 +1,14 @@
+{
+  "id": "prop.sky-scrap",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sky scrap",
+    "description": "A scorched lump of scrap that fell out of the sky. It stays where it landed, in the way, until it is rammed or blown apart.",
+    "since": "core@0.7.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "hardness": 0.9,
+  "made": "material.steel",
+  "integrity": 55
+}

@@ -60,6 +60,8 @@ export function rangeMend(w: World, c: Car): void {
   c.has = { front: true, rear: true, top: true };
   c.hp = 100;
   c.wrecked = false;
+  c.buried = false;
+  c.sunk = 0;
   c.invuln = 0;
   c.spin = 0;
   c.weldT = c.weldRate = 0;
