@@ -76,3 +76,18 @@ describe('track files', () => {
     expect(id).toMatch(/^[a-z0-9]{12}$/);
   });
 });
+
+describe('sizes of things', () => {
+  it('names a prop at another size, and reads the name back', async () => {
+    const { sizedId, sizeOfId, sizeStep } = await import('@demodogs/shared');
+    expect(sizedId('prop.cone')).toBe('prop.cone');
+    expect(sizedId('prop.cone', 1)).toBe('prop.cone');
+    expect(sizedId('prop.cone', 2)).toBe('prop.cone-x200');
+    expect(sizedId('prop.cone', 0.5)).toBe('prop.cone-x50');
+    expect(sizeOfId('prop.cone-x150')).toEqual(['prop.cone', 1.5]);
+    expect(sizeOfId('prop.container-red-top')).toEqual(['prop.container-red-top', 1]);
+    expect(sizeStep(2.1)).toBe(2);
+    expect(sizeStep(9)).toBe(3);
+    expect(sizeStep(0.1)).toBe(0.5);
+  });
+});

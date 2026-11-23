@@ -190,6 +190,43 @@ describe('custom tracks', () => {
     ).toBeUndefined();
   });
 
+  it('puts a thing down at another size as a prop of the track’s own', () => {
+    const t = newTrack(look('venue.kennel-loop'), 'sizes', 'Sizes');
+    t.items.push(
+      { prop: 'prop.rock', x: 700, y: 480, rot: 0, size: 2 },
+      { prop: 'prop.rock', x: 760, y: 480, rot: 0 },
+      { prop: 'prop.cone', x: 700, y: 540, rot: 0, size: 0.5 },
+      { prop: 'prop.boost-pad', x: 640, y: 420, rot: 0, size: 1.5 },
+      // a size between the steps goes to the nearest one
+      { prop: 'prop.rock', x: 820, y: 480, rot: 0, size: 2.1 },
+    );
+    const made = installTrack(C, t);
+    expect(made.dropped).toEqual([]);
+    // the game's own props are untouched; the track's content has the sized ones as well
+    expect(C.prop.has('prop.rock-x200')).toBe(false);
+    const rock = C.prop.get('prop.rock')!;
+    const big = made.content.prop.get('prop.rock-x200')!;
+    expect(big.radius).toBe(rock.radius * 2);
+    expect(big.meta.name).toBe(rock.meta.name);
+    const w = world(t);
+    const rocks = w.statics.filter((s) => Math.abs(s.y - 480) < 1 && [700, 760, 820].includes(s.x));
+    expect(rocks.map((s) => s.def.id).sort()).toEqual([
+      'prop.rock',
+      'prop.rock-x200',
+      'prop.rock-x200',
+    ]);
+    const cone = w.props.find((p) => p.def.id === 'prop.cone-x50')!;
+    expect(cone.def.mass).toBeCloseTo(C.prop.get('prop.cone')!.mass! / 4);
+    const pad = w.pads.find((p) => p.def.id === 'prop.boost-pad-x150')!;
+    expect(pad.def.pad!.long).toBe(C.prop.get('prop.boost-pad')!.pad!.long * 1.5);
+    // the big rock is in the way where the small one was not
+    expect(w.free(700 + rock.radius * 1.6, 480, 1)).toBe(false);
+    expect(w.free(760 + rock.radius * 1.6, 480, 1)).toBe(true);
+    const back = parseTrackFile(JSON.stringify(t));
+    expect(back.ok && back.track.items[0]!.size).toBe(2);
+    expect(world(t).hash()).toBe(w.hash());
+  });
+
   it('says when a bridge is on the start line or runs into another', () => {
     const t = newTrack(look('venue.kennel-loop'), 'bridge-bad', 'Bridge');
     const [x, y] = t.road.points[0]!;

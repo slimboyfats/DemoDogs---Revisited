@@ -1,5 +1,6 @@
 import {
   rolled,
+  sizeOfId,
   type BotLook,
   type CarLook,
   type LookModule,
@@ -76,7 +77,8 @@ export class Art {
     id: string,
     kind: K,
   ): Extract<CarLook | PropLook | BotLook, { kind: K }> {
-    const m = this.looks.get(id);
+    // a prop at another size (a custom track's) has the look of the prop it was made from
+    const m = this.looks.get(id) ?? this.looks.get(sizeOfId(id)[0]);
     if (!m || m.look.kind !== kind) throw new Error(`no ${kind} look for ${id}`);
     return m.look as Extract<CarLook | PropLook | BotLook, { kind: K }>;
   }
@@ -140,6 +142,8 @@ export class Art {
       const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
       for (const [from, to] of Object.entries(swap ?? {})) mats[from] = mats[to]!;
       s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
+      // at another size it is the same thing with bigger or smaller pixels
+      if (!this.looks.has(id)) s.res /= sizeOfId(id)[1];
       this.props.set(key, s);
     }
     return s;
@@ -157,7 +161,10 @@ export class Art {
       if (!G) a = null;
       else {
         const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
+        // at another size it is the same thing with bigger or smaller pixels, its bones as far apart
+        const size = this.looks.has(id) ? 1 : sizeOfId(id)[1];
         a = {
+          size,
           bare: [G.bare, ...(G.alts ?? [])].map((p) => this.make(p, mats)),
           bones: G.bones.map((bone) => {
             const M = bone.move;
@@ -171,6 +178,8 @@ export class Art {
           }),
         };
       }
+      if (a && a.size !== 1)
+        for (const st of [...a.bare, ...a.bones.flatMap((b) => b.poses)]) st.res /= a.size;
       this.rigs.set(id, a);
     }
     return a;

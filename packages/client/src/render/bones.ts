@@ -10,6 +10,8 @@ import { BREEZE, WIND } from './pixel/particles';
 
 /** A look's rig as strips: the bare part in each pose, and each bone in each of its poses. */
 export interface RigArt {
+  /** How many times its made size it is drawn: the pivots are that much further apart. */
+  size: number;
   bare: Strip[];
   bones: { bone: Bone; poses: Strip[] }[];
 }
@@ -84,6 +86,7 @@ export function queueRig(
 ): void {
   R.stack(A.bare[pose] ?? A.bare[0]!, x, y, z, rot, alpha);
   const n = A.bones.length;
+  const k = A.size;
   let mem = turned.get(key);
   if (!mem || mem.a.length !== n) turned.set(key, (mem = { t: time, a: new Float32Array(n) }));
   const dt = Math.min(0.1, Math.max(0, time - mem.t));
@@ -97,9 +100,9 @@ export function queueRig(
     const pa = on ? on[3] : rot;
     const c = Math.cos(pa);
     const s = Math.sin(pa);
-    const bx = px + c * bone.at[0] - s * bone.at[1];
-    const by = py + s * bone.at[0] + c * bone.at[1];
-    const bz = pz + bone.at[2];
+    const bx = px + (c * bone.at[0] - s * bone.at[1]) * k;
+    const by = py + (s * bone.at[0] + c * bone.at[1]) * k;
+    const bz = pz + bone.at[2] * k;
     const rest = pa + (bone.face ?? 0);
     let a = rest;
     let strip = poses[0]!;
@@ -154,7 +157,7 @@ export function rigTall(A: RigArt): number {
   const F = restFrames(A.bones.map((b) => b.bone));
   let top = A.bare[0]!.n / A.bare[0]!.res;
   A.bones.forEach((b, i) => {
-    top = Math.max(top, F[i]![2] + b.poses[0]!.n / b.poses[0]!.res);
+    top = Math.max(top, F[i]![2] * A.size + b.poses[0]!.n / b.poses[0]!.res);
   });
   return top;
 }

@@ -24,6 +24,7 @@ function drawn(A: RigArt, rot: number, time: number, cars: { x: number; y: numbe
   return out;
 }
 const rig = (...bones: Bone[]): RigArt => ({
+  size: 1,
   bare: [strip(30)],
   bones: bones.map((bone) => ({
     bone,
@@ -58,6 +59,13 @@ describe('bones', () => {
     expect(d[2]!.y).toBeCloseTo(56);
     expect(d[2]!.z).toBe(11);
     expect(rigTall(A)).toBe(13);
+  });
+
+  it('stands the bones of a thing drawn twice its size twice as far out', () => {
+    const A = { ...rig({ part, at: [4, 0, 10] }), size: 2 };
+    const d = drawn(A, 0, 0, null);
+    expect(d[1]).toMatchObject({ x: 108, y: 50, z: 20 });
+    expect(rigTall(A)).toBe(22);
   });
 
   it('turns a turning bone with the clock, and what rides on it goes round with it', () => {
