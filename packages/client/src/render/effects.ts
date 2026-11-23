@@ -43,6 +43,7 @@ import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { armsEvent, armsTick } from './arms-fx';
+import { arsenalEvent, arsenalTick } from './arsenal-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -1397,7 +1398,7 @@ export class Effects {
         case 'fire': {
           const c = w.cars[e.car]!;
           const wpn = w.content.weapon.get(e.weapon);
-          if (armsEvent(this, w, e, S)) break;
+          if (armsEvent(this, w, e, S) || arsenalEvent(this, w, e, S)) break;
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
           } else if (c === w.player && wpn?.kind !== 'pulse' && wpn?.kind !== 'howl') S.drop();
@@ -1420,6 +1421,17 @@ export class Effects {
         case 'arc':
         case 'stall':
           this.shock.handle(e);
+          break;
+        case 'catch':
+        case 'leash':
+        case 'snap':
+        case 'incoming':
+        case 'sentry':
+        case 'flea':
+        case 'beam':
+        case 'swap':
+        case 'fizz':
+          arsenalEvent(this, w, e, S);
           break;
         case 'howl':
         case 'hurl':
@@ -1749,6 +1761,7 @@ export class Effects {
       if (Math.random() < 0.2) this.ember(x, y, 5);
     }
     armsTick(this, w, this.sound);
+    arsenalTick(this, w, this.sound);
     this.feed();
     feedClouds(this, w);
     // the cars drag the air they drive through: fire and smoke near a fast car swirl in its wake

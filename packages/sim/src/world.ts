@@ -48,6 +48,7 @@ import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
+import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
@@ -164,6 +165,8 @@ export class World {
   readonly spikes: Spike[] = [];
   /** Sprays, rail slugs, wrecking balls, fire shells and sticky bombs in play. */
   readonly arms: Arms = newArms();
+  /** Sticks, skipping bombs, hooks, shells, diggers, turrets, fleas, rays, bolts and fire trails. */
+  readonly arsenal: Arsenal = newArsenal();
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   /**
@@ -533,6 +536,7 @@ export class World {
     updatePulses(this);
     updateHowls(this);
     updateArms(this);
+    updateArsenal(this);
     updateEmbers(this);
     updateRivers(this);
     if (this.mending.length) updateMending(this);
@@ -604,6 +608,10 @@ export class World {
     const A = this.arms;
     H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
     for (const b of A.balls) H.num(b.x).num(b.y);
+    const K = this.arsenal;
+    H.num(K.sticks.length).num(K.toys.length).num(K.hooks.length).num(K.tethers.length);
+    H.num(K.strikes.length).num(K.moles.length).num(K.sentries.length).num(K.fleas.length);
+    H.num(K.beams.length).num(K.bolts.length).num(K.trails.length);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);
