@@ -21,11 +21,29 @@
     <div id="controls">
       <div id="stickZone"><span class="hint">DRAG TO DRIVE</span></div>
       <div id="stickBase"><div id="stickKnob"></div></div>
-      <button id="btnFire" class="pad empty">FIRE</button>
-      <button id="btnBrake" class="pad">BRAKE</button>
-      <button id="btnBoost" class="pad">BOOST</button>
+      <button id="btnFire" class="pad empty">
+        <span id="fireLabel">FIRE</span><kbd data-act="fire"></kbd>
+      </button>
+      <button id="btnBrake" class="pad">BRAKE<kbd data-act="brake"></kbd></button>
+      <button id="btnBoost" class="pad">BOOST<kbd data-act="boost"></kbd></button>
+      <!-- key hints: with a mouse these stand where the touch buttons would be -->
+      <div id="keyHints" aria-hidden="true">
+        <div class="khDrive">
+          <div class="khPad">
+            <kbd data-act="gas"></kbd><kbd data-act="left"></kbd><kbd data-act="brake"></kbd
+            ><kbd data-act="right"></kbd>
+          </div>
+          <b>DRIVE</b>
+        </div>
+        <div class="khActs">
+          <div id="khFire" class="khRow fire empty"><b>FIRE</b><kbd data-act="fire"></kbd></div>
+          <div class="khRow"><b>BRAKE</b><kbd data-act="brake"></kbd></div>
+          <div class="khRow boost"><b>BOOST</b><kbd data-act="boost"></kbd></div>
+        </div>
+      </div>
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
+    <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
     <div id="recDot"></div>
     <div id="netDot"></div>
     <div id="devTap" class="hidden"></div>
@@ -74,6 +92,7 @@
               repairs.
             </p>
             <button class="muteBtn small">SOUND ON</button>
+            <button class="hintsBtn small">KEY HINTS ON</button>
             <button id="toDev" class="small">TEST RANGE</button>
           </div>
         </div>
@@ -103,6 +122,7 @@
         <button id="resume">RESUME</button>
         <button id="restart">RESTART</button>
         <button class="muteBtn">SOUND ON</button>
+        <button class="hintsBtn">KEY HINTS ON</button>
         <button class="recBtn small">RECORD PERFORMANCE</button>
         <button id="quit">QUIT TO MENU</button>
       </div>
