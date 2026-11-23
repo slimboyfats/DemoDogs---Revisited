@@ -4,6 +4,7 @@ import { TAU } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
 import { stand } from './scenery';
+import { nextBeam } from './spans';
 
 /**
  * Scenery with height: a flyover the track climbs onto and passes under, and great trees whose
@@ -52,6 +53,9 @@ export function flyover(w: World, rule: Rule<'flyover'>, add: Add, surface: numb
   const hi = at(reach + 6);
   const half = w.road / 2;
   let group = nextGroup(w);
+  // the whole flyover is one beam: its low ramps lie on the ground, the rest stands on pillars
+  const beam = nextBeam(w);
+  let link = 0;
   let inSpan = 0;
   // a piece of deck every other sample, each carrying the road over the two
   for (let o = -reach; o <= reach; o += 2) {
@@ -63,10 +67,12 @@ export function flyover(w: World, rule: Rule<'flyover'>, add: Add, surface: numb
     s.lift = h - surface;
     piece[i] = s.index;
     piece[at(o + 1)] = s.index;
+    s.beam = beam;
+    s.link = link++;
+    if (h < H * 0.5) s.rests = true;
     if (h < H * 0.95) continue;
     // up at full height it is part of a span, held up by a pair of pillars under its middle
     s.group = group;
-    s.bears = false;
     if (inSpan === Math.floor(rule.span / 2)) {
       for (const side of [-1, 1]) {
         const off = (half - 4) * side;
@@ -77,7 +83,8 @@ export function flyover(w: World, rule: Rule<'flyover'>, add: Add, surface: numb
         const p = add(rule.pillar, x, y, T.a[i]!);
         if (p) {
           p.group = group;
-          p.bears = true;
+          p.beam = beam;
+          p.holds = s.link;
         }
       }
     }

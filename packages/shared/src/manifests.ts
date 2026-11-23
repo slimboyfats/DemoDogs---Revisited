@@ -69,7 +69,7 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
    * flat for `length`, and comes down a ramp the other side (each ramp `ramp` long, art px). Cars
    * on the deck ride at `height`; the rest of the track passes under it. The deck is laid in
    * `deck` pieces, `span` of them to a span held up by a pair of `pillar`s (none where a road
-   * passes below). A span comes down when its pillars go.
+   * passes below). Deck with nothing left under it sags and comes down (sim/spans.ts).
    */
   z.strictObject({
     rule: z.literal('flyover'),
@@ -325,7 +325,7 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
   /**
    * A raised road over the track at each of `at` (fractions of the way round): `pillar` props
    * either side of the road, holding up `deck` props across it, all one structure. Cars pass
-   * under the deck; when the pillars go, it comes down on the road.
+   * under the deck; each lane of deck comes down on the road when a pillar under it goes.
    */
   z.strictObject({
     rule: z.literal('overpass'),

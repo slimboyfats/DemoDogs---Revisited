@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Overpass deck",
-    "description": "A span of the raised road, high enough to drive under. It falls when its pillars go, and leaves a heap of rubble across the track.",
+    "description": "A span of the raised road, high enough to drive under. It falls when a pillar under its lane goes, or when a hole is blown in the lane, and leaves a heap of rubble across the track.",
     "since": "core@0.4.0"
   },
   "body": "static",

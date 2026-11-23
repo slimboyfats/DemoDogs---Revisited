@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { explode, type World } from '@demodogs/sim';
+import { explode, fall, type World } from '@demodogs/sim';
 import { makeWorld, runUntil } from '../../../src/testing';
 
 const V = 'venue.tumble-heights';
@@ -55,18 +55,66 @@ describe(V, () => {
     // a span over the middle of the road
     const deck = w.statics.find((s) => s.def.id === 'prop.overpass-deck' && !w.offroad(s.x, s.y))!;
     const before = w.statics.length;
-    const pillars = w.statics.filter(
-      (s) => s.group === deck.group && s.def.id === 'prop.overpass-pillar',
-    );
-    for (let k = 0; k < 200 && !deck.down; k++) {
-      const p = pillars.find((s) => !s.down)!;
-      explode(w, p.x, p.y, 1.5, null);
-    }
+    // the legs of its own lane: one of them is enough
+    const pillars = w.statics.filter((s) => s.beam === deck.beam && s.holds !== undefined);
+    for (let k = 0; k < 200 && pillars.every((s) => !s.down); k++)
+      explode(w, pillars[0]!.x, pillars[0]!.y, 1.5, null);
+    runUntil(w, () => w.sagging.length === 0, 60 * 3);
     expect(deck.down).toBe(true);
     const onRoad = w.statics
       .slice(before)
       .filter((s) => s.def.id === 'prop.rubble' && !w.offroad(s.x, s.y));
     expect(onRoad.length).toBeGreaterThan(4);
+  });
+
+  /** One lane of the overpass over the road: its deck in order, and the leg at each end. */
+  function lane(w: World) {
+    const mid = w.statics.find((s) => s.def.id === 'prop.overpass-deck' && !w.offroad(s.x, s.y))!;
+    const deck = w.statics.filter((s) => s.beam === mid.beam && s.link !== undefined);
+    const legs = w.statics.filter((s) => s.beam === mid.beam && s.holds !== undefined);
+    return { deck, legs };
+  }
+
+  it('a lane that loses the leg under one end comes down, all but the stub on the other leg', () => {
+    const w = makeWorld({ venue: V });
+    const { deck, legs } = lane(w);
+    expect(legs.length).toBe(2);
+    const other = w.statics.filter(
+      (s) => s.def.id === 'prop.overpass-deck' && s.beam !== deck[0]!.beam,
+    );
+    fall(w, legs[0]!, legs[0]!.x, legs[0]!.y);
+    // nothing drops at once: it sags, then goes piece by piece from the broken end
+    expect(deck.every((s) => !s.down)).toBe(true);
+    expect(deck.filter((s) => s.sagT !== undefined).length).toBe(deck.length - 2);
+    const went: number[] = [];
+    runUntil(
+      w,
+      () => {
+        for (const s of deck) if (s.down && !went.includes(s.link!)) went.push(s.link!);
+        return w.sagging.length === 0;
+      },
+      60 * 3,
+    );
+    expect(went).toEqual(deck.slice(0, -2).map((s) => s.link));
+    // the far end still hangs off its leg, and the lane beside it never moved
+    expect(deck.slice(-2).every((s) => !s.down)).toBe(true);
+    expect(other.every((s) => !s.down)).toBe(true);
+  });
+
+  it('a hole blown in the deck drops everything that was hanging on across it', () => {
+    const w = makeWorld({ venue: V });
+    const { deck, legs } = lane(w);
+    const hit = deck[Math.floor(deck.length / 2)]!;
+    fall(w, hit, hit.x, hit.y);
+    runUntil(w, () => w.sagging.length === 0, 60 * 3);
+    expect(legs.every((s) => !s.down)).toBe(true);
+    // a leg and the piece on it and one more at each end: the rest is on the road
+    expect(deck.filter((s) => !s.down).map((s) => s.link)).toEqual([
+      0,
+      1,
+      deck.length - 2,
+      deck.length - 1,
+    ]);
   });
 
   it('racers get through a street full of rubble', () => {

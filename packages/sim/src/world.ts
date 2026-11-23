@@ -34,7 +34,8 @@ import { updateMovers } from './movers';
 import { updatePads } from './pads';
 import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { explode, respawn, updateEmbers, updateMending } from './damage';
+import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
+import { updateSagging } from './spans';
 import {
   fire,
   makeBot,
@@ -185,6 +186,8 @@ export class World {
   readonly blazes: Blaze[] = [];
   /** Fallen scenery waiting to be built again. */
   readonly mending: StaticProp[] = [];
+  /** Bridge deck that has lost its footing and is about to come down (see spans.ts). */
+  readonly sagging: StaticProp[] = [];
   /** Pits blasts have dug in the ground. */
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
@@ -606,6 +609,7 @@ export class World {
     if (this.mods.length) updateModifiers(this, live);
     updateEmbers(this);
     updateRivers(this);
+    if (this.sagging.length) updateSagging(this, (w, s) => fall(w, s, s.x, s.y));
     if (this.mending.length) updateMending(this);
 
     if (this.sandbox) return;

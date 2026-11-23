@@ -54,6 +54,11 @@ export type SimEvent =
   | { t: 'topple'; prop: number; left: number; a: number; len: number }
   /** A fallen prop starts flying back together; it stands again `in` seconds from now. */
   | { t: 'mend'; prop: number; in: number }
+  /**
+   * A raised road lost what held it up when world.statics[prop] came down at (x, y): `pieces`
+   * of its deck are sagging (their `sagT` runs down) and will fall one after another.
+   */
+  | { t: 'sag'; prop: number; x: number; y: number; pieces: number }
   /** A rebuilt prop stands again. */
   | { t: 'stand'; prop: number }
   /**

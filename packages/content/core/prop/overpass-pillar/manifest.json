@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Overpass pillar",
-    "description": "A concrete leg of the raised road over the track. Knock out the legs on both sides and the deck comes down on the road.",
+    "description": "A concrete leg of the raised road over the track. Knock one out and the lane it held sags and comes down on the road, all but a stub on the far leg.",
     "since": "core@0.4.0"
   },
   "body": "static",

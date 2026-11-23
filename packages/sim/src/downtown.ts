@@ -1,6 +1,7 @@
 import type { PropManifest, SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { damage } from './damage';
+import { nextBeam } from './spans';
 import { TAU } from './math';
 import type { Rng } from './prng';
 import type { World } from './world';
@@ -152,6 +153,9 @@ export function buildDowntown(w: World, rng: Rng, rule: SceneryRule, add: Add): 
         const reach = half + rule.out;
         const lanes = rule.width;
         for (let l = 0; l < lanes; l++) {
+          // each lane is a beam of its own, a leg under each end
+          const beam = nextBeam(w);
+          const k = Math.ceil((reach * 2) / rule.step);
           const u = (l - (lanes - 1) / 2) * rule.step;
           const bx = T.x[i]! + tx * u;
           const by = T.y[i]! + ty * u;
@@ -159,16 +163,17 @@ export function buildDowntown(w: World, rng: Rng, rule: SceneryRule, add: Add): 
             const s = add(rule.pillar, bx + nx * reach * sg, by + ny * reach * sg, a);
             if (s) {
               s.group = group;
-              s.bears = true;
+              s.beam = beam;
+              s.holds = sg < 0 ? 0 : k;
             }
           }
-          const k = Math.ceil((reach * 2) / rule.step);
           for (let j = 0; j <= k; j++) {
             const v = -reach + (j * reach * 2) / k;
             const s = add(rule.deck, bx + nx * v, by + ny * v, a + Math.PI / 2);
             if (s) {
               s.group = group;
-              s.bears = false;
+              s.beam = beam;
+              s.link = j;
             }
           }
         }

@@ -1136,6 +1136,22 @@ export class Effects {
         case 'topple':
           this.collapse(e);
           break;
+        case 'sag': {
+          // a bridge gives way: it cracks like a shot, the ground jumps, grit rains off the deck
+          const s = w.statics[e.prop]!;
+          const v = this.vol(e.x, e.y);
+          if (v > 0) this.sound.crash(Math.min(200, 60 + 20 * e.pieces) * v);
+          if (this.near(e.x, e.y, 220))
+            this.shake = Math.max(this.shake, Math.min(9, 3 + e.pieces * 0.8));
+          for (const o of w.sagging) {
+            if (o.beam !== s.beam) continue;
+            const z = (o.lift ?? 16) + 2;
+            for (let i = 0; i < 2; i++)
+              this.puff(o.x + rand(-6, 6), o.y + rand(-6, 6), z - rand(0, 6), 'dust');
+            for (let i = 0; i < 3; i++) this.spark(o.x + rand(-6, 6), o.y + rand(-6, 6), z, 50);
+          }
+          break;
+        }
         case 'mend':
           // gathered up and started together once this step's events are read
           this.mends.push({ s: w.statics[e.prop]!, in: e.in });
