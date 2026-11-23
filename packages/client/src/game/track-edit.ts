@@ -75,6 +75,21 @@ export function resize(t: TrackFile, w: number, h: number): void {
     o.x > 12 && o.y > 12 && o.x < w - 12 && o.y < h - 12;
   t.items = t.items.map((i) => ({ ...i, x: i.x + dx, y: i.y + dy })).filter(inside);
   t.pools = t.pools.map((p) => ({ ...p, x: p.x + dx, y: p.y + dy })).filter(inside);
+  t.bridges = t.bridges.map((b) => ({ ...b, x: b.x + dx, y: b.y + dy })).filter(inside);
+}
+
+/**
+ * Put every bridge back on the road: at the middle of the stretch nearest to it. One the road
+ * has left behind (further off than the road is wide) is taken away.
+ */
+export function snapBridges(t: TrackFile): void {
+  if (t.bridges.length === 0) return;
+  const T = sampleTrack(t.road.points, 4);
+  t.bridges = t.bridges.flatMap((b) => {
+    const hit = nearestSample(T, b.x, b.y);
+    if (hit.d > t.road.width) return [];
+    return [{ ...b, x: Math.round(T.x[hit.i]!), y: Math.round(T.y[hit.i]!) }];
+  });
 }
 
 /** The index of the thing nearest to (x, y) within `reach`, or -1. */

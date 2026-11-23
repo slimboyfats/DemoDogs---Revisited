@@ -9,7 +9,7 @@ import {
   type VenueManifest,
 } from '@demodogs/shared';
 import { sceneryRefs, type Content } from './content';
-import { sampleTrack } from './track';
+import { sampleTrack, type Track } from './track';
 
 /**
  * Tracks built in the track creator. A saved track (TrackFile) is turned into an ordinary venue,
@@ -31,6 +31,38 @@ const DRESSING = new Set<SceneryRule['rule']>([
   'towers',
   'kerb',
 ]);
+
+/** A bridge's ramps, height and how many deck pieces a pair of pillars carries (art px). */
+const BRIDGE = { ramp: 150, height: 24, span: 5 };
+/** Samples either side of the start line that a bridge keeps off: the grid stands there. */
+const GRID_BEHIND = 70;
+const GRID_AHEAD = 30;
+
+/**
+ * Where a track's bridges fall on its road: the sample at each one's middle and how many samples
+ * it reaches either way, ramps and all. `off`: it is nowhere near the road.
+ */
+export function bridgeSpans(
+  t: TrackFile,
+  T: Track = sampleTrack(t.road.points, 4),
+): { mid: number; reach: number; off: boolean }[] {
+  return t.bridges.map((b) => {
+    let mid = 0;
+    let bd = Infinity;
+    for (let i = 0; i < T.n; i++) {
+      const d = (T.x[i]! - b.x) ** 2 + (T.y[i]! - b.y) ** 2;
+      if (d < bd) {
+        bd = d;
+        mid = i;
+      }
+    }
+    return {
+      mid,
+      reach: Math.ceil((b.length / 2 + BRIDGE.ramp) / T.step),
+      off: Math.sqrt(bd) > t.road.width,
+    };
+  });
+}
 
 /** The id a track races under. */
 export function customVenueId(trackId: string): string {
@@ -77,6 +109,7 @@ export function newTrack(look: VenueManifest, id: string, name: string): TrackFi
     dressing: dressingOf(look),
     items: [],
     pools: [],
+    bridges: [],
     bots: Math.min(10, look.bots.count),
     pickups: [...look.pickups],
   };
@@ -94,6 +127,12 @@ export function trackProblems(t: TrackFile): string[] {
     if (T.x[i]! < m || T.y[i]! < m || T.x[i]! > w - m || T.y[i]! > h - m) outside = true;
   if (outside)
     out.push('The road runs off the map: move it in from the edge or make the map bigger.');
+  const spans = bridgeSpans(t, T).filter((s) => !s.off);
+  if (spans.some((s) => s.mid - s.reach < GRID_AHEAD || s.mid + s.reach > T.n - GRID_BEHIND))
+    out.push('A bridge is too close to the start line: move it along the road, or shorten it.');
+  spans.sort((a, b) => a.mid - b.mid);
+  if (spans.some((s, i) => i > 0 && s.mid - s.reach < spans[i - 1]!.mid + spans[i - 1]!.reach + 8))
+    out.push('Two bridges run into each other: move them apart, or shorten one.');
   return out;
 }
 
@@ -130,6 +169,32 @@ export function installTrack(content: Content, t: TrackFile): Installed {
   if (!mode || !bot) throw new Error('the content has no race mode or no bot');
 
   const scenery: SceneryRule[] = [];
+  // bridges first: what comes after builds round them. Their parts are whatever the pack's own
+  // flyover is made of.
+  const kit = [...content.venue.values()]
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .flatMap((v) => v.scenery)
+    .find((r) => r.rule === 'flyover');
+  const T = sampleTrack(t.road.points, 4);
+  const spans = bridgeSpans(t, T);
+  t.bridges.forEach((b, i) => {
+    const s = spans[i]!;
+    if (s.off) return;
+    if (!kit || kit.rule !== 'flyover') {
+      dropped.add('bridge');
+      return;
+    }
+    scenery.push({
+      rule: 'flyover',
+      at: Math.min(1, s.mid / T.n),
+      length: b.length,
+      ramp: BRIDGE.ramp,
+      height: BRIDGE.height,
+      deck: kit.deck,
+      pillar: kit.pillar,
+      span: BRIDGE.span,
+    });
+  });
   for (const d of t.dressing) {
     if (!d.on) continue;
     const r = SceneryRuleSchema.safeParse(d.rule);

@@ -8,6 +8,7 @@ import {
   resize,
   reverse,
   roadAt,
+  snapBridges,
   startAt,
 } from './track-edit';
 
@@ -32,6 +33,7 @@ const track = (): TrackFile => ({
   dressing: [],
   items: [{ prop: 'prop.cone', x: 500, y: 400, rot: 0 }],
   pools: [{ material: 'material.mud', x: 700, y: 480, r: 20 }],
+  bridges: [],
   bots: 4,
 });
 
@@ -95,6 +97,14 @@ describe('editing a track', () => {
       expect(x).toBeGreaterThan(100);
       expect(y).toBeLessThan(740);
     }
+  });
+
+  it('keeps a bridge on the road when the road moves, and drops one left behind', () => {
+    const t = track();
+    t.bridges.push({ x: 700, y: 250, length: 200 }, { x: 700, y: 480, length: 200 });
+    snapBridges(t);
+    expect(t.bridges.length).toBe(1);
+    expect(roadAt(t.road.points, t.bridges[0]!.x, t.bridges[0]!.y).d).toBeLessThan(3);
   });
 
   it('picks the nearest thing within reach, counting a pool’s size', () => {

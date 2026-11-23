@@ -182,6 +182,18 @@ const pools = await page.evaluate(() =>
 check(pools.includes('material.mud') && pools.includes('material.ice'), `pools not laid: ${pools}`);
 await shot('8-pools');
 
+// ---- a bridge on the far side of the loop
+await bar('BRIDGE').tap();
+const far = (await track()).road.points[5];
+await tapMap(far[0], far[1]);
+await page.waitForTimeout(400);
+const deck = await page.evaluate(() => {
+  const w = window.__dd.session.world;
+  return w.deckH ? Math.max(...w.deckH) : 0;
+});
+check((await track()).bridges.length === 1 && deck > 20, `no bridge went up (deck ${deck})`);
+await shot('8b-bridge');
+
 // ---- erase and undo
 await bar('ERASE').tap();
 await tapMap(c[0] - 60, c[1] + 40);

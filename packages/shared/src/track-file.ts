@@ -58,6 +58,14 @@ export const TrackFileSchema = z.object({
       }),
     )
     .max(200),
+  /**
+   * Bridges: the stretch of road nearest to (x, y) climbs onto a raised deck `length` long, so the
+   * road can cross over itself. Each follows the road when it is moved.
+   */
+  bridges: z
+    .array(z.strictObject({ x: z.number(), y: z.number(), length: z.number().min(80).max(600) }))
+    .max(6)
+    .default([]),
   /** How many scrap bots wander it. */
   bots: z.number().int().min(0).max(40),
   /** The crates' pickups; none listed means all of them. */

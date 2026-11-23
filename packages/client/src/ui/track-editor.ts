@@ -15,22 +15,25 @@ import {
   History,
   insertPoint,
   nearest,
+  nearestSample,
   removePoint,
   resize,
   reverse,
   roadAt,
+  snapBridges,
   startAt,
 } from '../game/track-edit';
 import { pickTrackFile, saveTrackFile } from '../game/tracks';
 import { PITCH } from '../render/scene';
 
-export type EditTool = 'road' | 'place' | 'pool' | 'erase';
+export type EditTool = 'road' | 'place' | 'pool' | 'bridge' | 'erase';
 
 const TOOLS: [EditTool, string, string][] = [
   ['road', 'ROAD', 'Drag a point to bend the road. Tap the road to add a point.'],
   ['place', 'THINGS', 'Tap to put the chosen thing down. Drag one to move it.'],
   ['pool', 'POOLS', 'Tap to lay a pool: mud, ice, oil. Drag one to move it.'],
-  ['erase', 'ERASE', 'Tap a thing, a pool or a road point to take it away.'],
+  ['bridge', 'BRIDGE', 'Tap the road to raise a bridge there. Drag one along the road.'],
+  ['erase', 'ERASE', 'Tap a thing, a pool, a bridge or a road point to take it away.'],
 ];
 
 const SIZES: [string, number, number][] = [
@@ -57,7 +60,7 @@ export interface EditHooks {
   exit(): void;
 }
 
-type Pick = { kind: 'point' | 'item' | 'pool'; index: number };
+type Pick = { kind: 'point' | 'item' | 'pool' | 'bridge'; index: number };
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -137,6 +140,14 @@ export class TrackEditor {
   private readonly propSel = el('select');
   private readonly matSel = el('select');
   private readonly sizeIn = el('input', { type: 'range', min: '8', max: '60', value: '22' });
+  private readonly lengthIn = el('input', {
+    type: 'range',
+    min: '80',
+    max: '480',
+    step: '20',
+    value: '220',
+  });
+  private readonly mapSel = el('select');
   private readonly undoBtn: HTMLButtonElement;
   private readonly zoomBtn: HTMLButtonElement;
   private readonly driveBtn: HTMLButtonElement;
@@ -182,6 +193,15 @@ export class TrackEditor {
     ))
       this.matSel.append(new Option(m.meta.name, m.id));
 
+    for (const [label, w, h] of SIZES)
+      this.mapSel.append(new Option(`MAP ${label} ${w} × ${h}`, `${w}x${h}`));
+    this.mapSel.onchange = () => this.setSize(this.mapSel.value);
+    // the slider sets the chosen bridge's length, and the next one's
+    this.lengthIn.onchange = () => {
+      const sel = this.sel;
+      const b = sel?.kind === 'bridge' ? this.track?.bridges[sel.index] : undefined;
+      if (b) this.change(() => (b.length = Number(this.lengthIn.value)));
+    };
     tap.addEventListener('pointerdown', (e) => this.down(e));
     tap.addEventListener('pointermove', (e) => this.move(e));
     tap.addEventListener('pointerup', (e) => this.up(e));
@@ -236,7 +256,8 @@ export class TrackEditor {
       this.tool === 'erase' ||
       (this.tool === 'road' && p.kind === 'point') ||
       (this.tool === 'place' && p.kind === 'item') ||
-      (this.tool === 'pool' && p.kind === 'pool')
+      (this.tool === 'pool' && p.kind === 'pool') ||
+      (this.tool === 'bridge' && p.kind === 'bridge')
     );
   }
 
@@ -258,6 +279,11 @@ export class TrackEditor {
       btn('REVERSE', 'Race the other way round', () =>
         this.change(() => (reverse(t), (this.sel = null))),
       );
+      const mine = `${t.size.w}x${t.size.h}`;
+      if (![...this.mapSel.options].some((o) => o.value === mine))
+        this.mapSel.append(new Option(`MAP ${t.size.w} × ${t.size.h}`, mine));
+      this.mapSel.value = mine;
+      r.append(this.mapSel);
     } else if (this.tool === 'place') {
       r.append(this.propSel);
       btn('⟲', 'Turn it left', () => this.turn(-STEP));
@@ -266,6 +292,12 @@ export class TrackEditor {
     } else if (this.tool === 'pool') {
       r.append(this.matSel, el('label', { textContent: 'SIZE' }), this.sizeIn);
       btn('DELETE', 'Take the chosen pool away', () => this.erase(sel!), sel?.kind !== 'pool');
+    }
+    if (this.tool === 'bridge') {
+      const b = sel?.kind === 'bridge' ? t.bridges[sel.index] : undefined;
+      if (b) this.lengthIn.value = String(b.length);
+      r.append(el('label', { textContent: 'LENGTH' }), this.lengthIn);
+      btn('DELETE', 'Take the chosen bridge away', () => this.erase(sel!), !b);
     }
     this.hint.textContent = TOOLS.find(([k]) => k === this.tool)![2];
     r.append(this.hint);
@@ -297,6 +329,8 @@ export class TrackEditor {
     const t = this.track;
     if (!t) return;
     this.line = null;
+    snapBridges(t);
+    if (this.sel?.kind === 'bridge' && !t.bridges[this.sel.index]) this.sel = null;
     this.problems = trackProblems(t);
     this.hooks.save(t);
     if (!light) this.build();
@@ -320,6 +354,20 @@ export class TrackEditor {
     this.track = back;
     this.sel = null;
     this.commit();
+  }
+
+  /** Give the map a new size ("1400x960"), keeping what is on it about its middle. */
+  private setSize(size: string): void {
+    const t = this.track;
+    const [w, h] = size.split('x').map(Number) as [number, number];
+    if (!t || !w || !h) return;
+    const dx = (w - t.size.w) / 2;
+    const dy = (h - t.size.h) / 2;
+    this.change(() => resize(t, w, h));
+    if (this.s) {
+      this.s.cam.x += dx;
+      this.s.cam.y += dy;
+    }
   }
 
   private setStart(i: number): void {
@@ -348,6 +396,7 @@ export class TrackEditor {
     this.change(() => {
       if (p.kind === 'point') removePoint(t, p.index);
       else if (p.kind === 'item') t.items.splice(p.index, 1);
+      else if (p.kind === 'bridge') t.bridges.splice(p.index, 1);
       else t.pools.splice(p.index, 1);
       this.sel = null;
     });
@@ -395,7 +444,8 @@ export class TrackEditor {
    */
   private reach(kind: Pick['kind'] = 'point'): number {
     const v = this.hooks.view();
-    return Math.max(8, ((kind === 'point' ? 24 : 13) * v.dpr) / v.scale);
+    const few = kind === 'point' || kind === 'bridge';
+    return Math.max(8, ((few ? 24 : 13) * v.dpr) / v.scale);
   }
 
   /** What of the track is under (x, y) that the tool in hand works on. */
@@ -408,14 +458,18 @@ export class TrackEditor {
           ? ['item']
           : this.tool === 'pool'
             ? ['pool']
-            : ['item', 'pool', 'point'];
+            : this.tool === 'bridge'
+              ? ['bridge']
+              : ['item', 'pool', 'bridge', 'point'];
     for (const kind of tries) {
       const things =
         kind === 'point'
           ? t.road.points.map(([px, py]) => ({ x: px, y: py }))
           : kind === 'item'
             ? t.items
-            : t.pools;
+            : kind === 'bridge'
+              ? t.bridges
+              : t.pools;
       const index = nearest(things, x, y, this.reach(kind));
       if (index >= 0) return { kind, index };
     }
@@ -465,6 +519,11 @@ export class TrackEditor {
     if (g.kind === 'point') {
       t.road.points[g.index] = clampPoint(t, x, y);
       this.line = null;
+    } else if (g.kind === 'bridge') {
+      // a bridge slides along the road, wherever the finger wanders
+      const T = (this.line ??= sampleTrack(t.road.points, 4));
+      const i = nearestSample(T, x, y).i;
+      Object.assign(t.bridges[g.index]!, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) });
     } else {
       const o = g.kind === 'item' ? t.items[g.index]! : t.pools[g.index]!;
       o.x = Math.round(Math.max(12, Math.min(t.size.w - 12, x)));
@@ -533,6 +592,17 @@ export class TrackEditor {
         // straight into the world as it stands: no need to build it all again for one thing
         rangeProp(s.world, def, item.x, item.y, item.rot);
       }, this.problems.length === 0);
+    } else if (tool === 'bridge') {
+      const near = roadAt(t.road.points, x, y);
+      if (near.d > t.road.width / 2 + this.reach()) return;
+      if (t.bridges.length >= 6) {
+        this.say('That is as many bridges as a track can have.');
+        return;
+      }
+      this.change(() => {
+        t.bridges.push({ x: Math.round(x), y: Math.round(y), length: Number(this.lengthIn.value) });
+        this.sel = { kind: 'bridge', index: t.bridges.length - 1 };
+      });
     } else {
       if (!this.content.material.has(this.matSel.value)) return;
       if (t.pools.length >= 200) {
@@ -614,10 +684,7 @@ export class TrackEditor {
     if (!SIZES.some(([, w, h]) => `${w}x${h}` === mine))
       size.append(new Option(`${t.size.w} × ${t.size.h}`, mine));
     size.value = mine;
-    size.onchange = () => {
-      const [w, h] = size.value.split('x').map(Number) as [number, number];
-      this.change(() => resize(t, w, h));
-    };
+    size.onchange = () => this.setSize(size.value);
     const rules = el('div', { className: 'rules' });
     t.dressing.forEach((d) => {
       const box = el('input', { type: 'checkbox', checked: d.on });
@@ -778,6 +845,20 @@ export class TrackEditor {
         g.setLineDash([]);
         // a pool being moved has not been painted where it is going yet
         if (on) this.label(g, this.content.material.get(p.material)?.meta.name ?? '', x, y, k);
+      });
+
+    if (this.tool === 'bridge' || this.tool === 'erase')
+      t.bridges.forEach((b, i) => {
+        const [x, y] = this.toScreen(b.x, b.y);
+        const on = this.sel?.kind === 'bridge' && this.sel.index === i;
+        g.beginPath();
+        g.arc(x, y, (on ? 11 : 8) * k, 0, Math.PI * 2);
+        g.fillStyle = on ? '#ff6a3d' : '#7fd4ff';
+        g.fill();
+        g.strokeStyle = '#16141c';
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        this.label(g, 'BRIDGE', x, y - 16 * k, k);
       });
 
     // what is wrong, or what was just said

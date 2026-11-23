@@ -102,7 +102,7 @@ export class TracksScreen {
           }, 3000);
         } else void this.store.remove(t.id).then(() => this.refresh());
       });
-      const things = t.items.length + t.pools.length;
+      const things = t.items.length + t.pools.length + t.bridges.length;
       this.list.append(
         el(
           'div',

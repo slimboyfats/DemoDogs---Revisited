@@ -68,6 +68,64 @@ describe('custom tracks', () => {
     expect(pool).toMatchObject({ x: 300, y: 200, r: 30, fixed: true });
   });
 
+  it('raises a bridge where one is put, and cars race over it', () => {
+    const t = newTrack(look('venue.kennel-loop'), 'bridge', 'Bridge');
+    const [x, y] = t.road.points[5]!;
+    t.bridges.push({ x, y, length: 200 });
+    t.laps = 1;
+    expect(trackProblems(t)).toEqual([]);
+    const made = installTrack(C, t);
+    expect(made.dropped).toEqual([]);
+    const w = new World({
+      content: made.content,
+      venue: made.venue,
+      car: 'car.mutt',
+      seed: 1,
+      laps: 1,
+      autopilot: true,
+    });
+    const T = w.track!;
+    let top = 0;
+    let high = 0;
+    for (let i = 0; i < T.n; i++)
+      if (w.deckH![i]! > high) {
+        high = w.deckH![i]!;
+        top = i;
+      }
+    expect(high).toBeGreaterThan(20);
+    expect(Math.hypot(T.x[top]! - x, T.y[top]! - y)).toBeLessThan(110);
+    let up = 0;
+    runUntil(
+      w,
+      (w) => {
+        up = Math.max(up, w.player.z);
+        return w.phase === 'over';
+      },
+      60 * 200,
+    );
+    expect(w.phase).toBe('over');
+    expect(w.player.finished).toBe(true);
+    expect(up).toBeGreaterThan(15);
+  });
+
+  it('says when a bridge is on the start line or runs into another', () => {
+    const t = newTrack(look('venue.kennel-loop'), 'bridge-bad', 'Bridge');
+    const [x, y] = t.road.points[0]!;
+    t.bridges.push({ x, y, length: 200 });
+    expect(trackProblems(t)[0]).toMatch(/start line/);
+    const [bx, by] = t.road.points[5]!;
+    t.bridges = [
+      { x: bx, y: by, length: 200 },
+      { x: bx, y: by + 40, length: 200 },
+    ];
+    expect(trackProblems(t)[0]).toMatch(/run into each other/);
+    // a file from before bridges still loads
+    const old: Record<string, unknown> = { ...t };
+    delete old.bridges;
+    const r = parseTrackFile(JSON.stringify(old));
+    expect(r.ok && r.track.bridges).toEqual([]);
+  });
+
   it('a rule switched off dresses nothing', () => {
     const t = newTrack(look('venue.kennel-loop'), 'bare', 'Bare');
     const full = world(t).statics.length;
