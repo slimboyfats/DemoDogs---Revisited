@@ -10,6 +10,7 @@ import {
   rangeMine,
   rangeMove,
   rangeProp,
+  rangeHowl,
   rangePulse,
   rangeRocket,
   rangeWreck,
@@ -28,6 +29,7 @@ export type Tool =
   | 'drop'
   | 'shock'
   | 'arms'
+  | 'howl'
   | 'blast'
   | 'hit'
   | 'wreck'
@@ -45,6 +47,7 @@ const TOOLS: [Tool, string, string][] = [
   ['mine', 'MINE', 'Tap: lay a mine there'],
   ['drop', 'DROP', 'Tap: drop the chosen rear weapon there (smoke, tacks, glue, oil)'],
   ['shock', 'SHOCK', 'Tap: your car jumps there and lets off a shock pulse'],
+  ['howl', 'HOWL', 'Tap: a howl goes off there, a shockwave that throws everything near it away'],
   ['arms', 'ARMS', 'Tap: your car turns to that spot and fires the chosen heavy weapon'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
@@ -284,6 +287,11 @@ export class DevPanel {
           rangeMove(P, x, y);
           rangePulse(w, def, P);
         }
+        break;
+      }
+      case 'howl': {
+        const def = weapon('howl');
+        if (def) rangeHowl(w, def, P, x, y);
         break;
       }
       case 'arms': {

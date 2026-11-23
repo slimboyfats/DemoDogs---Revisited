@@ -31,8 +31,18 @@ describe('content validate', () => {
     const looks = loadLooks();
     // a gun is part of the car, a slick is paint on the ground, smoke is cells, a pulse is all
     // sparks, a spray is a jet of single cells, a rail is a line of light, an arc is lightning and
-    // a vortex is a swirl of cells; the rest are drawn
-    const bare = new Set(['gun', 'slick', 'smoke', 'pulse', 'spray', 'rail', 'arc', 'vortex']);
+    // a vortex is a swirl of cells, and a howl is dust, motes and bent air; the rest are drawn
+    const bare = new Set([
+      'gun',
+      'slick',
+      'smoke',
+      'pulse',
+      'spray',
+      'rail',
+      'arc',
+      'vortex',
+      'howl',
+    ]);
     const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it
     const fitted = [...C.pickup.values()]

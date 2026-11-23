@@ -23,6 +23,7 @@ export {
   type Spike,
 } from './drops';
 export type { Pulse } from './shock';
+export { howl, howlWants, type Howl } from './howl';
 export { fitMover, nose } from './movers';
 export { grant } from './things';
 export * from './arms';

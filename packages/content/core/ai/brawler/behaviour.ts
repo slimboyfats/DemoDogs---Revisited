@@ -1,5 +1,13 @@
 import { DT, type Controls } from '@demodogs/shared';
-import { armsWants, defineAi, dropsBehind, nearestCar, steerTo, unstick } from '@demodogs/sim';
+import {
+  armsWants,
+  howlWants,
+  defineAi,
+  dropsBehind,
+  nearestCar,
+  steerTo,
+  unstick,
+} from '@demodogs/sim';
 
 /**
  * ai.brawler: pick a car (the player a little more often), aim where it is going and ram it.
@@ -82,6 +90,7 @@ export default defineAi({
       nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
     )
       out.fire = true;
+    if (howlWants(w, c)) out.fire = true;
     if (!c.isPlayer) c.aiSpeed = ai.skill * 0.95;
     return unstick(c, out);
   },
