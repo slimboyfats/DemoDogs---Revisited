@@ -198,8 +198,12 @@ export type SimEvent =
   | { t: 'meteor'; x: number; y: number }
   /** A pit of radius r was dug at (x, y); it will be there for `life` seconds. */
   | { t: 'pit'; x: number; y: number; r: number; life: number }
-  /** A car dropped into the pit at (x, y) and is stuck there for `time` seconds. */
-  | { t: 'trap'; car: number; x: number; y: number; time: number }
+  /** A car fell into the pit at (x, y): down for `time` seconds, or `gone` for good. */
+  | { t: 'trap'; car: number; x: number; y: number; time: number; gone: boolean }
+  /** A car was thrown back out of the pit at (x, y). */
+  | { t: 'unpit'; car: number; x: number; y: number }
+  /** A car went down a pit that closed over it: it is out, with no wreck left. */
+  | { t: 'buried'; car: number; by: number }
   /** The pit at (x, y) filled itself in. */
   | { t: 'fill'; x: number; y: number; r: number }
   /** A snap of cold went out from a car at (x, y) to radius r. */

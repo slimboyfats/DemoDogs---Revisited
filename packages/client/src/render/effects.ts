@@ -1435,6 +1435,8 @@ export class Effects {
         case 'pit':
         case 'trap':
         case 'fill':
+        case 'unpit':
+        case 'buried':
           wildEvent(this, w, e, S);
           break;
         case 'guard':
@@ -1677,7 +1679,7 @@ export class Effects {
       if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
-      if (c.wrecked || c.hp < 45) {
+      if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;
         if (t <= 0) {

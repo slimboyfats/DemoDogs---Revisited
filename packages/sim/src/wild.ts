@@ -17,8 +17,9 @@ import type { World } from './world';
  *   stands on it and bringing down what is built beside it.
  * - `frost`: a snap of cold. Engines round the car die for a moment, fires go out, leaves fall,
  *   and the road behind is left a sheet of ice.
- * - `pit`: a deep hole dug behind the car. Whoever drives into it drops in and sits there with a
- *   dead engine until they climb out; it fills itself in after a while.
+ * - `pit`: a deep hole dug behind the car. Whoever drives into it falls in. In a race they are
+ *   thrown back out after a moment; in a derby the hole closes over them and they are out. It
+ *   fills itself in after a while.
  */
 
 export interface Twister {
@@ -475,7 +476,24 @@ function frost(w: World, c: Car, d: WeaponManifest): void {
 function fill(w: World, i: number): void {
   const h = w.wild.holes[i]!;
   w.wild.holes.splice(i, 1);
+  // nobody is left down a hole that closes
+  for (const c of w.cars) if ((c.sunk ?? 0) > 0 && (h.cd[c.index] ?? 0) > 0) climb(w, c, h);
   w.emit({ t: 'fill', x: h.x, y: h.y, r: h.r });
+}
+
+/** Thrown back out of the hole, into the air above it. */
+function climb(w: World, c: Car, h: Hole): void {
+  c.sunk = 0;
+  c.stall = 0;
+  c.x = h.x;
+  c.y = h.y;
+  c.vx = Math.cos(c.h) * 40;
+  c.vy = Math.sin(c.h) * 40;
+  c.vz = h.def.lift ?? 150;
+  c.z = Math.max(c.z, c.deck + 0.6);
+  c.spin = 0;
+  c.invuln = Math.max(c.invuln, 1.2);
+  w.emit({ t: 'unpit', car: c.index, x: h.x, y: h.y });
 }
 
 function updateHoles(w: World): void {
@@ -490,32 +508,57 @@ function updateHoles(w: World): void {
       continue;
     }
     const o = w.cars[h.owner] ?? null;
+    let ate = false;
     for (const c of w.cars) {
-      if (c.wrecked || c.deck > 4) continue;
-      const dx = h.x - c.x;
-      const dy = h.y - c.y;
-      const dist = Math.hypot(dx, dy);
+      if (c.deck > 4 || (c.wrecked && !c.buried)) continue;
       if ((h.cd[c.index] ?? 0) > 0) {
         h.cd[c.index]! -= DT;
-        // down in it: held near the middle until the engine turns over again
-        if ((c.stall ?? 0) > 0 && dist < h.r + CAR_RADIUS) {
-          c.vx = dx * 4;
-          c.vy = dy * 4;
-          c.vz = Math.min(c.vz, 0);
-        }
+        if (!c.buried && !((c.sunk ?? 0) > 0)) continue;
+        // over the edge and down the middle of it
+        c.x += (h.x - c.x) * Math.min(1, 7 * DT);
+        c.y += (h.y - c.y) * Math.min(1, 7 * DT);
+        c.vx = c.vy = c.vz = 0;
+        c.lurch = c.roll = 0;
+        if (c.buried) continue;
+        // down in it until it is thrown back out
+        c.sunk! -= DT;
+        c.z = c.deck;
+        if (c.sunk! <= 0) climb(w, c, h);
         continue;
       }
       // the one who dug it has a moment to get clear; a car in the air sails over
-      if (dist > h.r || c.z - c.deck > 3 || c.invuln > 0 || (c === o && h.age < 1.2)) continue;
+      const dist = Math.hypot(h.x - c.x, h.y - c.y);
+      if (c.wrecked || dist > h.r || c.z - c.deck > 3 || c.invuln > 0) continue;
+      if (c === o && h.age < 1.2) continue;
+      const by = o && o !== c ? o : null;
       const time = d.stall ?? 1.6;
+      const gone = w.kind !== 'race';
       h.cd[c.index] = time + 2;
+      w.emit({ t: 'trap', car: c.index, x: h.x, y: h.y, time, gone });
+      // it goes in the way it was heading: nose, tail or a side first
+      const moving = Math.hypot(c.vx, c.vy) > 10;
+      const tx = moving ? c.vx : h.x - c.x;
+      const ty = moving ? c.vy : h.y - c.y;
+      const tl = Math.hypot(tx, ty);
+      const cs = Math.cos(c.h);
+      const sn = Math.sin(c.h);
+      c.sunkTip = tl < 0.01 ? [1, 0] : [(tx * cs + ty * sn) / tl, (ty * cs - tx * sn) / tl];
+      c.vx = c.vy = c.vz = 0;
+      c.spin = 0;
+      if (gone) {
+        // a derby has no way back: the hole closes over the car and it is out
+        bury(w, c, by);
+        ate = true;
+        continue;
+      }
+      damage(w, c, d.damage ?? 14, by, h.x, h.y);
+      if (c.wrecked) continue;
+      c.sunk = c.sunkFrom = time;
       c.stall = Math.max(c.stall ?? 0, time);
-      c.vx *= 0.1;
-      c.vy *= 0.1;
-      c.spin += w.rng.range(-4, 4);
-      w.emit({ t: 'trap', car: c.index, x: h.x, y: h.y, time });
-      damage(w, c, d.damage ?? 14, o && o !== c ? o : null, h.x, h.y);
+      c.invuln = Math.max(c.invuln, time);
     }
+    // it has had its car: it closes once that one is out of sight
+    if (ate) h.t = Math.min(h.t, 0.9);
     for (const b of w.bots)
       if (b.alive && Math.hypot(b.x - h.x, b.y - h.y) < h.r) squash(w, b, o, 0, 0);
     for (const p of w.props) {
@@ -528,6 +571,23 @@ function updateHoles(w: World): void {
       }
     }
   }
+}
+
+/** A car that went down a hole for good: wrecked, with nothing left above ground. */
+function bury(w: World, c: Car, by: Car | null): void {
+  c.wrecked = true;
+  c.buried = true;
+  c.wreckT = 0;
+  c.wreckTick = w.tick;
+  c.hp = 0;
+  c.spin = 0;
+  c.weapon = null;
+  c.ammo = 0;
+  if (by && !by.wrecked) {
+    by.score += 300;
+    w.emit({ t: 'score', car: by.index, x: c.x, y: c.y, points: 300, label: 'BURIED +300' });
+  }
+  w.emit({ t: 'buried', car: c.index, by: by ? by.index : -1 });
 }
 
 export function updateWild(w: World): void {

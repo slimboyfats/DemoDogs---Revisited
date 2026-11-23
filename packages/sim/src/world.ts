@@ -534,8 +534,13 @@ export class World {
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
     for (let i = 0; i < this.cars.length; i++)
-      for (let j = i + 1; j < this.cars.length; j++)
-        collideCars(this, this.cars[i]!, this.cars[j]!);
+      for (let j = i + 1; j < this.cars.length; j++) {
+        const c = this.cars[i]!;
+        const o = this.cars[j]!;
+        // a car down a pit is not there to be hit
+        if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
+        collideCars(this, c, o);
+      }
     for (const c of this.cars) {
       collideWorld(this, c);
       collideProps(this, c);

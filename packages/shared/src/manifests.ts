@@ -561,8 +561,8 @@ export const WeaponSchema = z.strictObject({
    * `speed`, opening a pit of `power` every `reach`; cars within `radius` are thrown up at `lift`
    * for `damage`. Frosts: engines within `radius` die for `stall` seconds and take `damage`, fires
    * there go out, and `count` pools of `material` are left behind the car. Pits: a hole of
-   * `radius` dug behind the car that lasts `life` seconds; a car that drives in sits there with
-   * a dead engine for `stall` seconds and takes `damage`. AI drivers dig one for a car within
+   * `radius` dug behind the car that lasts `life` seconds; a car that drives in is down it for
+   * `stall` seconds and takes `damage` in a race, and is out for good in a derby. AI drivers dig one for a car within
    * `range` behind them.
    */
 });

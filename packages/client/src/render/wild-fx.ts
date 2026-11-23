@@ -23,7 +23,10 @@ const CHAIN = [0xc4c7cd, 0x6b6e74, 0xf0f3f7, 0x3d4048] as const;
 const ICE = [0xffffff, 0xd8f0ff, 0xa6d8f0, 0x7fc8f0] as const;
 const BONE = [0xf2f2f2, 0xd6d7cf, 0xa9aaa2] as const;
 
-type Mine = Extract<SimEvent, { t: 'crack' | 'frost' | 'meteor' | 'pit' | 'trap' | 'fill' }>;
+type Mine = Extract<
+  SimEvent,
+  { t: 'crack' | 'frost' | 'meteor' | 'pit' | 'trap' | 'fill' | 'unpit' | 'buried' }
+>;
 
 const tone = (hex: string) => parseInt(hex.slice(1), 16);
 
@@ -134,16 +137,43 @@ export function wildEvent(fx: Effects, w: World, e: Mine, S: Sound): void {
         );
       }
       for (let i = 0; i < 6; i++) fx.puff(c.x + rand(-8, 8), c.y + rand(-8, 8), 2, 'dust');
-      fx.text(
-        e.x,
-        e.y,
-        c === P ? 'IN THE PIT!' : 'PITTED!',
-        c === P ? '#ff6a3d' : '#ffd24a',
-        c === P,
-      );
-      if (c === P) fx.shake = Math.max(fx.shake, 12);
+      if (c === P) {
+        if (!e.gone) fx.text(e.x, e.y, 'DOWN THE HOLE!', '#ff6a3d', true);
+        fx.shake = Math.max(fx.shake, 12);
+      }
       const v = fx.vol(e.x, e.y);
       if (v > 0) S.thud(v);
+      return;
+    }
+    case 'unpit': {
+      // thrown back out on a fountain of earth
+      for (let i = 0; i < 70 * Math.max(0.5, fx.quality); i++) {
+        const a = rand(0, TAU);
+        const s = rand(10, 80);
+        fx.emit(
+          'pip',
+          e.x + Math.cos(a) * rand(0, 8),
+          e.y + Math.sin(a) * rand(0, 8),
+          1,
+          Math.cos(a) * s,
+          Math.sin(a) * s,
+          rand(120, 280),
+          rand(0.4, 1),
+          Math.random() < 0.3 ? 2 : 1.2,
+          pick(earth),
+        );
+      }
+      for (let i = 0; i < 6; i++) fx.puff(e.x + rand(-8, 8), e.y + rand(-8, 8), 2, 'dust');
+      fx.plume(e.x, e.y, 2, 6, earth[0], 80);
+      const v = fx.vol(e.x, e.y);
+      if (v > 0) S.whoosh(v);
+      return;
+    }
+    case 'buried': {
+      const c = w.cars[e.car]!;
+      const mine = e.by === P.index;
+      if (c === P) fx.setMsg('BURIED! YOU ARE OUT', 2.4);
+      else fx.text(c.x, c.y, `${c.name} IS BURIED`, mine ? '#ffd24a' : '#ffb08a', mine);
       return;
     }
     case 'fill': {

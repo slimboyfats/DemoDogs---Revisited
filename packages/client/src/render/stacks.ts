@@ -214,7 +214,10 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   // it is laid out `k` times as far from its middle. One flattened by a bigger car is a little
   // is spread out like a pancake, `flat` times as tall.
   const flat = squashed(c);
-  const k = c.size * (1 + (1 - Math.min(1, flat)) * 0.95);
+  // going down a pit: it tips over the edge the way it went in, and gets small and dark
+  const fall = falling(c);
+  if (fall >= 1) return;
+  const k = c.size * (1 + (1 - Math.min(1, flat)) * 0.95) * (1 - 0.8 * fall ** 1.5);
   if (!R.visible(c.x, c.y, 20 * k, 14 * k)) return;
   R.group(c.y);
   if (c.collar) queueCollar(R, art, fx, c);
@@ -224,15 +227,34 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const D = c.def;
   const cs = Math.cos(c.h) * k;
   const sn = Math.sin(c.h) * k;
-  const alpha = c.invuln > 0 && Math.floor(w.time * 12) % 2 ? 0.4 : 1;
+  const alpha =
+    fall > 0
+      ? 1 - 0.85 * Math.max(0, (fall - 0.4) / 0.6)
+      : c.invuln > 0 && !((c.sunk ?? 0) > 0) && Math.floor(w.time * 12) % 2
+        ? 0.4
+        : 1;
+  // the end that went over first drops and the other end kicks up
+  const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 14;
+  const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
+  const lurch = c.lurch + (c.sunkTip?.[0] ?? 0) * tip;
   const wheel = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
-  const z = c.z;
+  const z = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
+  // the wheels go some of the way with a body that is tipping in
+  const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.45;
+  const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.45;
   for (const wh of D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];
       const wy = wh[1] * sg;
       const steer = wx > 0 && !c.wrecked ? c.steer * 0.45 : 0;
-      R.stack(wheel, c.x + cs * wx - sn * wy, c.y + sn * wx + cs * wy, z, c.h + steer, alpha);
+      R.stack(
+        wheel,
+        c.x + cs * wx - sn * wy + wtx,
+        c.y + sn * wx + cs * wy + wty,
+        z,
+        c.h + steer,
+        alpha,
+      );
     }
   // the body: each slice shifted a little more than the one below, so it leans and squats
   const rx = -sn;
@@ -240,8 +262,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const up = k * flat;
   for (let i = 0; i < body.n; i++) {
     const t = i / (body.n - 1);
-    const o = c.roll * t * flat;
-    const l = c.lurch * t * flat;
+    const o = roll * t * flat;
+    const l = lurch * t * flat;
     R.slice(
       body,
       i,
@@ -254,8 +276,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
     );
   }
   const a = D.body.halfLength - 0.1;
-  const o = c.roll * flat;
-  const l = c.lurch * flat;
+  const o = roll * flat;
+  const l = lurch * flat;
   const bz = z + (1.4 + c.bounce) * up;
   if (c.has.front && flat >= 1)
     R.stack(A.bumper, c.x + cs * a + rx * o * 0.15, c.y + sn * a + ry * o * 0.15, bz, c.h, alpha);
@@ -294,6 +316,13 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       alpha,
     );
   R.zoom(1);
+}
+
+/** How far down a pit a car is: 0 not at all, 1 out of sight. */
+export function falling(c: Car): number {
+  if (c.buried) return Math.min(1, c.wreckT / 0.5);
+  if ((c.sunk ?? 0) > 0) return Math.min(1, ((c.sunkFrom ?? 0) - c.sunk!) / 0.5);
+  return 0;
 }
 
 /** How tall a car stands for being flattened: 1 untouched, an eighth while flat, springing back at the end. */
@@ -377,7 +406,7 @@ export function queueShadows(
   }
   for (const c of w.cars)
     // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
-    if (c.deck < 4 && R.visible(c.x, c.y, 20))
+    if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
       shadow(
         c.x + 1.5,
         c.y + 1.5,
