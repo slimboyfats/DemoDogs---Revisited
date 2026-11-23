@@ -21,6 +21,8 @@ import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
+import { DuskPass } from './dusk';
+import type { WeatherDraw } from '../weather-fx';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
@@ -73,6 +75,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   distort = true;
   /** The sky: how dark, how wet, how much snow (set its `dark`, `wet`, `snow`; see Atmosphere). */
   readonly sky = new Atmosphere();
+  /** A modifier's tint over the picture (made the first time one is needed). */
+  private dusk: DuskPass | null = null;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -280,6 +284,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const dt = this.fixedDt ?? (this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0);
     this.lastT = clock;
     const A = this.sky;
+    A.ask.dark = fx.weather.dark;
+    A.ask.wet = fx.weather.wet;
     A.update(dt);
     this.atlas.work(2.5, () => performance.now());
     const sky = this.stackSky;
@@ -376,6 +382,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.queueParticles(fx);
     this.queueSnow(W, H);
     this.quads.flush(quadView, quadOrigin, S / this.fxGrid, undefined, tint);
+    this.darken(fx, W, H);
     this.gas?.draw(gas, this.lights, 1, tint);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
@@ -394,6 +401,26 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       if (this.heat) this.meter.drawHeat(this.heat, W, H);
     }
+  }
+
+  /**
+   * A modifier's own colour (dust in a gale, the heat of a dry spell): multiply the world drawn so
+   * far by the weather's tint, less where a fire or a flash lights the ground, and blink the lot
+   * for a bolt. Night and rain are the sky's work; fire and glow are drawn after this.
+   */
+  private darken(fx: Effects, W: number, H: number): void {
+    const A = fx.weather;
+    if (!A.dim && A.flash <= 0) return;
+    const D = (this.dusk ??= new DuskPass(this.gl));
+    D.clear();
+    D.take(this.lights);
+    const f = A.flash * 0.85;
+    const T = A.tint;
+    D.draw({ w: W, h: H, ox: this.ox, oy: this.oy, scale: this.scale, ys: this.ys }, [
+      T[0] + (1 - T[0]) * f,
+      T[1] + (1 - T[1]) * f,
+      T[2] + (1 - T[2]) * f,
+    ]);
   }
 
   /** The frame's lens rings in device pixels: every ripple that has started and is near the view. */
@@ -468,6 +495,31 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     fx.cells.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.shock.sparks.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
+    const S = this.scale;
+    const wd: WeatherDraw = {
+      cx: (this.vw / 2 - this.ox) / S,
+      cy: (this.vh / 2 - this.oy) / (S * this.ys),
+      hw: this.vw / (2 * S),
+      hh: this.vh / (2 * S * this.ys),
+      cell: (x, y, z, n, rgb, a) => cellN(x, y, z, n, rgb, a, Shape.Rect),
+      glow: (x, y, z, n, rgb, a) => cellG(x, y, z, n, rgb, a, Shape.Rect),
+      bar: (x, y, z, bw, bh, rgb, a, rot) =>
+        this.quads.push(
+          Math.round(x * G),
+          Math.round(this.my(y, z) * G),
+          bw,
+          bh,
+          rgb,
+          a,
+          Shape.Rect,
+          rot,
+        ),
+      shade: (x, y, d, a) =>
+        this.quads.push(x * G, this.my(y, 0) * G, d * G, d * G * this.ys, 0x000000, a, Shape.Disc),
+      ys: this.ys,
+      cosP: this.cosP,
+    };
+    fx.weather.draw(wd);
   }
 
   /**

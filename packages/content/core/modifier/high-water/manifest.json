@@ -1,0 +1,23 @@
+{
+  "id": "modifier.high-water",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "High Water",
+    "description": "A rising flood. Pools on the road start small and keep widening through the race until they bog down whoever drives through; they drown fire as they spread.",
+    "since": "core@0.7.0"
+  },
+  "kind": "flood",
+  "label": "FLOOD",
+  "colour": "#4fc3f7",
+  "pools": {
+    "material": "material.water",
+    "start": 5,
+    "max": 5,
+    "r": [7, 44],
+    "rise": 75
+  },
+  "tint": "#c4dcf0",
+  "sky": {
+    "wet": 0.6
+  }
+}

@@ -55,6 +55,7 @@ import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
 import { updateGuards, type Decoy } from './guards';
+import { addModifier, updateModifiers, type Mod } from './modifiers';
 
 export interface WorldOptions {
   content: Content;
@@ -97,6 +98,11 @@ export interface WorldOptions {
    * See range.ts for what can be done to them.
    */
   sandbox?: boolean;
+  /**
+   * World modifiers on for this race (content ids): weather, night, low gravity and the like.
+   * Online, every peer gets the same list.
+   */
+  modifiers?: string[];
 }
 
 export interface Oval {
@@ -181,6 +187,16 @@ export class World {
   readonly arsenal: Arsenal = newArsenal();
   /** Twisters, flails, bones on their way down and cracks running through the ground. */
   readonly wild: Wild = newWild();
+  /** World modifiers at work (see modifiers.ts), and the numbers they set for the other rules. */
+  readonly mods: Mod[] = [];
+  /** The share of their grip cars keep (rain). */
+  grip = 1;
+  /** Gravity, as a share of the usual. */
+  gravity = 1;
+  /** How fast a rival that cannot see drives (night, lamps smashed). */
+  blindPace = 1;
+  /** The wind, art px per second squared; (0, 0) in still air. */
+  readonly wind: [number, number] = [0, 0];
   /** What a wrecked car leaks: the pack's material that says so, if any. */
   readonly leak: MaterialManifest | null;
   /**
@@ -329,6 +345,12 @@ export class World {
       const b = makeBot(this, botDef, i);
       spawnBot(this, b, true);
       this.bots.push(b);
+    }
+    // in a fixed order, whatever order they were picked in
+    for (const id of [...new Set(opts.modifiers ?? [])].sort()) {
+      const def = C.modifier.get(id);
+      if (!def) throw new Error(`no modifier ${id}`);
+      addModifier(this, def);
     }
   }
 
@@ -559,6 +581,7 @@ export class World {
     updateHowls(this);
     updateArms(this);
     updateArsenal(this);
+    if (this.mods.length) updateModifiers(this, live);
     updateEmbers(this);
     updateRivers(this);
     if (this.mending.length) updateMending(this);
@@ -643,6 +666,10 @@ export class World {
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);
+    if (this.mods.length) {
+      H.num(this.wind[0]).num(this.wind[1]).num(this.gravity).num(this.grip);
+      for (const m of this.mods) H.num(m.next).num(m.pending.length).num(m.laid).num(m.shakeT);
+    }
     return H.hex();
   }
 

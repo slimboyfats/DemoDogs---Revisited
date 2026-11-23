@@ -17,6 +17,7 @@ import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
 import type { World } from './world';
+import { pace } from './modifiers';
 
 export function makeCar(
   w: World,
@@ -179,7 +180,9 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
   // the deck is clean: pools and pits are on the ground below it
-  const [hold, bog, pit] = airborne || floor > 0 ? [1, 0, false] : footing(w, c.x, c.y);
+  const [dry, bog, pit] = airborne || floor > 0 ? [1, 0, false] : footing(w, c.x, c.y);
+  // rain takes grip everywhere, the deck included
+  const hold = dry * w.grip;
   // dropping into a crater at speed throws the car up off its far lip
   if (pit && !c.pit && Math.abs(vf) > 70) c.vz = Math.max(c.vz, Math.min(70, Math.abs(vf) * 0.3));
   if (!airborne) c.pit = pit;
@@ -209,7 +212,8 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     (off ? 0.56 : 1) *
     (boost ? 1.33 * c.fuel : 1) *
     c.aiSpeed *
-    c.pace;
+    c.pace *
+    pace(w, c);
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
@@ -233,7 +237,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     c.z = floor;
     c.vz = 0;
   } else if (c.z > floor || c.vz !== 0) {
-    c.vz -= GRAVITY * DT;
+    c.vz -= GRAVITY * w.gravity * DT;
     c.z += c.vz * DT;
     if (c.z <= floor) {
       c.z = floor;

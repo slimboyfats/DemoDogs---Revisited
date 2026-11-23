@@ -23,6 +23,7 @@
     "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "look": "pnpm build && node scripts/capture-look.mjs",
     "sky": "pnpm build && node scripts/capture-sky.mjs",
+    "world": "pnpm build && node scripts/capture-world.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",
     "signal": "pnpm --filter @demodogs/signal start",
