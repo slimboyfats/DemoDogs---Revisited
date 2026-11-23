@@ -136,8 +136,33 @@ export function makeGround(w: World): Ground {
     stroke('#c8322e', road + 9, [9, 9]);
     stroke('#47474d', road);
     stroke('#4f4f56', road * 0.55);
+    // (a stretch with its own surface is painted over this below, before the start line)
     stroke('rgba(230,224,200,0.7)', 2, [12, 16]);
     dressRoad(g, w, r, up);
+    // stretches with a surface of their own: the road in that material's colour, roughened
+    const S = w.roadSurface;
+    if (S)
+      for (let i = 0; i < T.n; i++) {
+        const m = S[i];
+        if (!m || up(i)) continue;
+        const rgb = parseInt(m.colour.slice(1), 16);
+        const a = T.a[i]!;
+        for (let k = 0; k < road * 1.6; k++) {
+          const o = (r() - 0.5) * (road - 2);
+          const f = (r() - 0.5) * T.step * 1.6;
+          const sh = 0.86 + r() * 0.28;
+          g.globalAlpha = Math.max(0.75, m.alpha);
+          g.fillStyle = `rgb(${Math.min(255, ((rgb >> 16) & 255) * sh) | 0},${Math.min(255, ((rgb >> 8) & 255) * sh) | 0},${Math.min(255, (rgb & 255) * sh) | 0})`;
+          const s = 1.5 + r() * 2.5;
+          g.fillRect(
+            T.x[i]! - Math.sin(a) * o + Math.cos(a) * f - s / 2,
+            T.y[i]! + Math.cos(a) * o + Math.sin(a) * f - s / 2,
+            s,
+            s,
+          );
+        }
+        g.globalAlpha = 1;
+      }
     // the start line: a chequer across the road at sample 0, and the grid boxes behind it
     const a = T.a[0]!;
     const nx = -Math.sin(a);

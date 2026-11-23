@@ -1,0 +1,13 @@
+{
+  "id": "material.snow",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Snow",
+    "description": "Deep, packed snow. Tyres slip on it and plough through it: slower and looser than grass, kinder than ice.",
+    "since": "core@0.9.0"
+  },
+  "grip": 0.5,
+  "drag": 0.7,
+  "colour": "#e6edf2",
+  "alpha": 0.9
+}

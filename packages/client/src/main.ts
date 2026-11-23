@@ -196,38 +196,42 @@ function storage(): KeyValue | null {
   }
 }
 const trackStore = new LocalTrackStore(storage(), () => new Date().toISOString());
-const editor = new TrackEditor($('editPanel'), $('editTap'), $('editSetup'), content, {
-  view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
-  rebuild: (made) => {
-    const old = session;
-    const s = new Session({ art, sound, input, ...editOptions(made), autopilot: false });
-    if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
-    s.setView(W / shown, H / shown);
-    session = s;
-    return s;
+const editor = new TrackEditor(
+  $('editPanel'),
+  $('editTap'),
+  $('editSetup'),
+  $('editTray'),
+  content,
+  art,
+  {
+    view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
+    rebuild: (made) => {
+      const old = session;
+      const s = new Session({ art, sound, input, ...editOptions(made), autopilot: false });
+      if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
+      s.setView(W / shown, H / shown);
+      session = s;
+      return s;
+    },
+    setZoom: (k) => {
+      editShown = shown = k;
+      scene.setScale(k);
+      session?.setView(W / k, H / k);
+    },
+    zoomRange: () => {
+      const w = session!.world;
+      // from the whole map with room to spare, to twice as close as a race is shown
+      const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
+      return [Math.min(fit * 0.8, scale / 2), scale * 2];
+    },
+    save: (t) => {
+      editing = t;
+      void trackStore.put(t);
+    },
+    drive: (t) => raceTrack(t),
+    exit: () => openTracks(),
   },
-  zoom: () => {
-    const w = session!.world;
-    // close as in a race, twice as wide, and the whole map
-    const fit = Math.min(W / w.w, (H * 0.8) / (w.h * Math.sin(PITCH)));
-    const steps: [number, string][] = [
-      [scale, 'ZOOM'],
-      [Math.max(1, Math.round(scale) / 2), 'ZOOM WIDE'],
-      [Math.min(fit, scale / 2), 'ZOOM MAP'],
-    ];
-    const i = steps.findIndex(([v]) => v === editShown);
-    const next = steps[(i + 1) % steps.length]!;
-    editShown = next[0];
-    if (next[1] === 'ZOOM MAP') Object.assign(session!.cam, { x: w.w / 2, y: w.h / 2 });
-    return next[1];
-  },
-  save: (t) => {
-    editing = t;
-    void trackStore.put(t);
-  },
-  drive: (t) => raceTrack(t),
-  exit: () => openTracks(),
-});
+);
 const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
   edit: startEditor,
   race: (t) => {
@@ -279,12 +283,28 @@ function startEditor(t: TrackFile): void {
 function raceTrack(t: TrackFile): void {
   startGame(customVenueId(t.id), installTrack(content, t));
 }
+/**
+ * A custom track's weather areas: the screen takes the sky of the area it is over, and goes back
+ * to the sky it had when it leaves. Not in the editor, where the whole map is in view at once.
+ */
+let areaSky: string | null = null;
+function weatherAreas(): void {
+  if (!session || !(scene instanceof PixelScene)) return;
+  let name: string | null = null;
+  if (!editMode && !devMode)
+    for (const a of session.world.venue.weather ?? [])
+      if (SKIES[a.sky] && Math.hypot(a.x - session.cam.x, a.y - session.cam.y) <= a.r) name = a.sky;
+  if (name === areaSky) return;
+  areaSky = name;
+  Object.assign(scene.sky, SKIES[name ?? skyName] ?? SKIES.day);
+}
 /** The sky by name (see SKIES); false when there is no such sky or no pixel engine. */
 let skyName = 'day';
 function setSky(name: string, now = false): boolean {
   const k = SKIES[name];
   if (!k || !(scene instanceof PixelScene)) return false;
   skyName = name;
+  areaSky = null;
   Object.assign(scene.sky, k);
   if (now) scene.sky.snap();
   return true;
@@ -838,6 +858,7 @@ function frame(t: number): void {
       return;
     }
     spectate(dt);
+    weatherAreas();
     const r0 = performance.now();
     // the overdraw meter reads its counts back about twice a second (a GPU stall, so not every frame)
     if (scene instanceof PixelScene && scene.meterOn && ++meterFrames % 30 === 0)

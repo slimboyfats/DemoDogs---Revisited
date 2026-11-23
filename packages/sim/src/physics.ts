@@ -183,7 +183,16 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
   // the deck is clean: pools and pits are on the ground below it
-  const [dry, bog, pit] = airborne || floor > 0 ? [1, 0, false] : footing(w, c.x, c.y);
+  const foot = airborne || floor > 0 ? ([1, 0, false] as const) : footing(w, c.x, c.y);
+  let dry: number = foot[0];
+  let bog: number = foot[1];
+  const pit = foot[2];
+  // a stretch of road with a surface of its own (dirt, ice, sand) grips and drags like it
+  const surface = w.roadSurface && !off && !airborne && floor <= 0 ? w.roadSurface[c.idx] : null;
+  if (surface) {
+    dry = Math.min(dry, surface.grip);
+    bog = Math.max(bog, surface.drag);
+  }
   // rain takes grip everywhere, the deck included
   const hold = dry * w.grip;
   // dropping into a crater at speed throws the car up off its far lip
