@@ -34,7 +34,9 @@ await mkdir(out, { recursive: true });
 
 const venues = process.argv.slice(2).length
   ? process.argv.slice(2)
-  : (await readdir(venueDir, { withFileTypes: true })).filter((d) => d.isDirectory()).map((d) => d.name);
+  : (await readdir(venueDir, { withFileTypes: true }))
+      .filter((d) => d.isDirectory())
+      .map((d) => d.name);
 
 const browser = await chromium.launch();
 const page = await browser.newPage({
@@ -46,7 +48,16 @@ const page = await browser.newPage({
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 
-const KEYS = ['covered', 'solid', 'written', 'front', 'shellSolid', 'shellWritten', 'shellFront', 'particles'];
+const KEYS = [
+  'covered',
+  'solid',
+  'written',
+  'front',
+  'shellSolid',
+  'shellWritten',
+  'shellFront',
+  'particles',
+];
 const rows = [];
 const add = (name, list) => {
   const n = list.length;
