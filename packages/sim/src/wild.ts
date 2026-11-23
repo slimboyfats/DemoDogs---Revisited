@@ -548,7 +548,8 @@ function updateHoles(w: World): void {
       c.sunkTip = tl < 0.01 ? [1, 0] : [(tx * cs + ty * sn) / tl, (ty * cs - tx * sn) / tl];
       c.vx = c.vy = c.vz = 0;
       c.spin = 0;
-      c.sunkTurn = w.rng.range(2.5, 4) * (w.rng.next() < 0.5 ? -1 : 1);
+      // which way round is the car's own: no dice, so a pit changes nothing else in the race
+      c.sunkTurn = (2.6 + (c.index % 3) * 0.6) * ((c.index + w.tick) % 2 ? 1 : -1);
       if (gone) {
         // a derby has no way back: the hole closes over the car and it is out
         bury(w, c, by);
