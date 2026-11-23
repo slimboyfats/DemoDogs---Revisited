@@ -153,7 +153,12 @@ function sample(part: Part, res: number): Sampled {
 }
 
 /** A part as a strip in the given materials, `res` texels to the art pixel. */
-export function build(part: Part, mats: Record<string, Tones>, res = DETAIL): Strip {
+export function build(
+  part: Part,
+  mats: Record<string, Tones>,
+  res = DETAIL,
+  glows?: Readonly<Record<string, number>>,
+): Strip {
   const { cw, ch, n, names, grid, lit } = sample(part, res);
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
   const W = cw * cols;
@@ -166,6 +171,9 @@ export function build(part: Part, mats: Record<string, Tones>, res = DETAIL): St
     if (m && !mats[m]) throw new Error(`no material ${m}`);
     return m ? mats[m]!.map(hexRgb) : [];
   });
+  // which of its materials glow (lamps, lenses), and so which texels: kept beside the pixels
+  const shine = names.map((m) => (m && glows?.[m]) || 0);
+  const glow = shine.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
   const c = [0, 0, 0];
   for (let z = 0; z < n; z++)
     for (let y = 0; y < ch; y++)
@@ -174,13 +182,15 @@ export function build(part: Part, mats: Record<string, Tones>, res = DETAIL): St
         const m = grid[i]!;
         if (!m) continue;
         mix3(rgb[m]!, lit[i]! / 255, c);
-        const j = ((Math.floor(z / cols) * ch + y) * W + (z % cols) * cw + x) * 4;
+        const t = (Math.floor(z / cols) * ch + y) * W + (z % cols) * cw + x;
+        const j = t * 4;
         px[j] = c[0]!;
         px[j + 1] = c[1]!;
         px[j + 2] = c[2]!;
         px[j + 3] = 255;
+        if (glow) glow[t] = shine[m]!;
       }
-  return { img: cv, cw, ch, n, res, cols, px, stale: true };
+  return { img: cv, cw, ch, n, res, cols, px, stale: true, glow };
 }
 
 /**

@@ -3,7 +3,7 @@ import type { LookModule } from '@demodogs/shared';
 import { discoverContent, discoverLooks } from './glob';
 
 export { discoverContent, discoverLooks, itemFolders } from './glob';
-export { PALETTE } from './palette';
+export { GLOWS, PALETTE } from './palette';
 export * as kit from './kit';
 
 let cached: Content | undefined;

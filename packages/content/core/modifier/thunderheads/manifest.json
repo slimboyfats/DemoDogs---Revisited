@@ -14,5 +14,9 @@
   "power": 0.6,
   "reach": 46,
   "time": 1.3,
-  "tint": "#8390b8"
+  "tint": "#bcc4e2",
+  "sky": {
+    "dark": 0.42,
+    "wet": 0.4
+  }
 }

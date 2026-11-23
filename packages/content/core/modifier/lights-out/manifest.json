@@ -10,6 +10,7 @@
   "label": "NIGHT",
   "colour": "#7986cb",
   "pace": 0.84,
-  "tint": "#2c3662",
-  "lamps": true
+  "sky": {
+    "dark": 1
+  }
 }

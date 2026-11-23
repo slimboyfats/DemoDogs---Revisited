@@ -258,6 +258,9 @@ body.kbd:not(.nohints) .pad kbd {
 .khRow.fire b {
   color: #ff7850;
 }
+body.nonames .khRow.names {
+  opacity: 0.5;
+}
 .khRow.empty {
   opacity: 0.5;
 }

@@ -149,6 +149,12 @@
     "pickup.dome",
     "pickup.welder",
     "pickup.blade",
-    "pickup.springs"
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower"
   ]
 }

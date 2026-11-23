@@ -42,7 +42,10 @@ import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
+import { GuardState, guardEvent, guardTick } from './guards-fx';
+import { CatchupFx } from './catchup-fx';
 import { armsEvent, armsTick } from './arms-fx';
+import { arsenalEvent, arsenalTick } from './arsenal-fx';
 import { WeatherFx } from './weather-fx';
 
 const TAU = Math.PI * 2;
@@ -222,6 +225,10 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** Guards: where turrets point, which feelers twitch and which claws are down. */
+  readonly guards = new GuardState();
+  /** Catch-up items: size bursts, the gale, the lead ball. */
+  readonly catchup = new CatchupFx();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
   readonly weather: WeatherFx;
 
@@ -595,7 +602,7 @@ export class Effects {
     this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
-  private fling(
+  fling(
     strip: Strip,
     x: number,
     y: number,
@@ -1401,7 +1408,7 @@ export class Effects {
         case 'fire': {
           const c = w.cars[e.car]!;
           const wpn = w.content.weapon.get(e.weapon);
-          if (armsEvent(this, w, e, S)) break;
+          if (armsEvent(this, w, e, S) || arsenalEvent(this, w, e, S)) break;
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
           } else if (c === w.player && wpn?.kind !== 'pulse' && wpn?.kind !== 'howl') S.drop();
@@ -1424,6 +1431,23 @@ export class Effects {
         case 'arc':
         case 'stall':
           this.shock.handle(e);
+          break;
+        case 'guard':
+          guardEvent(this, w, e, S);
+          break;
+        case 'catchup':
+          this.catchup.handle(this, w, e, S, this.art);
+          break;
+        case 'catch':
+        case 'leash':
+        case 'snap':
+        case 'incoming':
+        case 'sentry':
+        case 'flea':
+        case 'beam':
+        case 'swap':
+        case 'fizz':
+          arsenalEvent(this, w, e, S);
           break;
         case 'howl':
         case 'hurl':
@@ -1764,6 +1788,7 @@ export class Effects {
       if (Math.random() < 0.2) this.ember(x, y, 5);
     }
     armsTick(this, w, this.sound);
+    arsenalTick(this, w, this.sound);
     this.feed();
     feedClouds(this, w);
     // the cars drag the air they drive through: fire and smoke near a fast car swirl in its wake
@@ -1773,6 +1798,8 @@ export class Effects {
     this.cells.step(DT);
     this.shock.step(DT);
     howlTick(this, w);
+    guardTick(this, w, this.sound);
+    this.catchup.step(this, w);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

@@ -323,6 +323,12 @@ export class Sound {
     this.tone(70, 0.16, 0.18 * v, 'sine', 0.6);
   }
 
+  /** A squeaky toy: a short rising squeal. */
+  squeak(v = 1): void {
+    this.tone(1250, 0.09, 0.07 * v, 'square', 1.5);
+    this.tone(1900, 0.06, 0.03 * v, 'triangle', 1.3, 0.03);
+  }
+
   /** A blade bolted on or falling off: a clang of steel. */
   clang(v = 1): void {
     this.tone(620, 0.25, 0.1 * v, 'square', 0.92);

@@ -68,7 +68,10 @@ export function drawOverlay(
     }
 }
 
-/** Spectating: every running car's name over its roof, the one being watched picked out. */
+/**
+ * Every running car's name over its roof. Spectating, the one being watched is picked out;
+ * driving, `skip` is this screen's own car, which needs no label.
+ */
 export function drawNames(
   ctx: CanvasRenderingContext2D,
   P: Projector,
@@ -77,6 +80,7 @@ export function drawNames(
   W: number,
   H: number,
   dpr: number,
+  skip: Car | null = null,
 ): void {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
@@ -85,7 +89,7 @@ export function drawNames(
   const order = w.cars.filter((c) => c !== watched);
   if (watched) order.push(watched);
   for (const c of order) {
-    if (c.wrecked) continue;
+    if (c.wrecked || c === skip) continue;
     const on = c === watched;
     const sx = P.sx(c.x);
     const sy = P.sy(c.y, c.z + 16) - 4 * dpr;

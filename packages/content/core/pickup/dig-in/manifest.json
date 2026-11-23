@@ -1,0 +1,13 @@
+{
+  "id": "pickup.dig-in",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dig In",
+    "description": "Claws that bite the ground when something shoves: blasts, shockwaves and suction orbs do not throw the car.",
+    "since": "core@0.7.0"
+  },
+  "kind": "anchor",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 12
+}

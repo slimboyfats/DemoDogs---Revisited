@@ -24,16 +24,19 @@ import {
 import { Session, type SessionOptions } from './game/session';
 import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
+import { isKey } from './input/keys';
 import { Art } from './render/art';
 import { Hud, placeName } from './render/hud';
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
+import { SKIES } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { PITCH, Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { KeyHints } from './ui/key-hints';
+import { NameTags } from './ui/name-tags';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
@@ -57,6 +60,15 @@ const art = new Art(loadLooks());
 const sound = new Sound();
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
+const nameTags = new NameTags();
+// Tab while driving: the names over the cars, on and off (spectating, Tab is the next car)
+addEventListener('keydown', (e) => {
+  if (!isKey('watch', e.key.toLowerCase()) || e.repeat || e.metaKey || e.ctrlKey || e.altKey)
+    return;
+  if (screen !== 'game' || paused || specBar.shown) return;
+  e.preventDefault();
+  nameTags.toggle();
+});
 const canvas = $<HTMLCanvasElement>('game');
 const overlay = $<HTMLCanvasElement>('overlay');
 const octx = overlay.getContext('2d')!;
@@ -154,7 +166,23 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
     scene.setHeat(next);
     return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
   },
+  sky: () => {
+    const names = Object.keys(SKIES);
+    skyName = names[(names.indexOf(skyName) + 1) % names.length]!;
+    setSky(skyName);
+    return `SKY ${skyName.toUpperCase().replace('-', ' ')}`;
+  },
 });
+/** The sky by name (see SKIES); false when there is no such sky or no pixel engine. */
+let skyName = 'day';
+function setSky(name: string, now = false): boolean {
+  const k = SKIES[name];
+  if (!k || !(scene instanceof PixelScene)) return false;
+  skyName = name;
+  Object.assign(scene.sky, k);
+  if (now) scene.sky.snap();
+  return true;
+}
 // online races: the lobby screen, and the room it holds while racing
 const online = new OnlineScreen(
   $('onlinePanel'),
@@ -702,6 +730,8 @@ function frame(t: number): void {
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
+    else if (nameTags.shown && !devMode)
+      drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (devMode) dev.frame(dt);
     else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
@@ -739,6 +769,15 @@ function boot(): void {
   if (params.has('perf')) startPerf();
   if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
   if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
+  if (scene instanceof PixelScene) {
+    // the sky and its switches: ?sky=night, ?light=flat, ?bloom=0, ?outline=on|off, ?reflect=0
+    if (params.get('light') === 'flat') scene.setFlat(true);
+    if (params.get('bloom') === '0') scene.bloom = false;
+    if (params.get('reflect') === '0') scene.reflections = false;
+    const line = params.get('outline');
+    if (line === 'on' || line === 'off') scene.outline = line;
+    setSky(params.get('sky') ?? 'day', true);
+  }
   resize();
   addEventListener('resize', resize);
   buildMenu();
@@ -832,6 +871,26 @@ function boot(): void {
       dev,
       online,
       spectator,
+      /**
+       * The sky for scripts: `set('night')` (see SKIES; `now` skips the fade), `flat(true)` for the
+       * old flat light, and `state` to read or set dark, wet and snow directly.
+       */
+      sky: {
+        set: (name: string, now = true) => setSky(name, now),
+        flat(on: boolean): void {
+          if (scene instanceof PixelScene) scene.setFlat(on);
+        },
+        get state() {
+          return scene instanceof PixelScene ? scene.sky : null;
+        },
+        get scene() {
+          return scene instanceof PixelScene ? scene : null;
+        },
+        /** Strips still waiting for their lighting to be baked. */
+        get baking() {
+          return scene instanceof PixelScene ? scene.baking : 0;
+        },
+      },
       /**
        * The overdraw meter for scripts: `measure()` draws the current frame again with the counts
        * and returns them (fragments per pixel); `heat(channel | null)` shows a heat map.

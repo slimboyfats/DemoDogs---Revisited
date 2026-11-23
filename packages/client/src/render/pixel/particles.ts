@@ -10,6 +10,8 @@ import { Shape } from './batch';
 export type FxKind =
   /** One bright additive cell: flies, falls and bounces. */
   | 'spark'
+  /** One solid cell of its colour, `size` art px, that neither fades nor falls: ropes, marks, fleas. */
+  | 'pip'
   /** A firework star: flies out fast, brakes hard in the air, droops and strobes as it burns out. */
   | 'glitter'
   /** A glowing ember shed by fire: floats up on the heat, sways and flickers out. */
@@ -149,6 +151,9 @@ export function drawParticle(p: Particle, normal: Put, glow: Put, cell = 1): voi
   switch (p.kind) {
     case 'spark':
       glow(p.x, p.y, p.z, cell, p.rgb, t < 0.6 ? 1 : (1 - t) / 0.4, Shape.Rect);
+      break;
+    case 'pip':
+      normal(p.x, p.y, p.z, Math.max(cell, s), p.rgb, 1, Shape.Rect);
       break;
     case 'glitter':
       // full on, then strobing as it burns out

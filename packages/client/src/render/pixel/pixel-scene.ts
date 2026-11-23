@@ -1,5 +1,6 @@
 import type { StaticProp, World } from '@demodogs/sim';
 import { armsLights } from '../arms-fx';
+import { arsenalLights } from '../arsenal-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
 import type { Ground } from '../ground';
@@ -12,12 +13,13 @@ import { GroundLayer } from './ground-layer';
 import { ShadowLayer } from './shadow-layer';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
-import { Lights } from './lighting';
+import { Lights, MAX_CONES } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
 import { fineGrid } from '../strips';
 import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
-import { StackBatch, type StackView } from './stack-batch';
+import { StackBatch, type StackSky, type StackView } from './stack-batch';
+import { Atmosphere } from '../atmosphere';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
@@ -65,12 +67,26 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private wantRead = false;
   private last: OverdrawStats | null = null;
   private frameW: World | null = null;
+  /** How strong sun shadows are this frame, 0 to 1. */
+  private shade = 1;
   /** The shockwave lens (made on first use), and whether to bend the picture at all. */
   private lens: LensPass | null = null;
   private readonly lenses: Lens[] = [];
   distort = true;
-  /** Darkness and lamps (made the first time a world dims the picture). */
+  /** The sky: how dark, how wet, how much snow (set its `dark`, `wet`, `snow`; see Atmosphere). */
+  readonly sky = new Atmosphere();
+  /** A modifier's tint over the picture (made the first time one is needed). */
   private dusk: DuskPass | null = null;
+  /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
+  reflections = true;
+  /** A line round your own car: always, never, or only when it is dark enough to lose it. */
+  outline: 'on' | 'off' | 'auto' = 'auto';
+  /** Let a new race rise out of the ground, slice by slice. */
+  bloom = true;
+  /** Seconds the sky moves on each frame drawn, instead of the clock's (captures). */
+  fixedDt: number | null = null;
+  private lastT = 0;
+  private readonly stackSky: StackSky;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -88,6 +104,39 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.stacks = new StackBatch(gl, this.atlas);
     this.quads = new QuadBatch(gl);
     this.glow = new QuadBatch(gl, 1024);
+    this.atlas.setLit(true);
+    const A = this.sky;
+    this.stackSky = {
+      lit: true,
+      amb: A.amb,
+      sun: A.sun,
+      dir: A.dir,
+      glow: 0,
+      snow: 0,
+      wet: 0,
+      time: 0,
+    };
+  }
+
+  /** Flat light and no second atlas texture (as before there was a sky), or the lit look. */
+  setFlat(flat: boolean): void {
+    this.sky.flat = flat;
+    this.atlas.setLit(!flat);
+  }
+
+  // StackSink: where the next instance will go, and a line round everything queued since
+  mark(): number {
+    return this.stacks.count;
+  }
+  rim(from: number, rgb: number): void {
+    this.stacks.outline(from, rgb);
+  }
+  warm(on: boolean): void {
+    this.stacks.warm = on;
+  }
+  /** Should your own car get its line this frame? */
+  get rimOn(): boolean {
+    return this.outline === 'on' || (this.outline === 'auto' && this.sky.now.dark >= 0.4);
   }
 
   /** Can this browser run the pixel engine? */
@@ -135,6 +184,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha?: number): void {
     this.stacks.stack(s, x, y, z, rot, alpha);
   }
+  zoom(k: number): void {
+    this.stacks.zoom(k);
+  }
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     this.stacks.limb(s, a, b, n);
   }
@@ -159,6 +211,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);
+    arsenalLights(L, w);
     for (const f of fx.fires)
       L.add(
         f.x,
@@ -171,6 +224,24 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
       if (p.on && this.visible(p.x, p.y, 30)) L.add(p.x, p.y, 20, 0.45, 0x60f0ff);
+    if (!this.sky.lamps) return;
+    // dark enough for lamps: every running car throws a beam from its nose, your own first
+    const lamp = (c: World['cars'][number]) => {
+      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
+      const a = c.def.body.halfLength - 1;
+      L.cone(c.x + Math.cos(c.h) * a, c.y + Math.sin(c.h) * a, c.h);
+    };
+    lamp(w.player);
+    // (a phone that is struggling gets your own beam and two more)
+    const most = fx.quality > 0.6 ? MAX_CONES : 3;
+    for (const c of w.cars) if (c !== w.player && L.coneCount < most) lamp(c);
+    // and scenery with a lamp in it lights the ground round its foot
+    const k = (this.sky.now.dark - 0.42) / 0.58;
+    for (const s of w.statics) {
+      if (s.down || !this.visible(s.x, s.y, 50)) continue;
+      if (!this.art.prop(s.def.id).glow) continue;
+      L.add(s.x, s.y, 44, 0.75 * k, 0xffd890);
+    }
   }
 
   draw(w: World, fx: Effects, ground: Ground, cam: Camera, W: number, H: number): void {
@@ -208,6 +279,23 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       this.shadows.build(w.statics);
       this.shadowLayer = new ShadowLayer(gl, this.shadows);
     }
+    // the sky follows its targets, and strips waiting for their lighting get a little time
+    const clock = performance.now();
+    const dt = this.fixedDt ?? (this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0);
+    this.lastT = clock;
+    const A = this.sky;
+    A.ask.dark = fx.weather.dark;
+    A.ask.wet = fx.weather.wet;
+    A.update(dt);
+    this.atlas.work(2.5, () => performance.now());
+    const sky = this.stackSky;
+    sky.lit = !A.flat;
+    sky.glow = A.glow;
+    sky.snow = A.now.snow;
+    sky.wet = A.now.wet;
+    sky.time = A.time;
+    sky.grow = this.bloom && w.time < 2.6 ? [w.player.x, w.player.y, w.time * 70 - 6] : undefined;
+    const tint = A.plain ? undefined : A.ground;
     this.shadows!.update(w);
     this.shadowLayer!.sync();
     for (const s of fx.dropped) this.atlas.release(s);
@@ -246,14 +334,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     this.gatherLights(w, fx);
-    this.groundLayer!.draw(view, this.lights);
+    this.groundLayer!.draw(view, this.lights, { ground: A.ground, snow: sky.snow, wet: sky.wet });
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
     const quadView: [number, number] = [W, H];
     const quadOrigin: [number, number] = [this.ox, this.oy];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    this.shadowLayer!.draw(view);
+    this.shade = A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1);
+    this.shadowLayer!.draw(view, this.shade);
     this.queueShadows(w, fx);
     this.quads.flush(quadView, quadOrigin, S);
 
@@ -267,7 +356,13 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    this.stacks.flush(this.lights);
+    this.stacks.ready();
+    if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
+      // wet ground: the stacks upside down under their feet first, then the depth buffer afresh
+      this.stacks.mirror(this.lights, sky);
+      gl.clear(gl.DEPTH_BUFFER_BIT);
+    }
+    this.stacks.flush(this.lights, sky);
     gl.disable(gl.DEPTH_TEST);
 
     // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
@@ -283,11 +378,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       ys: this.ys,
       cosP: this.cosP,
     };
-    this.gas?.draw(gas, this.lights, 0);
+    this.gas?.draw(gas, this.lights, 0, tint);
     this.queueParticles(fx);
-    this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
-    this.darken(w, fx, W, H);
-    this.gas?.draw(gas, this.lights, 1);
+    this.queueSnow(W, H);
+    this.quads.flush(quadView, quadOrigin, S / this.fxGrid, undefined, tint);
+    this.darken(fx, W, H);
+    this.gas?.draw(gas, this.lights, 1, tint);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
     this.gas?.draw(gas, this.lights, 2);
@@ -308,26 +404,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
 
   /**
-   * Night, or the gloom of a storm: multiply the world drawn so far by the weather's tint, less
-   * where a lamp, a fire or a flash lights the ground. Fire and glow are drawn after it.
+   * A modifier's own colour (dust in a gale, the heat of a dry spell): multiply the world drawn so
+   * far by the weather's tint, less where a fire or a flash lights the ground, and blink the lot
+   * for a bolt. Night and rain are the sky's work; fire and glow are drawn after this.
    */
-  private darken(w: World, fx: Effects, W: number, H: number): void {
+  private darken(fx: Effects, W: number, H: number): void {
     const A = fx.weather;
-    if (!A.dim) return;
+    if (!A.dim && A.flash <= 0) return;
     const D = (this.dusk ??= new DuskPass(this.gl));
     D.clear();
-    if (A.lamps) {
-      // the car this screen follows first, so its lamps are never the ones left out
-      const P = w.player;
-      const cars = [P, ...w.cars.filter((c) => c !== P)];
-      for (const c of cars) {
-        if (!this.visible(c.x, c.y, 130)) continue;
-        if (!c.wrecked && c.has.front) D.lamp(c);
-        else D.ember(c);
-      }
-    }
     D.take(this.lights);
-    // a bolt blinks the whole sky
     const f = A.flash * 0.85;
     const T = A.tint;
     D.draw({ w: W, h: H, ox: this.ox, oy: this.oy, scale: this.scale, ys: this.ys }, [
@@ -369,7 +455,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         rx * 2,
         ry * 2 * this.ys,
         0x000000,
-        a,
+        a * this.shade,
         box ? Shape.Rect : Shape.Disc,
         Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
       ),
@@ -434,6 +520,45 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       cosP: this.cosP,
     };
     fx.weather.draw(wd);
+  }
+
+  /**
+   * Falling snow: single cells on the fine grid, each on its own slow path down the screen,
+   * drifting with the ground as the camera moves so they do not stick to the glass.
+   */
+  private queueSnow(W: number, H: number): void {
+    const A = this.sky;
+    const fall = Math.min(1, A.snow) * (this.fx ? Math.min(1, this.fx.quality + 0.2) : 1);
+    if (fall <= 0.01 || A.flat) return;
+    const cell = this.scale / this.fxGrid;
+    const cw = W / cell;
+    const ch = H / cell;
+    const n = Math.round(((W * H) / 5200) * fall);
+    const t = A.time;
+    const ox = this.ox / cell;
+    const oy = this.oy / cell;
+    for (let i = 0; i < n; i++) {
+      // a cheap hash per flake: where it starts, how fast it falls, how it wanders
+      const a = Math.sin(i * 12.9898) * 43758.5453;
+      const b = Math.sin(i * 78.233) * 12543.123;
+      const fa = a - Math.floor(a);
+      const fb = b - Math.floor(b);
+      const near = 0.5 + fa * 0.9;
+      const x = fa * cw * 7 + ox * near + Math.sin(t * (0.6 + fb) + i) * 5 + t * 6 * near;
+      const y = fb * ch * 5 + oy * near + t * (16 + 22 * fb) * near;
+      const sx = ((x % cw) + cw) % cw;
+      const sy = ((y % ch) + ch) % ch;
+      const big = near > 1.15 ? 2 : 1;
+      this.glow.push(
+        Math.floor(sx - ox) + 0.5 * (big & 1),
+        Math.floor(sy - oy) + 0.5 * (big & 1),
+        big,
+        big,
+        0xdfe8f4,
+        0.55 + 0.4 * fb,
+        Shape.Rect,
+      );
+    }
   }
 
   // ---- the overdraw meter (?dev OVERDRAW, ?overdraw with the perf recorder, __dd.overdraw())
@@ -501,6 +626,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   /** The sprite atlas: how full it is, and how often it filled up and was started again. */
   get atlasState(): { fill: number; flushes: number } {
     return { fill: this.atlas.fill, flushes: this.atlas.flushes };
+  }
+
+  /** Strips still waiting for their lighting to be baked. */
+  get baking(): number {
+    return this.atlas.baking;
   }
 
   get instances(): number {

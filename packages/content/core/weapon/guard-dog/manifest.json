@@ -1,0 +1,20 @@
+{
+  "id": "weapon.guard-dog",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Guard Dog",
+    "description": "A turret set down behind the car. It shoots at every rival that comes within reach until its belt runs out, and blows up under whoever runs it over.",
+    "since": "core@0.7.0"
+  },
+  "kind": "sentry",
+  "label": "GUARD",
+  "ammo": 1,
+  "power": 0.5,
+  "cooldown": 1.0,
+  "life": 14,
+  "range": 120,
+  "count": 40,
+  "fuse": 0.22,
+  "damage": 5,
+  "homing": 4
+}

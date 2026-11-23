@@ -1,5 +1,5 @@
 import type { BotLook, CarLook, LookModule, Part, PropLook, Tones } from '@demodogs/shared';
-import { PALETTE, kit } from '@demodogs/content';
+import { GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { Strip } from './stack';
 import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
@@ -36,6 +36,12 @@ export class Art {
   readonly wheels: Strip[];
   readonly pickup: Strip;
   readonly plank: Strip;
+  /** A decoy thrown out for rockets to chase. */
+  readonly squeaky: Strip;
+  private readonly heights = new Map<string, number>();
+  private readonly roofs = new Map<string, number>();
+  /** One link of a chain: a dark block a little over an art pixel across. */
+  readonly link: Strip;
   private readonly props = new Map<string, Strip>();
   private readonly cars = new Map<string, CarArt>();
   private readonly bots = new Map<string, BotArt>();
@@ -43,7 +49,7 @@ export class Art {
   built = 0;
 
   private make(part: Part, mats: Record<string, Tones>, res?: number): Strip {
-    const s = build(part, mats, res);
+    const s = build(part, mats, res, GLOWS);
     this.built += s.cw * s.ch * s.n;
     return s;
   }
@@ -52,6 +58,8 @@ export class Art {
     this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, CAR_DETAIL));
     this.pickup = this.make(kit.PICKUP_BOX, PALETTE);
     this.plank = this.make(kit.PLANK, PALETTE);
+    this.squeaky = this.make(kit.SQUEAKY, PALETTE);
+    this.link = this.make({ w: 2, h: 2, layers: 1, fn: () => 'bumper' }, PALETTE);
   }
 
   private look<K extends 'car' | 'prop' | 'bot'>(
@@ -61,6 +69,47 @@ export class Art {
     const m = this.looks.get(id);
     if (!m || m.look.kind !== kind) throw new Error(`no ${kind} look for ${id}`);
     return m.look as Extract<CarLook | PropLook | BotLook, { kind: K }>;
+  }
+
+  /**
+   * How high a car's body stands at (x, y) in its own frame, art px above its sill: read off the
+   * body's own shape, so that what is bolted on sits on the bonnet, the roof or the boot.
+   */
+  carHeight(id: string, x: number, y: number): number {
+    const key = `${id}|${x.toFixed(1)}|${y.toFixed(1)}`;
+    let h = this.heights.get(key);
+    if (h === undefined) {
+      const B = this.look(id, 'car').body;
+      h = 0;
+      for (let z = B.layers; z > 0; z -= 0.25)
+        if (B.fn(x, y, B.smooth ? z - 0.125 : Math.floor(z - 0.125))) {
+          h = z;
+          break;
+        }
+      this.heights.set(key, h);
+    }
+    return h;
+  }
+
+  /** Where along a car the roof is: the middle of the highest stretch of its centre line. */
+  carRoof(id: string): number {
+    let x = this.roofs.get(id);
+    if (x === undefined) {
+      const B = this.look(id, 'car').body;
+      let top = 0;
+      let from = 0;
+      let to = 0;
+      for (let q = -B.w / 2 + 1; q <= B.w / 2 - 1; q += 0.5) {
+        const h = this.carHeight(id, q, 0);
+        if (h > top + 0.3) {
+          top = h;
+          from = to = q;
+        } else if (h > top - 0.3) to = q;
+      }
+      x = (from + to) / 2;
+      this.roofs.set(id, x);
+    }
+    return x;
   }
 
   /** A prop or weapon strip. `swap` replaces materials (a mine's light switched off). */

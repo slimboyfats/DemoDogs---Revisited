@@ -4,8 +4,23 @@ import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
 import { STACK_FS, STACK_VS } from './stack-shaders';
 
-/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res. */
-const STRIDE = 11;
+/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
+const STRIDE = 12;
+
+/** The sky's light for a frame of slices (see Atmosphere). */
+export interface StackSky {
+  /** False: flat light, as before there was a sky. */
+  lit: boolean;
+  amb: Float32Array;
+  sun: Float32Array;
+  dir: Float32Array;
+  glow: number;
+  snow: number;
+  wet: number;
+  time: number;
+  /** A race rising out of the ground: focus x, y and how far the rise has got; z < 0 for none. */
+  grow?: readonly [number, number, number] | undefined;
+}
 
 const NAMES = [
   'u_view',
@@ -19,6 +34,19 @@ const NAMES = [
   'u_lcol',
   'u_lcount',
   'u_count',
+  'u_aux',
+  'u_lit',
+  'u_amb',
+  'u_sun',
+  'u_sdir',
+  'u_glow',
+  'u_snow',
+  'u_wet',
+  'u_mirror',
+  'u_time',
+  'u_cone',
+  'u_ccount',
+  'u_grow',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -70,6 +98,18 @@ export function nearestFirstOrder(
   out.set(src.subarray(0, n));
   return out;
 }
+
+/** Flat light: every texel its painted colour, as before there was a sky. */
+const FLAT: StackSky = {
+  lit: false,
+  amb: new Float32Array([1, 1, 1]),
+  sun: new Float32Array(3),
+  dir: new Float32Array([0, 0, 1]),
+  glow: 0,
+  snow: 0,
+  wet: 0,
+  time: 0,
+};
 
 /** How the overdraw meter draws the frame's slices again (see overdraw.ts). */
 export interface CountPass {
@@ -131,6 +171,10 @@ export class StackBatch {
   /** The data the last flush drew (queued or sorted), for the overdraw meter's "written". */
   private drawn: Float32Array = new Float32Array(0);
   private v: StackView = { w: 1, h: 1, ox: 0, oy: 0, scale: 1, ys: 1, zk: 1, worldH: 1 };
+  private sky: StackSky = FLAT;
+  /** Slices queued while this is set are of something warm and moving: snow hardly lies on it. */
+  warm = false;
+  private isReady = false;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -152,6 +196,7 @@ export class StackBatch {
       [2, 4, 5],
       [3, 1, 9],
       [4, 1, 10],
+      [5, 1, 11],
     ];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
@@ -168,6 +213,8 @@ export class StackBatch {
   begin(view: StackView): void {
     this.v = view;
     this.n = 0;
+    this.isReady = false;
+    this.zm = 1;
   }
 
   private push(
@@ -182,6 +229,7 @@ export class StackBatch {
     h: number,
     alpha: number,
     res: number,
+    tint = 0,
   ): void {
     if ((this.n + 1) * STRIDE > this.data.length) {
       const bigger = new Float32Array(this.data.length * 2);
@@ -201,6 +249,7 @@ export class StackBatch {
     d[o + 8] = h;
     d[o + 9] = alpha;
     d[o + 10] = res;
+    d[o + 11] = tint;
     this.n++;
   }
 
@@ -214,16 +263,62 @@ export class StackBatch {
     rot: number,
     thick = 1,
     alpha = 1,
+    tint = 0,
   ): void {
     const a = this.atlas.slot(s);
     const zk = this.v.zk;
     const up = Math.round(z * zk);
+    const res = s.res / this.zm;
     // a layer is drawn a row or two thick so stacks have no gaps between slices
-    const rows = Math.max(1, Math.ceil((zk * thick) / s.res - 0.02));
+    const rows = Math.max(1, Math.ceil((zk * thick) / res - 0.02));
     const u = a.x + sliceX(s, i);
     const v = a.y + sliceY(s, i);
+    if (!tint && this.warm) tint = -1;
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, s.res);
+      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint);
+  }
+
+  private zm = 1;
+
+  /** Draw what follows `k` times its size, with pixels that much bigger (1 puts it back). */
+  zoom(k: number): void {
+    this.zm = k;
+  }
+
+  /**
+   * A line round whatever slices were queued since instance `from` (see `count`): the same slices
+   * again in one flat colour (0xRRGGBB), a step out to each side and a shade further off, so only
+   * the rim shows past the thing itself. `w` is the line's width in art px.
+   */
+  outline(from: number, rgb: number, w = 0.5): void {
+    const end = this.n;
+    const tint = 1 + rgb;
+    for (const [ox, oy] of [
+      [w, 0],
+      [-w, 0],
+      [0, w / this.v.ys],
+      [0, -w / this.v.ys],
+    ] as const)
+      for (let i = from; i < end; i++) {
+        const d = this.data;
+        const o = i * STRIDE;
+        // a loose voxel (texel y of -1) has no texture to cut the shape from: left out
+        if (d[o + 6]! < 0 || d[o + 11]! > 0) continue;
+        this.push(
+          d[o]! + ox,
+          d[o + 1]! + oy,
+          d[o + 2]!,
+          d[o + 3]!,
+          d[o + 4]!,
+          d[o + 5]!,
+          d[o + 6]!,
+          d[o + 7]!,
+          d[o + 8]!,
+          1,
+          d[o + 10]!,
+          tint,
+        );
+      }
   }
 
   /**
@@ -239,7 +334,8 @@ export class StackBatch {
   }
 
   stack(s: Strip, x: number, y: number, z: number, rot: number, alpha = 1): void {
-    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / s.res, rot, 1, alpha);
+    const res = s.res / this.zm;
+    for (let i = 0; i < s.n; i++) this.slice(s, i, x, y, z + i / res, rot, 1, alpha);
   }
 
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
@@ -255,9 +351,24 @@ export class StackBatch {
     }
   }
 
-  flush(lights: Lights): void {
-    if (this.n === 0) return;
+  /** Sort what is queued into draw order; call once before `mirror` and `flush`. */
+  ready(): void {
+    this.isReady = true;
     this.drawn = this.frontToBack ? this.sortNearestFirst() : this.data;
+  }
+
+  /** The reflections in wet ground: every slice again, upside down under its foot. */
+  mirror(lights: Lights, sky: StackSky): void {
+    if (this.n === 0) return;
+    if (!this.isReady) this.ready();
+    this.sky = sky;
+    this.draw(this.prog, this.u, this.atlas.tex, lights, this.drawn, true);
+  }
+
+  flush(lights: Lights, sky?: StackSky): void {
+    if (this.n === 0) return;
+    if (!this.isReady) this.ready();
+    this.sky = sky ?? FLAT;
     this.draw(this.prog, this.u, this.atlas.tex, lights, this.drawn);
   }
 
@@ -350,10 +461,29 @@ export class StackBatch {
     tex: WebGLTexture,
     lights: Lights,
     data: Float32Array,
+    mirror = false,
   ): void {
     const gl = this.gl;
     const v = this.v;
+    const sky = this.sky;
     gl.useProgram(prog);
+    const lit = sky.lit && !!this.atlas.auxTex;
+    gl.uniform1f(u.u_lit, lit ? 1 : 0);
+    gl.uniform3fv(u.u_amb, sky.amb);
+    gl.uniform3fv(u.u_sun, sky.sun);
+    gl.uniform3fv(u.u_sdir, sky.dir);
+    gl.uniform1f(u.u_glow, sky.glow);
+    gl.uniform1f(u.u_snow, sky.snow);
+    gl.uniform1f(u.u_wet, sky.wet);
+    gl.uniform1f(u.u_time, sky.time);
+    gl.uniform1f(u.u_mirror, mirror ? 1 : 0);
+    const g = sky.grow;
+    gl.uniform3f(u.u_grow, g?.[0] ?? 0, g?.[1] ?? 0, g?.[2] ?? -1);
+    gl.uniform4fv(u.u_cone, lights.cones);
+    gl.uniform1i(u.u_ccount, lights.coneCount);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, lit ? this.atlas.auxTex : tex);
+    gl.uniform1i(u.u_aux, 1);
     gl.uniform2f(u.u_view, v.w, v.h);
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_scale, v.scale);

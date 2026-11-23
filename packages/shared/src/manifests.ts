@@ -383,6 +383,17 @@ export const ModeSchema = z.strictObject({
   ai: id('ai'),
   /** Seconds a pickup takes to come back. */
   pickupRespawn: z.number().positive(),
+  /**
+   * Race: a human more than `gap` art px of road behind the car in front is helped along, up to
+   * `pace` times its top speed once it is `full` behind (rivals have their own rubber band).
+   */
+  chase: z
+    .strictObject({
+      gap: z.number().positive(),
+      full: z.number().positive(),
+      pace: z.number().min(1),
+    })
+    .optional(),
 });
 export type ModeManifest = z.infer<typeof ModeSchema>;
 
@@ -405,6 +416,16 @@ export const WeaponSchema = z.strictObject({
     'arc',
     'vortex',
     'howl',
+    'boomerang',
+    'skip',
+    'tether',
+    'barrage',
+    'burrow',
+    'sentry',
+    'swarm',
+    'beam',
+    'swap',
+    'trail',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -506,16 +527,98 @@ export const WeaponSchema = z.strictObject({
    * swept along with the front. `power` is how hard it leans on scenery.
    */
   lift: z.number().min(0).optional(),
+  /**
+   * Ten more kinds (sim `arsenal.ts`), all on the fields above. Boomerangs: a stick of `radius`
+   * thrown at `speed` that turns for home `range` out (at `homing` rad/s) and cuts for `damage`.
+   * Skips: a bomb that bounces `count` times, `fuse` seconds apart, a blast of `power` each time.
+   * Tethers: a hook thrown `range` at `speed`; the car it bites is tied to the thrower for `life`
+   * seconds by a line with `reach` of slack that hauls with strength `push`. Barrages: `count`
+   * shells in a row within `range`, the first landing after `arm` seconds and the rest `fuse`
+   * apart, each `spread` off the line. Burrows: a digger at `speed` for `life` seconds that turns
+   * after cars within `range` (`homing`), comes up within `trigger` of one once `arm` has passed
+   * and throws it up at `lift`. Sentries: a turret that stands `life` seconds with `count` rounds,
+   * one every `fuse` seconds at cars within `range` for `damage`, turning at `homing`; run over,
+   * it blows with `power`. Swarms: `count` fleas that hop at `speed` after cars within `range` for
+   * `fuse` seconds, then ride one for `life` seconds, each biting `damage` a second. Beams: a ray
+   * `range` long held for `life` seconds that burns a car for `damage` a second and scenery by
+   * `power`. Swaps: a bolt at `speed` over `range` that bends (`homing`) towards a car within `aim`
+   * of its path and changes places with it. Trails: for `life` seconds the car leaves a fire of
+   * `radius` every `reach` it travels, each burning `fuse` seconds.
+   */
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
+
+/**
+ * Guards: countermeasures a car carries that act by themselves when the thing they guard against
+ * turns up. Each is a pickup kind.
+ *
+ * - decoy   thrown out when a rocket comes for the car; rockets chase it instead and burst on it
+ * - flak    shoots rockets, shells and darts out of the air within `reach`
+ * - mirror  gun rounds, rail slugs and sticky darts go back the way they came
+ * - bond    `amount` of every blow runs down a leash of sparks to the nearest rival within `reach`
+ * - sweep   feelers that set mines off early and flick spikes aside, `reach` ahead
+ * - earth   a trailing lead that takes shocks and lightning to ground
+ * - anchor  claws that hold the car where a blast, a shockwave or a pull would throw it
+ * - soak    a wet coat: fire does not burn it, and fire within `reach` is put out
+ * - jam     guns, seeker rockets and lobbed shells cannot pick the car out
+ * - pads    what the car drives into, or what falls on it, costs no armour
+ */
+export const GUARD_KINDS = [
+  'decoy',
+  'flak',
+  'mirror',
+  'bond',
+  'sweep',
+  'earth',
+  'anchor',
+  'soak',
+  'jam',
+  'pads',
+] as const;
+export type GuardKind = (typeof GUARD_KINDS)[number];
 
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
-  kind: z.enum(['repair', 'nitro', 'arms', 'ammo', 'cash', 'shield', 'weld', 'blade', 'springs']),
+  kind: z.enum([
+    'repair',
+    'nitro',
+    'arms',
+    'ammo',
+    'cash',
+    'shield',
+    'weld',
+    'blade',
+    'springs',
+    'kit',
+    ...GUARD_KINDS,
+    'grow',
+    'shrink',
+    'wind',
+    'collar',
+    'bones',
+  ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
+  /**
+   * Catch-up: in a race the chance is multiplied by `lead` for the car in front and by `trail`
+   * for the car at the back, and by something in between for the cars between them (both 1 when
+   * absent). A derby has no front or back: every car gets the midpoint.
+   */
+  lead: z.number().min(0).optional(),
+  trail: z.number().min(0).optional(),
+  /**
+   * Catch-up items (sim/catchup.ts), all lasting `seconds`. Grow: the car swells to `scale` times
+   * its size, and `pace` multiplies its top speed. Shrink: every rival ahead (or, with nobody
+   * ahead, within `radius`) is zapped down to `scale`, at `pace`. Wind: top speed times `pace`.
+   * Collar: the car in front is weighed down to `pace`. Bones: `charges` of `prop` drop out of
+   * the sky in front of each rival ahead (or within `radius`).
+   */
+  scale: z.number().positive().optional(),
+  pace: z.number().positive().optional(),
+  radius: z.number().positive().optional(),
+  prop: id('prop').optional(),
   /** Repair: armour restored. Ammo: rounds for the gun. Cash: money. */
   amount: z.number().positive().optional(),
   /** Arms: weapons to pick from. */
@@ -530,6 +633,13 @@ export const PickupSchema = z.strictObject({
   /** Springs: leaps it holds, and how hard each one throws the car up (art px/s). */
   charges: z.number().int().positive().optional(),
   lift: z.number().positive().optional(),
+  /** Kit: a crate that holds one of these pickups, picked at random. */
+  kits: z.array(id('pickup')).min(1).optional(),
+  /**
+   * Guards (see GUARD_KINDS, and guards.ts in the sim): `charges` uses or `seconds` on the car,
+   * and how far it reaches (art px). A bond's `amount` is the share of each blow it passes on.
+   */
+  reach: z.number().positive().optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 
@@ -869,11 +979,16 @@ export const ModifierSchema = z.strictObject({
   spread: z.number().min(0).default(0),
   /**
    * How the client shows it; nothing in the race depends on these. `tint` multiplies the whole
-   * picture (night is dark blue), and with `lamps` every car that still has its nose lights the
-   * road ahead of it.
+   * picture (dust is yellow), and `sky` asks the client's sky for at least this much darkness
+   * (0 day, 0.5 dusk, 1 night: headlamps come on) and wet (rain on the ground, reflections).
    */
   tint: hex.default('#ffffff'),
-  lamps: z.boolean().default(false),
+  sky: z
+    .strictObject({
+      dark: z.number().min(0).max(1).default(0),
+      wet: z.number().min(0).max(1).default(0),
+    })
+    .optional(),
 });
 export type ModifierManifest = z.infer<typeof ModifierSchema>;
 

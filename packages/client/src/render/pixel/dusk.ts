@@ -1,8 +1,7 @@
-import type { Car } from '@demodogs/sim';
 import { compile, uniforms } from './gl';
 import type { Lights } from './lighting';
 
-/** Lights the dusk pass can show at once: lamps first, then the frame's fires and flashes. */
+/** Lights the tint pass can show at once: the frame's fires and flashes. */
 export const MAX_DUSK = 14;
 
 const VS = `#version 300 es
@@ -12,10 +11,10 @@ void main() {
 }`;
 
 /**
- * Darkness as one pass over the picture: every pixel is multiplied by the ambient colour (dark
- * blue at night, grey-blue in a storm) plus whatever light falls on the ground under it. A lamp
- * is a cone ahead of a car and a small pool round it; a fire, a blast or a pickup is a light all
- * round. The light is worked out per cell, a third of an art pixel across, and stepped in hard
+ * A world modifier's colour as one pass over the picture: every pixel is multiplied by the
+ * ambient colour (yellow in blown dust, warm in a dry spell) plus whatever light falls on the
+ * ground under it from a fire, a blast or a pickup. Night itself is the sky's (`Atmosphere`).
+ * The light is worked out per cell, a third of an art pixel across, and stepped in hard
  * dithered bands like the rest of the lighting, so the edge of a beam is pixels, not a blur.
  *
  * Drawn with multiply blending after the world and its smoke, before fire and glow, so flames,
@@ -111,19 +110,6 @@ export class DuskPass {
     this.dir.set([0, 0, 2, 0], i * 4);
     this.col.set(rgb, i * 3);
     return i;
-  }
-
-  /** A car's lamps: a cone down the road ahead of it, and a small pool round the car itself. */
-  lamp(c: Car): void {
-    const cs = Math.cos(c.h);
-    const sn = Math.sin(c.h);
-    const i = this.add(c.x + cs * 5, c.y + sn * 5, 105, 1, [1, 0.95, 0.8]);
-    if (i >= 0) this.dir.set([cs, sn, 0.74, 15], i * 4);
-  }
-
-  /** The faint glow of a car with no lamps left: enough to make it out. */
-  ember(c: Car): void {
-    this.add(c.x, c.y, 15, 0.4, [0.8, 0.75, 0.7]);
   }
 
   /** The frame's own lights (fires, blasts, rockets, pickups), as far as there is room. */

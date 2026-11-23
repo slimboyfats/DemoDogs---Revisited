@@ -1,0 +1,20 @@
+{
+  "id": "weapon.leash",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Leash",
+    "description": "A hook on a line. It bites the first car ahead and ties the two together: the hooked car is hauled back and the one that threw it is hauled on past.",
+    "since": "core@0.7.0"
+  },
+  "kind": "tether",
+  "label": "LEASH",
+  "ammo": 2,
+  "power": 0.2,
+  "cooldown": 1.0,
+  "speed": 420,
+  "range": 170,
+  "life": 3.5,
+  "reach": 34,
+  "push": 9,
+  "damage": 6
+}

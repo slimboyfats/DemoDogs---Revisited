@@ -21,9 +21,8 @@ describe('modifier.lights-out', () => {
     expect(pace([], false)).toBeCloseTo(pace([], true), 5);
   });
 
-  it('asks the client for darkness and lamps', () => {
+  it('asks the client for a night sky', () => {
     const w = makeWorld({ modifiers: ['modifier.lights-out'] });
-    expect(w.mods[0]!.def.lamps).toBe(true);
-    expect(w.mods[0]!.def.tint).not.toBe('#ffffff');
+    expect(w.mods[0]!.def.sky?.dark).toBe(1);
   });
 });

@@ -42,6 +42,7 @@ flat in vec4 v_seg;
 uniform vec2 u_view;
 uniform vec2 u_origin;
 uniform float u_scale;
+uniform vec3 u_tint; // the sky's light on what is not itself a light (1 by day)
 out vec4 o;
 void main() {
   float a = 1.0;
@@ -83,7 +84,7 @@ void main() {
     float h = fract(sin(dot(cell, vec2(12.9898, 78.233)) + dot(floor(v_blob.xy), vec2(3.1, 7.7))) * 43758.5453);
     if (h > v_color.a * (1.25 - k * 0.7)) discard;
     vec3 c = k > 0.6 ? min(vec3(1.0), v_color.rgb * 1.3) : v_color.rgb; // pale fringe, one step
-    o = vec4(c, 1.0);
+    o = vec4(c * u_tint, 1.0);
     return;
   } else if (v_shape == 5) { // solid pixel blob: opaque cells, one dithered edge band
     vec2 dev = vec2(gl_FragCoord.x, u_view.y - gl_FragCoord.y);
@@ -93,5 +94,5 @@ void main() {
     ivec2 ic = ivec2(cell) & 1;
     if (k > 0.86 && (ic.x ^ ic.y) == 1) discard;
   }
-  o = vec4(v_color.rgb * v_color.a * a, v_color.a * a); // premultiplied
+  o = vec4(v_color.rgb * u_tint * v_color.a * a, v_color.a * a); // premultiplied
 }`;

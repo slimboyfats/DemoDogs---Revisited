@@ -30,7 +30,7 @@ or a reference points at nothing.
 - **A new world modifier:** copy one in `modifier/`. `kind` picks its rule in `sim/src/modifiers.ts`
   (`rain`, `wind`, `lightning`, `night`, `gravity`, `quake`, `flood`, `meteors`, `slick`, `tinder`) and
   the rest are that rule's numbers: `every` (seconds between events), `warn`, `power`, `reach`, `grip`,
-  `gravity`, `pace`, `wind`, `pools`, `leaves`, and for the picture `tint` and `lamps`. `label` and
+  `gravity`, `pace`, `wind`, `pools`, `leaves`, and for the picture `tint` and `sky`. `label` and
   `colour` are its chip on the menu and the HUD. It appears on the menu's WORLD row, the online host's
   screen and the test range automatically. A new `kind` needs a rule in the sim and, if it should show,
   a case in `client/src/render/weather-fx.ts`.

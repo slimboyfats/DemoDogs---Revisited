@@ -15,8 +15,8 @@ import { PULL } from './voxels';
  *   of its number and the time, so nothing is stored (after mudders' ambient layers, ambient.ts).
  * - A bolt is mudders' sky bolt (`skyBolt` and BOLT_FLICK in its pixel effects): a jagged channel
  *   walked down from the sky with a few branches, flickering in hard steps.
- * - Darkness, and the tint of a storm, is one pass over the picture (`DuskPass`): this class
- *   only says what colour and whether cars carry lamps.
+ * - Night and wet ground are the sky's (`Atmosphere`): this class says how dark and how wet. A
+ *   modifier's own colour (dust, heat) is one multiply over the picture (`DuskPass`).
  */
 type WeatherEvent = Extract<
   SimEvent,
@@ -132,7 +132,9 @@ export class WeatherFx {
   /** What the whole picture is multiplied by: white when nothing dims it. */
   readonly tint: [number, number, number] = [1, 1, 1];
   /** Cars light the road ahead of them (night). */
-  lamps = false;
+  /** The least darkness and wet the modifiers ask of the sky (see Atmosphere). */
+  dark = 0;
+  wet = 0;
   /** How hard it is raining, 0 to 1 (eased, so rain comes on and dies away). */
   rain = 0;
   /** How dry and hot it is, 0 to 1: embers ride the air. */
@@ -300,7 +302,8 @@ export class WeatherFx {
     let tb = 1;
     let rain = 0;
     let heat = 0;
-    let lamps = false;
+    let dark = 0;
+    let wet = 0;
     for (const m of w.mods) {
       const [r, g, b] = hexRgb(m.def.tint);
       tr *= r;
@@ -308,7 +311,8 @@ export class WeatherFx {
       tb *= b;
       if (m.def.kind === 'rain') rain = 1;
       if (m.def.kind === 'tinder') heat = 1;
-      if (m.def.lamps) lamps = true;
+      dark = Math.max(dark, m.def.sky?.dark ?? 0);
+      wet = Math.max(wet, m.def.sky?.wet ?? 0);
     }
     const k = Math.min(1, 1.6 * DT);
     const T = this.tint;
@@ -317,7 +321,8 @@ export class WeatherFx {
     T[2] += (tb - T[2]) * k;
     this.rain += (rain - this.rain) * k;
     this.heat += (heat - this.heat) * k;
-    this.lamps = lamps;
+    this.dark = dark;
+    this.wet = wet;
     this.flash = Math.max(0, this.flash - DT * 3.2);
     WIND[0] = BREEZE[0] + w.wind[0] * 0.9;
     WIND[1] = BREEZE[1] + w.wind[1] * 0.9;

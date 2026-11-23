@@ -27,16 +27,17 @@ compares hashes, so a behaviour change shows up as a failing golden.
 
 ## The sim (`packages/sim`)
 
-| File         | What                                                                                                                  |
-| ------------ | --------------------------------------------------------------------------------------------------------------------- |
-| `world.ts`   | `World`: builds the venue (track samples, distance grid or oval, scenery, field, pickups, bots), `step`, events, hash |
-| `physics.ts` | arcade drift driving, walls, statics, car-car impulses, shoving props                                                 |
-| `damage.ts`  | damage, part loss, wrecks, respawn, explosions                                                                        |
-| `things.ts`  | scrap bots, loose props, pickups, weapons                                                                             |
-| `race.ts`    | lap progress, finishing, standings                                                                                    |
-| `scenery.ts` | the venue's scenery rules (bend walls, scatter, roadside groups, rings ...)                                           |
-| `content.ts` | resolves packs: `extends`, schema validation, cross-references                                                        |
-| `ai-kit.ts`  | helpers AI behaviours share                                                                                           |
+| File         | What                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `world.ts`   | `World`: builds the venue (track samples, distance grid or oval, scenery, field, pickups, bots), `step`, events, hash            |
+| `physics.ts` | arcade drift driving, walls, statics, car-car impulses, shoving props                                                            |
+| `damage.ts`  | damage, part loss, wrecks, respawn, explosions                                                                                   |
+| `things.ts`  | scrap bots, loose props, pickups, weapons                                                                                        |
+| `race.ts`    | lap progress, finishing, standings                                                                                               |
+| `guards.ts`  | countermeasures a car carries that act by themselves (decoys, flak, mirror, bond, feelers, earth, claws, wet coat, jammer, pads) |
+| `scenery.ts` | the venue's scenery rules (bend walls, scatter, roadside groups, rings ...)                                                      |
+| `content.ts` | resolves packs: `extends`, schema validation, cross-references                                                                   |
+| `ai-kit.ts`  | helpers AI behaviours share                                                                                                      |
 
 ## Content (`packages/content`)
 
@@ -196,9 +197,10 @@ The client shows all of it from events and world state (`WeatherFx`, owned by `E
   stepped. Counts scale with `Effects.quality`.
 - A bolt is mudders' sky bolt: a jagged channel walked down from far above the screen with a few
   branches, flickering in hard steps (its `BOLT_FLICK` table).
-- Darkness and storm tints are one pass over the finished picture (`pixel/dusk.ts`): a full-screen
-  multiply by the modifier's `tint`, lifted by up to 14 lights in banded, dithered steps: a cone for
-  each car's headlamps (`lamps`), a pool round each fire, a flash for a bolt or blast.
+- Night and wet ground are the sky's (`render/atmosphere.ts`): a modifier's `sky` asks for at
+  least that much `dark` and `wet` (`Atmosphere.ask`), so headlamps, reflections and puddles come
+  with it. A modifier's own colour (`tint`: dust, heat, the lilac of low gravity) is one multiply
+  over the finished picture (`pixel/dusk.ts`), lifted round fires and flashes in dithered bands.
 - Wind sets `WIND` (leaves, smoke, grit and swaying crowns lean with it) and low gravity sets
   `PULL.g`, so debris hangs as long as the cars do.
 
