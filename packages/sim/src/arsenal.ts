@@ -4,6 +4,7 @@ import { angDiff, clamp } from './math';
 import { batter, breakProp, damage, explode, ignite, light, shed } from './damage';
 import { inSmoke } from './drops';
 import type { World } from './world';
+import { fireWild, isWild, updateWild, wildWants } from './wild';
 
 /**
  * Ten more arms, each a weapon `kind` of its own; every number comes from the weapon's manifest.
@@ -205,7 +206,7 @@ const KINDS = new Set<WeaponManifest['kind']>([
 
 /** Is this one of the kinds this module fires? */
 export function isArsenal(kind: WeaponManifest['kind'] | undefined): boolean {
-  return kind !== undefined && KINDS.has(kind);
+  return kind !== undefined && (KINDS.has(kind) || isWild(kind));
 }
 
 /** Things this far apart in height are on different levels and pass each other by. */
@@ -219,7 +220,7 @@ function within(c: Car, z: number): boolean {
 }
 
 /** The nearest running rival of car `me` within `d` of (x, y) on level z, inside `cone` of h. */
-function prey(
+export function prey(
   w: World,
   me: number,
   x: number,
@@ -250,13 +251,13 @@ function blocks(s: StaticProp, x: number, y: number, pad: number): boolean {
 }
 
 /** The solid piece of scenery in the way at (x, y), if any. Only the ground has scenery on it. */
-function wall(w: World, x: number, y: number, z: number, pad: number): StaticProp | null {
+export function wall(w: World, x: number, y: number, z: number, pad: number): StaticProp | null {
   if (z > 4) return null;
   for (const s of w.near(x, y, pad + 1)) if (blocks(s, x, y, pad)) return s;
   return null;
 }
 
-function squash(w: World, b: Bot, by: Car | null, vx: number, vy: number): void {
+export function squash(w: World, b: Bot, by: Car | null, vx: number, vy: number): void {
   b.alive = false;
   b.deadT = w.rng.range(b.def.respawn[0], b.def.respawn[1]);
   w.emit({ t: 'smash', bot: b.index, by: by ? by.index : -1, x: b.x, y: b.y, vx, vy });
@@ -270,6 +271,7 @@ function squash(w: World, b: Bot, by: Car | null, vx: number, vy: number): void 
 export function arsenalWants(w: World, c: Car): boolean {
   const d = c.weapon;
   if (!d || !isArsenal(d.kind) || c.fireCd > 0) return false;
+  if (isWild(d.kind)) return wildWants(w, c);
   const ahead = (dist: number, cone: number) => prey(w, c.index, c.x, c.y, c.deck, dist, c.h, cone);
   const R = d.range ?? 160;
   switch (d.kind) {
@@ -302,6 +304,7 @@ export function arsenalWants(w: World, c: Car): boolean {
 
 /** Fire one of these from car c. The caller has spent the round and set the cooldown. */
 export function fireArsenal(w: World, c: Car, d: WeaponManifest, at?: [number, number]): void {
+  if (isWild(d.kind)) return fireWild(w, c, d, at);
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
   const nose = c.def.body.halfLength + 3;
@@ -997,6 +1000,7 @@ export function updateArsenal(w: World): void {
   updateBeams(w);
   updateBolts(w);
   updateTrails(w);
+  updateWild(w);
 }
 
 /**

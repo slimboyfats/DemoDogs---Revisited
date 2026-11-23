@@ -1,0 +1,22 @@
+{
+  "id": "weapon.tail-chaser",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tail Chaser",
+    "description": "A whirlwind let loose ahead of the car. It wanders off after whoever is near, drags cars, drums and crates round and in, lifts them and throws them out, and strips trees and fences as it goes.",
+    "since": "core@0.7.0"
+  },
+  "kind": "twister",
+  "label": "TWISTER",
+  "ammo": 1,
+  "power": 1.0,
+  "cooldown": 1.5,
+  "speed": 70,
+  "life": 6,
+  "radius": 46,
+  "push": 520,
+  "lift": 210,
+  "damage": 5,
+  "homing": 0.8,
+  "range": 160
+}
