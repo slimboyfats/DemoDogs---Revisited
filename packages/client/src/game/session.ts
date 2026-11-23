@@ -33,6 +33,8 @@ export interface SessionOptions {
   /** Online: seat 0's name and paint. */
   name?: string;
   paint?: string;
+  /** World modifiers on for this race (content ids). */
+  modifiers?: string[];
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -55,6 +57,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.you !== undefined ? { you: o.you } : {}),
     ...(o.name ? { name: o.name } : {}),
     ...(o.paint ? { paint: o.paint } : {}),
+    ...(o.modifiers?.length ? { modifiers: o.modifiers } : {}),
   });
 }
 
@@ -118,6 +121,8 @@ export class Session {
       if (s.def.rubble) props.add(s.def.rubble.prop);
     }
     for (const p of world.props) props.add(p.def.id);
+    // and what the weather may leave standing
+    for (const m of world.mods) if (m.def.leaves) props.add(m.def.leaves.prop);
     const bots = new Map<string, { id: string; paint: string }>();
     for (const b of world.bots) bots.set(b.def.id + b.paint, { id: b.def.id, paint: b.paint });
     const of = 3 + cars.size + props.size;

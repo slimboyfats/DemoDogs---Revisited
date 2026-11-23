@@ -14,6 +14,8 @@ import type { SignalClient } from './signal';
 export interface RaceStart {
   seed: number;
   venue: string;
+  /** World modifiers on for the race: the same list on every peer. */
+  mods: string[];
   seats: Seat[];
   you: number;
 }
@@ -48,6 +50,8 @@ const SILENCE_MS = 6000;
 export class OnlineRoom {
   code = '';
   venue: string;
+  /** World modifiers the host has switched on. */
+  mods: string[] = [];
   seats: Seat[] = [];
   you = 0;
   race: HostRace | GuestRace | null = null;
@@ -172,6 +176,13 @@ export class OnlineRoom {
     this.broadcastLobby();
   }
 
+  /** Host: switch world modifiers on or off for the next race. */
+  setMods(mods: string[]): void {
+    if (this.role !== 'host' || this.race) return;
+    this.mods = [...mods].sort();
+    this.broadcastLobby();
+  }
+
   /** Host: everyone in the lobby goes racing. */
   begin(): void {
     if (this.role !== 'host' || this.race) return;
@@ -180,6 +191,7 @@ export class OnlineRoom {
     const start: RaceStart = {
       seed: Math.floor(Math.random() * 2 ** 31),
       venue: this.venue,
+      mods: [...this.mods],
       seats: this.seats.map((s) => ({ ...s })),
       you: 0,
     };
@@ -188,6 +200,7 @@ export class OnlineRoom {
       type: 'start',
       seed: start.seed,
       venue: start.venue,
+      mods: start.mods,
       seats: start.seats,
       you: seat,
       log: race.log,
@@ -373,7 +386,13 @@ export class OnlineRoom {
   private broadcastLobby(): void {
     for (let seat = 1; seat < this.seatPeer.length; seat++) {
       const l = this.links.get(this.seatPeer[seat] ?? '');
-      l?.link.send({ type: 'lobby', venue: this.venue, seats: this.seats, you: seat });
+      l?.link.send({
+        type: 'lobby',
+        venue: this.venue,
+        mods: this.mods,
+        seats: this.seats,
+        you: seat,
+      });
     }
     this.hooks.change();
   }
@@ -412,12 +431,19 @@ export class OnlineRoom {
     switch (m.type) {
       case 'lobby':
         this.venue = m.venue;
+        this.mods = m.mods ?? [];
         this.seats = m.seats;
         this.you = m.you;
         this.hooks.change();
         return;
       case 'start': {
-        this.start = { seed: m.seed, venue: m.venue, seats: m.seats, you: m.you };
+        this.start = {
+          seed: m.seed,
+          venue: m.venue,
+          mods: m.mods ?? [],
+          seats: m.seats,
+          you: m.you,
+        };
         this.seats = m.seats;
         this.you = m.you;
         const race = new GuestRace(m.you, m.seats.length, m.log, m.upTo, (x) => this.link?.send(x));

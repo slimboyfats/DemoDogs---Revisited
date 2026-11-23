@@ -323,7 +323,7 @@ export function updateEmbers(w: World): void {
     const e = w.embers[i]!;
     const star = e.kind === 'star';
     // stars drift down slowly, as a firework's do
-    e.vz -= GRAVITY * (star ? 0.4 : 0.9) * DT;
+    e.vz -= GRAVITY * w.gravity * (star ? 0.4 : 0.9) * DT;
     e.x += e.vx * DT;
     e.y += e.vy * DT;
     e.z += e.vz * DT;

@@ -214,6 +214,22 @@ export type SimEvent =
   | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
+  /** A world modifier (its content id) came on or went off. */
+  | { t: 'weather'; id: string; on: boolean }
+  /** Something lands at (x, y) in `in` seconds and reaches r: a bolt, scrap from the sky, a quake. */
+  | { t: 'omen'; what: 'bolt' | 'scrap' | 'quake'; x: number; y: number; r: number; in: number }
+  /** Lightning out of the sky struck (x, y). */
+  | { t: 'bolt'; x: number; y: number }
+  /** Burning scrap out of the sky came down at (x, y). */
+  | { t: 'skyfall'; x: number; y: number; power: number }
+  /** The ground shakes for `time` seconds, hardest at (x, y) and out to r. */
+  | { t: 'quake'; x: number; y: number; r: number; time: number }
+  /** The ground split open along the points [x0, y0, x1, y1, ...]. */
+  | { t: 'split'; pts: number[] }
+  /** A gust: the wind (see world.wind) rises for `time` seconds. */
+  | { t: 'gust'; time: number }
+  /** Flood water at (x, y) has risen to radius r. */
+  | { t: 'flood'; material: string; x: number; y: number; r: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }
   | { t: 'countdown'; n: number }
   | { t: 'go' }
