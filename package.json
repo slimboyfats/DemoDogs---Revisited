@@ -20,6 +20,7 @@
     "content:validate": "vitest run --project content validate",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
+    "play:editor": "pnpm build && node scripts/play-editor.mjs",
     "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "look": "pnpm build && node scripts/capture-look.mjs",
     "sky": "pnpm build && node scripts/capture-sky.mjs",

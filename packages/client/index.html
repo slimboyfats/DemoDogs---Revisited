@@ -68,6 +68,9 @@
     <div id="netDot"></div>
     <div id="devTap" class="hidden"></div>
     <div id="devPanel" class="hidden"></div>
+    <!-- the track creator: its bar of tools, and the layer that takes taps on the map -->
+    <div id="editTap" class="hidden"></div>
+    <div id="editPanel" class="hidden"></div>
 
     <section id="menu" class="screen">
       <div class="panel">
@@ -100,6 +103,9 @@
             <button id="toCareer" class="career">
               <b>CAREER</b><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
             </button>
+            <button id="toTracks" class="career tracks">
+              <b>TRACK CREATOR</b><small>Build your own track, save it as a file, race it.</small>
+            </button>
             <button id="toOnline" class="career online">
               <b>ONLINE</b
               ><small>Race friends over the internet: host a room, share the code.</small>
@@ -123,6 +129,10 @@
 
     <section id="online" class="screen hidden">
       <div class="panel narrow" id="onlinePanel"></div>
+    </section>
+
+    <section id="tracks" class="screen hidden">
+      <div class="panel" id="tracksPanel"></div>
     </section>
 
     <section id="career" class="screen hidden">
@@ -159,6 +169,10 @@
         <div class="tableWrap"><table id="resTable"></table></div>
         <div class="row"><button id="again">GO AGAIN</button><button id="toMenu">MENU</button></div>
       </div>
+    </section>
+
+    <section id="editSetup" class="screen hidden">
+      <div class="panel narrow"></div>
     </section>
 
     <script type="module" src="/src/main.ts"></script>

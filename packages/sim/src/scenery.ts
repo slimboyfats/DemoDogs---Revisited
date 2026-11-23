@@ -331,6 +331,11 @@ function apply(
       for (const i of rule.items) add(i.prop, cx + i.x, cy + i.y, i.rot);
       return;
     }
+    case 'pools': {
+      for (const i of rule.items)
+        spill(w, w.content.material.get(i.material)!, i.x, i.y, i.r, -1, true);
+      return;
+    }
     case 'river':
       layRiver(w, rng, rule, add);
       return;

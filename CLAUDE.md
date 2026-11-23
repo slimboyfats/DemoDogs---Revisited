@@ -4,22 +4,23 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 
 ## Commands
 
-| Command                                                    | What                                                                                                        |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`                                                 | Vite dev server (LAN-visible for phones)                                                                    |
-| `pnpm check`                                               | lint + format check + typecheck + tests with coverage. Run before every push                                |
-| `pnpm verify`                                              | `check`, then build and `scripts/play-smoke.mjs` (headless Chromium at 844×390, screenshots in `captures/`) |
-| `pnpm dev`, then `/?dev`                                   | the test range: fire weapons at parked cars and props, slow time, read the counters                         |
-| `/?dev&venue=knotwood`                                     | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap      |
-| `/?perf`, or RECORD PERFORMANCE when paused                | the performance recorder: saves a log of what each second cost on that device                               |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE   | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)              |
-| `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`           | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                   |
-| `pnpm look [out-dir]`                                      | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after   |
-| `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`     | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`   |
-| `pnpm format`                                              | Prettier, write                                                                                             |
-| `pnpm content:validate`                                    | resolve and validate every manifest                                                                         |
-| `UPDATE_GOLDEN=1 pnpm vitest run --project content golden` | regenerate golden hashes after an intended sim change                                                       |
-| `pnpm deploy:pages`                                        | build and push `packages/client/dist` to `gh-pages`                                                         |
+| Command                                                         | What                                                                                                          |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`                                                      | Vite dev server (LAN-visible for phones)                                                                      |
+| `pnpm check`                                                    | lint + format check + typecheck + tests with coverage. Run before every push                                  |
+| `pnpm verify`                                                   | `check`, then build and `scripts/play-smoke.mjs` (headless Chromium at 844×390, screenshots in `captures/`)   |
+| `pnpm dev`, then `/?dev`                                        | the test range: fire weapons at parked cars and props, slow time, read the counters                           |
+| `/?dev&venue=knotwood`                                          | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap        |
+| `/?perf`, or RECORD PERFORMANCE when paused                     | the performance recorder: saves a log of what each second cost on that device                                 |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)                |
+| `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
+| `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
+| `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
+| menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
+| `pnpm format`                                                   | Prettier, write                                                                                               |
+| `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
+| `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
+| `pnpm deploy:pages`                                             | build and push `packages/client/dist` to `gh-pages`                                                           |
 
 ## Packages
 
@@ -42,4 +43,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.
 - **Original content only.** No names, characters, tracks or art from existing games.
+- **Custom tracks are data, not content.** A track from the track creator is a `TrackFile` (shared/track-file.ts);
+  `installTrack` (sim/custom.ts) turns it into a venue in a copy of the content. It names props by id and must keep
+  loading when ids go: unknown ones are left out, never an error. Every prop is placeable; nothing is added per prop.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.
