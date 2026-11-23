@@ -151,6 +151,8 @@ export interface Car {
   sunkFrom?: number;
   /** Which way it tipped in, in its own frame: [nose first, right side first], length 1. */
   sunkTip?: [number, number];
+  /** How fast it turns as it drops, rad/s. */
+  sunkTurn?: number;
   /** Wrecked by going down a pit that closed over it: there is no hulk left to see or hit. */
   buried?: boolean;
   /** A blade bolted to the nose (see movers.ts): seconds left, and seconds until its next bite. */

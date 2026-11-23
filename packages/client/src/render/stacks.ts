@@ -234,14 +234,14 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
         ? 0.4
         : 1;
   // the end that went over first drops and the other end kicks up
-  const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 14;
+  const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 3.5;
   const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
   const lurch = c.lurch + (c.sunkTip?.[0] ?? 0) * tip;
   const wheel = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
   const z = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
   // the wheels go some of the way with a body that is tipping in
-  const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.45;
-  const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.45;
+  const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.3;
+  const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.3;
   for (const wh of D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];

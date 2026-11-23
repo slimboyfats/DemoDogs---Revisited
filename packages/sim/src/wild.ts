@@ -519,6 +519,9 @@ function updateHoles(w: World): void {
         c.y += (h.y - c.y) * Math.min(1, 7 * DT);
         c.vx = c.vy = c.vz = 0;
         c.lurch = c.roll = 0;
+        // turning slowly as it drops
+        c.spin = 0;
+        c.h += (c.sunkTurn ?? 0) * DT;
         if (c.buried) continue;
         // down in it until it is thrown back out
         c.sunk! -= DT;
@@ -545,6 +548,7 @@ function updateHoles(w: World): void {
       c.sunkTip = tl < 0.01 ? [1, 0] : [(tx * cs + ty * sn) / tl, (ty * cs - tx * sn) / tl];
       c.vx = c.vy = c.vz = 0;
       c.spin = 0;
+      c.sunkTurn = w.rng.range(2.5, 4) * (w.rng.next() < 0.5 ? -1 : 1);
       if (gone) {
         // a derby has no way back: the hole closes over the car and it is out
         bury(w, c, by);
