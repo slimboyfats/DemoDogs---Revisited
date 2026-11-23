@@ -109,6 +109,22 @@ export type SimEvent =
   | { t: 'pulse'; car: number; x: number; y: number; r: number; life: number }
   /** A bolt of charge jumped from (x, y, z) to (tx, ty, tz). */
   | { t: 'arc'; x: number; y: number; z: number; tx: number; ty: number; tz: number }
+  /** A howl's shockwave went out from (x, y) on level z, running to radius r over `life` seconds. */
+  | { t: 'howl'; car: number; x: number; y: number; z: number; r: number; life: number }
+  /**
+   * The shockwave threw something at (x, y, z) away along (dx, dy), a unit vector: `what` says what
+   * (a car has its index in `car`).
+   */
+  | {
+      t: 'hurl';
+      what: 'car' | 'prop' | 'shot' | 'bot';
+      car?: number;
+      x: number;
+      y: number;
+      z: number;
+      dx: number;
+      dy: number;
+    }
   /** A car's engine was cut by a shock for `time` seconds. */
   | { t: 'stall'; car: number; by: number; time: number }
   /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */

@@ -41,6 +41,7 @@ import { PLAIN, Wreckage } from './wreckage';
 import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
+import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { armsEvent, armsTick } from './arms-fx';
 
 const TAU = Math.PI * 2;
@@ -212,6 +213,8 @@ export class Effects {
   shake = 0;
   /** Shock pulses: the crackling rings, bolts and dead engines, as single spark cells. */
   readonly shock: ShockFx;
+  /** Howls: rings of bent air still spreading, for the renderer's lens pass. */
+  readonly ripples: Ripple[] = [];
   msg = '';
   msgT = 0;
   private readonly smokeT: number[] = [];
@@ -1397,7 +1400,7 @@ export class Effects {
           if (armsEvent(this, w, e, S)) break;
           if (wpn?.kind === 'rocket') {
             if (this.vol(c.x, c.y) > 0) S.fire();
-          } else if (c === w.player && wpn?.kind !== 'pulse') S.drop();
+          } else if (c === w.player && wpn?.kind !== 'pulse' && wpn?.kind !== 'howl') S.drop();
           break;
         }
         case 'puncture': {
@@ -1417,6 +1420,10 @@ export class Effects {
         case 'arc':
         case 'stall':
           this.shock.handle(e);
+          break;
+        case 'howl':
+        case 'hurl':
+          howlEvent(this, w, e, S);
           break;
         case 'countdown':
           S.beep(false);
@@ -1750,6 +1757,7 @@ export class Effects {
     for (const c of w.cars) if (c.vx * c.vx + c.vy * c.vy > 625) M.push(c.x, c.y, c.z, c.vx, c.vy);
     this.cells.step(DT);
     this.shock.step(DT);
+    howlTick(this, w);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

@@ -18,6 +18,7 @@ import { fineGrid } from '../strips';
 import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
+import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
@@ -62,6 +63,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private wantRead = false;
   private last: OverdrawStats | null = null;
   private frameW: World | null = null;
+  /** The shockwave lens (made on first use), and whether to bend the picture at all. */
+  private lens: LensPass | null = null;
+  private readonly lenses: Lens[] = [];
+  distort = true;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -225,6 +230,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       worldH: w.h,
     };
 
+    // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
+    const lenses = this.gatherLenses(fx);
+    if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
+
     gl.viewport(0, 0, W, H);
     const bg = hex(w.venue.colors.outside);
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
@@ -279,6 +288,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
+    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], Math.max(1, S / DETAIL), this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {
@@ -290,6 +300,28 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       if (this.heat) this.meter.drawHeat(this.heat, W, H);
     }
+  }
+
+  /** The frame's lens rings in device pixels: every ripple that has started and is near the view. */
+  private gatherLenses(fx: Effects): Lens[] {
+    const L = this.lenses;
+    L.length = 0;
+    if (!this.distort) return L;
+    const S = this.scale;
+    for (const r of fx.ripples) {
+      if (L.length >= MAX_RIPPLES) break;
+      if (r.t < 0 || r.t > r.dur) continue;
+      const at = rippleAt(r.t / r.dur, r.maxR, r.width, r.strength);
+      if (!this.visible(r.x, r.y, at.r + 4)) continue;
+      L.push({
+        x: this.sx(r.x),
+        y: this.sy(r.y, r.z),
+        r: at.r * S,
+        width: at.width * S,
+        strength: at.strength,
+      });
+    }
+    return L;
   }
 
   private queueShadows(w: World, fx: Effects): void {

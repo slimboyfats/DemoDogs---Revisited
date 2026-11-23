@@ -404,6 +404,7 @@ export const WeaponSchema = z.strictObject({
     'sticky',
     'arc',
     'vortex',
+    'howl',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -497,6 +498,14 @@ export const WeaponSchema = z.strictObject({
    * in with strength `push` for `life` seconds, then bursts with `power`. (`count` is declared
    * with caltrops above.)
    */
+  /**
+   * Howls: a shockwave that leaves no crater. A front runs out from where the car stood at `speed`
+   * to `radius`, and whatever it crosses is hurled outward: cars at up to `push` (art px per
+   * second) and thrown `lift` into the air, taking `damage`; loose props, rockets, shells, balls
+   * and everything else in flight are turned round and sent away, and mines, spikes and smoke are
+   * swept along with the front. `power` is how hard it leans on scenery.
+   */
+  lift: z.number().min(0).optional(),
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 

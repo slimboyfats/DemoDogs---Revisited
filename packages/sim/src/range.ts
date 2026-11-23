@@ -6,6 +6,7 @@ import type { Car } from './entities';
 import { lockOn } from './payloads';
 import type { World } from './world';
 import { firePulse } from './shock';
+import { howl } from './howl';
 
 /**
  * What a test range lets you do to a world by hand: set off blasts, fire weapons from anywhere,
@@ -97,5 +98,11 @@ export function rangeProp(w: World, def: PropManifest, x: number, y: number, rot
 /** A shock pulse from `owner`'s car, as if it had been fired there and then. */
 export function rangePulse(w: World, def: WeaponManifest, owner: Car): void {
   firePulse(w, owner, def);
+  w.emit({ t: 'fire', car: owner.index, weapon: def.id });
+}
+
+/** A howl's shockwave going off at (x, y), as `owner`'s (it is not thrown by it). */
+export function rangeHowl(w: World, def: WeaponManifest, owner: Car, x: number, y: number): void {
+  howl(w, def, owner.index, x, y, 0);
   w.emit({ t: 'fire', car: owner.index, weapon: def.id });
 }

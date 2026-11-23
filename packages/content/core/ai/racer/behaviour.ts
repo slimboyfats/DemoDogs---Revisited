@@ -2,6 +2,7 @@ import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
 import {
   angDiff,
   armsWants,
+  howlWants,
   defineAi,
   dropsBehind,
   nearestCar,
@@ -76,6 +77,7 @@ export default defineAi({
       nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
     )
       out.fire = true;
+    if (howlWants(w, c)) out.fire = true;
     // rubber band: rivals far ahead of the player ease off, far behind push harder
     if (!c.isPlayer) {
       const gap = c.progress - w.humanProgress();

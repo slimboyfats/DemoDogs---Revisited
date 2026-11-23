@@ -1,0 +1,13 @@
+{
+  "id": "pickup.howler",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Howler",
+    "description": "A dented horn crate: two howls, shockwaves that throw everything near the car away from it.",
+    "since": "core@0.6.0"
+  },
+  "kind": "arms",
+  "weight": 0.12,
+  "hurtWeight": 0.1,
+  "weapons": ["weapon.howl"]
+}

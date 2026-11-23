@@ -47,6 +47,7 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { stallControls, updatePulses, type Pulse } from './shock';
+import { updateHowls, type Howl } from './howl';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
@@ -146,6 +147,8 @@ export class World {
   readonly mines: Mine[] = [];
   /** Shock pulses still spreading. */
   readonly pulses: Pulse[] = [];
+  /** Howls: shockwaves still running out. */
+  readonly howls: Howl[] = [];
   readonly pickups: Pickup[] = [];
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
@@ -528,6 +531,7 @@ export class World {
     updateMines(this);
     updateDrops(this);
     updatePulses(this);
+    updateHowls(this);
     updateArms(this);
     updateEmbers(this);
     updateRivers(this);

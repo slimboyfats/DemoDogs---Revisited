@@ -196,6 +196,14 @@ export class Sound {
     this.tone(90, 0.1, 0.15 * v, 'sine', 0.5);
   }
 
+  /** A howl's shockwave: a deep thump, the air rushing out after it, and the howl falling away. */
+  howl(v = 1): void {
+    this.noise(0.8, 150, 0.7, 0.9 * v, 'lowpass');
+    this.tone(60, 0.7, 0.7 * v, 'sine', 0.4);
+    this.noise(0.6, 700, 0.9, 0.35 * v, 'bandpass', 0.05);
+    this.tone(330, 0.5, 0.1 * v, 'sawtooth', 0.3, 0.03);
+  }
+
   /** A shock: a buzzing crack; `big` for a whole pulse going out, a snap for one bolt. */
   zap(v = 1, big = false): void {
     this.noise(big ? 0.35 : 0.09, 4200, 1.2, (big ? 0.35 : 0.18) * v, 'highpass');
