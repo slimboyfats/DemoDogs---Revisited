@@ -153,6 +153,18 @@ export interface Car {
   hop: number;
   /** Countermeasures on the car, by kind (see guards.ts). */
   guards: Guards;
+  /**
+   * Catch-up items (see catchup.ts). `size` is how big the car is, 1 its own size: its hull, its
+   * weight and how it is drawn all follow it. `pace` multiplies its top speed. `squashT` is the
+   * seconds it still lies flattened under a much bigger car.
+   */
+  size: number;
+  pace: number;
+  squashT: number;
+  /** A swell (grow) or a zap (shrink) at work on it, a second wind, and a lead collar from car `by`. */
+  morph: { def: PickupManifest; t: number } | null;
+  wind: { def: PickupManifest; t: number } | null;
+  collar: { def: PickupManifest; t: number; by: number } | null;
 }
 
 export interface Bot {

@@ -1,0 +1,16 @@
+{
+  "id": "pickup.second-wind",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Second Wind",
+    "description": "A gale at the car's back: a burst of top speed that blows longer the further back the car is running.",
+    "since": "core@0.7.0"
+  },
+  "kind": "wind",
+  "weight": 0.12,
+  "hurtWeight": 0.08,
+  "lead": 0.1,
+  "trail": 3.5,
+  "seconds": 4.5,
+  "pace": 1.38
+}

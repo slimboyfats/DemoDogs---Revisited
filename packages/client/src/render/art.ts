@@ -40,6 +40,8 @@ export class Art {
   readonly squeaky: Strip;
   private readonly heights = new Map<string, number>();
   private readonly roofs = new Map<string, number>();
+  /** One link of a chain: a dark block a little over an art pixel across. */
+  readonly link: Strip;
   private readonly props = new Map<string, Strip>();
   private readonly cars = new Map<string, CarArt>();
   private readonly bots = new Map<string, BotArt>();
@@ -57,6 +59,7 @@ export class Art {
     this.pickup = this.make(kit.PICKUP_BOX, PALETTE);
     this.plank = this.make(kit.PLANK, PALETTE);
     this.squeaky = this.make(kit.SQUEAKY, PALETTE);
+    this.link = this.make({ w: 2, h: 2, layers: 1, fn: () => 'bumper' }, PALETTE);
   }
 
   private look<K extends 'car' | 'prop' | 'bot'>(

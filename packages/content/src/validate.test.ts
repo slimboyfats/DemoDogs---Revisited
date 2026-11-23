@@ -43,6 +43,11 @@ describe('content validate', () => {
       'arc',
       'vortex',
       'howl',
+      // fleas are single cells, a ray is a line of light, a swap bolt is sparks, a trail is fire
+      'swarm',
+      'beam',
+      'swap',
+      'trail',
     ]);
     const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it
@@ -51,6 +56,7 @@ describe('content validate', () => {
         (p) =>
           p.kind === 'blade' ||
           p.kind === 'springs' ||
+          p.kind === 'collar' ||
           (GUARD_KINDS as readonly string[]).includes(p.kind),
       )
       .map((p) => p.id);

@@ -1,6 +1,7 @@
 import { DT, type Controls } from '@demodogs/shared';
 import {
   armsWants,
+  arsenalWants,
   howlWants,
   defineAi,
   dropsBehind,
@@ -81,7 +82,7 @@ export default defineAi({
       ai.boostT -= DT;
       out.boost = true;
     }
-    if (armsWants(w, c)) out.fire = true;
+    if (armsWants(w, c) || arsenalWants(w, c)) out.fire = true;
     if (c.weapon?.kind === 'rocket' && t && Math.abs(d) < 0.2) out.fire = true;
     if (dropsBehind(c.weapon?.kind) && w.rng.next() < 0.01) out.fire = true;
     // a shock pulse goes off when a rival is well inside its ring

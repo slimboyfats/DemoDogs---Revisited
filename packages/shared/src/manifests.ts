@@ -383,6 +383,17 @@ export const ModeSchema = z.strictObject({
   ai: id('ai'),
   /** Seconds a pickup takes to come back. */
   pickupRespawn: z.number().positive(),
+  /**
+   * Race: a human more than `gap` art px of road behind the car in front is helped along, up to
+   * `pace` times its top speed once it is `full` behind (rivals have their own rubber band).
+   */
+  chase: z
+    .strictObject({
+      gap: z.number().positive(),
+      full: z.number().positive(),
+      pace: z.number().min(1),
+    })
+    .optional(),
 });
 export type ModeManifest = z.infer<typeof ModeSchema>;
 
@@ -405,6 +416,16 @@ export const WeaponSchema = z.strictObject({
     'arc',
     'vortex',
     'howl',
+    'boomerang',
+    'skip',
+    'tether',
+    'barrage',
+    'burrow',
+    'sentry',
+    'swarm',
+    'beam',
+    'swap',
+    'trail',
   ]),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
@@ -506,6 +527,24 @@ export const WeaponSchema = z.strictObject({
    * swept along with the front. `power` is how hard it leans on scenery.
    */
   lift: z.number().min(0).optional(),
+  /**
+   * Ten more kinds (sim `arsenal.ts`), all on the fields above. Boomerangs: a stick of `radius`
+   * thrown at `speed` that turns for home `range` out (at `homing` rad/s) and cuts for `damage`.
+   * Skips: a bomb that bounces `count` times, `fuse` seconds apart, a blast of `power` each time.
+   * Tethers: a hook thrown `range` at `speed`; the car it bites is tied to the thrower for `life`
+   * seconds by a line with `reach` of slack that hauls with strength `push`. Barrages: `count`
+   * shells in a row within `range`, the first landing after `arm` seconds and the rest `fuse`
+   * apart, each `spread` off the line. Burrows: a digger at `speed` for `life` seconds that turns
+   * after cars within `range` (`homing`), comes up within `trigger` of one once `arm` has passed
+   * and throws it up at `lift`. Sentries: a turret that stands `life` seconds with `count` rounds,
+   * one every `fuse` seconds at cars within `range` for `damage`, turning at `homing`; run over,
+   * it blows with `power`. Swarms: `count` fleas that hop at `speed` after cars within `range` for
+   * `fuse` seconds, then ride one for `life` seconds, each biting `damage` a second. Beams: a ray
+   * `range` long held for `life` seconds that burns a car for `damage` a second and scenery by
+   * `power`. Swaps: a bolt at `speed` over `range` that bends (`homing`) towards a car within `aim`
+   * of its path and changes places with it. Trails: for `life` seconds the car leaves a fire of
+   * `radius` every `reach` it travels, each burning `fuse` seconds.
+   */
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 
@@ -553,10 +592,33 @@ export const PickupSchema = z.strictObject({
     'springs',
     'kit',
     ...GUARD_KINDS,
+    'grow',
+    'shrink',
+    'wind',
+    'collar',
+    'bones',
   ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
   hurtWeight: z.number().positive(),
+  /**
+   * Catch-up: in a race the chance is multiplied by `lead` for the car in front and by `trail`
+   * for the car at the back, and by something in between for the cars between them (both 1 when
+   * absent). A derby has no front or back: every car gets the midpoint.
+   */
+  lead: z.number().min(0).optional(),
+  trail: z.number().min(0).optional(),
+  /**
+   * Catch-up items (sim/catchup.ts), all lasting `seconds`. Grow: the car swells to `scale` times
+   * its size, and `pace` multiplies its top speed. Shrink: every rival ahead (or, with nobody
+   * ahead, within `radius`) is zapped down to `scale`, at `pace`. Wind: top speed times `pace`.
+   * Collar: the car in front is weighed down to `pace`. Bones: `charges` of `prop` drop out of
+   * the sky in front of each rival ahead (or within `radius`).
+   */
+  scale: z.number().positive().optional(),
+  pace: z.number().positive().optional(),
+  radius: z.number().positive().optional(),
+  prop: id('prop').optional(),
   /** Repair: armour restored. Ammo: rounds for the gun. Cash: money. */
   amount: z.number().positive().optional(),
   /** Arms: weapons to pick from. */

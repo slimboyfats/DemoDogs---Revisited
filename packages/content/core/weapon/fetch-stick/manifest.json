@@ -1,0 +1,20 @@
+{
+  "id": "weapon.fetch-stick",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fetch Stick",
+    "description": "A bent throwing stick. It flies out ahead, comes round and back to the car that threw it, and cuts every car, crate and fence it crosses both ways. Catch it and you can throw it again.",
+    "since": "core@0.7.0"
+  },
+  "kind": "boomerang",
+  "label": "FETCH",
+  "ammo": 2,
+  "power": 0.3,
+  "cooldown": 0.7,
+  "speed": 300,
+  "range": 150,
+  "radius": 4,
+  "damage": 16,
+  "homing": 6,
+  "life": 4
+}

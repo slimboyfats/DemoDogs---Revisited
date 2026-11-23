@@ -1,0 +1,16 @@
+{
+  "id": "pickup.lead-collar",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lead Collar",
+    "description": "A lead ball on a chain, clamped to whoever is in front: it drags them back for a few seconds, though it makes them a heavier thing to hit.",
+    "since": "core@0.7.0"
+  },
+  "kind": "collar",
+  "weight": 0.08,
+  "hurtWeight": 0.06,
+  "lead": 0,
+  "trail": 2.5,
+  "seconds": 6,
+  "pace": 0.7
+}

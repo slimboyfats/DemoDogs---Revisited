@@ -128,7 +128,7 @@ export function held(w: World, c: Car): number {
 }
 
 /** anchor: how many times its own weight a car with its claws in is to ram. */
-export function heft(c: Car): number {
+export function dugIn(c: Car): number {
   return guard(c, 'anchor') ? HEFT : 1;
 }
 
