@@ -14,6 +14,7 @@ import {
 import type { Car, Setup } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
+import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
 import type { World } from './world';
 
@@ -119,6 +120,7 @@ export function makeCar(
     blade: null,
     springs: null,
     hop: -1,
+    guards: {},
     size: 1,
     pace: 1,
     squashT: 0,
@@ -283,7 +285,7 @@ function bump(
   if (impact > 30) {
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
-      damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
+      if (!padded(w, c, px, py)) damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
       w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c === w.player });
     }
   } else if (impact > 8 && c.scrapeCd <= 0) {
@@ -345,7 +347,8 @@ export function collideWorld(w: World, c: Car): void {
         const keep = big > 1 ? 0.9 : 0.72;
         c.vx *= keep;
         c.vy *= keep;
-        damage(w, c, ((vn - 28) * 0.1 * s.def.hardness) / big, null, px, py);
+        if (!padded(w, c, px, py))
+          damage(w, c, ((vn - 28) * 0.1 * s.def.hardness) / big, null, px, py);
         w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c === w.player });
         break;
       }
@@ -405,8 +408,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
       }
     }
   if (!best || flatten(w, a, b)) return;
-  const ma = heft(a);
-  const mb = heft(b);
+  const ma = heft(a) * dugIn(a);
+  const mb = heft(b) * dugIn(b);
   const tot = ma + mb;
   a.x -= (best.nx * best.ov * mb) / tot;
   a.y -= (best.ny * best.ov * mb) / tot;

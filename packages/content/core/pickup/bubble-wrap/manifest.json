@@ -1,0 +1,13 @@
+{
+  "id": "pickup.bubble-wrap",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bubble Wrap",
+    "description": "Wrapped bumpers: the next few walls it hits, and whatever falls on it, cost no armour.",
+    "since": "core@0.7.0"
+  },
+  "kind": "pads",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "charges": 5
+}

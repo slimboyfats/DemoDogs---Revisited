@@ -32,7 +32,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
-import { respawn, updateEmbers, updateMending } from './damage';
+import { explode, respawn, updateEmbers, updateMending } from './damage';
 import {
   fire,
   makeBot,
@@ -53,6 +53,7 @@ import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
+import { updateGuards, type Decoy } from './guards';
 
 export interface WorldOptions {
   content: Content;
@@ -157,6 +158,9 @@ export class World {
   readonly pulses: Pulse[] = [];
   /** Howls: shockwaves still running out. */
   readonly howls: Howl[] = [];
+  /** Decoys thrown out for rockets to chase, and the id the next one gets. */
+  readonly decoys: Decoy[] = [];
+  decoySeq = 0;
   readonly pickups: Pickup[] = [];
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
@@ -539,6 +543,7 @@ export class World {
     updatePresses(this);
     updatePickups(this);
     updateDefence(this);
+    updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateRockets(this);
     updateMines(this);
     updateDrops(this);
@@ -614,7 +619,8 @@ export class World {
       .num(this.spills.length)
       .num(this.craters.length)
       .num(this.clouds.length)
-      .num(this.spikes.length);
+      .num(this.spikes.length)
+      .num(this.decoys.length);
     const A = this.arms;
     H.num(A.gobs.length).num(A.stickies.length).num(A.shells.length).num(A.orbs.length);
     for (const b of A.balls) H.num(b.x).num(b.y);

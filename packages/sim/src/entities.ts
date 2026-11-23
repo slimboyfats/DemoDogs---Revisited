@@ -7,6 +7,7 @@ import type {
   WeaponManifest,
 } from '@demodogs/shared';
 import type { AiBehaviour } from './behaviours';
+import type { Guards } from './guards';
 
 /** What a rival's AI remembers between ticks. */
 export interface AiState {
@@ -150,6 +151,8 @@ export interface Car {
   /** Springs under the car: leaps left. `hop` is seconds into a sprung leap, -1 when not in one. */
   springs: { def: PickupManifest; n: number } | null;
   hop: number;
+  /** Countermeasures on the car, by kind (see guards.ts). */
+  guards: Guards;
   /**
    * Catch-up items (see catchup.ts). `size` is how big the car is, 1 its own size: its hull, its
    * weight and how it is drawn all follow it. `pace` multiplies its top speed. `squashT` is the
@@ -288,6 +291,8 @@ export interface Rocket {
   target?: number;
   /** Seconds in the air. */
   age?: number;
+  /** The decoy it is chasing instead (see guards.ts), by the decoy's id. */
+  lure?: number;
 }
 
 export interface Mine {

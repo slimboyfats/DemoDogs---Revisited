@@ -1,3 +1,4 @@
+import { guardLabels } from '../render/hud';
 import {
   dropsBehind,
   isArms,
@@ -365,6 +366,9 @@ export class DevPanel {
           `${c.def.meta.name} ${c.wrecked ? 'wrecked' : Math.ceil(c.hp)}` +
           (c.shield > 0 ? ` shield ${Math.ceil(c.shield)}` : '') +
           (c.weldT > 0 ? ' welding' : '') +
+          guardLabels(c)
+            .map((g) => ` ${g.toLowerCase()}`)
+            .join('') +
           (c.size !== 1 ? ` size ${c.size.toFixed(2)}` : '') +
           (c.pace !== 1 ? ` pace ${c.pace.toFixed(2)}` : ''),
       )

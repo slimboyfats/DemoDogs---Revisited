@@ -2,6 +2,7 @@ import { CAR_RADIUS, DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
 import { angDiff } from './math';
 import { batter, breakProp, damage, explode, ignite, light, shed, spill } from './damage';
+import { bounced, fireproof, held, hidden } from './guards';
 import type { World } from './world';
 import { startCoil, throwOrb, updateCoils, updateOrbs, type Coil, type Orb } from './arcs';
 
@@ -124,7 +125,7 @@ function prey(w: World, c: Car, d: number, cone: number): Car | null {
   let best: Car | null = null;
   let bd = d;
   for (const o of w.cars) {
-    if (o === c || o.wrecked || o.z > 10) continue;
+    if (o === c || o.wrecked || o.z > 10 || hidden(o)) continue;
     const dd = Math.hypot(o.x - c.x, o.y - c.y);
     if (dd < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < cone) {
       bd = dd;
@@ -283,11 +284,11 @@ function updateGobs(w: World): void {
       if (c.index === g.owner || c.wrecked || c.z > 8) continue;
       if (Math.abs(c.x - g.x) > 10 || Math.hypot(c.x - g.x, c.y - g.y) > CAR_RADIUS + 3) continue;
       const sp = Math.hypot(g.vx, g.vy) || 1;
-      const push = d.push ?? 0;
+      const push = (d.push ?? 0) * (d.push ? held(w, c) : 1);
       c.vx += (g.vx / sp) * push;
       c.vy += (g.vy / sp) * push;
       if (push) c.spin += w.rng.range(-0.25, 0.25);
-      if (d.damage) {
+      if (d.damage && !(d.lit && fireproof(c))) {
         const S = (A.soak[c.index] ??= { amount: 0, by: -1, x: 0, y: 0 });
         S.amount += d.damage;
         S.by = g.owner;
@@ -402,6 +403,12 @@ export function rail(w: World, c: Car, d: WeaponManifest, x0: number, y0: number
       if (o === c || o.wrecked || o.z > 10 || struck.has(o.index)) continue;
       if (Math.hypot(o.x - x, o.y - y) > CAR_RADIUS + 1.5) continue;
       struck.add(o.index);
+      // a mirrored car turns the slug: half of it comes back down the line
+      const back = bounced(w, o, c, x, y, (d.damage ?? 30) * 0.5);
+      if (back) {
+        damage(w, c, back, o, c.x, c.y);
+        continue;
+      }
       o.vx += cs * 90;
       o.vy += sn * 90;
       o.spin += w.rng.range(-3, 3);
@@ -679,6 +686,14 @@ function updateStickies(w: World): void {
           c.z < 10 &&
           Math.hypot(c.x - s.x, c.y - s.y) < CAR_RADIUS + 2,
       );
+      if (hit && bounced(w, hit, w.cars[s.owner], s.x, s.y, 1)) {
+        // a mirrored car bats the dart back: it is the thrower's problem now
+        s.vx = -s.vx;
+        s.vy = -s.vy;
+        s.owner = hit.index;
+        s.flight = 0.9;
+        continue;
+      }
       if (hit) {
         cling(w, s, hit, s.x, s.y);
         continue;

@@ -15,6 +15,7 @@ import { fireHowl } from './howl';
 import { fireArsenal, isArsenal } from './arsenal';
 import { fireArms, isArms } from './arms';
 import { land } from './hazards';
+import { bounced, fitGuard, hidden, lureHit, lureTurn, lured } from './guards';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -276,6 +277,10 @@ export function grant(w: World, c: Car, got: PickupManifest): string {
   if (defence) return defence;
   const mover = fitMover(w, c, got);
   if (mover !== null) return mover;
+  const guard = fitGuard(w, c, got);
+  if (guard !== null) return guard;
+  // a kit crate: one of the pickups it lists
+  if (got.kind === 'kit') return grant(w, c, w.content.pickup.get(w.rng.pick(got.kits ?? []))!);
   const help = fitCatchup(w, c, got);
   if (help !== null) return help;
   let label: string;
@@ -363,6 +368,7 @@ export function shoot(w: World, c: Car): void {
   let bd = range;
   for (const o of w.cars) {
     if (o === c || o.wrecked || o.invuln > 0 || o.z - o.deck > 10 || inSmoke(w, o.x, o.y)) continue;
+    if (hidden(o)) continue;
     if (Math.abs(o.deck - c.deck) > 8) continue;
     const d = Math.hypot(o.x - c.x, o.y - c.y);
     if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
@@ -384,7 +390,11 @@ export function shoot(w: World, c: Car): void {
   const tx = c.x + cs * reach - sn * off;
   const ty = c.y + sn * reach + cs * off;
   w.emit({ t: 'shot', car: c.index, x, y, tx, ty, hit: hit ? best.index : -1 });
-  if (hit) damage(w, best, g.damage ?? 1.5, c, tx, ty);
+  if (!hit) return;
+  // a mirrored car sends the round back where it came from
+  const back = bounced(w, best, c, tx, ty, g.damage ?? 1.5);
+  if (back) damage(w, c, back, best, x, y);
+  else damage(w, best, g.damage ?? 1.5, c, tx, ty);
 }
 
 export function updateRockets(w: World): void {
@@ -393,22 +403,25 @@ export function updateRockets(w: World): void {
     r.life -= DT;
     r.age = (r.age ?? 0) + DT;
     // homing: chase the car it locked onto, or else lean towards a car in front
-    let best: Car | null = lockedOn(w, r);
+    // (a decoy that has its attention comes before anything else)
+    const bait = lured(w, r);
+    let best: { x: number; y: number } | null = bait ?? lockedOn(w, r);
     let bd = 160;
     if (!best)
       for (const c of w.cars) {
-        if (c.index === r.owner || c.wrecked || Math.abs(c.deck - r.z) > 8) continue;
+        if (c.index === r.owner || c.wrecked || Math.abs(c.deck - r.z) > 8 || hidden(c)) continue;
         const d = Math.hypot(c.x - r.x, c.y - r.y);
         if (d < bd && Math.abs(angDiff(Math.atan2(c.y - r.y, c.x - r.x), r.h)) < 0.5) {
           bd = d;
           best = c;
         }
       }
-    const turn = (r.def.homing ?? 0) * DT;
+    const turn = (bait ? lureTurn(r) : (r.def.homing ?? 0)) * DT;
     if (best) r.h += clamp(angDiff(Math.atan2(best.y - r.y, best.x - r.x), r.h), -turn, turn);
     r.x += Math.cos(r.h) * r.v * DT;
     r.y += Math.sin(r.h) * r.v * DT;
     let hit = r.life <= 0 || (r.def.cluster !== undefined && r.age >= r.def.cluster.fuse);
+    if (bait && lureHit(bait, r)) hit = true;
     const k = w.keepInside(r.x, r.y, 2);
     if (k[0] !== r.x || k[1] !== r.y) hit = true;
     // until it arms it flies through whatever it meets (bomblets leaving the burst)
@@ -417,6 +430,8 @@ export function updateRockets(w: World): void {
       hit = w.cars.some(
         (c) =>
           c.index !== r.owner &&
+          // (chasing a decoy, it swerves past the car that threw it)
+          c.index !== bait?.owner &&
           c.z - c.deck < 10 &&
           Math.abs(c.deck - r.z) < 8 &&
           Math.hypot(c.x - r.x, c.y - r.y) < 10,

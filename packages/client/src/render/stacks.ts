@@ -14,6 +14,7 @@ import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
 import { queueArsenal } from './arsenal-fx';
 import { leanAt } from './rubble';
+import { queueDecoys, queueGuards } from './guard-mounts';
 
 const MINE_OFF = { minelit: 'black' };
 
@@ -112,6 +113,7 @@ export function queueStacks(
     R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
   queueArms(R, art, w);
+  queueDecoys(R, art, w);
   queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(R, art, fx, b);
   for (const d of fx.debris)
@@ -271,6 +273,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       alpha,
     );
   }
+  queueGuards(R, art, w, fx, c, alpha);
   if (c.springs && c.hop >= 0 && c.hop < 0.4) {
     const coil = art.prop(c.springs.def.id);
     const cz = Math.max(0, z - 4 * k);

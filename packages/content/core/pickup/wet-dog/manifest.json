@@ -1,0 +1,14 @@
+{
+  "id": "pickup.wet-dog",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Wet Dog",
+    "description": "A soaked coat and a leaking tank: fire does not burn the car, and it puts out what it drives through.",
+    "since": "core@0.7.0"
+  },
+  "kind": "soak",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 12,
+  "reach": 18
+}

@@ -1,0 +1,15 @@
+{
+  "id": "pickup.pack-bond",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pack Bond",
+    "description": "A crackling leash to the nearest rival: half of every blow the car takes runs down it to them.",
+    "since": "core@0.7.0"
+  },
+  "kind": "bond",
+  "weight": 0.1,
+  "hurtWeight": 0.1,
+  "seconds": 12,
+  "amount": 0.5,
+  "reach": 90
+}

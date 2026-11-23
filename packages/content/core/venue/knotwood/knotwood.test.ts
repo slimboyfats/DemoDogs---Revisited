@@ -12,7 +12,8 @@ describe('venue.knotwood', () => {
   });
 
   it('cars climb onto the flyover on one pass and go under it on the other', () => {
-    const w = makeWorld({ venue: 'venue.knotwood', autopilot: true, seed: 4 });
+    // (a seed whose race takes the player's car right under the middle of the deck)
+    const w = makeWorld({ venue: 'venue.knotwood', autopilot: true, seed: 2 });
     const P = w.player;
     let top = 0;
     let under = 0;

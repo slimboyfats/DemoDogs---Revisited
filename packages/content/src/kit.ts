@@ -71,6 +71,20 @@ export const PICKUP_BOX: Part = {
   },
 };
 
+/** A decoy: a red rubber squeaky ball with a white band and a brass squeaker. */
+export const SQUEAKY: Part = {
+  w: 4,
+  h: 4,
+  layers: 4,
+  smooth: true,
+  fn: (x, y, z) => {
+    const r = Math.hypot(x, y, z - 1.8);
+    if (r > 1.75) return null;
+    if (z > 3.2 && Math.hypot(x, y) < 0.5) return 'light';
+    return Math.abs(x) < 0.4 ? 'paintw' : 'paintr';
+  },
+};
+
 export const PLANK: Part = {
   w: 8,
   h: 3,
