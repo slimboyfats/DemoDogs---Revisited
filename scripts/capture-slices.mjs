@@ -1,7 +1,9 @@
 // Slice effects, staged on the test range in headless Chromium at 844x390 dpr 2 (see
-// packages/client/src/render/slice-fx.ts): props, towers and a car going up slice by slice, a
-// frame every 40 ms of the slice clock (`build/`, stills `build-N.png`; `--video` makes build.mp4
-// with ffmpeg). Run with `pnpm build && node scripts/capture-slices.mjs [out-dir] [--video]`.
+// packages/client/src/render/slice-fx.ts): props, towers and a car going up slice by slice
+// (`build/`, stills `build-N.png`), and tall scenery seen through as the car passes behind it
+// (`through/`, `through-on.png` beside `through-off.png`). A frame every 40 ms of the slice clock;
+// `--video` makes an mp4 of each with ffmpeg.
+// Run with `pnpm build && node scripts/capture-slices.mjs [out-dir] [--video] [--only=build|through]`.
 import { createServer } from 'node:http';
 import { readFile, mkdir, copyFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -30,6 +32,8 @@ await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}/`;
 const args = process.argv.slice(2);
 const video = args.includes('--video');
+// --only=build or through: just that part
+const only = args.find((a) => a.startsWith('--only='))?.slice(7);
 const out = args.find((a) => !a.startsWith('--')) ?? 'captures/slices';
 await mkdir(out, { recursive: true });
 
@@ -111,26 +115,61 @@ const film = async (name, n, each) => {
     ]);
 };
 
-// things going up slice by slice, and a car put back together as after a wreck
-await range();
-await hold();
-await page.evaluate((list) => {
-  const dd = window.__dd;
-  for (const [id, dx, dy] of list) dd.put(id, dx, dy - 70);
-  dd.put('crate', -20, -24);
-  dd.put('oil-drum', 22, -24);
-  dd.tick(0);
-  const P = dd.session.world.player;
-  dd.session.fx.slices.start(P, P.z);
-}, TALL);
-await film('build', 60, () => tick(0.04));
-for (const [i, name] of [
-  [5, 'build-1'],
-  [14, 'build-2'],
-  [28, 'build-3'],
-  [44, 'build-4'],
-])
-  await copyFile(`${out}/build/${String(i).padStart(3, '0')}.png`, `${out}/${name}.png`);
+if (!only || only === 'build') {
+  // things going up slice by slice, and a car put back together as after a wreck
+  await range();
+  await hold();
+  await page.evaluate((list) => {
+    const dd = window.__dd;
+    for (const [id, dx, dy] of list) dd.put(id, dx, dy - 70);
+    dd.put('crate', -20, -24);
+    dd.put('oil-drum', 22, -24);
+    dd.tick(0);
+    const P = dd.session.world.player;
+    dd.session.fx.slices.start(P, P.z);
+  }, TALL);
+  await film('build', 60, () => tick(0.04));
+  for (const [i, name] of [
+    [5, 'build-1'],
+    [14, 'build-2'],
+    [28, 'build-3'],
+    [44, 'build-4'],
+  ])
+    await copyFile(`${out}/build/${String(i).padStart(3, '0')}.png`, `${out}/${name}.png`);
+}
+
+// driving past behind three tall things: each turns see-through above the car, then fills in.
+// `through-off.png` is the same moment with the effect off (`?slices=0`).
+if (!only || only === 'through') {
+  for (const [name, query] of [
+    ['through-off', '&slices=0'],
+    ['through-on', ''],
+  ]) {
+    await range(query);
+    await page.evaluate((list) => {
+      for (const [id, dx, dy] of list) window.__dd.put(id, dx, dy);
+    }, TALL);
+    await frames(40);
+    await page.screenshot({ path: `${out}/${name}.png` });
+  }
+  await range();
+  await hold();
+  await page.evaluate((list) => {
+    const dd = window.__dd;
+    for (const [id, dx, dy] of list) dd.put(id, dx, dy);
+    dd.tick(0);
+    dd.tick(3);
+    const P = dd.session.world.player;
+    dd.home = { x: P.x, y: P.y };
+  }, TALL);
+  await film('through', 80, async (i) => {
+    await page.evaluate((x) => {
+      const dd = window.__dd;
+      dd.session.world.player.x = dd.home.x - 100 + x;
+    }, i * 2.5);
+    await tick(0.04);
+  });
+}
 
 if (errors.length) console.log(`page errors:\n  ${errors.join('\n  ')}`);
 await browser.close();

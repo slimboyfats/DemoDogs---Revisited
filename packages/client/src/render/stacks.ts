@@ -193,7 +193,9 @@ function queueStatic(
   const lost = standing(s, strip);
   if (lost < strip.n) {
     // a building that has lost floors: only what still stands
-    for (let i = 0; i < lost; i++) R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot);
+    const T = lift === 0 ? fx.slices.through(s, strip, lost, P) : null;
+    for (let i = 0; i < lost; i++)
+      R.slice(strip, i, s.x, s.y, lift + i / strip.res, s.rot, 1, T && i >= T.from ? T.alpha : 1);
     return;
   }
   if (lift !== 0) {
@@ -206,6 +208,19 @@ function queueStatic(
       const o = (0.5 + (0.5 * i) / strip.n) * 1.6;
       R.slice(strip, i, s.x + wx * o, s.y + wy * o, lift + i / strip.res, s.rot, 1, alpha);
     }
+    return;
+  }
+  // tall, and your car is behind it: seen through from the car's height up
+  const T = fx.slices.through(s, strip, strip.n, P);
+  if (T) {
+    const [wx, wy] = s.def.sway ? sway(w.time, s.seed) : STILL;
+    for (let i = 0; i < strip.n; i++) {
+      const k = i / strip.n;
+      const o = k * k * 1.8;
+      const a = i < T.from ? 1 : T.alpha;
+      R.slice(strip, i, s.x + wx * o, s.y + wy * o, i / strip.res, s.rot, 1, a);
+    }
+    if (s.def.press) queuePress(R, art, w, s);
     return;
   }
   if (!s.def.sway) {

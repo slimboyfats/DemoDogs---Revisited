@@ -976,7 +976,7 @@ function boot(): void {
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
   }
-  // ?slices=0: nothing is built slice by slice
+  // ?slices=0: nothing is built slice by slice or seen through
   if (params.get('slices') === '0') SliceFx.enabled = false;
   resize();
   showRes();
