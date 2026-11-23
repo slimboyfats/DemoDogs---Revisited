@@ -334,7 +334,7 @@ export function guardTick(fx: Effects, w: World, S: Sound): void {
         }
       }
       if (best) {
-        const n = Math.ceil(bd / 2.2);
+        const n = Math.ceil(bd / 1.1);
         const z0 = roofOf(c);
         const t = w.time * 9;
         for (let i = 1; i < n; i++) {
@@ -350,9 +350,9 @@ export function guardTick(fx: Effects, w: World, S: Sound): void {
             0,
             0,
             0,
-            0.04,
+            hot ? 0.09 : 0.05,
             1,
-            hot ? 0xffe0e0 : 0xff5a6a,
+            hot ? 0xffffff : 0xff6a7a,
           );
         }
       }

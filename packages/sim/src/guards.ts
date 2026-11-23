@@ -301,7 +301,7 @@ function sweep(w: World, c: Car, g: Guard, pop: (x: number, y: number, power: nu
     w.mines.splice(i, 1);
     used(w, c, g, false, m.x, m.y);
     // tripped from a feeler's length: a pop, not the blast it was laid for
-    pop(m.x, m.y, m.def.power * 0.3);
+    pop(m.x, m.y, m.def.power * 0.18);
   }
   if (c.z - c.deck > 4) return;
   let flicked = false;
