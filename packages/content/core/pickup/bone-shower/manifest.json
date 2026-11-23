@@ -1,0 +1,17 @@
+{
+  "id": "pickup.bone-shower",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bone Shower",
+    "description": "Three great bones fall out of the sky onto the road in front of every rival ahead. They hurt what they land on, and lie there to be dodged or smashed.",
+    "since": "core@0.7.0"
+  },
+  "kind": "bones",
+  "weight": 0.08,
+  "hurtWeight": 0.06,
+  "lead": 0.1,
+  "trail": 2.5,
+  "charges": 3,
+  "radius": 320,
+  "prop": "prop.big-bone"
+}

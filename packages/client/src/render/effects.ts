@@ -42,6 +42,7 @@ import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
+import { CatchupFx } from './catchup-fx';
 import { armsEvent, armsTick } from './arms-fx';
 
 const TAU = Math.PI * 2;
@@ -221,6 +222,8 @@ export class Effects {
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
+  /** Catch-up items: size bursts, the gale, the lead ball. */
+  readonly catchup = new CatchupFx();
 
   constructor(
     readonly w: World,
@@ -591,7 +594,7 @@ export class Effects {
     this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
-  private fling(
+  fling(
     strip: Strip,
     x: number,
     y: number,
@@ -1421,6 +1424,9 @@ export class Effects {
         case 'stall':
           this.shock.handle(e);
           break;
+        case 'catchup':
+          this.catchup.handle(this, w, e, S, this.art);
+          break;
         case 'howl':
         case 'hurl':
           howlEvent(this, w, e, S);
@@ -1758,6 +1764,7 @@ export class Effects {
     this.cells.step(DT);
     this.shock.step(DT);
     howlTick(this, w);
+    this.catchup.step(this, w);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

@@ -27,12 +27,14 @@ export function damage(
   py: number,
 ): void {
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
-  const dealt = absorb(w, c, (amount * w.mode.damageScale) / c.stats.armor, px, py);
+  // a swollen car shrugs blows off; one zapped small feels them more
+  const tough = c.size > 1.05 ? 0.6 : c.size < 0.95 ? 1.25 : 1;
+  const dealt = absorb(w, c, (amount * tough * w.mode.damageScale) / c.stats.armor, px, py);
   if (dealt <= 0) return;
   c.hp -= dealt;
   const L = toLocal(c, px, py);
-  const lx = clamp(L[0], -12, 12);
-  const ly = clamp(L[1], -6, 6);
+  const lx = clamp(L[0] / c.size, -12, 12);
+  const ly = clamp(L[1] / c.size, -6, 6);
   w.emit({ t: 'hit', car: c.index, by: by ? by.index : -1, x: px, y: py, lx, ly, amount: dealt });
   if (c.hp < 74 || (dealt > 14 && lx < -7)) detach(w, c, 'rear');
   if (c.hp < 52 || (dealt > 18 && lx > 7)) detach(w, c, 'front');

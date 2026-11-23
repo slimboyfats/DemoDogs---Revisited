@@ -137,6 +137,10 @@ export class Hud {
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
       P.springs && P.springs.n > 0 ? `SPRINGS x${P.springs.n}` : '',
+      // catch-up items at work on the car, its own or a rival's doing
+      P.morph ? `${P.morph.def.kind === 'grow' ? 'BIG' : 'RUNT'} ${Math.ceil(P.morph.t)}s` : '',
+      P.wind ? `WIND ${Math.ceil(P.wind.t)}s` : '',
+      P.collar ? `COLLARED ${Math.ceil(P.collar.t)}s` : '',
     ]
       .filter(Boolean)
       .join('  ');

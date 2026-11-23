@@ -127,6 +127,21 @@ export type SimEvent =
     }
   /** A car's engine was cut by a shock for `time` seconds. */
   | { t: 'stall'; car: number; by: number; time: number }
+  /**
+   * A catch-up item at work on `car` at (x, y), set off by car `by` (-1: nobody): it swelled up
+   * (`grow`) or was zapped small (`shrink`), came back to its own size (`back`), was flattened
+   * under a much bigger car (`squash`), got a second wind (`wind`), had a lead collar clamped on or
+   * drop off (`collar`, `collar-off`; `id` is the pickup), or bones were called down on it (`bones`).
+   */
+  | {
+      t: 'catchup';
+      what: 'grow' | 'shrink' | 'back' | 'squash' | 'wind' | 'collar' | 'collar-off' | 'bones';
+      car: number;
+      by: number;
+      id: string;
+      x: number;
+      y: number;
+    }
   /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */
   | { t: 'blade'; car: number; id: string; on: boolean; x: number; y: number }
   /** A car's springs threw it up at (x, y) to clear the ground ahead. */

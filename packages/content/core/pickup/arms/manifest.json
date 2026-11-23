@@ -27,5 +27,7 @@
     "weapon.zap-collar",
     "weapon.lobster",
     "weapon.gulp"
-  ]
+  ],
+  "lead": 0.7,
+  "trail": 1.4
 }

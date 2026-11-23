@@ -36,6 +36,8 @@ export class Art {
   readonly wheels: Strip[];
   readonly pickup: Strip;
   readonly plank: Strip;
+  /** One link of a chain: a dark block a little over an art pixel across. */
+  readonly link: Strip;
   private readonly props = new Map<string, Strip>();
   private readonly cars = new Map<string, CarArt>();
   private readonly bots = new Map<string, BotArt>();
@@ -52,6 +54,7 @@ export class Art {
     this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, CAR_DETAIL));
     this.pickup = this.make(kit.PICKUP_BOX, PALETTE);
     this.plank = this.make(kit.PLANK, PALETTE);
+    this.link = this.make({ w: 2, h: 2, layers: 1, fn: () => 'bumper' }, PALETTE);
   }
 
   private look<K extends 'car' | 'prop' | 'bot'>(

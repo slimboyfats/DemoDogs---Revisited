@@ -11,5 +11,10 @@
   "laps": 3,
   "respawnSeconds": 2.6,
   "ai": "ai.racer",
-  "pickupRespawn": 7
+  "pickupRespawn": 7,
+  "chase": {
+    "gap": 350,
+    "full": 1100,
+    "pace": 1.06
+  }
 }
