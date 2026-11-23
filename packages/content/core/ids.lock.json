@@ -155,8 +155,12 @@
   "venue.tar-flats",
   "venue.the-pit",
   "venue.tumble-heights",
+  "weapon.big-bone",
   "weapon.bowler",
   "weapon.chew-toy",
+  "weapon.choke-chain",
+  "weapon.cold-nose",
+  "weapon.dig",
   "weapon.dog-pile",
   "weapon.fetch-stick",
   "weapon.fleas",
@@ -176,6 +180,7 @@
   "weapon.mine",
   "weapon.mole",
   "weapon.oil-can",
+  "weapon.pit-stop",
   "weapon.pup",
   "weapon.red-dot",
   "weapon.rocket",
@@ -184,6 +189,7 @@
   "weapon.sniffer",
   "weapon.switcheroo",
   "weapon.tacks",
+  "weapon.tail-chaser",
   "weapon.tick",
   "weapon.zap-collar"
 ]

@@ -18,7 +18,7 @@ describe('modifier.tremors', () => {
       for (const e of w.takeEvents()) seen.push(e.t);
     }
     expect(seen.indexOf('omen')).toBeLessThan(seen.indexOf('quake'));
-    expect(seen.filter((t) => t === 'crack').length).toBeGreaterThanOrEqual(2);
+    expect(seen.filter((t) => t === 'split').length).toBeGreaterThanOrEqual(2);
     expect(w.craters.length).toBeGreaterThan(10);
   });
 

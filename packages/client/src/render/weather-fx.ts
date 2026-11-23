@@ -8,7 +8,7 @@ import { PULL } from './voxels';
 
 /**
  * How world modifiers look and sound. The sim says what is on (`world.mods`), which way the wind
- * blows (`world.wind`) and what happens (`omen`, `bolt`, `skyfall`, `quake`, `crack`, `gust`,
+ * blows (`world.wind`) and what happens (`omen`, `bolt`, `skyfall`, `quake`, `split`, `gust`,
  * `flood`); everything here is the showing of it, in single cells like the rest of the effects.
  *
  * - Rain, wind-blown grit and rising embers are stateless: each cell's place is a pure function
@@ -20,7 +20,7 @@ import { PULL } from './voxels';
  */
 type WeatherEvent = Extract<
   SimEvent,
-  { t: 'weather' | 'omen' | 'bolt' | 'skyfall' | 'quake' | 'crack' | 'gust' | 'flood' }
+  { t: 'weather' | 'omen' | 'bolt' | 'skyfall' | 'quake' | 'split' | 'gust' | 'flood' }
 >;
 
 /** How the scene hands a frame's weather cells to its batches. */
@@ -198,7 +198,7 @@ export class WeatherFx {
         if (Math.hypot(P.x - e.x, P.y - e.y) < e.r) fx.setMsg('QUAKE!', 1.2);
         break;
       }
-      case 'crack':
+      case 'split':
         this.crack(e.pts);
         break;
       case 'gust':

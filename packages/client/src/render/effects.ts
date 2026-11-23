@@ -47,6 +47,7 @@ import { CatchupFx } from './catchup-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
 import { WeatherFx } from './weather-fx';
+import { wildEvent } from './wild-fx';
 
 const TAU = Math.PI * 2;
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
@@ -1432,6 +1433,16 @@ export class Effects {
         case 'stall':
           this.shock.handle(e);
           break;
+        case 'crack':
+        case 'frost':
+        case 'meteor':
+        case 'pit':
+        case 'trap':
+        case 'fill':
+        case 'unpit':
+        case 'buried':
+          wildEvent(this, w, e, S);
+          break;
         case 'guard':
           guardEvent(this, w, e, S);
           break;
@@ -1458,7 +1469,7 @@ export class Effects {
         case 'bolt':
         case 'skyfall':
         case 'quake':
-        case 'crack':
+        case 'split':
         case 'gust':
         case 'flood':
           this.weather.handle(e);
@@ -1683,7 +1694,7 @@ export class Effects {
       if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
-      if (c.wrecked || c.hp < 45) {
+      if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;
         if (t <= 0) {

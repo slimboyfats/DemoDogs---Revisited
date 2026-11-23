@@ -1,0 +1,20 @@
+{
+  "id": "weapon.choke-chain",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Choke Chain",
+    "description": "A spiked ball on a chain that swings round and round the car for six seconds, smashing every car, crate and fence it reaches.",
+    "since": "core@0.7.0"
+  },
+  "kind": "flail",
+  "label": "FLAIL",
+  "ammo": 1,
+  "power": 0.3,
+  "cooldown": 1.0,
+  "speed": 8,
+  "life": 6,
+  "reach": 22,
+  "radius": 3.5,
+  "damage": 12,
+  "push": 140
+}

@@ -73,7 +73,8 @@ export function stepParticle(p: Particle, dt: number): boolean {
   if (p.life <= 0) return false;
   const t = age(p);
   switch (p.kind) {
-    case 'spark': {
+    case 'spark':
+    case 'pip': {
       p.vz -= 300 * dt;
       break;
     }

@@ -48,6 +48,12 @@ describe('content validate', () => {
       'beam',
       'swap',
       'trail',
+      // a twister is air and what it carries, a fissure is the ground itself, a frost is cells
+      'twister',
+      'fissure',
+      'frost',
+      // a pit is a hole: there is nothing to draw but the ground
+      'pit',
     ]);
     const shown = [...C.weapon.values()].filter((w) => !bare.has(w.kind)).map((w) => w.id);
     // pickups that bolt something onto the car draw it

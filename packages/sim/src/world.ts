@@ -50,6 +50,7 @@ import { updateCatchup } from './catchup';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
+import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
@@ -184,6 +185,8 @@ export class World {
   readonly arms: Arms = newArms();
   /** Sticks, skipping bombs, hooks, shells, diggers, turrets, fleas, rays, bolts and fire trails. */
   readonly arsenal: Arsenal = newArsenal();
+  /** Twisters, flails, bones on their way down and cracks running through the ground. */
+  readonly wild: Wild = newWild();
   /** World modifiers at work (see modifiers.ts), and the numbers they set for the other rules. */
   readonly mods: Mod[] = [];
   /** The share of their grip cars keep (rain). */
@@ -553,8 +556,13 @@ export class World {
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
     for (let i = 0; i < this.cars.length; i++)
-      for (let j = i + 1; j < this.cars.length; j++)
-        collideCars(this, this.cars[i]!, this.cars[j]!);
+      for (let j = i + 1; j < this.cars.length; j++) {
+        const c = this.cars[i]!;
+        const o = this.cars[j]!;
+        // a car down a pit is not there to be hit
+        if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
+        collideCars(this, c, o);
+      }
     for (const c of this.cars) {
       collideWorld(this, c);
       collideProps(this, c);
@@ -651,6 +659,10 @@ export class World {
     H.num(K.sticks.length).num(K.toys.length).num(K.hooks.length).num(K.tethers.length);
     H.num(K.strikes.length).num(K.moles.length).num(K.sentries.length).num(K.fleas.length);
     H.num(K.beams.length).num(K.bolts.length).num(K.trails.length);
+    const W = this.wild;
+    H.num(W.flails.length).num(W.bones.length).num(W.cracks.length);
+    for (const t of W.twisters) H.num(t.x).num(t.y);
+    for (const h of W.holes) H.num(h.x).num(h.y).num(h.t);
     let down = 0;
     for (const s of this.statics) if (s.down) down++;
     H.num(down);

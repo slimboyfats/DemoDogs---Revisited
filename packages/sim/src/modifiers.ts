@@ -400,7 +400,7 @@ function quake(w: World, m: Mod, x: number, y: number): void {
       pts.push(px, py);
       w.craters.push({ x: px, y: py, r: 4 + 2 * D.power * (1 - i / segs) });
     }
-    w.emit({ t: 'crack', pts });
+    w.emit({ t: 'split', pts });
   }
   if (w.craters.length > 160) w.craters.splice(0, w.craters.length - 160);
   for (const s of w.near(x, y, D.reach)) {
