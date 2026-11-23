@@ -38,7 +38,7 @@ export class QuadBatch {
   ) {
     this.data = new Float32Array(capacity * STRIDE);
     this.prog = compile(gl, QUAD_VS, QUAD_FS);
-    this.u = uniforms(gl, this.prog, ['u_view', 'u_origin', 'u_scale']);
+    this.u = uniforms(gl, this.prog, ['u_view', 'u_origin', 'u_scale', 'u_tint']);
     this.vao = gl.createVertexArray();
     this.buf = gl.createBuffer();
     gl.bindVertexArray(this.vao);
@@ -121,7 +121,13 @@ export class QuadBatch {
    * Draw what was pushed and empty the batch. With `count`, the overdraw meter's counting shader
    * draws instead: each fragment adds `count` (see overdraw.ts).
    */
-  flush(view: [number, number], origin: [number, number], scale: number, count?: number): void {
+  flush(
+    view: [number, number],
+    origin: [number, number],
+    scale: number,
+    count?: number,
+    tint?: Float32Array,
+  ): void {
     if (this.n === 0) return;
     const gl = this.gl;
     let prog = this.prog;
@@ -131,7 +137,7 @@ export class QuadBatch {
         const p = compileKept(gl, QUAD_VS, countingShader(QUAD_FS));
         this.counter = {
           prog: p,
-          u: uniforms(gl, p, ['u_view', 'u_origin', 'u_scale', 'u_count']),
+          u: uniforms(gl, p, ['u_view', 'u_origin', 'u_scale', 'u_count', 'u_tint']),
         };
       }
       prog = this.counter.prog;
@@ -142,6 +148,8 @@ export class QuadBatch {
     gl.uniform2f(u.u_view!, view[0], view[1]);
     gl.uniform2f(u.u_origin!, origin[0], origin[1]);
     gl.uniform1f(u.u_scale!, scale);
+    if (tint) gl.uniform3fv(u.u_tint!, tint);
+    else gl.uniform3f(u.u_tint!, 1, 1, 1);
     gl.bindVertexArray(this.vao);
     gl.bindBuffer(gl.ARRAY_BUFFER, this.buf);
     if (this.data.byteLength > this.gpuBytes) {
