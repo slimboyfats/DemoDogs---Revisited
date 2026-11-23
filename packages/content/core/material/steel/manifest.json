@@ -11,5 +11,6 @@
     "impact": 3,
     "heat": 7
   },
+  "conducts": true,
   "colour": "#5d6168"
 }

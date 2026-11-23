@@ -61,6 +61,12 @@ export default defineAi({
       );
       if (behind) out.fire = true;
     }
+    // a shock pulse goes off when a rival is well inside its ring
+    if (
+      c.weapon?.kind === 'pulse' &&
+      nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
+    )
+      out.fire = true;
     // rubber band: rivals far ahead of the player ease off, far behind push harder
     if (!c.isPlayer) {
       const gap = c.progress - w.player.progress;

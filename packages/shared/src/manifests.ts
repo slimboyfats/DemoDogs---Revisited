@@ -218,7 +218,7 @@ export type ModeManifest = z.infer<typeof ModeSchema>;
 export const WeaponSchema = z.strictObject({
   ...base,
   id: id('weapon'),
-  kind: z.enum(['rocket', 'mine', 'gun', 'slick', 'smoke', 'caltrops']),
+  kind: z.enum(['rocket', 'mine', 'gun', 'slick', 'smoke', 'caltrops', 'pulse']),
   /** Label on the fire button. */
   label: z.string().min(1).max(8),
   ammo: z.number().int().positive(),
@@ -255,6 +255,15 @@ export const WeaponSchema = z.strictObject({
    */
   count: z.number().int().positive().optional(),
   flat: z.number().positive().optional(),
+  /**
+   * Pulses: a ring of charge that spreads from the car at `speed` (art px per second) out to
+   * `radius`. Every rival it crosses has its engine cut for `stall` seconds and takes `damage`.
+   * Where it touches something that conducts it arcs on, up to `chain` hops of `reach` art px
+   * each, striking cars and lighting fuel near every conductor it jumps to.
+   */
+  stall: z.number().positive().optional(),
+  chain: z.number().int().min(0).optional(),
+  reach: z.number().positive().optional(),
 });
 export type WeaponManifest = z.infer<typeof WeaponSchema>;
 
@@ -396,6 +405,11 @@ export const MaterialSchema = z.strictObject({
   burns: z.number().positive().optional(),
   /** Puts out fire it touches, and fire cannot start on it. */
   quenches: z.boolean().default(false),
+  /**
+   * Carries a shock: a pulse that touches scenery made of it, or a pool of it, arcs on from
+   * there (steel, water).
+   */
+  conducts: z.boolean().default(false),
   /** A wrecked car leaks a pool of this, of this radius. */
   wreck: z.number().positive().optional(),
   /**

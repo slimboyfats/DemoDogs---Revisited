@@ -4,6 +4,7 @@ import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import type { World } from './world';
 import { drop, inSmoke } from './drops';
+import { firePulse } from './shock';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -293,6 +294,7 @@ export function fire(w: World, c: Car): void {
     );
   else if (wpn.kind === 'smoke' || wpn.kind === 'caltrops')
     drop(w, wpn, c.index, c.x - cs * 18, c.y - sn * 18, c.h);
+  else if (wpn.kind === 'pulse') firePulse(w, c, wpn);
   else w.mines.push({ x: c.x - cs * 15, y: c.y - sn * 15, owner: c.index, t: 0, def: wpn });
   w.emit({ t: 'fire', car: c.index, weapon: wpn.id });
   if (c.ammo <= 0) c.weapon = null;

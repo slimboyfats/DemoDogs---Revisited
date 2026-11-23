@@ -196,6 +196,13 @@ export class Sound {
     this.tone(90, 0.1, 0.15 * v, 'sine', 0.5);
   }
 
+  /** A shock: a buzzing crack; `big` for a whole pulse going out, a snap for one bolt. */
+  zap(v = 1, big = false): void {
+    this.noise(big ? 0.35 : 0.09, 4200, 1.2, (big ? 0.35 : 0.18) * v, 'highpass');
+    this.tone(big ? 95 : 140, big ? 0.32 : 0.08, (big ? 0.14 : 0.07) * v, 'sawtooth', 0.6);
+    if (big) this.tone(1900, 0.18, 0.05 * v, 'square', 0.3, 0.02);
+  }
+
   drop(): void {
     this.tone(160, 0.12, 0.2, 'square', 0.6);
   }

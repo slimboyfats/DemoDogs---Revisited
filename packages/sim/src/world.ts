@@ -44,6 +44,7 @@ import {
 } from './things';
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
+import { stallControls, updatePulses, type Pulse } from './shock';
 
 export interface WorldOptions {
   content: Content;
@@ -119,6 +120,8 @@ export class World {
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
+  /** Shock pulses still spreading. */
+  readonly pulses: Pulse[] = [];
   readonly pickups: Pickup[] = [];
   /** Burning bits in the air, and pools of fire on the ground. */
   readonly embers: Ember[] = [];
@@ -403,6 +406,7 @@ export class World {
         ctl = c.ai ? c.ai.behaviour.drive(this, c) : c.isPlayer ? player : NO_CONTROLS;
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
         ctl = blinded(this, c, ctl);
+        ctl = stallControls(c, ctl);
       } else if (c.isPlayer) c.throttle = player.throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
@@ -426,6 +430,7 @@ export class World {
     updateRockets(this);
     updateMines(this);
     updateDrops(this);
+    updatePulses(this);
     updateEmbers(this);
 
     if (this.sandbox) return;

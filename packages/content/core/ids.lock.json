@@ -29,6 +29,7 @@
   "pickup.cash",
   "pickup.nitro",
   "pickup.repair",
+  "pickup.storm-cell",
   "prop.barrel",
   "prop.birch",
   "prop.block",
@@ -76,6 +77,7 @@
   "weapon.mine",
   "weapon.oil-can",
   "weapon.rocket",
+  "weapon.shock-pulse",
   "weapon.smoke-pot",
   "weapon.tacks"
 ]

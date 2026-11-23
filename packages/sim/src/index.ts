@@ -19,3 +19,4 @@ export {
   type Cloud,
   type Spike,
 } from './drops';
+export type { Pulse } from './shock';

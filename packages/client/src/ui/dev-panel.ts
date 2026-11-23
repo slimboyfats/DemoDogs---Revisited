@@ -7,6 +7,7 @@ import {
   rangeMine,
   rangeMove,
   rangeProp,
+  rangePulse,
   rangeRocket,
   rangeWreck,
   type Car,
@@ -20,6 +21,7 @@ export type Tool =
   | 'rocket'
   | 'mine'
   | 'drop'
+  | 'shock'
   | 'blast'
   | 'hit'
   | 'wreck'
@@ -33,6 +35,7 @@ const TOOLS: [Tool, string, string][] = [
   ['rocket', 'ROCKET', 'Tap: a rocket flies from your car to that spot'],
   ['mine', 'MINE', 'Tap: lay a mine there'],
   ['drop', 'DROP', 'Tap: drop the chosen rear weapon there (smoke, tacks, glue, oil)'],
+  ['shock', 'SHOCK', 'Tap: your car jumps there and lets off a shock pulse'],
   ['blast', 'BLAST', 'Tap: set off a blast there'],
   ['hit', 'HIT', 'Tap a car: a blow where you tapped it'],
   ['wreck', 'WRECK', 'Tap a car: wreck it'],
@@ -239,6 +242,14 @@ export class DevPanel {
       case 'drop': {
         const def = this.content.weapon.get(this.dropSel.value);
         if (def) rangeDrop(w, def, P, x, y, Math.atan2(y - P.y, x - P.x));
+        break;
+      }
+      case 'shock': {
+        const def = weapon('pulse');
+        if (def) {
+          rangeMove(P, x, y);
+          rangePulse(w, def, P);
+        }
         break;
       }
       case 'blast':
