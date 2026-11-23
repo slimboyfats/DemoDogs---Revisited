@@ -349,6 +349,32 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     chance: unit.default(1),
     items: z.array(ScatterItem).min(1),
   }),
+  /**
+   * Walls beside the road, both sides: runs of one of `items` laid end to end, `offset` art px
+   * past the road's edge and turned to run with it, each run between the two `run` lengths
+   * (art px) with a gap between the two `gap` lengths before the next. Left out on a flyover,
+   * across the inside of a tight bend and where something already stands.
+   */
+  z.strictObject({
+    rule: z.literal('trackside'),
+    offset: z.number(),
+    run: z.tuple([z.number().positive(), z.number().positive()]),
+    gap: z.tuple([z.number().nonnegative(), z.number().nonnegative()]),
+    items: z.array(ScatterItem).min(1),
+  }),
+  /**
+   * The start gantry: a `leg` either side of the road at fraction `at` of the way round (0 is
+   * the start line) and `span` pieces `step` apart high across the road between them. Bring
+   * down a leg and the gantry comes down.
+   */
+  z.strictObject({
+    rule: z.literal('gantry'),
+    at: unit.default(0),
+    leg: id('prop'),
+    span: id('prop'),
+    step: z.number().positive().default(9),
+    offset: z.number().default(6),
+  }),
   AlongRule,
   FieldRule,
 ]);

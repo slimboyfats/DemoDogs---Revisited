@@ -1,5 +1,5 @@
 // Ground captures: for each venue, the whole painted ground as one picture (the canvas itself, no
-// cars or scenery), a 3x crop of it at the start line, and one race frame at 844x390 dpr 2, to
+// cars or scenery), a 3x crop of it at the start line, the grid and one race frame at 844x390 dpr 2, to
 // compare roads and terrain before and after a change.
 // `pnpm build && node scripts/capture-ground.mjs [out-dir] [venue ...] [--maps]` (default
 // captures/ground/, every venue; --maps skips the slow race frames).
@@ -85,6 +85,8 @@ for (const venue of venues) {
   await save(`${venue}-close`, pics[1]);
   if (mapsOnly) continue;
   await page.waitForTimeout(5000);
+  // the grid under the start gantry, before the lights go out
+  await page.screenshot({ path: `${out}/${venue}-start.png` });
   await page.evaluate(() => {
     const s = window.__dd.session;
     Object.defineProperty(s.fx, 'quality', { get: () => 1, set() {} });

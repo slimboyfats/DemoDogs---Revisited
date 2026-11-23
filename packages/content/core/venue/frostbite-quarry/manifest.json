@@ -39,6 +39,27 @@
   },
   "scenery": [
     {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.block",
+          "weight": 2
+        },
+        {
+          "prop": "prop.barrier",
+          "weight": 2
+        }
+      ]
+    },
+    {
       "rule": "bend-wall",
       "props": ["prop.rock", "prop.block"],
       "offset": 17,

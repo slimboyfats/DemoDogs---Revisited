@@ -80,7 +80,8 @@ export function sceneryRefs(r: SceneryRule): { prop: string[]; material: string[
   if (r.rule === 'roadside') prop.push(r.pair, r.stack, r.drum, ...r.tanks);
   if (r.rule === 'flyover' || r.rule === 'overpass') prop.push(r.deck, r.pillar);
   if (r.rule === 'canopy') prop.push(r.trunk, ...r.crowns);
-  if (r.rule === 'arch') prop.push(r.leg, r.span);
+  if (r.rule === 'arch' || r.rule === 'gantry') prop.push(r.leg, r.span);
+  if (r.rule === 'trackside') prop.push(...r.items.map((i) => i.prop));
   if (r.rule === 'towers') prop.push(...r.column, r.front);
   if (r.rule === 'kerb') prop.push(...r.items.map((i) => i.prop));
   return { prop: prop.filter((p): p is string => !!p), material };

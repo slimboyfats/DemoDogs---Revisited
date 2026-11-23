@@ -51,6 +51,31 @@
       "offset": 4
     },
     {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [80, 220],
+      "gap": [150, 320],
+      "items": [
+        {
+          "prop": "prop.rock",
+          "weight": 2
+        },
+        {
+          "prop": "prop.plank-fence",
+          "weight": 1
+        },
+        {
+          "prop": "prop.barrier",
+          "weight": 1
+        }
+      ]
+    },
+    {
       "rule": "patches",
       "material": "material.sand",
       "count": 12,

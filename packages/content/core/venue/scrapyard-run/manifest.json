@@ -43,6 +43,31 @@
   },
   "scenery": [
     {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.concrete-wall",
+          "weight": 2
+        },
+        {
+          "prop": "prop.barrier",
+          "weight": 1
+        },
+        {
+          "prop": "prop.tyres",
+          "weight": 1
+        }
+      ]
+    },
+    {
       "rule": "bend-wall",
       "props": ["prop.tyres-red", "prop.tyres"],
       "offset": 17,
@@ -301,7 +326,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00005,
+      "perArea": 5e-5,
       "clear": 6,
       "items": [
         {
