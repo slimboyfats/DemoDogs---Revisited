@@ -320,9 +320,19 @@ const online = new OnlineScreen(
     race: (s, race) => {
       careerRace = null;
       const host = s.seats[0]!;
+      // the host's own track: every screen builds the same venue from the same file
+      let made: Installed | null = null;
+      if (s.track)
+        try {
+          made = installTrack(content, s.track);
+        } catch {
+          online.fail('The host’s track could not be built on this device.');
+          return;
+        }
       void launch(
         {
-          venue: s.venue,
+          venue: made?.venue ?? s.venue,
+          ...(made ? { content: made.content, laps: made.laps } : {}),
           car: host.car,
           name: host.name,
           paint: host.paint,
@@ -332,7 +342,7 @@ const online = new OnlineScreen(
           humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
           you: s.you,
         },
-        `ONLINE · ${content.venue.get(s.venue)?.meta.name.toUpperCase() ?? ''}${modLine(content, s.mods)}`,
+        `ONLINE · ${(s.track?.name ?? content.venue.get(s.venue)?.meta.name ?? '').toUpperCase()}${modLine(content, s.mods)}`,
         (made) => {
           made.net = race;
           document.body.classList.add('online');
@@ -345,6 +355,7 @@ const online = new OnlineScreen(
       if (screen !== 'online') setScreen('online');
     },
   },
+  () => trackStore.list(),
 );
 function openOnline(join?: string): void {
   setScreen('online');

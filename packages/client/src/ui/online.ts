@@ -1,5 +1,5 @@
-import type { CarManifest, VenueManifest } from '@demodogs/shared';
-import type { Content } from '@demodogs/sim';
+import type { CarManifest, TrackFile, VenueManifest } from '@demodogs/shared';
+import { trackProblems, type Content } from '@demodogs/sim';
 import { installDeterministicMath, contentHash } from '../net/det-math';
 import type { NetRace } from '../net/lockstep';
 import { OnlineRoom, type RaceStart } from '../net/room';
@@ -28,6 +28,7 @@ export class OnlineScreen {
   private carIdx: number;
   private note = '';
   private busy = false;
+  private mine: TrackFile[] = [];
   private readonly hash: string;
 
   constructor(
@@ -37,6 +38,8 @@ export class OnlineScreen {
     private readonly venues: VenueManifest[],
     private readonly baseUrl: string,
     private readonly hooks: OnlineHooks,
+    /** The tracks built on this device: the host may race on one. */
+    private readonly tracks: () => Promise<TrackFile[]> = async () => [],
   ) {
     this.hash = contentHash(content);
     let saved = '';
@@ -64,7 +67,20 @@ export class OnlineScreen {
       this.cars.findIndex((c) => c.id === car),
     );
     this.render();
+    // only tracks that can be raced are offered
+    void this.tracks().then((all) => {
+      this.mine = all.filter((t) => trackProblems(t).length === 0);
+      this.render();
+    });
     if (join && !this.room) void this.join(join);
+  }
+
+  /** The race could not be built here (a track this game cannot make): leave, and say why. */
+  fail(reason: string): void {
+    this.leave();
+    this.note = reason;
+    this.hooks.show();
+    this.render();
   }
 
   status(): string {
@@ -282,6 +298,8 @@ export class OnlineScreen {
         const sel = h('select', {
           ariaLabel: 'Venue',
           onchange: () => {
+            const t = this.mine.find((x) => `track:${x.id}` === sel.value);
+            if (t) return room.setTrack(t, t.name);
             const v = this.content.venue.get(sel.value)!;
             room.setVenue(v.id, v.meta.name);
           },
@@ -292,9 +310,21 @@ export class OnlineScreen {
             h('option', {
               value: v.id,
               textContent: `${v.meta.name.toUpperCase()} · ${mode.kind}`,
-              selected: v.id === room.venue,
+              selected: !room.track && v.id === room.venue,
             }),
           );
+        }
+        if (this.mine.length) {
+          const group = h('optgroup', { label: 'YOUR TRACKS' });
+          for (const t of this.mine)
+            group.append(
+              h('option', {
+                value: `track:${t.id}`,
+                textContent: `${t.name.toUpperCase()} · your track`,
+                selected: room.track?.id === t.id,
+              }),
+            );
+          sel.append(group);
         }
         el.append(
           sel,
@@ -312,7 +342,7 @@ export class OnlineScreen {
           h('p', {
             className: 'tag',
             textContent: venue
-              ? `${venue.meta.name.toUpperCase()}${modLine(this.content, room.mods)} · waiting for the host to start`
+              ? `${(room.trackName ? `${room.trackName} · the host’s own track` : venue.meta.name).toUpperCase()}${modLine(this.content, room.mods)} · waiting for the host to start`
               : 'Reaching the host…',
           }),
         );

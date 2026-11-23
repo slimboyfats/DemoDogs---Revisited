@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Controls } from './controls';
+import { TrackFileSchema } from './track-file';
 
 /**
  * Online play, after mudders: a small lobby server (packages/signal, on Render) hands out rooms
@@ -198,6 +199,8 @@ export const PeerMessageSchema = z.discriminatedUnion('type', [
     venue: ContentId,
     /** World modifiers the host has switched on (absent from an older host: none). */
     mods: z.array(ContentId).max(16).optional(),
+    /** The name of the host's own track, when the race is to be on one (see `start`). */
+    track: z.string().max(40).optional(),
     seats: z.array(SeatSchema).max(MAX_HUMANS),
     you: z.number().int(),
   }),
@@ -207,6 +210,11 @@ export const PeerMessageSchema = z.discriminatedUnion('type', [
     seed: z.number().int(),
     venue: ContentId,
     mods: z.array(ContentId).max(16).optional(),
+    /**
+     * A track from the host's track creator, whole: every peer builds the same venue from it
+     * (`venue` is then that venue's id). Absent for the game's own venues.
+     */
+    track: TrackFileSchema.optional(),
     seats: z.array(SeatSchema).max(MAX_HUMANS),
     you: z.number().int(),
     log: LogSchema,
