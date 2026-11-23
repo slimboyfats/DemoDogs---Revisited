@@ -24,6 +24,7 @@ import {
 import { Session, type SessionOptions } from './game/session';
 import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
+import { isKey } from './input/keys';
 import { Art } from './render/art';
 import { Hud, placeName } from './render/hud';
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
@@ -34,6 +35,7 @@ import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { KeyHints } from './ui/key-hints';
+import { NameTags } from './ui/name-tags';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
@@ -55,6 +57,15 @@ const art = new Art(loadLooks());
 const sound = new Sound();
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
+const nameTags = new NameTags();
+// Tab while driving: the names over the cars, on and off (spectating, Tab is the next car)
+addEventListener('keydown', (e) => {
+  if (!isKey('watch', e.key.toLowerCase()) || e.repeat || e.metaKey || e.ctrlKey || e.altKey)
+    return;
+  if (screen !== 'game' || paused || specBar.shown) return;
+  e.preventDefault();
+  nameTags.toggle();
+});
 const canvas = $<HTMLCanvasElement>('game');
 const overlay = $<HTMLCanvasElement>('overlay');
 const octx = overlay.getContext('2d')!;
@@ -666,6 +677,8 @@ function frame(t: number): void {
     octx.clearRect(0, 0, W, H);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
+    else if (nameTags.shown && !devMode)
+      drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (devMode) dev.frame(dt);
     else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
