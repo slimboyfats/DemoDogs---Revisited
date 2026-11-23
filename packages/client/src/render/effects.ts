@@ -44,6 +44,7 @@ import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { GuardState, guardEvent, guardTick } from './guards-fx';
 import { CatchupFx } from './catchup-fx';
+import { LifeFx } from './life-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
 import { WeatherFx } from './weather-fx';
@@ -230,6 +231,8 @@ export class Effects {
   readonly guards = new GuardState();
   /** Catch-up items: size bursts, the gale, the lead ball. */
   readonly catchup = new CatchupFx();
+  /** Track tiles and animals: boost fire, ramp dust, feathers. */
+  readonly life = new LifeFx();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
   readonly weather: WeatherFx;
 
@@ -267,6 +270,16 @@ export class Effects {
     // the pools the map starts with
     for (const s of w.spills) if (s.fixed) this.pool(s.def, s.x, s.y, s.r);
     this.weather = new WeatherFx(this, w, sound);
+  }
+
+  /** The art, for the effects kept in other files. */
+  get artOf(): Art {
+    return this.art;
+  }
+
+  /** A heavy landing, as loud as `v`. */
+  thump(v: number): void {
+    this.sound.thud(v);
   }
 
   carArt(c: Car) {
@@ -1428,6 +1441,11 @@ export class Effects {
             this.text(e.x, e.y, e.label, big ? '#ff6a3d' : '#ffd24a', big);
           }
           break;
+        case 'pad':
+        case 'critter':
+        case 'trample':
+          this.life.handle(this, w, e, S, this.art);
+          break;
         case 'pulse':
         case 'arc':
         case 'stall':
@@ -1811,6 +1829,7 @@ export class Effects {
     howlTick(this, w);
     guardTick(this, w, this.sound);
     this.catchup.step(this, w);
+    this.life.step(this, w);
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

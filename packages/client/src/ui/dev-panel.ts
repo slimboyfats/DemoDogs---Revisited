@@ -370,7 +370,8 @@ export class DevPanel {
       }
       case 'prop': {
         const def = this.content.prop.get(this.propSel.value);
-        if (def) rangeProp(w, def, x, y);
+        // a tile points the way you are facing, so you can drive straight onto it
+        if (def) rangeProp(w, def, x, y, def.pad ? P.h : 0);
         break;
       }
       case 'give': {

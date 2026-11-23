@@ -1,0 +1,13 @@
+{
+  "id": "prop.flowers",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Flowers",
+    "description": "A clump of meadow flowers. Pretty until someone drives through it.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 3,
+  "solid": false,
+  "trample": true
+}

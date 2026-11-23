@@ -2,6 +2,7 @@ import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
 import {
   angDiff,
   armsWants,
+  boostAhead,
   arsenalWants,
   howlWants,
   defineAi,
@@ -48,6 +49,13 @@ export default defineAi({
       if (p) {
         tx = p.x;
         ty = p.y;
+      }
+    } else {
+      // nothing better to do: take the boost tile that lies ahead
+      const pad = boostAhead(w, c, 120);
+      if (pad) {
+        tx = pad.x;
+        ty = pad.y;
       }
     }
     const [steer, d] = steerTo(c, tx, ty);

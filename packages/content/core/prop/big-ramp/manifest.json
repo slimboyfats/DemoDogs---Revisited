@@ -1,0 +1,19 @@
+{
+  "id": "prop.big-ramp",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big ramp",
+    "description": "A long, tall ramp for the fastest straights: a long flight and a hard landing.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 14,
+  "solid": false,
+  "pad": {
+    "kind": "jump",
+    "long": 28,
+    "wide": 30,
+    "lift": 195,
+    "min": 80
+  }
+}

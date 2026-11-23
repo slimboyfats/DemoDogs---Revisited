@@ -1,4 +1,4 @@
-import { stand } from './scenery';
+import { putProp } from './stand';
 import type { PickupManifest, PropManifest, WeaponManifest } from '@demodogs/shared';
 import { grant } from './things';
 import { damage, explode, wreck } from './damage';
@@ -76,25 +76,9 @@ export function rangeMove(c: Car, x: number, y: number, h = c.h): void {
   c.vx = c.vy = c.vz = c.z = c.spin = c.vf = 0;
 }
 
-/** Put a prop down at (x, y): scenery if it is static, otherwise something that can be shoved. */
+/** Put a prop down at (x, y): scenery, something that can be shoved, a tile, or animals. */
 export function rangeProp(w: World, def: PropManifest, x: number, y: number, rot = 0): void {
-  if (def.body === 'static') stand(w, def, x, y, rot, w.rng.range(0, 10));
-  else
-    w.props.push({
-      index: w.props.length,
-      def,
-      x,
-      y,
-      z: 0,
-      vx: 0,
-      vy: 0,
-      vz: 0,
-      rot,
-      spin: 0,
-      alive: true,
-      fuse: 0,
-      owner: -1,
-    });
+  putProp(w, def, x, y, rot, w.rng);
 }
 
 /** A shock pulse from `owner`'s car, as if it had been fired there and then. */

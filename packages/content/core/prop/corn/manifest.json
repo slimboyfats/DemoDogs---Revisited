@@ -1,0 +1,14 @@
+{
+  "id": "prop.corn",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Corn",
+    "description": "A corn stalk, taller than a car. A field of them hides the road until the pack has cut its own way through.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 2.2,
+  "solid": false,
+  "trample": true,
+  "sway": true
+}

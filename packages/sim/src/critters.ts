@@ -1,0 +1,348 @@
+import {
+  DT,
+  FLUNG_BELOW,
+  GRAVITY,
+  type CritterManifest,
+  type PropManifest,
+} from '@demodogs/shared';
+import { damage } from './damage';
+import type { Car } from './entities';
+import { TAU, angDiff, clamp } from './math';
+import { circles, hull } from './physics';
+import type { Rng } from './prng';
+import type { World } from './world';
+
+/**
+ * Animals: chickens, sheep, cows, crows and the like that live beside a track. Each is put down
+ * as a prop with a `critter` (see shared/pieces.ts), which becomes a group of them in
+ * `world.critters`. They wander near home, bolt from fast cars, and are knocked flying (light
+ * ones) or stand their ground (heavy ones). Birds take off and come down again. None of them is
+ * ever killed: what lands gets up and runs.
+ */
+export interface Critter {
+  index: number;
+  def: PropManifest;
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  /** Heading, radians. */
+  h: number;
+  /** Home: where its group was put down. */
+  hx: number;
+  hy: number;
+  /** Where it is walking, or where a bird will come down. */
+  tx: number;
+  ty: number;
+  /**
+   * idle: standing about. walk: strolling to (tx, ty). flee: running from a car. air: knocked
+   * flying. fly: a bird on the wing.
+   */
+  state: 'idle' | 'walk' | 'flee' | 'air' | 'fly';
+  /** Seconds left of standing, of fright, or of flight. */
+  t: number;
+  /** How far it has gone on foot, art px: its gait. */
+  gait: number;
+}
+
+/** How far off a car still wakes an animal up, art px. Further than this it just stands. */
+const AWAKE = 320;
+
+/** Put a group of `def` animals down round (x, y). */
+export function spawnCritters(
+  w: World,
+  def: PropManifest,
+  x: number,
+  y: number,
+  rot: number,
+  rng: Rng,
+): void {
+  const D = def.critter!;
+  const n = D.group[0] + rng.int(D.group[1] - D.group[0] + 1);
+  for (let i = 0; i < n; i++) {
+    const a = rng.next() * TAU;
+    const d =
+      n === 1 ? 0 : Math.sqrt(rng.next()) * Math.min(D.roam, 6 + def.radius * 2.2 * Math.sqrt(n));
+    const [px, py] = w.keepInside(x + Math.cos(a) * d, y + Math.sin(a) * d, def.radius + 2);
+    w.critters.push({
+      index: w.critters.length,
+      def,
+      x: px,
+      y: py,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      h: n === 1 ? rot : rng.next() * TAU,
+      hx: x,
+      hy: y,
+      tx: px,
+      ty: py,
+      state: 'idle',
+      t: rng.range(0.3, 3),
+      gait: 0,
+    });
+  }
+}
+
+/** A spot within its roaming ground. */
+function spot(w: World, k: Critter, D: CritterManifest): [number, number] {
+  const a = w.rng.next() * TAU;
+  const d = Math.sqrt(w.rng.next()) * D.roam;
+  return w.keepInside(k.hx + Math.cos(a) * d, k.hy + Math.sin(a) * d, k.def.radius + 2);
+}
+
+/** Knock an animal into the air with this velocity. */
+function fling(w: World, k: Critter, vx: number, vy: number, vz: number, by: number): void {
+  k.state = 'air';
+  k.vx = vx;
+  k.vy = vy;
+  k.vz = vz;
+  k.z = Math.max(k.z, 1);
+  w.emit({ t: 'critter', what: 'flung', critter: k.index, car: by, x: k.x, y: k.y, power: vz });
+}
+
+/** A bird leaves the ground, away from (fx, fy). */
+function takeOff(w: World, k: Critter, D: CritterManifest, fx: number, fy: number): void {
+  k.state = 'fly';
+  k.t = w.rng.range(3.5, 6.5);
+  [k.tx, k.ty] = spot(w, k, D);
+  k.h = fx || fy ? Math.atan2(fy, fx) + w.rng.range(-0.5, 0.5) : k.h;
+  k.z = Math.max(k.z, 1);
+  w.emit({ t: 'critter', what: 'up', critter: k.index, car: -1, x: k.x, y: k.y, power: 0 });
+}
+
+/** A blast at (x, y) reaching `rad`: animals in it are thrown, birds near it take off. */
+export function blastCritters(w: World, x: number, y: number, rad: number): void {
+  for (const k of w.critters) {
+    const dx = k.x - x;
+    const dy = k.y - y;
+    if (Math.abs(dx) > rad * 2 || Math.abs(dy) > rad * 2) continue;
+    const d = Math.hypot(dx, dy);
+    const D = k.def.critter!;
+    if (D.kind === 'bird') {
+      if (k.state !== 'fly' && k.state !== 'air') takeOff(w, k, D, dx, dy);
+      continue;
+    }
+    if (d > rad || k.state === 'air') continue;
+    const p = (1 - d / rad) / Math.max(0.35, Math.sqrt(D.mass * 4));
+    fling(w, k, (dx / (d || 1)) * 190 * p, (dy / (d || 1)) * 190 * p, 90 + 170 * p, -1);
+  }
+}
+
+export function updateCritters(w: World): void {
+  for (const k of w.critters) {
+    const D = k.def.critter!;
+    if (k.state === 'air') {
+      // knocked flying: it comes down where it comes down, and gets up running
+      k.vz -= GRAVITY * DT;
+      k.z += k.vz * DT;
+      [k.x, k.y] = w.keepInside(k.x + k.vx * DT, k.y + k.vy * DT, k.def.radius);
+      if (k.z <= 0) {
+        k.z = 0;
+        k.vz = 0;
+        k.h = Math.atan2(k.vy, k.vx);
+        k.state = 'flee';
+        k.t = 2.2;
+      }
+      continue;
+    }
+    // what is there to be afraid of
+    let fx = 0;
+    let fy = 0;
+    let scared = false;
+    let awake = false;
+    for (const c of w.cars) {
+      const dx = k.x - c.x;
+      const dy = k.y - c.y;
+      if (Math.abs(dx) > AWAKE || Math.abs(dy) > AWAKE) continue;
+      awake = true;
+      const d = Math.hypot(dx, dy);
+      if (d < D.scare && Math.hypot(c.vx, c.vy) > D.shy) {
+        scared = true;
+        fx += dx / (d + 1);
+        fy += dy / (d + 1);
+      }
+    }
+    if (D.kind === 'bird' && k.state === 'fly') {
+      fly(w, k, D);
+      continue;
+    }
+    // with nobody near, it stands where it is: a field of sheep costs nothing far from the race
+    if (!awake && k.state !== 'flee') continue;
+    if (scared) {
+      if (D.kind === 'bird') {
+        takeOff(w, k, D, fx, fy);
+        continue;
+      }
+      k.state = 'flee';
+      k.t = 1.2;
+    }
+    let want = k.h;
+    let speed = 0;
+    let turn = 5;
+    if (k.state === 'flee') {
+      if (scared) want = Math.atan2(fy, fx);
+      else if ((k.t -= DT) <= 0) {
+        k.state = 'idle';
+        k.t = w.rng.range(0.6, 2);
+      }
+      speed = D.run;
+      turn = 9;
+    } else if (k.state === 'idle') {
+      if ((k.t -= DT) <= 0) {
+        [k.tx, k.ty] = spot(w, k, D);
+        k.state = 'walk';
+      }
+    } else {
+      const dx = k.tx - k.x;
+      const dy = k.ty - k.y;
+      if (Math.abs(dx) < 3 && Math.abs(dy) < 3) {
+        k.state = 'idle';
+        k.t = w.rng.range(1, 4.5);
+      } else {
+        want = Math.atan2(dy, dx);
+        speed = D.walk;
+      }
+    }
+    if (speed > 0) {
+      const off = angDiff(want, k.h);
+      k.h += clamp(off, -turn * DT, turn * DT);
+      // it turns before it goes: no sliding off sideways
+      const go = speed * (Math.abs(off) > 1.2 ? 0.3 : 1);
+      let nx = k.x + Math.cos(k.h) * go * DT;
+      let ny = k.y + Math.sin(k.h) * go * DT;
+      const rad = k.def.radius;
+      for (const s of w.near(nx, ny, rad + 2)) {
+        const r = s.def.radius + rad;
+        if (s.down || !s.def.solid || Math.abs(s.x - nx) > r || Math.abs(s.y - ny) > r) continue;
+        const d = Math.hypot(nx - s.x, ny - s.y) || 1;
+        if (d < r) {
+          nx = s.x + ((nx - s.x) / d) * r;
+          ny = s.y + ((ny - s.y) / d) * r;
+          // blocked on a walk: think again
+          if (k.state === 'walk') [k.tx, k.ty] = spot(w, k, D);
+        }
+      }
+      [nx, ny] = w.keepInside(nx, ny, rad);
+      k.gait += Math.hypot(nx - k.x, ny - k.y);
+      k.x = nx;
+      k.y = ny;
+    }
+    if (D.kind === 'ground') for (const c of w.cars) meet(w, k, D, c);
+  }
+}
+
+/** A bird on the wing: it climbs, comes round over where it means to land, and glides down. */
+function fly(w: World, k: Critter, D: CritterManifest): void {
+  k.t -= DT;
+  const dx = k.tx - k.x;
+  const dy = k.ty - k.y;
+  const d = Math.hypot(dx, dy);
+  // time to come down: it turns in tight over its spot (wide circles would never reach it)
+  const landing = k.t <= 0;
+  const off = angDiff(Math.atan2(dy, dx), k.h);
+  k.h += clamp(off, -(landing ? 7 : 2.4) * DT, (landing ? 7 : 2.4) * DT);
+  const v = landing ? Math.max(16, D.run * Math.min(1, d / 50)) : D.run;
+  k.x += Math.cos(k.h) * v * DT;
+  k.y += Math.sin(k.h) * v * DT;
+  k.gait += v * DT;
+  const high = landing ? D.height * Math.min(1, d / 50) : D.height;
+  k.z += clamp(high - k.z, -70 * DT, 55 * DT);
+  if (landing && d < 3) {
+    k.z = 0;
+    k.state = 'idle';
+    k.t = w.rng.range(1, 4);
+    w.emit({ t: 'critter', what: 'down', critter: k.index, car: -1, x: k.x, y: k.y, power: 0 });
+  }
+}
+
+/** A car and an animal on the ground. */
+function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
+  const R = hull(c);
+  const m = k.def.radius + R;
+  if (Math.abs(c.x - k.x) > m + 14 * c.size || Math.abs(c.y - k.y) > m + 14 * c.size) return;
+  // a car in the air goes over its head
+  if (c.z - c.deck > 7 || c.deck > 4) return;
+  for (const p of circles(c)) {
+    const dx = k.x - p[0];
+    const dy = k.y - p[1];
+    const d = Math.hypot(dx, dy);
+    if (d >= m) continue;
+    const nx = d > 0.001 ? dx / d : Math.cos(c.h);
+    const ny = d > 0.001 ? dy / d : Math.sin(c.h);
+    const closing = c.vx * nx + c.vy * ny;
+    if (D.mass < FLUNG_BELOW) {
+      if (closing > 30 && !c.wrecked) {
+        // bowled over: thrown on ahead and a little to the side, the heavier the lower
+        const side = w.rng.range(-0.5, 0.5);
+        const up = clamp(60 + closing * 0.55, 70, 190) / (1 + D.mass);
+        fling(
+          w,
+          k,
+          c.vx * 0.85 - ny * closing * side,
+          c.vy * 0.85 + nx * closing * side,
+          up,
+          c.index,
+        );
+        const keep = 1 - Math.min(0.3, D.mass * 0.45);
+        c.vx *= keep;
+        c.vy *= keep;
+        if (D.points > 0) {
+          c.score += D.points;
+          w.emit({
+            t: 'score',
+            car: c.index,
+            x: k.x,
+            y: k.y,
+            points: D.points,
+            label: `+${D.points}`,
+          });
+        }
+      } else {
+        // nudged out of the way
+        k.x += nx * (m - d);
+        k.y += ny * (m - d);
+      }
+      return;
+    }
+    // too heavy to throw: the car is what gives way
+    const share = clamp(1 / (1 + D.mass), 0.2, 0.6);
+    c.x -= nx * (m - d) * (1 - share);
+    c.y -= ny * (m - d) * (1 - share);
+    k.x += nx * (m - d) * share;
+    k.y += ny * (m - d) * share;
+    if (closing <= 0) return;
+    c.vx -= nx * closing * 1.3;
+    c.vy -= ny * closing * 1.3;
+    c.spin += w.rng.range(-1, 1) * clamp(closing * 0.02, 0, 2.5);
+    // and it is off, the way it was shoved
+    k.h = Math.atan2(ny, nx);
+    k.state = 'flee';
+    k.t = 1.6;
+    if (closing > 25 && c.hitCd <= 0) {
+      c.hitCd = 0.25;
+      if (closing > 45 && !c.wrecked)
+        damage(w, c, (closing - 40) * 0.16, null, p[0] + nx * R, p[1] + ny * R);
+      w.emit({
+        t: 'critter',
+        what: 'bump',
+        critter: k.index,
+        car: c.index,
+        x: k.x,
+        y: k.y,
+        power: closing,
+      });
+      w.emit({
+        t: 'crash',
+        x: k.x - nx * k.def.radius,
+        y: k.y - ny * k.def.radius,
+        impact: closing * 0.5,
+        player: c === w.player,
+      });
+    }
+    return;
+  }
+}

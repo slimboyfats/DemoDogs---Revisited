@@ -68,6 +68,8 @@ export function sceneryRefs(r: SceneryRule): { prop: string[]; material: string[
     prop.push(...(r.edge?.items ?? []).map((i) => i.prop));
   }
   if (r.rule === 'place') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'along') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'field') prop.push(r.prop);
   if (r.rule === 'pools') material.push(...r.items.map((i) => i.material));
   if (r.rule === 'harbour') {
     material.push(r.material);
@@ -185,6 +187,10 @@ export function resolveContent(src: ContentSource): Content {
   for (const p of out.prop.values()) {
     if (p.spills) need(p.id, 'material', p.spills.material);
     if (p.made) need(p.id, 'material', p.made);
+    if (p.pad && (p.body !== 'static' || p.solid))
+      problems.push(`${p.id}: a pad must be a static prop that is not solid`);
+    if (p.trample && (p.body !== 'static' || p.solid))
+      problems.push(`${p.id}: only a static prop that is not solid can be trampled`);
     if (p.topples) {
       if (p.body !== 'static') problems.push(`${p.id}: only static props topple`);
       if (out.prop.get(p.topples.into)?.body !== 'loose')

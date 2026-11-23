@@ -95,6 +95,48 @@
           "weight": 1
         }
       ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "x": -260,
+          "y": -120,
+          "rot": 0.4
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 260,
+          "y": 120,
+          "rot": 3.5416
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 0,
+          "y": 230,
+          "rot": 3.1416
+        },
+        {
+          "prop": "prop.ramp",
+          "x": 0,
+          "y": -230,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 4,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "items": [
+        {
+          "prop": "prop.gulls",
+          "weight": 1
+        }
+      ],
+      "clear": 0
     }
   ],
   "bots": {

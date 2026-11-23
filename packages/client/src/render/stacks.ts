@@ -3,6 +3,7 @@ import {
   pressWarning,
   type Bot,
   type Car,
+  type Critter,
   type StaticProp,
   type World,
 } from '@demodogs/sim';
@@ -126,6 +127,7 @@ export function queueStacks(
   queueDecoys(R, art, w);
   queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(R, art, fx, b);
+  for (const k of w.critters) queueCritter(R, art, w, k);
   for (const d of fx.debris)
     if (R.visible(d.x, d.y, 8, 10)) {
       R.group(d.y);
@@ -152,6 +154,10 @@ function queueStatic(
   P: Car,
   still?: StaticHook,
 ): void {
+  if (s.def.pad) {
+    queuePad(R, art, w, s);
+    return;
+  }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
   const lift = s.lift ?? 0;
   if (!R.visible(s.x, s.y, s.def.radius + 12, tall(strip) + lift)) return;
@@ -186,6 +192,48 @@ function queueStatic(
     const o = k * k * 1.8;
     R.slice(strip, i, s.x + wx * o, s.y + wy * o, i / strip.res, s.rot);
   }
+}
+
+/** Steps of a tile's running light a second. */
+const PAD_RATE = 9;
+
+/**
+ * A track tile lying on the road: a boost tile's light runs along its arrows (its look's poses,
+ * in turn); a ramp just stands there.
+ */
+function queuePad(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  if (!R.visible(s.x, s.y, s.def.radius + 12, 12)) return;
+  // under everything that drives over it
+  R.group(s.y - 40);
+  const n = art.poses(s.def.id);
+  const pose = n > 1 ? Math.floor(w.time * PAD_RATE + s.seed) % n : 0;
+  R.stack(art.prop(s.def.id, undefined, pose), s.x, s.y, 0, s.rot);
+}
+
+/**
+ * An animal: on the ground it steps from one pose to the other as it goes and bobs with its gait;
+ * knocked into the air it spins; a bird on the wing beats between its two flying poses.
+ */
+function queueCritter(R: StackSink, art: Art, w: World, k: Critter): void {
+  if (!R.visible(k.x, k.y, 12, 14 + k.z)) return;
+  R.group(k.y);
+  const D = k.def.critter!;
+  const id = k.def.id;
+  const flier = D.kind === 'bird';
+  let pose = 0;
+  let z = k.z;
+  let rot = k.h;
+  if (k.state === 'fly') pose = 1 + (Math.floor(w.time * 9 + k.index * 0.37) & 1);
+  else if (k.state === 'air') {
+    rot += w.time * 17 + k.index;
+    pose = flier ? 1 + (Math.floor(w.time * 16) & 1) : Math.floor(w.time * 14) & 1;
+  } else if (k.state !== 'idle') {
+    // one step each time it has gone about its own length
+    const ph = k.gait / Math.max(1.6, k.def.radius * 1.5);
+    pose = flier ? 0 : Math.floor(ph) & 1;
+    z += Math.abs(Math.sin(ph * Math.PI)) * D.step;
+  } else if (!flier && Math.sin(w.time * 1.7 + k.index * 2.4) > 0.86) pose = 1;
+  R.stack(art.prop(id, undefined, pose), k.x, k.y, z, rot);
 }
 
 /** A press's ram, as high as the sim says it is, shuddering just before it drops. */
@@ -443,6 +491,12 @@ export function queueShadows(
         0.3,
       );
   for (const b of w.bots) if (b.alive && R.visible(b.x, b.y, 8)) shadow(b.x, b.y, 4, 3, 0, 0.25);
+  // an animal's shadow stays on the ground under it: it is how you see a bird is up in the air
+  for (const k of w.critters)
+    if (R.visible(k.x, k.y, 10)) {
+      const r = k.def.radius * (k.state === 'fly' ? 1.5 : 1.15);
+      shadow(k.x + 1 + k.z * 0.25, k.y + 1 + k.z * 0.2, r, r * 0.75, k.h, 0.28 / (1 + k.z / 60));
+    }
   // what is falling out of the sky is seen coming by its shadow, which tightens as it nears
   for (const p of w.props)
     if (p.alive && p.z > 6 && R.visible(p.x, p.y, 12)) {

@@ -1,0 +1,19 @@
+{
+  "id": "prop.ramp",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ramp",
+    "description": "A steel ramp. A car that drives up it at speed is thrown into the air and sails over whatever is low enough.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "solid": false,
+  "pad": {
+    "kind": "jump",
+    "long": 20,
+    "wide": 24,
+    "lift": 140,
+    "min": 60
+  }
+}

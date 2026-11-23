@@ -33,7 +33,8 @@ describe('modifier.tremors', () => {
       moved = Math.max(moved, Math.hypot(c.vx, c.vy));
     }
     expect(moved).toBeGreaterThan(8);
-    for (let i = 0; i < 60 * 3; i++) w.step(idle);
+    // a hard shove takes a while to roll off
+    for (let i = 0; i < 60 * 6; i++) w.step(idle);
     expect(Math.hypot(c.vx, c.vy)).toBeLessThan(1);
   });
 

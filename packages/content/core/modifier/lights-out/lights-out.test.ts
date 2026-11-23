@@ -5,6 +5,9 @@ import { makeWorld, startRace } from '../../../src/testing';
 function pace(modifiers: string[], nose: boolean): number {
   const w = startRace(makeWorld({ rivals: 1, seed: 3, modifiers }));
   const r = w.cars.find((c) => !c.isPlayer)!;
+  // its own pace is what is measured: no boost tiles, no animals in the road
+  w.pads.length = 0;
+  w.critters.length = 0;
   r.has.front = nose;
   let top = 0;
   for (let i = 0; i < 60 * 12; i++) {

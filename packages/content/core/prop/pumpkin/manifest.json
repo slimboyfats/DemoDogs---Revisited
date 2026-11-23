@@ -1,0 +1,15 @@
+{
+  "id": "prop.pumpkin",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pumpkin",
+    "description": "A pumpkin. It bursts.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 2.6,
+  "mass": 0.1,
+  "breaksAt": 40,
+  "launch": 0.5,
+  "points": 5
+}

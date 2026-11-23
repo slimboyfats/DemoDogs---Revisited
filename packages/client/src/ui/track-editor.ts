@@ -98,6 +98,8 @@ function ruleLabel(content: Content, r: unknown): string {
       return 'Fence round the map';
     case 'towers':
       return 'Tower blocks';
+    case 'field':
+      return 'Fields beside the road';
     case 'kerb':
       return 'Things along the kerb';
     default:

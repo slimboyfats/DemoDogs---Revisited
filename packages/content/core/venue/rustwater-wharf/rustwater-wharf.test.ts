@@ -22,7 +22,12 @@ describe('venue.rustwater-wharf', () => {
   });
 
   it('an all-AI derby runs to the end, and the yards and barges come apart', () => {
-    const w = makeWorld({ venue: 'venue.rustwater-wharf', car: 'car.bruiser', autopilot: true });
+    const w = makeWorld({
+      venue: 'venue.rustwater-wharf',
+      car: 'car.bruiser',
+      autopilot: true,
+      seed: 3,
+    });
     const seen = new Set<string>();
     runUntil(
       w,

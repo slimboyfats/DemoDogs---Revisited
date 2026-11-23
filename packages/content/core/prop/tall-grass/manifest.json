@@ -1,0 +1,14 @@
+{
+  "id": "prop.tall-grass",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Long grass",
+    "description": "A tuft of long grass that bends in the wind and lies flat where a car has been.",
+    "since": "core@0.8.0"
+  },
+  "body": "static",
+  "radius": 3,
+  "solid": false,
+  "trample": true,
+  "sway": true
+}

@@ -30,6 +30,7 @@ const DRESSING = new Set<SceneryRule['rule']>([
   'border',
   'towers',
   'kerb',
+  'field',
 ]);
 
 /** A bridge's ramps, height and how many deck pieces a pair of pillars carries (art px). */

@@ -167,6 +167,20 @@ check(
   Math.abs((await track()).items[4].rot - cone.rot - Math.PI / 12) < 1e-6,
   'the turn button did not turn it',
 );
+// track pieces: a boost pad on the road, and a flock of animals that the world brings alive
+await page.selectOption('#editPanel .row2 select', 'prop.boost-pad');
+await tapMap(rx, ry - 200);
+await page.selectOption('#editPanel .row2 select', 'prop.chickens');
+await tapMap(c[0], c[1] - 60);
+await page.waitForTimeout(300);
+const pieces = await page.evaluate(() => {
+  const w = window.__dd.session.world;
+  return { pads: w.pads.length, critters: w.critters.length };
+});
+check(
+  pieces.pads >= 1 && pieces.critters >= 1,
+  `pad and animals not placed: ${JSON.stringify(pieces)}`,
+);
 await shot('7-things');
 
 // ---- pools
@@ -198,11 +212,11 @@ await shot('8b-bridge');
 await bar('ERASE').tap();
 await tapMap(c[0] - 60, c[1] + 40);
 await page.waitForTimeout(300);
-check((await track()).items.length === 4, 'erase did not take the drum away');
+check((await track()).items.length === 6, 'erase did not take the drum away');
 await shot('9-erase');
 await bar('UNDO').tap();
 await page.waitForTimeout(300);
-check((await track()).items.length === 5, 'undo did not bring it back');
+check((await track()).items.length === 7, 'undo did not bring it back');
 
 // ---- setup: name, laps, a rule off
 await bar('SETUP').tap();
@@ -230,7 +244,7 @@ check(
 check(
   saved.format === 'demodogs-track' &&
     JSON.stringify(saved.road) === JSON.stringify(now.road) &&
-    saved.items.length === 5 &&
+    saved.items.length === 7 &&
     saved.pools.length === 2,
   'the file does not hold the track',
 );
@@ -279,7 +293,7 @@ await page.tap('#toMenu');
 await page.tap('#toTracks');
 await page.locator('.trackRow button', { hasText: 'EDIT' }).tap();
 await inEditor();
-check((await track()).items.length === 5, 'the saved track came back different');
+check((await track()).items.length === 7, 'the saved track came back different');
 await bar('TEST DRIVE').tap();
 await page.waitForFunction(
   () => window.__dd.screen === 'game' && !document.body.classList.contains('editing'),

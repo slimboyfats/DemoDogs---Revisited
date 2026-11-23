@@ -1,0 +1,23 @@
+{
+  "id": "prop.cow",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cow",
+    "description": "A cow, or two. It will not be hurried: a car that runs into it stops, and the cow walks off.",
+    "since": "core@0.8.0"
+  },
+  "body": "loose",
+  "radius": 5.2,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 2],
+    "roam": 46,
+    "walk": 4,
+    "run": 30,
+    "scare": 30,
+    "cry": "moo",
+    "mass": 3,
+    "shy": 45,
+    "step": 0.35
+  }
+}
