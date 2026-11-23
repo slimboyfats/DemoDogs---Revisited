@@ -3,6 +3,7 @@ import { grantDefence } from './defence';
 import type { Bot, Car } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
+import { fitMover } from './movers';
 import type { World } from './world';
 import { drop, inSmoke } from './drops';
 import { firePulse } from './shock';
@@ -242,19 +243,21 @@ export function updatePickups(w: World): void {
           break;
         }
       }
-      const label = applyPickup(w, c, got);
+      const label = grant(w, c, got);
       w.emit({ t: 'pickup', car: c.index, x: p.x, y: p.y, label, kind: got.kind });
       break;
     }
   }
 }
 
-/** What a car gets from a pickup of kind `got`; returns the words to float over it. */
-export function applyPickup(w: World, c: Car, got: PickupManifest): string {
+/** Give car `c` what pickup `got` holds; returns the words to float over it. */
+export function grant(w: World, c: Car, got: PickupManifest): string {
+  const defence = grantDefence(w, c, got);
+  if (defence) return defence;
+  const mover = fitMover(w, c, got);
+  if (mover !== null) return mover;
   let label: string;
-  const d = grantDefence(w, c, got);
-  if (d) label = d;
-  else if (got.kind === 'repair') {
+  if (got.kind === 'repair') {
     c.hp = Math.min(100, c.hp + (got.amount ?? 40));
     label = `REPAIR +${got.amount ?? 40}`;
   } else if (got.kind === 'nitro') {

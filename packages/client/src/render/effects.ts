@@ -1094,6 +1094,56 @@ export class Effects {
             else S.pickup();
           }
           break;
+        case 'blade': {
+          const c = w.cars[e.car]!;
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.clang(v);
+          for (let i = 0; i < 6; i++) this.spark(e.x, e.y, 3, 40);
+          // a worn-out blade drops off the nose and tumbles away
+          if (!e.on)
+            this.fling(
+              this.art.prop(e.id),
+              e.x,
+              e.y,
+              2,
+              c.vx * 0.5 + rand(-20, 20),
+              c.vy * 0.5 + rand(-20, 20),
+              rand(50, 90),
+              c.h,
+              5,
+            );
+          break;
+        }
+        case 'hop': {
+          // the springs kick off the ground: a scuff of dust behind the wheels
+          const c = w.cars[e.car]!;
+          for (let i = 0; i < 6; i++) this.puff(e.x, e.y, 1, 'dust', -c.vx * 0.15, -c.vy * 0.15);
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.boing(v);
+          break;
+        }
+        case 'touchdown': {
+          // the car comes down in a ring of dust thrown out along the ground, single cells
+          const c = w.cars[e.car]!;
+          const k = clamp(e.impact / 120, 0.5, 1.4);
+          const n = Math.round(16 * k * this.quality) + 4;
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * TAU + rand(-0.2, 0.2);
+            const sp = rand(25, 55) * k;
+            this.puff(
+              e.x + Math.cos(a) * 7,
+              e.y + Math.sin(a) * 5,
+              0.5,
+              'dust',
+              Math.cos(a) * sp + c.vx * 0.3,
+              Math.sin(a) * sp + c.vy * 0.3,
+            );
+          }
+          const v = this.vol(e.x, e.y);
+          if (v > 0) S.thud(v * k);
+          if (c.isPlayer) this.shake = Math.max(this.shake, 3 * k);
+          break;
+        }
         case 'shot': {
           // a tracer down the line of fire, a flash at the muzzle, sparks where it lands
           const dx = e.tx - e.x;

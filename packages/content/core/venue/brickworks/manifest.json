@@ -146,6 +146,8 @@
     "pickup.cash",
     "pickup.storm-cell",
     "pickup.dome",
-    "pickup.welder"
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs"
   ]
 }

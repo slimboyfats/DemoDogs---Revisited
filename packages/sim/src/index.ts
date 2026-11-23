@@ -20,3 +20,5 @@ export {
   type Spike,
 } from './drops';
 export type { Pulse } from './shock';
+export { fitMover, nose } from './movers';
+export { grant } from './things';

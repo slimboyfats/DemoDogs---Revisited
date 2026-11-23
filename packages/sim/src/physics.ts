@@ -113,6 +113,9 @@ export function makeCar(
     has: { front: true, rear: true, top: true },
     aiSpeed: 1,
     smokeT: 0,
+    blade: null,
+    springs: null,
+    hop: -1,
   };
 }
 

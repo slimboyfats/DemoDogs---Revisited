@@ -100,6 +100,12 @@ export type SimEvent =
   | { t: 'arc'; x: number; y: number; z: number; tx: number; ty: number; tz: number }
   /** A car's engine was cut by a shock for `time` seconds. */
   | { t: 'stall'; car: number; by: number; time: number }
+  /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */
+  | { t: 'blade'; car: number; id: string; on: boolean; x: number; y: number }
+  /** A car's springs threw it up at (x, y) to clear the ground ahead. */
+  | { t: 'hop'; car: number; x: number; y: number }
+  /** A sprung car came down at (x, y); impact is how fast it was falling. */
+  | { t: 'touchdown'; car: number; x: number; y: number; impact: number }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
   | { t: 'score'; car: number; x: number; y: number; points: number; label: string }

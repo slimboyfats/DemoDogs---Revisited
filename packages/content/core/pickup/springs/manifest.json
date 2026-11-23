@@ -1,0 +1,14 @@
+{
+  "id": "pickup.springs",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pogo paws",
+    "description": "Coil springs under the car: two leaps, taken by themselves when a crater or a slick lies just ahead.",
+    "since": "core@0.4.0"
+  },
+  "kind": "springs",
+  "weight": 0.1,
+  "hurtWeight": 0.06,
+  "charges": 2,
+  "lift": 150
+}
