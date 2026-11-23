@@ -16,6 +16,7 @@ import {
 } from './voxels';
 import { HAZE, SOOT, shade, stepParticle, type FxKind, type Particle } from './pixel/particles';
 import { CKind, Cells } from './pixel/cells';
+import { DefenceFx } from './defence-fx';
 import type { Sound } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
@@ -141,13 +142,28 @@ export class Effects {
   msgT = 0;
   private readonly smokeT: number[] = [];
 
+  /** Shield bubbles and field welding. */
+  readonly defence: DefenceFx;
+
   constructor(
-    private readonly w: World,
+    readonly w: World,
     private readonly art: Art,
     private readonly ground: Ground,
     private readonly sound: Sound,
   ) {
     for (const c of w.cars) this.bodies.push(clone(this.carArt(c).body));
+    this.defence = new DefenceFx({
+      w,
+      bodies: this.bodies,
+      changed: this.changed,
+      flashes: this.flashes,
+      freshBody: (c) => this.carArt(c).body,
+      particle: (...a) => this.emit(...a),
+      pop: (x, y) => {
+        const v = this.vol(x, y);
+        if (v > 0) sound.pop(v);
+      },
+    });
     for (const b of w.bots) {
       const wk = createWalker(BOT_RIG);
       place(wk, b.x, b.y, b.h);
@@ -661,6 +677,7 @@ export class Effects {
     const S = this.sound;
     let smashAt = '';
     for (const e of events) {
+      this.defence.handle(e);
       switch (e.t) {
         case 'hit': {
           const c = w.cars[e.car]!;
@@ -1072,7 +1089,7 @@ export class Effects {
           for (let i = 0; i < 8; i++) this.spark(e.x, e.y, 6, 30);
           if (e.car === w.player.index) {
             this.text(e.x, e.y, e.label, '#a6fbff');
-            if (e.kind === 'repair' || e.kind === 'cash') S.repair();
+            if (e.kind === 'repair' || e.kind === 'cash' || e.kind === 'weld') S.repair();
             else if (e.kind === 'nitro') S.nitro();
             else S.pickup();
           }
@@ -1163,6 +1180,7 @@ export class Effects {
   /** Per tick: walk the bots, lay skid marks, puff smoke from damaged cars, age everything. */
   afterStep(): void {
     const w = this.w;
+    this.defence.afterStep();
     for (const b of w.bots) if (b.alive) step(this.walkers[b.index]!, b.x, b.y, b.h, DT);
     // a prop that died this tick (a smashed crate, a barrel going up) bursts into its voxels
     for (const p of w.props) {

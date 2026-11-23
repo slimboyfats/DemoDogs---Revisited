@@ -117,6 +117,13 @@ export interface Car {
   /** Money picked up off the track this race. */
   cash: number;
   invuln: number;
+  /** Shield bubble: armour points it can still soak up, what it started with, seconds left. */
+  shield: number;
+  shieldMax: number;
+  shieldT: number;
+  /** Field welder at work: armour put back per second, seconds left. */
+  weldRate: number;
+  weldT: number;
   fireCd: number;
   hitCd: number;
   scrapeCd: number;
