@@ -45,6 +45,8 @@ export interface DevHooks {
   record(): void;
   /** Extra readouts from the renderer (slices drawn), if it has any. */
   stats(): string;
+  /** Step the overdraw meter (heat maps, then numbers only, then off); the button's new label. */
+  heat(): string;
 }
 
 /**
@@ -110,6 +112,11 @@ export class DevPanel {
     this.carSel.onchange = () => hooks.restart(this.carSel.value);
     root.append(this.carSel);
     btn('REC', 'Record performance; press again to stop and save the log', () => hooks.record());
+    const od = btn(
+      'OVERDRAW',
+      'Fragments per pixel: heat maps of written, solid, covered and particle fragments, then the numbers alone',
+      () => (od.textContent = hooks.heat()),
+    );
     btn('EXIT', 'Back to the menu', () => hooks.exit());
     this.statsEl.className = 'stats';
     root.append(this.statsEl);
