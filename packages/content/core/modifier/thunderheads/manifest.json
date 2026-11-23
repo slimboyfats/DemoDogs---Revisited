@@ -9,7 +9,7 @@
   "kind": "lightning",
   "label": "LIGHTNING",
   "colour": "#f5e663",
-  "every": [3.5, 7],
+  "every": [2.2, 4.5],
   "warn": 0.9,
   "power": 0.6,
   "reach": 46,
