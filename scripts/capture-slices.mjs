@@ -2,7 +2,7 @@
 // packages/client/src/render/slice-fx.ts): tall scenery cut down to show the car behind it (with
 // and without, `cut-on.png` / `cut-off.png`), and things going up slice by slice (`build-N.png`).
 // and the frames of both as they happen (`build/`, `cut/`; `--video` makes an mp4 of each with ffmpeg).
-// Run with `pnpm build && node scripts/capture-slices.mjs [out-dir] [--video]`.
+// Run with `pnpm build && node scripts/capture-slices.mjs [out-dir] [--video] [--only=stills|build|cut]`.
 import { createServer } from 'node:http';
 import { readFile, mkdir, copyFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -31,6 +31,8 @@ await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}/`;
 const args = process.argv.slice(2);
 const video = args.includes('--video');
+// --only=stills, build or cut: just that part
+const only = args.find((a) => a.startsWith('--only='))?.slice(7);
 const out = args.find((a) => !a.startsWith('--')) ?? 'captures/slices';
 await mkdir(out, { recursive: true });
 
@@ -75,18 +77,19 @@ const TALL = [
   ['water-tower', -58, 30],
   ['scrap-tower-tall', 56, 30],
 ];
-for (const [name, query] of [
-  ['cut-off', '&slices=0'],
-  ['cut-on', ''],
-]) {
-  await range(query);
-  await page.evaluate((list) => {
-    for (const [id, dx, dy] of list) window.__dd.put(id, dx, dy);
-  }, TALL);
-  // the builds finish and the cuts slide down
-  await frames(40);
-  await page.screenshot({ path: `${out}/${name}.png` });
-}
+if (!only || only === 'stills')
+  for (const [name, query] of [
+    ['cut-off', '&slices=0'],
+    ['cut-on', ''],
+  ]) {
+    await range(query);
+    await page.evaluate((list) => {
+      for (const [id, dx, dy] of list) window.__dd.put(id, dx, dy);
+    }, TALL);
+    // the builds finish and the cuts slide down
+    await frames(40);
+    await page.screenshot({ path: `${out}/${name}.png` });
+  }
 
 // from here the script moves the slice clock itself, a step a shot, so every run shows the same
 const hold = () =>
@@ -124,46 +127,50 @@ const film = async (name, n, each) => {
     ]);
 };
 
-// 2. the same things going up slice by slice, and a car put back together as after a wreck
-await range();
-await hold();
-await page.evaluate((list) => {
-  const dd = window.__dd;
-  for (const [id, dx, dy] of list) dd.put(id, dx, dy - 70);
-  dd.put('crate', -20, -24);
-  dd.put('oil-drum', 22, -24);
-  dd.tick(0);
-  const P = dd.session.world.player;
-  dd.session.fx.slices.start(P, P.z);
-}, TALL);
-await film('build', 60, () => tick(0.04));
-for (const [i, name] of [
-  [5, 'build-1'],
-  [14, 'build-2'],
-  [28, 'build-3'],
-  [44, 'build-4'],
-])
-  await copyFile(`${out}/build/${String(i).padStart(3, '0')}.png`, `${out}/${name}.png`);
-
-// 3. driving past behind a tower: it sinks to show the car and rises again
-await range();
-await hold();
-await page.evaluate((list) => {
-  const dd = window.__dd;
-  for (const [id, dx, dy] of list) dd.put(id, dx, dy);
-  dd.tick(0);
-  dd.tick(3);
-  const P = dd.session.world.player;
-  dd.home = { x: P.x, y: P.y };
-}, TALL);
-await film('cut', 80, async (i) => {
-  await page.evaluate((x) => {
+if (!only || only === 'build') {
+  // 2. the same things going up slice by slice, and a car put back together as after a wreck
+  await range();
+  await hold();
+  await page.evaluate((list) => {
     const dd = window.__dd;
+    for (const [id, dx, dy] of list) dd.put(id, dx, dy - 70);
+    dd.put('crate', -20, -24);
+    dd.put('oil-drum', 22, -24);
+    dd.tick(0);
     const P = dd.session.world.player;
-    P.x = dd.home.x - 100 + x;
-  }, i * 2.5);
-  await tick(0.04);
-});
+    dd.session.fx.slices.start(P, P.z);
+  }, TALL);
+  await film('build', 60, () => tick(0.04));
+  for (const [i, name] of [
+    [5, 'build-1'],
+    [14, 'build-2'],
+    [28, 'build-3'],
+    [44, 'build-4'],
+  ])
+    await copyFile(`${out}/build/${String(i).padStart(3, '0')}.png`, `${out}/${name}.png`);
+}
+
+if (!only || only === 'cut') {
+  // 3. driving past behind a tower: it sinks to show the car and rises again
+  await range();
+  await hold();
+  await page.evaluate((list) => {
+    const dd = window.__dd;
+    for (const [id, dx, dy] of list) dd.put(id, dx, dy);
+    dd.tick(0);
+    dd.tick(3);
+    const P = dd.session.world.player;
+    dd.home = { x: P.x, y: P.y };
+  }, TALL);
+  await film('cut', 80, async (i) => {
+    await page.evaluate((x) => {
+      const dd = window.__dd;
+      const P = dd.session.world.player;
+      P.x = dd.home.x - 100 + x;
+    }, i * 2.5);
+    await tick(0.04);
+  });
+}
 
 if (errors.length) console.log(`page errors:\n  ${errors.join('\n  ')}`);
 await browser.close();
