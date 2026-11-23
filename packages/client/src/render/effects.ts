@@ -765,7 +765,8 @@ export class Effects {
         [0.96, 0.6],
         [0.92, 1],
       ] as const) {
-        g.globalAlpha = Math.max(m.alpha, 0.8) * alpha;
+        // thin enough that the road still shows through it
+        g.globalAlpha = Math.min(0.72, Math.max(m.alpha, 0.6)) * alpha;
         g.beginPath();
         for (let i = 0; i <= 96; i++) {
           const a = (i / 96) * TAU;
