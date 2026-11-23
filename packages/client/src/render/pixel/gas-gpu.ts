@@ -29,6 +29,10 @@ export const MAX_RINGS = 12;
 export const MAX_GUSTS = 6;
 export const MAX_MOVERS = 8;
 export const MAX_SWIRLS = 4;
+/** Slots to a chunk of the ring (see `until`). */
+const CHUNK = 4096;
+/** Ticks in a row the gas is stepped without a frame being drawn; past that it only ages. */
+const UNSEEN = 4;
 
 const UPDATE_VS = `#version 300 es
 precision highp float;
@@ -36,6 +40,7 @@ layout(location = 0) in vec4 a0; // x y z vx
 layout(location = 1) in vec4 a1; // vy vz age life
 layout(location = 2) in vec4 a2; // th kind rgb seed
 uniform float u_dt;
+uniform float u_aged; // seconds to age by: u_dt, plus any ticks nobody saw
 uniform float u_tick;
 uniform vec2 u_wind;
 uniform int u_nr;
@@ -153,7 +158,7 @@ void main() {
   o2 = a2;
   float life = a1.w;
   if (a1.z >= life) return; // dead: left as it is until its slot is used again
-  float age = a1.z + u_dt;
+  float age = a1.z + u_aged;
   float t = age / life;
   int k = int(a2.y + 0.5);
   vec3 p = a0.xyz;
@@ -342,6 +347,7 @@ void main() { o = v_color; }`;
 
 const UPDATE_U = [
   'u_dt',
+  'u_aged',
   'u_tick',
   'u_wind',
   'u_nr',
@@ -403,8 +409,22 @@ export class GasGpu {
   /** Which buffer holds the current state. */
   private cur = 0;
   private head = 0;
-  /** Slots ever used: until the ring first wraps, only these are stepped and drawn. */
-  private used = 0;
+  /**
+   * The ring in chunks of `CHUNK` slots, and the tick each chunk's last cell burns out at: only
+   * the chunks with something alive in them are stepped and drawn, so a quiet race costs a few
+   * thousand cells and not the whole buffer.
+   */
+  private readonly until: Float64Array;
+  /** The live chunks as runs of slots (first, count pairs), worked out once a tick. */
+  private readonly runs: number[] = [];
+  private now = 0;
+  /**
+   * Ticks stepped since a frame was last drawn, and the time owed to the cells for the ticks
+   * skipped: gas nobody sees is not moved (a race run fast-forward, a tab in the background),
+   * it only grows older, all at once, on the next tick that is seen.
+   */
+  private unseen = 0;
+  private owed = 0;
   /** New cells waiting to go up, and the slot the first of them goes to. */
   private readonly stage = new Float32Array(8192 * F);
   private staged = 0;
@@ -451,6 +471,7 @@ export class GasGpu {
     gl.bindVertexArray(null);
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     this.tf = gl.createTransformFeedback();
+    this.until = new Float64Array(Math.ceil(cap / CHUNK));
   }
 
   /** Every slot dead: age 1, life 0. */
@@ -498,8 +519,11 @@ export class GasGpu {
     S[o + 10] = rgb;
     S[o + 11] = (th * 977 + this.tick) % 1024;
     this.staged++;
+    // two ticks to spare, so both buffers hold the chunk's cells dead before it is left alone
+    const c = (this.head / CHUNK) | 0;
+    const end = this.now + Math.ceil(life * 60) + 3;
+    if (end > this.until[c]!) this.until[c] = end;
     this.head = (this.head + 1) % this.cap;
-    this.used = this.head === 0 ? this.cap : Math.max(this.used, this.head);
   }
 
   /** A whirlpool this tick (see `Cells.swirl`). */
@@ -531,8 +555,21 @@ export class GasGpu {
       if (this.spawned.length > 12) this.spawned.shift();
     }
     this.tick++;
+    this.now++;
     this.upload();
-    if (this.used === 0) {
+    const runs = this.runs;
+    runs.length = 0;
+    for (let c = 0; c < this.until.length; c++) {
+      if (this.until[c]! <= this.now) continue;
+      const first = c * CHUNK;
+      const n = Math.min(CHUNK, this.cap - first);
+      const last = runs.length - 2;
+      if (last >= 0 && runs[last]! + runs[last + 1]! === first) runs[last + 1]! += n;
+      else runs.push(first, n);
+    }
+    if (runs.length === 0 || ++this.unseen > UNSEEN) {
+      if (runs.length) this.owed += dt;
+      else this.owed = 0;
       this.swirls.length = 0;
       return;
     }
@@ -540,6 +577,8 @@ export class GasGpu {
     const u = this.uu;
     gl.useProgram(this.upd);
     gl.uniform1f(u.u_dt, dt);
+    gl.uniform1f(u.u_aged, dt + this.owed);
+    this.owed = 0;
     gl.uniform1f(u.u_tick, this.tick % 8192);
     gl.uniform2f(u.u_wind, WIND[0], WIND[1]);
     const nr = Math.min(MAX_RINGS, rings.length);
@@ -578,11 +617,21 @@ export class GasGpu {
     const next = 1 - this.cur;
     gl.bindVertexArray(this.vaos[this.cur]!);
     gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, this.tf);
-    gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, this.bufs[next]!);
     gl.enable(gl.RASTERIZER_DISCARD);
-    gl.beginTransformFeedback(gl.POINTS);
-    gl.drawArrays(gl.POINTS, 0, this.used);
-    gl.endTransformFeedback();
+    for (let i = 0; i < runs.length; i += 2) {
+      const first = runs[i]!;
+      const n = runs[i + 1]!;
+      gl.bindBufferRange(
+        gl.TRANSFORM_FEEDBACK_BUFFER,
+        0,
+        this.bufs[next]!,
+        first * F * 4,
+        n * F * 4,
+      );
+      gl.beginTransformFeedback(gl.POINTS);
+      gl.drawArrays(gl.POINTS, first, n);
+      gl.endTransformFeedback();
+    }
     gl.disable(gl.RASTERIZER_DISCARD);
     gl.bindBufferBase(gl.TRANSFORM_FEEDBACK_BUFFER, 0, null);
     gl.bindTransformFeedback(gl.TRANSFORM_FEEDBACK, null);
@@ -596,7 +645,9 @@ export class GasGpu {
    */
   draw(v: GasView, lights: Lights, pass: 0 | 1 | 2): void {
     this.upload();
-    if (this.used === 0) return;
+    this.unseen = 0;
+    const runs = this.runs;
+    if (runs.length === 0) return;
     const gl = this.gl;
     const u = this.du;
     gl.useProgram(this.drw);
@@ -614,7 +665,7 @@ export class GasGpu {
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);
     gl.bindVertexArray(this.vaos[this.cur]!);
-    gl.drawArrays(gl.POINTS, 0, this.used);
+    for (let i = 0; i < runs.length; i += 2) gl.drawArrays(gl.POINTS, runs[i]!, runs[i + 1]!);
     gl.bindVertexArray(null);
   }
 
@@ -628,7 +679,9 @@ export class GasGpu {
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
     this.staged = 0;
     this.head = 0;
-    this.used = 0;
+    this.until.fill(0);
+    this.owed = 0;
+    this.runs.length = 0;
     this.spawned = [];
     this.swirls.length = 0;
   }

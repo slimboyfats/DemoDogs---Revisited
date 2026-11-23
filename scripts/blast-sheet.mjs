@@ -70,7 +70,7 @@ const at = await page.evaluate((power) => {
 const frames = [];
 let done = 0;
 for (const t of TICKS) {
-  const cam = await page.evaluate((n) => {
+  const cam = await page.evaluate(async (n) => {
     const s = window.__dd.session;
     const P = s.world.player;
     for (let i = 0; i < n; i++) {
@@ -78,6 +78,8 @@ for (const t of TICKS) {
       P.vx = P.vy = P.vf = 0;
       s.fx.quality = window.__q;
       s.step();
+      // a frame between ticks: gas that is never drawn is not moved (see GasGpu)
+      await new Promise((r) => requestAnimationFrame(r));
     }
     return { x: s.cam.x, y: s.cam.y, live: s.fx.cells.live };
   }, t - done);

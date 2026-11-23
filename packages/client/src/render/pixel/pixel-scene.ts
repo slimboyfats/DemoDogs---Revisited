@@ -288,7 +288,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], Math.max(1, S / DETAIL), this.ys);
+    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {

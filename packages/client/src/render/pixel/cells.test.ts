@@ -55,6 +55,10 @@ describe('cells', () => {
     const C = new Cells(8, rng());
     C.ring({ x: 0, y: 0, z: 10, vz: 0, R: 10, r: 6, spin: 50, grow: 0, life: 2 });
     const air: [number, number, number] = [0, 0, 0];
+    // it takes a moment to wind up: at first the air is still
+    C.air(2, 0, 10, air);
+    expect(air[2]).toBe(0);
+    for (let i = 0; i < 24; i++) C.step(1 / 60);
     C.air(2, 0, 10, air);
     expect(air[2]).toBeGreaterThan(5);
     C.air(10, 0, 16, air);
@@ -63,6 +67,23 @@ describe('cells', () => {
     expect(air[2]).toBeLessThan(-5);
     C.air(200, 0, 10, air);
     expect(air[2]).toBe(0);
+  });
+
+  it('a gust shoves the air outward from its middle and dies away', () => {
+    const C = new Cells(8, rng());
+    C.gust({ x: 0, y: 0, z: 0, R: 20, v: 100 });
+    const air: [number, number, number] = [0, 0, 0];
+    C.air(20, 0, 0, air);
+    expect(air[0]).toBeGreaterThan(50);
+    expect(air[1]).toBeCloseTo(0);
+    C.air(-20, 0, 0, air);
+    expect(air[0]).toBeLessThan(-50);
+    C.air(0, 0, 20, air);
+    expect(air[2]).toBeGreaterThan(50);
+    C.air(200, 0, 0, air);
+    expect(air[0]).toBe(0);
+    for (let i = 0; i < 90; i++) C.step(1 / 60);
+    expect(C.gusts.length).toBe(0);
   });
 
   it('smoke is carried up by the air and never goes under the ground', () => {
