@@ -93,6 +93,10 @@ export interface FloatText {
 
 /** The most loose voxels in the air at once. */
 const MAX_VOXELS = 4000;
+/** Ticks a blast goes on letting go soot into its rolling air (mudders' SMOKE_FEED). */
+const SOOT_FEED = 70;
+/** Ticks a blast lets go its burning gas over (mudders' FIRE_FEED). */
+const FIRE_FEED = 10;
 /** The most pieces of scenery that keep their own damaged copy of their art. */
 const MAX_SCARRED = 260;
 /** A strip this many texels or more is never copied to be scarred (deck pieces): the atlas has no room. */
@@ -123,6 +127,14 @@ const BOT_RIG = {
  * words, screen shake, each car's dented body, the bots' walk rigs and the big centre message.
  * It reads the sim's events after every tick and plays them as sights and sounds.
  */
+/** Screen cells per gas cell at an effects quality: four at full, down to one on a slow device. */
+export const splitFor = (quality: number): number =>
+  quality > 0.8 ? 4 : quality > 0.6 ? 3 : quality > 0.4 ? 2 : 1;
+const withSplit = (c: Cells, quality: number): Cells => {
+  c.split = splitFor(quality);
+  return c;
+};
+
 export class Effects {
   readonly fx: Particle[] = [];
   readonly debris: Debris[] = [];
@@ -160,20 +172,33 @@ export class Effects {
   readonly scarred = new Map<StaticProp, Strip>();
   private readonly tones = new Map<string, number[]>();
   /** Single cells of fire and smoke, and the rolling air that carries them. */
-  readonly cells = new Cells(14000);
-  /** How much of the full effect to draw: 1 everything, less on a slow device. */
-  quality = 1;
-  /** Blasts still letting go of their burning gas. */
-  private readonly burning: {
+  readonly cells = withSplit(new Cells(24000), 1);
+  private q = 1;
+  /**
+   * How much of the full effect to draw: 1 everything, less on a slow device. Gas cells are let
+   * go `split` screen cells at a time (finer grain), fewer as the quality drops.
+   */
+  get quality(): number {
+    return this.q;
+  }
+  set quality(v: number) {
+    this.q = v;
+    this.cells.split = splitFor(v);
+  }
+  /** Blasts still letting go of their burning gas and soot. */
+  readonly blasts: {
     x: number;
     y: number;
     z: number;
     r: number;
+    /** Fire cells still to let go, over `ticks` more ticks. */
     left: number;
     ticks: number;
-    /** Ticks it goes on smoking into the turning air after the fire. */
-    smoke: number;
     high: boolean;
+    /** Ticks since it went off. */
+    age: number;
+    /** The shades of its soot. */
+    tones: readonly number[];
   }[] = [];
   /** Fires still burning where something blew up. */
   readonly fires: Fire[] = [];
@@ -275,20 +300,26 @@ export class Effects {
     );
   }
 
-  /** A thin stippled puff: tyre smoke, or dust off the dirt. */
+  /**
+   * A thin puff of single cells: tyre smoke, or dust off the dirt. The air carries each cell on
+   * its own, so a puff frays out cell by cell instead of fading as one blob.
+   */
   puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
-    this.emit(
-      kind,
-      x + rand(-2, 2),
-      y + rand(-2, 2),
-      z,
-      vx + rand(-8, 8),
-      vy + rand(-8, 8),
-      rand(8, 20),
-      rand(0.8, 1.6),
-      rand(3, 5.5),
-      kind === 'smoke' ? 0x8a8680 : 0x9a8460,
-    );
+    const rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460;
+    const dust = kind === 'dust';
+    const n = Math.max(1, Math.round(4 * this.quality));
+    for (let i = 0; i < n; i++)
+      this.cells.add(
+        CKind.Wisp,
+        x + rand(-2.5, 2.5),
+        y + rand(-2.5, 2.5),
+        z + rand(0, 1.5),
+        vx + rand(-8, 8),
+        vy + rand(-8, 8),
+        dust ? rand(-4, 4) : rand(4, 12),
+        dust ? rand(0.5, 1.1) : rand(0.8, 1.6),
+        rgb,
+      );
   }
 
   /**
@@ -313,7 +344,7 @@ export class Effects {
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
-    const n = Math.max(1, Math.round(size * size * 0.3 * this.quality));
+    const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
     const r = size * 0.5;
     for (let i = 0; i < n; i++)
       this.cells.add(
@@ -334,37 +365,57 @@ export class Effects {
   }
 
   /**
-   * An explosion, mudders' way. Nothing is a drawn shape: the blast lets go a packed ball of
-   * white-hot cells in every direction the ground allows, sets a ring of air rolling (up through
-   * the middle, out over the top, back in along the ground) and then feeds burning gas into that
-   * roll for a quarter of a second, so the fire curls over into a cap and burns out into soot
-   * that is still turning. Round it: firework stars, a ring of sparks racing out with the shock,
-   * dust along the ground and a patch left burning.
+   * An explosion, built the way mudders builds its blast (its fireball2 and feedFires). Nothing
+   * is a drawn shape. The blast lets go a packed ball of white-hot cells and shoves the air
+   * outward, so the ball flies out fat and round. Then two rolls of air wind up: one lying on the
+   * ground that throws a sheet of fire out along it and up the outside, and a cap riding the hot
+   * jet that takes fire up the middle and curls it out over the top. Burning gas is fed into both
+   * for a sixth of a second, and soot the colour of the ground's dust for a second more, all
+   * through where the fire was, so the ball goes dark from inside and hangs, still turning.
+   * Round it: firework stars, a ring of sparks racing out with the shock, and a patch left burning.
    */
   fireball(x: number, y: number, power: number, z = 0): void {
     const high = z > 12;
     const r = 20 * Math.sqrt(power);
-    const q = this.quality;
     const C = this.cells;
+    // without the GPU stepping the gas, the same blast in a third of the cells
+    const den = this.density();
+    const turn = (0.9 + r * 0.03) * 22;
+    C.gust({ x, y, z: z + 1, R: r * 1.1, v: (0.6 + r * 0.06) * 50 });
+    const capR = Math.max(5, r * 0.45);
     C.ring({
       x,
       y,
-      z: z + r * 0.3,
-      vz: high ? 8 : 24 + r * 0.9,
-      R: r * 0.5,
-      r: r * 0.55,
-      spin: 34 + r * 1.1,
-      grow: r * 0.45,
-      life: 2.2,
+      z: z + r * 0.75,
+      vz: high ? 6 : 15,
+      R: capR * 1.25,
+      r: capR,
+      spin: turn,
+      grow: capR * 0.5,
+      life: 2.3,
     });
-    // the bang: it fills the blast radius in a few ticks and burns out fast
-    const nBang = Math.min(3000, Math.round(r * r * 3.6 * q));
-    const vMax = (0.5 + r * 0.13) * 38;
+    if (!high) {
+      const roll = Math.max(5, r * 0.5);
+      C.ring({
+        x,
+        y,
+        z: roll * 0.85,
+        vz: 0,
+        R: r * 0.3 + roll * 0.6,
+        r: roll,
+        spin: -turn * 0.6,
+        grow: roll * 0.9,
+        life: 2,
+      });
+    }
+    // the bang: a packed ball that fills the blast radius in a few ticks and burns out fast
+    const nBang = Math.min(4000, Math.round(r * r * 7 * den));
+    const vMax = r * 2.9;
     for (let i = 0; i < nBang; i++) {
       const a = rand(0, TAU);
       const u = high ? rand(-1, 1) : rand(0, 1);
       const flat = Math.sqrt(1 - u * u);
-      const sp = Math.sqrt(Math.random()) * vMax;
+      const sp = Math.cbrt(Math.random()) * vMax;
       const d = rand(0, r * 0.2);
       C.add(
         CKind.Bang,
@@ -373,25 +424,26 @@ export class Effects {
         z + 1 + Math.abs(u) * d,
         Math.cos(a) * flat * sp,
         Math.sin(a) * flat * sp,
-        u * sp * 0.75,
+        u * sp * 0.8,
         rand(0.23, 0.73),
       );
     }
-    this.burning.push({
+    this.blasts.push({
       x,
       y,
       z,
       r,
-      left: Math.min(4500, Math.round(r * r * 6 * q)),
-      ticks: 22,
-      smoke: 50,
+      left: Math.min(6000, Math.round(r * r * 9 * den)),
+      ticks: FIRE_FEED,
       high,
+      age: 0,
+      tones: high ? SMOKE_TONES : this.dustTones(x, y),
     });
     // the shock front: a ring of sparks racing out along the ground
     if (!high)
       for (let i = 0; i < 40; i++) {
         const a = (i / 40) * TAU;
-        const v = vMax * 1.5;
+        const v = vMax * 3;
         this.emit('spark', x, y, 2, Math.cos(a) * v, Math.sin(a) * v, 20, 0.22, 1, 0xfff6c0);
       }
     for (let i = 0; i < 20 * power; i++) {
@@ -410,23 +462,8 @@ export class Effects {
         Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
       );
     }
-    // a burst high in the air raises no dust and leaves no fire on the ground under it
+    // a burst high in the air leaves no fire on the ground under it
     if (high) return;
-    for (let i = 0; i < 90 * q; i++) {
-      const a = rand(0, TAU);
-      const v = rand(40, 130) * Math.sqrt(power);
-      C.add(
-        CKind.Wisp,
-        x,
-        y,
-        rand(0, 2),
-        Math.cos(a) * v,
-        Math.sin(a) * v,
-        4,
-        rand(0.5, 1.1),
-        0x9a8a70,
-      );
-    }
     this.fires.push({
       x,
       y,
@@ -436,56 +473,105 @@ export class Effects {
     });
   }
 
-  /** Let go this tick's share of each blast's burning gas: a heart over the impact, and the roll. */
+  /**
+   * How thick a blast is let go: all of it with the GPU stepping the gas and room to spare, a
+   * third without, and thinner as the air fills up (a chain of blasts shares the cells).
+   */
+  private density(): number {
+    const g = this.cells.gpu;
+    return this.quality * (g ? Math.max(0.25, 1 - (g.live / g.cap) * 1.2) : 0.3);
+  }
+
+  /**
+   * What a blast's smoke is made of: mostly the dust of the ground it went off on, so a blast on
+   * grass smokes olive, one on dirt tan and one on the road grey (mudders' soot). Four shades.
+   */
+  private dustTones(x: number, y: number): readonly number[] {
+    const cv = this.ground.cv;
+    const x0 = Math.max(0, Math.min(cv.width - 4, Math.round(x) - 2));
+    const y0 = Math.max(0, Math.min(cv.height - 4, Math.round(y) - 2));
+    let d: Uint8ClampedArray;
+    try {
+      d = this.ground.g.getImageData(x0, y0, 4, 4).data;
+    } catch {
+      return SMOKE_TONES;
+    }
+    let R = 0;
+    let G = 0;
+    let B = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      R += d[i]!;
+      G += d[i + 1]!;
+      B += d[i + 2]!;
+    }
+    const n = d.length / 4;
+    const base = [(R / n + 0x62) / 2, (G / n + 0x5c) / 2, (B / n + 0x58) / 2];
+    return [0.6, 0.75, 0.9, 1.05].map(
+      (k) =>
+        (Math.min(255, Math.round(base[0]! * k)) << 16) |
+        (Math.min(255, Math.round(base[1]! * k)) << 8) |
+        Math.min(255, Math.round(base[2]! * k)),
+    );
+  }
+
+  /** Let go this tick's share of each blast's burning gas and soot into its turning air. */
   private feed(): void {
     const C = this.cells;
-    for (let i = this.burning.length - 1; i >= 0; i--) {
-      const b = this.burning[i]!;
+    const den = this.density();
+    for (let i = this.blasts.length - 1; i >= 0; i--) {
+      const b = this.blasts[i]!;
       const r = b.r;
-      if (b.ticks <= 0) {
-        // the fire is out: the crater goes on smoking into the air that is still turning
-        if (--b.smoke <= 0) this.burning.splice(i, 1);
-        for (let k = 0; k < r * 1.2 * this.quality; k++) {
+      if (++b.age >= SOOT_FEED) {
+        this.blasts.splice(i, 1);
+        continue;
+      }
+      // soot: the ball goes dark as it burns out, so it is let go all through where the fire
+      // was, thick at first, and it is caught by the same turning air
+      if (b.age >= 6) {
+        const k = 1 - b.age / SOOT_FEED;
+        const puffs = Math.min(700, Math.round(r * r * 1.2 * den * k * k));
+        const rise = (0.55 + r * 0.03) * 45;
+        for (let p = 0; p < puffs; p++) {
           const a = rand(0, TAU);
-          const d = Math.sqrt(Math.random()) * r * 0.5;
+          const d = Math.sqrt(Math.random()) * r * 0.8;
           C.add(
             CKind.Wisp,
             b.x + Math.cos(a) * d,
             b.y + Math.sin(a) * d,
-            b.z + rand(0, r * 0.4),
-            rand(-6, 6),
-            rand(-6, 6),
-            rand(10, 40),
-            rand(1.4, 3.2),
-            SMOKE_TONES[(Math.random() * 4) | 0]!,
+            b.z + rand(0, r * 0.7) + b.age * 0.25,
+            Math.cos(a) * 15,
+            Math.sin(a) * 15,
+            (b.high ? rand(-0.2, 0.2) : rand(0.2, 0.6)) * rise,
+            rand(2.6, 6.2),
+            b.tones[(Math.random() * 4) | 0]!,
           );
         }
-        continue;
       }
+      if (b.ticks <= 0) continue;
       const n = Math.ceil(b.left / b.ticks);
       b.left -= n;
       b.ticks--;
-      const up = (0.55 + r * 0.03) * 45;
-      const heart = Math.round(n * 0.45);
+      const heart = b.high ? n : Math.round(n * 0.7);
+      const out = r / 20;
       for (let k = 0; k < n; k++) {
         const a = rand(0, TAU);
         if (k < heart) {
-          // packed over the impact and thrown up: the air rolls it as it climbs
-          const d = Math.sqrt(Math.random()) * r * 0.42;
+          // packed over the impact and thrown up into the cap
+          const d = Math.sqrt(Math.random()) * r * 0.75;
           C.add(
             CKind.Fire,
             b.x + Math.cos(a) * d,
             b.y + Math.sin(a) * d,
-            b.z + rand(0, r * 0.5),
-            rand(-10, 10),
-            rand(-10, 10),
-            (b.high ? rand(-0.5, 0.5) : rand(0.4, 1)) * up,
-            rand(1.3, 3),
+            b.z + rand(0, r * 0.8) * (1 - (d / r) * 0.8),
+            Math.cos(a) * d * 1.6,
+            Math.sin(a) * d * 1.6,
+            b.high ? rand(-20, 20) : rand(20, 47) * out,
+            rand(1.17, 3.3),
           );
         } else {
-          // thrown out along the ground into the underside of the roll
+          // a sheet thrown out along the ground, into the underside of the ground roll
           const d = r * rand(0.25, 0.6);
-          const v = rand(0.5, 1) * r * 1.5;
+          const v = rand(30, 75) * out;
           C.add(
             CKind.Fire,
             b.x + Math.cos(a) * d,
@@ -493,8 +579,8 @@ export class Effects {
             b.z + rand(0, 3),
             Math.cos(a) * v,
             Math.sin(a) * v,
-            rand(0, 12),
-            rand(1.2, 2.6),
+            rand(0, 10),
+            rand(1.17, 3.3),
           );
         }
       }
@@ -1075,20 +1161,21 @@ export class Effects {
                 }
               }
           });
-          // clods of earth thrown out: they land and stay as specks, and dust hangs over the pit
+          // clods of earth thrown out, most of them grit a third of an art px across: they land
+          // and stay as specks, and dust hangs over the pit
           const clods: Chip[] = [];
-          for (let i = 0; i < r * 5; i++) {
+          for (let i = 0; i < r * 10; i++) {
             const a = rand(0, TAU);
             const d = rand(0.2, 1) * r;
             clods.push({
               x: Math.cos(a) * d,
               y: Math.sin(a) * d,
               z: rand(0, 2),
-              s: Math.random() < 0.3 ? 1 : 0.5,
+              s: Math.random() < 0.12 ? 1 : Math.random() < 0.4 ? 2 / 3 : 1 / 3,
               rgb: shade(dirt, rand(0.6, 1.2)),
             });
           }
-          this.burst(clods, 90, {
+          this.burst(clods, 160, {
             x,
             y,
             h: 0,
@@ -1664,6 +1751,10 @@ export class Effects {
     armsTick(this, w, this.sound);
     this.feed();
     feedClouds(this, w);
+    // the cars drag the air they drive through: fire and smoke near a fast car swirl in its wake
+    const M = this.cells.movers;
+    M.length = 0;
+    for (const c of w.cars) if (c.vx * c.vx + c.vy * c.vy > 625) M.push(c.x, c.y, c.z, c.vx, c.vy);
     this.cells.step(DT);
     this.shock.step(DT);
     howlTick(this, w);

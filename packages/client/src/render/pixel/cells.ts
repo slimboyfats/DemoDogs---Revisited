@@ -1,5 +1,6 @@
 import { Shape } from './batch';
 import { shade, WIND, type Put } from './particles';
+import type { GasGpu } from './gas-gpu';
 
 /**
  * Fire and smoke as mudders draws them: nothing is a drawn shape. A blast lets go thousands of
@@ -52,6 +53,19 @@ export interface Ring {
   max: number;
 }
 
+/**
+ * A blast's shove: for a moment the air goes outward from a point, hardest about `R` away and
+ * falling off beyond, at up to `v` art px a second. It dies away in a fraction of a second; what
+ * it threw out keeps going on its own.
+ */
+export interface Gust {
+  x: number;
+  y: number;
+  z: number;
+  R: number;
+  v: number;
+}
+
 const rgbOf = (r: number, g: number, b: number): number =>
   (Math.round(r * 255) << 16) | (Math.round(g * 255) << 8) | Math.round(b * 255);
 
@@ -85,12 +99,15 @@ export const BANG_RAMP: readonly number[] = Array.from({ length: 9 }, (_, i) => 
 /** A fire cell's colour in 12 hard steps: the fire ramp in the first third, then soot paling. */
 export const FIRE_RAMP: readonly number[] = Array.from({ length: 13 }, (_, i) => {
   const x = i / 12;
-  if (x >= 0.3) return rgbOf(...ramp3(SOOT, GREY, PALE, (x - 0.3) / 0.7));
-  const f = x / 0.3;
+  if (x >= 0.42) return rgbOf(...ramp3(SOOT, GREY, PALE, (x - 0.42) / 0.58));
+  const f = x / 0.42;
   return rgbOf(
     ...(f < 0.5 ? ramp3(WHITE, YELLOW, ORANGE, f * 2) : ramp3(ORANGE, RED, SOOT, f * 2 - 1)),
   );
 });
+
+/** A cheap e^-x for x >= 0, close enough for the shape of a gust. */
+const fall = (x: number): number => 1 / (1 + x + 0.5 * x * x);
 
 /** Time in `n` hard steps, each cell on its own clock (`th` is the cell's own offset, 0 to 1). */
 const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.floor(t * n + th) / n);
@@ -98,8 +115,14 @@ const stepT = (t: number, th: number, n: number): number => Math.min(1, Math.flo
 export class Cells {
   n = 0;
   readonly rings: Ring[] = [];
+  readonly gusts: Gust[] = [];
   /** Leaves that came to rest this tick, as x, y, colour triples; whoever paints them empties it. */
   readonly landed: number[] = [];
+  /**
+   * What moves through the air this tick and drags it along: x, y, z, vx, vy per mover (the
+   * cars), set by whoever owns the cells before `step`. See `stir`.
+   */
+  readonly movers: number[] = [];
   private readonly x: Float32Array;
   private readonly y: Float32Array;
   private readonly z: Float32Array;
@@ -130,7 +153,25 @@ export class Cells {
     this.kind = new Uint8Array(cap);
   }
 
-  /** Let go one cell. When full, one of the cells already burning is replaced. */
+  /**
+   * How many screen cells each gas cell let go becomes (fire, bang, smoke, fog; never leaves).
+   * The cells are drawn one screen cell each, finer than an art pixel, so a blast is as many
+   * more of them, each a little apart and on its own clock: the same cloud in finer grain.
+   */
+  split = 1;
+
+  /**
+   * Where gas cells go when the renderer can step them on the GPU (see `GasGpu`): then only
+   * leaves are kept here, and `step` hands the GPU the air (rings, cars, whirlpools) each tick.
+   */
+  gpu: GasGpu | null = null;
+
+  /** Cells alive: here, and about how many on the GPU. */
+  get live(): number {
+    return this.n + (this.gpu?.live ?? 0);
+  }
+
+  /** Let go one cell (`split` of them for gas). When full, one of the cells already burning is replaced. */
   add(
     kind: CKind,
     x: number,
@@ -142,6 +183,40 @@ export class Cells {
     life: number,
     rgb = 0,
   ): void {
+    const n = kind === CKind.Leaf ? 1 : this.split;
+    this.put(kind, x, y, z, vx, vy, vz, life, rgb);
+    const r = this.rand;
+    for (let k = 1; k < n; k++) {
+      const f = 0.85 + r() * 0.3;
+      this.put(
+        kind,
+        x + (r() - 0.5) * 0.9,
+        y + (r() - 0.5) * 0.9,
+        z + (r() - 0.5) * 0.9,
+        vx * f,
+        vy * f,
+        vz * f,
+        life * (0.9 + r() * 0.2),
+        rgb,
+      );
+    }
+  }
+
+  private put(
+    kind: CKind,
+    x: number,
+    y: number,
+    z: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    life: number,
+    rgb: number,
+  ): void {
+    if (this.gpu && kind !== CKind.Leaf) {
+      this.gpu.add(kind, x, y, z, vx, vy, vz, life, this.rand(), rgb);
+      return;
+    }
     let i = this.n;
     if (i >= this.cap) {
       i = this.next;
@@ -166,6 +241,7 @@ export class Cells {
    * fire, smoke and leaves alike, whatever their own air is doing.
    */
   swirl(x: number, y: number, R: number, k: number, dt: number): void {
+    this.gpu?.swirl(x, y, R, k * dt);
     for (let i = 0; i < this.n; i++) {
       const dx = x - this.x[i]!;
       const dy = y - this.y[i]!;
@@ -184,6 +260,12 @@ export class Cells {
     this.rings.push({ ...r, max: r.life });
   }
 
+  /** Shove the air outward from a point (a blast). */
+  gust(g: Gust): void {
+    if (this.gusts.length >= 6) this.gusts.shift();
+    this.gusts.push({ ...g });
+  }
+
   count(kind: CKind): number {
     let c = 0;
     for (let i = 0; i < this.n; i++) if (this.kind[i] === kind) c++;
@@ -195,6 +277,18 @@ export class Cells {
     let ax = 0;
     let ay = 0;
     let az = 0;
+    for (const g of this.gusts) {
+      const dx = px - g.x;
+      const dy = py - g.y;
+      const dz = pz - g.z;
+      const len = Math.hypot(dx, dy, dz);
+      const q = len / g.R;
+      if (q > 4 || len < 0.01) continue;
+      const s = (g.v * q * 1.9) / (1 + q * q * q) / len;
+      ax += dx * s;
+      ay += dy * s;
+      az += dz * s;
+    }
     for (const g of this.rings) {
       const dx = px - g.x;
       const dy = py - g.y;
@@ -207,18 +301,105 @@ export class Cells {
       const q = d / g.r;
       // fastest at the roll's own radius, falling off inside and outside it
       const fall = 2 / (1 + q * q);
-      const s = (g.spin * q * fall * g.life) / g.max / d;
+      const s = (g.spin * q * fall * ringStrength(g)) / d;
       const out2 = s * dh;
       if (rho > 0.01) {
-        ax += (out2 * dx) / rho;
-        ay += (out2 * dy) / rho;
+        // nothing crosses the axis: the pull inward dies away towards it
+        const k = Math.min(1, rho / (g.R * 0.7)) / rho;
+        ax += out2 * dx * k;
+        ay += out2 * dy * k;
       }
       // the whole roll is climbing: what is in it climbs with it
-      az += -s * dr + g.vz * fall * 0.5;
+      az += -s * dr + g.vz * fall * 0.35 * ringStrength(g);
     }
     out[0] = ax;
     out[1] = ay;
     out[2] = az;
+  }
+
+  /**
+   * The air a moving car stirs at a point, added to `out`: it drags the air behind it along
+   * (the slipstream), rolls it into two whirls turning opposite ways off its back corners (the
+   * wake), and shoves it aside at the nose. The faster the car, the wider and harder. Only near
+   * the ground: smoke high in a column is above it.
+   */
+  stir(px: number, py: number, pz: number, out: [number, number, number]): void {
+    if (this.preparedFor !== this.movers.length) this.prepare();
+    const P = this.prep;
+    for (let m = 0; m < this.nPrep; m += 7) {
+      const R = P[m + 6]!;
+      const reach = R * 4;
+      const dx = px - P[m]!;
+      if (dx > reach || dx < -reach) continue;
+      const dy = py - P[m + 1]!;
+      if (dy > reach || dy < -reach) continue;
+      const hz = pz - P[m + 2]!;
+      if (hz > R * 2) continue;
+      const ux = P[m + 3]!;
+      const uy = P[m + 4]!;
+      const sp = P[m + 5]!;
+      const along = dx * ux + dy * uy;
+      if (along > R * 1.5 || along < -reach) continue;
+      const side = -dx * uy + dy * ux;
+      const RR = R * R;
+      const low = fall(Math.max(0, hz) / (R * 0.8));
+      let fa = 0;
+      let fs = 0;
+      if (along < 0) {
+        // slipstream: pulled along behind, most in the car's own lane
+        const lane = fall((side * side) / (RR * 0.6)) * fall(-along / (R * 2.2));
+        fa += sp * 0.75 * lane;
+        // the wake: a whirl off each back corner, turning opposite ways, drifting back; each
+        // turns fastest at its rim (about 0.6 R out) and is still at its eye
+        const ca = along + R * 0.9;
+        const r2 = RR * 0.35;
+        for (let k = -1; k <= 1; k += 2) {
+          const cs = side - k * R * 0.45;
+          const t = (sp * 0.9 * k * R * 0.6) / (r2 + ca * ca + cs * cs);
+          fa -= cs * t;
+          fs += ca * t;
+        }
+      } else {
+        // the bow: shoved aside and forward off the nose
+        const bow = fall(along / (R * 0.6)) * fall((side * side) / RR);
+        fs += (side < 0 ? -1 : 1) * sp * 0.6 * bow;
+        fa += sp * 0.3 * bow;
+      }
+      fa *= low;
+      fs *= low;
+      out[0] += fa * ux - fs * uy;
+      out[1] += fa * uy + fs * ux;
+      // a fast car lifts what it passes through a little
+      out[2] += (fs < 0 ? -fs : fs) * 0.15;
+    }
+  }
+
+  /** The movers worked out once a tick: x, y, z, heading x, heading y, speed, reach. */
+  private prep = new Float32Array(0);
+  private nPrep = 0;
+  private preparedFor = -1;
+  private prepare(): void {
+    const M = this.movers;
+    if (this.prep.length < (M.length / 5) * 7)
+      this.prep = new Float32Array((M.length / 5) * 7 + 14);
+    let n = 0;
+    for (let m = 0; m < M.length; m += 5) {
+      const vx = M[m + 3]!;
+      const vy = M[m + 4]!;
+      const sp = Math.hypot(vx, vy);
+      if (sp < 25) continue;
+      const P = this.prep;
+      P[n] = M[m]!;
+      P[n + 1] = M[m + 1]!;
+      P[n + 2] = M[m + 2]!;
+      P[n + 3] = vx / sp;
+      P[n + 4] = vy / sp;
+      P[n + 5] = sp;
+      P[n + 6] = 9 + sp * 0.07;
+      n += 7;
+    }
+    this.nPrep = n;
+    this.preparedFor = M.length;
   }
 
   /** One tick: the rings climb and die away, every cell is carried, ages and burns out. */
@@ -230,13 +411,26 @@ export class Cells {
         this.rings.splice(i, 1);
         continue;
       }
+      // the whole roll drifts downwind, and what turns in it with it
+      g.x += WIND[0] * 0.7 * dt;
+      g.y += WIND[1] * 0.7 * dt;
       g.z += g.vz * dt;
       g.vz *= Math.exp(-1.1 * dt);
       g.R += g.grow * dt;
       g.grow *= Math.exp(-1.6 * dt);
     }
+    const fade = Math.exp(-5 * dt);
+    for (let i = this.gusts.length - 1; i >= 0; i--) {
+      const g = this.gusts[i]!;
+      g.v *= fade;
+      g.R += g.v * dt * 0.5;
+      if (g.v < 3) this.gusts.splice(i, 1);
+    }
     const air: [number, number, number] = [0, 0, 0];
-    const calm = this.rings.length === 0;
+    const calm = this.rings.length === 0 && this.gusts.length === 0;
+    this.prepare();
+    this.gpu?.step(dt, this.rings, this.gusts, this.prep, this.nPrep / 7);
+    const still = this.nPrep === 0;
     const drag = Math.exp(-3 * dt);
     const rand = this.rand;
     let w = 0;
@@ -252,13 +446,14 @@ export class Cells {
       let vy = this.vy[i]!;
       let vz = this.vz[i]!;
       if (k === CKind.Bang) {
-        // thrown too hard for the air to turn it: it brakes, and licks upward
-        vx *= drag;
-        vy *= drag;
+        // thrown too hard for the air to turn it: it brakes, leans on the wind and licks upward
+        vx = vx * drag + WIND[0] * 1.8 * dt;
+        vy = vy * drag + WIND[1] * 1.8 * dt;
         vz = vz * drag + 70 * dt;
       } else if (k === CKind.Leaf) {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // it brakes hard, takes up the air and the wind, and sinks slowly, swinging as it goes
         const th = this.th[i]!;
         const f = Math.min(1, 3.2 * dt);
@@ -273,6 +468,7 @@ export class Cells {
       } else if (k === CKind.Fog) {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // it seeks its own height a little above the ground and churns slowly there
         const th = this.th[i]!;
         const f = Math.min(1, 2.5 * dt);
@@ -283,11 +479,12 @@ export class Cells {
       } else {
         if (calm) air[0] = air[1] = air[2] = 0;
         else this.air(x, y, z, air);
+        if (!still) this.stir(x, y, z, air);
         // weightless: it takes up the air's speed, lifts on its own heat and jitters
         const t = a / life;
         const fire = k === CKind.Fire;
         const f = Math.min(1, (fire ? 11 : 8) * dt);
-        const lean = fire ? 0.15 + t * 0.5 : 0.3 + t * 1.1;
+        const lean = fire ? 0.6 + t * 0.4 : 0.6 + t * 0.8;
         const j = fire ? 7 : 5;
         vx += (air[0] + WIND[0] * lean - vx) * f + (rand() - 0.5) * j;
         vy += (air[1] + WIND[1] * lean - vy) * f + (rand() - 0.5) * j;
@@ -319,7 +516,8 @@ export class Cells {
   }
 
   /**
-   * Draw every cell, one art pixel each: smoke and soot first, fire over them, and a hard
+   * Draw every cell, one screen cell each (sizes go to `normal` and `glow` in screen cells, finer
+   * than an art pixel): smoke and soot first, fire over them, and a hard
    * additive cell on each of the hottest. `seen` culls what is off screen.
    */
   draw(normal: Put, glow: Put, seen: (x: number, y: number, z: number) => boolean): void {
@@ -339,7 +537,7 @@ export class Cells {
           normal(x, y, z, 1, face ? shade(c, 0.72) : c, 1, Shape.Rect);
         } else if (k === CKind.Wisp) {
           if (pass !== 0) continue;
-          if (th >= Math.min(1, t * 8 + 0.4) * (t < 0.25 ? 1 : (1 - t) / 0.75)) continue;
+          if (th >= Math.min(1, t * 8 + 0.4) * (t < 0.5 ? 1 : (1 - t) / 0.5)) continue;
           if (!seen(x, y, z)) continue;
           const s = stepT(t, th, 6);
           const c = this.rgb[i]!;
@@ -359,10 +557,11 @@ export class Cells {
           if (t > 0.8 && th < (t - 0.8) / 0.2) continue;
           if (!seen(x, y, z)) continue;
           const s = stepT(t, th, 4);
-          normal(x, y, z, t < 0.85 ? 2 : 1, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
+          // a bank of it hides the road: three cells across until it thins
+          normal(x, y, z, t < 0.85 ? 3 : 2, shade(this.rgb[i]!, 0.8 + s * 0.35), 1, Shape.Rect);
         } else if (k === CKind.Fire) {
           const s = stepT(t, th, 12);
-          const hot = s < 0.3;
+          const hot = s < 0.42;
           if (hot !== (pass === 1)) continue;
           if (th >= (t < 0.45 ? 1 : (1 - t) / 0.55)) continue;
           if (!seen(x, y, z)) continue;
@@ -381,7 +580,18 @@ export class Cells {
 
   clear(): void {
     this.n = 0;
+    this.gpu?.clear();
     this.rings.length = 0;
+    this.gusts.length = 0;
     this.landed.length = 0;
   }
+}
+
+/**
+ * How hard a ring is turning: it takes a moment to wind up (the bang flies out first, then is
+ * caught) and dies away over its life.
+ */
+export function ringStrength(g: Ring): number {
+  const age = g.max - g.life;
+  return Math.min(1, Math.max(0, (age - 0.08) / 0.23)) * (0.35 + (0.65 * g.life) / g.max);
 }

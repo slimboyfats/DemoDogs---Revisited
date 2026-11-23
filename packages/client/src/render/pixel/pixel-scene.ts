@@ -14,7 +14,8 @@ import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
-import { DETAIL } from '../strips';
+import { fineGrid } from '../strips';
+import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type StackView } from './stack-batch';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
@@ -29,6 +30,9 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
+/** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
+const GAS_CAP = 131072;
+
 export class PixelScene implements WorldRenderer, StackSink, CountSource {
   readonly gl: WebGL2RenderingContext;
   private readonly atlas: StackAtlas;
@@ -42,6 +46,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private shadows: ShadowMap | null = null;
   private ground: Ground | null = null;
   private scale = 4;
+  /** Screen cells to the art pixel for particles (see `fineGrid`). */
+  private fxGrid = fineGrid(4);
+  /** Fire and smoke on the GPU; null where it cannot (then they stay on the CPU). */
+  private gas: GasGpu | null | undefined = undefined;
   private readonly ys = Math.sin(PITCH);
   private readonly cosP = Math.cos(PITCH);
   private ox = 0;
@@ -89,6 +97,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   setScale(s: number): void {
     this.scale = s;
+    this.fxGrid = fineGrid(s);
   }
 
   sx(x: number): number {
@@ -136,6 +145,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     L.clear();
     const t = w.time;
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
+    // a blast's ball lights the ground and its own smoke for as long as it burns
+    for (const b of fx.blasts) {
+      const k = 1 - b.age / 70;
+      L.add(b.x, b.y, b.r * 3.2, (1.3 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
+    }
     for (const c of w.cars)
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
@@ -166,7 +180,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // a new race: nothing of the last one's damaged art will be drawn again
     if (fx !== this.fx) {
       this.atlas.reset();
+      if (this.fx) this.fx.cells.gpu = null;
       this.fx = fx;
+      // fire and smoke go to the GPU from here on (if it can take them)
+      if (this.gas === undefined) {
+        try {
+          this.gas = new GasGpu(gl, GAS_CAP);
+        } catch {
+          this.gas = null;
+        }
+      }
+      this.gas?.clear();
+      fx.cells.gpu = this.gas;
       // and its tall scenery throws its shadows anew, from its own shape
       this.shadowLayer?.dispose();
       const art = this.art;
@@ -216,7 +241,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
-    this.groundLayer!.draw(view);
+    this.gatherLights(w, fx);
+    this.groundLayer!.draw(view, this.lights);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
     const quadView: [number, number] = [W, H];
@@ -232,7 +258,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
     gl.depthMask(true);
-    this.gatherLights(w, fx);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
@@ -241,17 +266,29 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.stacks.flush(this.lights);
     gl.disable(gl.DEPTH_TEST);
 
-    // particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art
-    // pixel) so smoke and fire have the same grain as what they come off. Smoke first, fire over
-    // it, then the additive cells (sparks, embers, the hot core of a flame).
+    // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
+    // Smoke first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
     gl.enable(gl.BLEND);
+    const gas: GasView = {
+      w: W,
+      h: H,
+      ox: this.ox,
+      oy: this.oy,
+      scale: S,
+      grid: this.fxGrid,
+      ys: this.ys,
+      cosP: this.cosP,
+    };
+    this.gas?.draw(gas, this.lights, 0);
     this.queueParticles(fx);
-    this.quads.flush(quadView, quadOrigin, S / DETAIL);
+    this.quads.flush(quadView, quadOrigin, S / this.fxGrid);
+    this.gas?.draw(gas, this.lights, 1);
     gl.blendFunc(gl.ONE, gl.ONE);
-    this.glow.flush(quadView, quadOrigin, S / DETAIL);
+    this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
+    this.gas?.draw(gas, this.lights, 2);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], Math.max(1, S / DETAIL), this.ys);
+    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {
@@ -305,23 +342,37 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
 
   /**
-   * Particles: mudders' pixel blobs, on a grid as fine as the art (DETAIL cells to the art pixel)
-   * so smoke and fire have the same grain as what they come off. Smoke first, fire over it; the
-   * additive cells (sparks, embers, the hot core of a flame) go to the glow batch.
+   * Particles, on the screen's own fine grid: one cell is `fxGrid` to the art pixel, about two
+   * device pixels (one CSS pixel), as small as mudders draws its fire and smoke at a whole-map
+   * view. Fire, smoke, sparks and embers are single cells on that grid; the few blob particles
+   * left (art px sizes) are drawn on it too, so their edges step in fine cells. Smoke first, fire
+   * over it; the additive cells (sparks, embers, the hot core of a flame) go to the glow batch.
    */
   private queueParticles(fx: Effects): void {
-    const G = DETAIL;
-    const cell = (v: number) => Math.floor(v * G) + 0.5;
-    const normal: Put = (x, y, z, d, rgb, a, shape) =>
-      this.quads.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, shape);
-    const glow: Put = (x, y, z, d, rgb, a) =>
-      this.glow.push(cell(x), cell(this.my(y, z)), d * G, d * G, rgb, a, Shape.Rect);
+    const G = this.fxGrid;
+    // a cell's place on the grid: odd sizes sit on a cell, even ones on the line between cells
+    const at = (v: number, n: number) => (n & 1 ? Math.floor(v * G) + 0.5 : Math.round(v * G));
+    // sizes in art px (blobs)
+    const normal: Put = (x, y, z, d, rgb, a, shape) => {
+      const n = Math.max(1, Math.round(d * G));
+      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+    };
+    const glow: Put = (x, y, z, d, rgb, a) => {
+      const n = Math.max(1, Math.round(d * G));
+      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+    };
+    // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
+    const cellN: Put = (x, y, z, n, rgb, a, shape) =>
+      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+    const cellG: Put = (x, y, z, n, rgb, a) =>
+      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+    const one = 1 / G;
     for (const f of fx.fx)
-      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
+      if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
     for (const f of fx.fx)
-      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow);
-    fx.cells.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
-    fx.shock.sparks.draw(normal, glow, (x, y, z) => this.visible(x, y, 4, z));
+      if (overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
+    fx.cells.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
+    fx.shock.sparks.draw(cellN, cellG, (x, y, z) => this.visible(x, y, 4, z));
     fx.defence.draw(glow, (x, y) => this.visible(x, y, 30, 10));
   }
 
@@ -382,8 +433,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.queueShadows(this.frameW, this.fx);
     this.quads.flush(q, o, this.scale, step);
     this.queueParticles(this.fx);
-    this.quads.flush(q, o, this.scale / DETAIL, step);
-    this.glow.flush(q, o, this.scale / DETAIL, step);
+    this.quads.flush(q, o, this.scale / this.fxGrid, step);
+    this.glow.flush(q, o, this.scale / this.fxGrid, step);
   }
 
   /** Slices drawn last frame (for the perf readout and tests). */

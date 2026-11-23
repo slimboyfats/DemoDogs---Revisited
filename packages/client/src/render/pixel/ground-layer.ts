@@ -1,6 +1,8 @@
+import { fineGrid } from '../strips';
 import type { Ground } from '../ground';
 import { compile, texture, uniforms } from './gl';
 import { GROUND_FS, GROUND_VS } from './stack-shaders';
+import type { Lights } from './lighting';
 import type { StackView } from './stack-batch';
 
 /**
@@ -18,12 +20,23 @@ export class GroundLayer {
     private readonly gl: WebGL2RenderingContext,
     private readonly ground: Ground,
   ) {
-    // filtered: the shader blends between texels itself and needs their neighbours
-    this.tex = texture(gl, gl.LINEAR);
+    // read texel by texel (texelFetch): the shader dithers between texels, never blends them
+    this.tex = texture(gl, gl.NEAREST);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, ground.cv);
     ground.dirty = null;
     this.prog = compile(gl, GROUND_VS, GROUND_FS);
-    this.u = uniforms(gl, this.prog, ['u_view', 'u_origin', 'u_scale', 'u_ys', 'u_size', 'u_tex']);
+    this.u = uniforms(gl, this.prog, [
+      'u_view',
+      'u_origin',
+      'u_scale',
+      'u_ys',
+      'u_size',
+      'u_tex',
+      'u_fine',
+      'u_lcount',
+      'u_lpos',
+      'u_lcol',
+    ]);
     this.vao = gl.createVertexArray();
   }
 
@@ -45,7 +58,7 @@ export class GroundLayer {
     gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, gl.RGBA, gl.UNSIGNED_BYTE, img);
   }
 
-  draw(v: StackView): void {
+  draw(v: StackView, lights: Lights): void {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
@@ -53,6 +66,10 @@ export class GroundLayer {
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_scale, v.scale);
     gl.uniform1f(u.u_ys, v.ys);
+    gl.uniform1f(u.u_fine, fineGrid(v.scale));
+    gl.uniform1i(u.u_lcount, lights.count);
+    gl.uniform4fv(u.u_lpos, lights.pos);
+    gl.uniform3fv(u.u_lcol, lights.col);
     gl.uniform2f(u.u_size, this.ground.cv.width, this.ground.cv.height);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);

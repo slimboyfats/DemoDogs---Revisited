@@ -115,19 +115,80 @@ precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform vec2 u_size;
+uniform float u_fine;
+uniform vec4 u_lpos[8];  // x, y, radius, strength
+uniform vec3 u_lcol[8];
+uniform int u_lcount;
 out vec4 o;
+float bayer(ivec2 p) {
+  int i = (p.y & 3) * 4 + (p.x & 3);
+  int t[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
+  return (float(t[i]) + 0.5) / 16.0;
+}
+float hash(vec2 p) {
+  p = fract(p * vec2(0.1031, 0.1030));
+  p += dot(p, p.yx + 33.33);
+  return fract((p.x + p.y) * p.x);
+}
+vec3 tex(vec2 t) {
+  return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
+}
 void main() {
-  // The ground is painted one texel to the art pixel, and drawn on the art's finer grid (three
-  // cells to the art pixel): each fine cell takes a colour blended between the texels around it,
-  // sharpened so edges stay crisp, so a kerb steps in fine cells instead of whole art pixels.
-  vec2 cell = floor(v_uv * u_size * 3.0);
-  vec2 a = (cell + 0.5) / 3.0 - 0.5;
-  vec2 i = floor(a);
-  vec2 f = smoothstep(0.2, 0.8, a - i);
-  vec3 c = texture(u_tex, (i + 0.5 + f) / u_size).rgb;
-  // a little grain, in three flat steps, so tarmac and grass are not flat fills
-  float h = fract(sin(dot(cell, vec2(12.9898, 78.233))) * 43758.5453);
-  o = vec4(c * (0.955 + 0.045 * floor(h * 3.0)), 1.0);
+  // The ground is painted one texel to the art pixel and drawn on the screen's fine grid (u_fine
+  // cells to the art pixel, about two device pixels a cell). Nothing is blended: every fine cell
+  // takes one texel's colour whole, and where two texels meet the edge is dithered between them
+  // on the Bayer grid, so a kerb or a road edge steps in fine cells, crisp, as in mudders.
+  vec2 cell = floor(v_uv * u_size * u_fine);
+  vec2 p = (cell + 0.5) / u_fine - 0.5;
+  vec2 i = floor(p);
+  vec2 f = p - i;
+  ivec2 ci = ivec2(cell);
+  vec2 d = vec2(bayer(ci), bayer(ci.yx + ivec2(2, 1)));
+  vec3 c = tex(i + step(d, f));
+  // The material under the cell, from its colour: grass is green, tarmac is grey, the rest dirt.
+  float mx = max(c.r, max(c.g, c.b));
+  float sat = mx - min(c.r, min(c.g, c.b));
+  float grass = step(0.03, c.g - max(c.r, c.b) * 0.97) * step(0.06, sat);
+  float tar = (1.0 - grass) * (1.0 - step(0.075, sat));
+  float dirt = 1.0 - grass - tar;
+  // Grain at three sizes, in flat steps, so no fill is ever flat.
+  float h1 = hash(cell);
+  float h2 = hash(floor(cell / 2.0) + 71.0);
+  float h3 = hash(floor(cell / 5.0) + 13.0);
+  float k = 1.0 + (floor(h1 * 3.0) - 1.0) * 0.022 + (floor(h2 * 3.0) - 1.0) * 0.02 + (floor(h3 * 3.0) - 1.0) * 0.018;
+  // grass: blades, a few cells tall, each its own shade, a light tip on some
+  float row = cell.y + floor(hash(vec2(cell.x, 9.0)) * 3.0);
+  float blade = hash(vec2(cell.x, floor(row / 3.0)));
+  float tip = step(0.82, blade) * step(mod(row, 3.0), 0.5);
+  float g = blade < 0.3 ? 0.84 : blade < 0.7 ? 1.0 : 1.08;
+  g = mix(g, 1.2, tip);
+  // tarmac: aggregate, single cells lighter or darker, and a rare pale chip
+  float a1 = hash(cell + 401.0);
+  float t = a1 < 0.07 ? 0.8 : a1 < 0.13 ? 1.16 : a1 > 0.995 ? 1.45 : 1.0;
+  // dirt: pebbles, two cells across, light on top and dark below; and grit
+  vec2 pc = floor(cell / 2.0);
+  float pb = hash(pc + 907.0);
+  float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
+  float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
+  float m = grass * g + tar * t + dirt * pebble * grit;
+  c = clamp(c * k * m, 0.0, 1.0);
+  // Fire lights the ground round it, in the same hard dithered bands as it lights the stacks.
+  if (u_lcount > 0) {
+    vec2 wp = (cell + 0.5) / u_fine;
+    float b = bayer(ci);
+    vec3 l = vec3(0.0);
+    for (int n = 0; n < 8; n++) {
+      if (n >= u_lcount) break;
+      vec4 lp = u_lpos[n];
+      float dist = length(wp - lp.xy);
+      if (dist >= lp.z) continue;
+      float e = 1.0 - dist / lp.z;
+      l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    }
+    vec3 q = min(vec3(0.7), l);
+    c = min(vec3(1.0), c * (1.0 + q * 1.1) + q * (30.0 / 255.0));
+  }
+  o = vec4(c, 1.0);
 }`;
 
 /**
@@ -141,6 +202,7 @@ in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform vec2 u_size;
 uniform float u_alpha;
+uniform float u_fine;
 out vec4 o;
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
@@ -148,8 +210,8 @@ float bayer(ivec2 p) {
   return (float(t[i]) + 0.5) / 16.0;
 }
 void main() {
-  vec2 cell = floor(v_uv * u_size * 3.0);
-  float a = texture(u_tex, (cell + 0.5) / (u_size * 3.0)).r;
+  vec2 cell = floor(v_uv * u_size * u_fine);
+  float a = texture(u_tex, (cell + 0.5) / (u_size * u_fine)).r;
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
   o = vec4(0.0, 0.0, 0.0, u_alpha);
 }`;

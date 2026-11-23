@@ -1,3 +1,4 @@
+import { fineGrid } from '../strips';
 import type { ShadowMap } from '../cast';
 import { compile, texture, uniforms } from './gl';
 import { GROUND_VS, SHADOW_FS } from './stack-shaders';
@@ -35,6 +36,7 @@ export class ShadowLayer {
       'u_size',
       'u_tex',
       'u_alpha',
+      'u_fine',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -70,6 +72,7 @@ export class ShadowLayer {
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_scale, v.scale);
     gl.uniform1f(u.u_ys, v.ys);
+    gl.uniform1f(u.u_fine, fineGrid(v.scale));
     gl.uniform2f(u.u_size, this.map.w, this.map.h);
     gl.uniform1f(u.u_alpha, DARK);
     gl.activeTexture(gl.TEXTURE0);
