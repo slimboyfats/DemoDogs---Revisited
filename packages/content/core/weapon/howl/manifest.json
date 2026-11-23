@@ -1,0 +1,19 @@
+{
+  "id": "weapon.howl",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Howl",
+    "description": "A shockwave bursts out round the car. It digs no crater and lights no fire: it hurls rivals, wrecks and loose scrap into the air, turns rockets and shells in flight round, and sweeps mines, tacks and smoke out of the way.",
+    "since": "core@0.6.0"
+  },
+  "kind": "howl",
+  "label": "HOWL",
+  "ammo": 2,
+  "power": 0.5,
+  "cooldown": 1.2,
+  "speed": 420,
+  "radius": 130,
+  "push": 300,
+  "lift": 170,
+  "damage": 6
+}
