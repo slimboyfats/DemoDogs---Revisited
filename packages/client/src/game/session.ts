@@ -1,12 +1,17 @@
-import { DT, type Controls } from '@demodogs/shared';
+import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
 import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
+import { tuneFor, type Tune } from '../audio/tunes';
 import type { Input } from '../input/input';
 import type { Art } from '../render/art';
 import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
 import { makeGround, type Ground } from '../render/ground';
 import { PITCH, type Camera } from '../render/scene';
+import { terrainOf } from '../render/terrain';
+
+/** How far off another car's engine can be heard, in art pixels. */
+const EARSHOT = 240;
 
 export interface SessionOptions {
   content: Content;
@@ -90,6 +95,10 @@ export class Session {
   spot: { x: number; y: number } | null = null;
   /** Online: the race driver decides when ticks run and with whose controls. */
   net: NetRace | null = null;
+  /** The tune this venue is raced to. */
+  readonly tune: Tune;
+  /** The venue's road is a loose one: tyres wash over it instead of squealing. */
+  private readonly looseRoad: boolean;
 
   constructor(
     private readonly o: SessionOptions,
@@ -100,6 +109,13 @@ export class Session {
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;
     this.cam = { x: P.x, y: P.y, shake: 0 };
+    const v = this.world.venue;
+    this.looseRoad = v.colors.road === 'dirt';
+    this.tune = tuneFor({
+      derby: o.content.mode.get(v.mode)?.kind === 'derby',
+      terrain: terrainOf(v.colors),
+      dirtRoad: this.looseRoad,
+    });
   }
 
   /**
@@ -175,8 +191,8 @@ export class Session {
     this.ticks++;
     // the engine heard is the car on screen
     const C = this.watch ?? P;
-    if (!P.ai || this.watch)
-      this.o.sound.engineSet(Math.abs(C.vf), C.wrecked ? 0 : C.throttle, C.boosting);
+    this.o.sound.step(DT);
+    if (!P.ai || this.watch || this.o.sound.taping) this.hear(C);
     // the camera looks ahead of the car, the way it is going
     // never so far that the car leaves the middle third of the picture
     const lead = 0.42;
@@ -213,6 +229,34 @@ export class Session {
     }
     if (n === MAX_STEPS) this.acc = 0;
     return this.over();
+  }
+
+  /** The engine and tyres of the car on screen, and the engine of the car nearest it. */
+  private hear(C: Car): void {
+    const top = (c: Car) => Math.abs(c.vf) / (BASE_SPEED * c.stats.speed);
+    const side = Math.abs(C.vy * Math.cos(C.h) - C.vx * Math.sin(C.h));
+    const moving = Math.hypot(C.vx, C.vy);
+    let near: Car | null = null;
+    let best = EARSHOT;
+    for (const o of this.world.cars) {
+      if (o === C || o.wrecked) continue;
+      const d = Math.hypot(o.x - C.x, o.y - C.y);
+      if (d < best) {
+        best = d;
+        near = o;
+      }
+    }
+    this.o.sound.drive({
+      frac: top(C),
+      throttle: C.wrecked ? 0 : Math.abs(C.throttle),
+      boost: C.boosting,
+      slide:
+        C.sliding && moving > 40 ? Math.min(1, 0.35 + side / 110 + (C.handbrake ? 0.2 : 0)) : 0,
+      loose: C.offroad || this.looseRoad,
+      rival: near
+        ? { frac: top(near), throttle: Math.abs(near.throttle), near: (1 - best / EARSHOT) ** 1.5 }
+        : null,
+    });
   }
 
   private over(): boolean {

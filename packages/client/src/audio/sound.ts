@@ -1,25 +1,48 @@
 /** Every sound is synthesised with Web Audio, so the game ships no sound files. */
-
-interface Engine {
-  o1: OscillatorNode;
-  o2: OscillatorNode;
-  f: BiquadFilterNode;
-  g: GainNode;
-}
+import { EngineVoice, SkidVoice } from './engine';
+import { clipCurve, Music } from './music';
+import { tune, type Tune } from './tunes';
 
 const MUTE_KEY = 'dd-muted';
-const LEVEL = 0.55;
+const MUSIC_KEY = 'dd-music';
+const LEVEL = 0.6;
+
+/** What the car on screen is doing, for its engine and tyres. */
+export interface Drive {
+  /** Its speed as a share of its top speed. */
+  frac: number;
+  throttle: number;
+  boost: boolean;
+  /** How hard its tyres are sliding, 0 to 1, and whether the ground under them is loose. */
+  slide: number;
+  loose: boolean;
+  /** The nearest other car: the same, and how near it is (1 alongside, 0 out of earshot). */
+  rival: { frac: number; throttle: number; near: number } | null;
+}
 
 export class Sound {
-  private ac: AudioContext | null = null;
+  private ac: BaseAudioContext | null = null;
   private master: GainNode | null = null;
+  /** Where loud things go: a soft clip, and a room that answers them. */
+  private big: GainNode | null = null;
+  private musicOut: GainNode | null = null;
+  private tunes: Music | null = null;
   private noiseBuf: AudioBuffer | null = null;
-  private engine: Engine | null = null;
+  private engine: { own: EngineVoice; rival: EngineVoice; skid: SkidVoice } | null = null;
   private muted_ = false;
+  private music_ = true;
+  /** The tune asked for, which starts once there is an audio context to play it. */
+  private wanted: Tune | null = null;
+  /** Loud sounds are being sent to the room. */
+  private loud = false;
+  /** Taping: seconds to tape, and the clock that stands in for real time. */
+  private tape = 0;
+  private clock = 0;
 
   constructor() {
     try {
       this.muted_ = localStorage.getItem(MUTE_KEY) === '1';
+      this.music_ = localStorage.getItem(MUSIC_KEY) !== '0';
     } catch {
       /* storage blocked */
     }
@@ -29,32 +52,165 @@ export class Sound {
     return this.muted_;
   }
 
+  /** What the sound button says. */
+  get label(): string {
+    return this.muted_ ? 'SOUND OFF' : this.music_ ? 'SOUND + MUSIC' : 'SOUND, NO MUSIC';
+  }
+
+  get taping(): boolean {
+    return this.tape > 0;
+  }
+
+  /** How many seconds of tape have run. */
+  get tapeTime(): number {
+    return this.clock;
+  }
+
+  private now(): number {
+    return this.tape > 0 ? this.clock : (this.ac?.currentTime ?? 0);
+  }
+
   /** Call from a user gesture: browsers only start audio after one. */
   init(): void {
     if (this.ac) {
-      if (this.ac.state === 'suspended') void this.ac.resume();
+      if (this.ac instanceof AudioContext && this.ac.state === 'suspended') void this.ac.resume();
       return;
     }
     if (typeof AudioContext === 'undefined') return;
-    const ac = new AudioContext();
+    const ac: BaseAudioContext =
+      this.tape > 0
+        ? new OfflineAudioContext(2, Math.ceil(this.tape * 44100), 44100)
+        : new AudioContext();
     this.ac = ac;
+    // everything meets in a compressor, so a blast and the tune share the room they have
+    const squash = ac.createDynamicsCompressor();
+    squash.threshold.value = -16;
+    squash.knee.value = 10;
+    squash.ratio.value = 5;
+    squash.attack.value = 0.004;
+    squash.release.value = 0.22;
+    squash.connect(ac.destination);
     this.master = ac.createGain();
-    this.master.gain.value = this.muted_ ? 0 : LEVEL;
-    this.master.connect(ac.destination);
+    this.master.connect(squash);
+    this.musicOut = ac.createGain();
+    this.musicOut.connect(squash);
+    this.levels();
     this.noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
     const d = this.noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    // the room: a second and a half of dying noise, quieter and duller as it goes
+    const len = Math.floor(ac.sampleRate * 1.5);
+    const room = ac.createBuffer(2, len, ac.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const r = room.getChannelData(c);
+      let last = 0;
+      for (let i = 0; i < len; i++) {
+        const k = i / len;
+        last += (Math.random() * 2 - 1 - last) * (0.75 - 0.6 * k);
+        r[i] = last * (1 - k) ** 2.4;
+      }
+    }
+    this.big = ac.createGain();
+    const clip = ac.createWaveShaper();
+    clip.curve = clipCurve(2.2);
+    const echo = ac.createConvolver();
+    echo.buffer = room;
+    const wet = ac.createGain();
+    wet.gain.value = 0.3;
+    this.big.connect(clip).connect(this.master);
+    clip.connect(echo).connect(wet).connect(this.master);
+    this.tunes = new Music(ac, this.musicOut, this.noiseBuf);
+    if (this.wanted) this.tunes.play(tune(this.wanted), this.now());
+    if (ac instanceof AudioContext) setInterval(() => this.tunes?.pump(this.now()), 60);
   }
 
-  toggle(): boolean {
-    this.muted_ = !this.muted_;
+  private levels(): void {
+    if (this.master) this.master.gain.value = this.muted_ ? 0 : LEVEL;
+    if (this.musicOut) this.musicOut.gain.value = this.muted_ || !this.music_ ? 0 : 1;
+  }
+
+  /** The sound button: everything, then no music, then nothing. */
+  cycle(): void {
+    if (this.muted_) {
+      this.muted_ = false;
+      this.music_ = true;
+    } else if (this.music_) this.music_ = false;
+    else this.muted_ = true;
     try {
       localStorage.setItem(MUTE_KEY, this.muted_ ? '1' : '0');
+      localStorage.setItem(MUSIC_KEY, this.music_ ? '1' : '0');
     } catch {
       /* ignore */
     }
-    if (this.master) this.master.gain.value = this.muted_ ? 0 : LEVEL;
-    return this.muted_;
+    this.levels();
+  }
+
+  /** The tune to have playing (it carries on if it already is), or none. */
+  music(name: Tune | null): void {
+    this.wanted = name;
+    this.tunes?.play(name ? tune(name) : null, this.now());
+  }
+
+  /** The tune goes dull behind the pause menu. */
+  musicMuffle(on: boolean): void {
+    this.tunes?.muffle(on, this.now());
+  }
+
+  /**
+   * Tape the next `seconds` of sound instead of playing it, for the capture scripts (`?tape=40`).
+   * Its clock is the game's own ticks, so the tape fits the frames a script shoots however slowly
+   * they are drawn. Call before `init`.
+   */
+  record(seconds: number): void {
+    if (!this.ac) this.tape = seconds;
+  }
+
+  /** One game tick has gone by (only a tape keeps time by it). */
+  step(dt: number): void {
+    if (this.tape <= 0) return;
+    this.clock += dt;
+    this.tunes?.pump(this.clock);
+  }
+
+  /** The tape as a WAV file, in base64. */
+  async tapeWav(): Promise<string> {
+    if (!(this.ac instanceof OfflineAudioContext)) return '';
+    const buf = await this.ac.startRendering();
+    const n = buf.length;
+    const out = new DataView(new ArrayBuffer(44 + n * 4));
+    const text = (at: number, s: string) =>
+      [...s].forEach((c, i) => out.setUint8(at + i, c.charCodeAt(0)));
+    text(0, 'RIFF');
+    out.setUint32(4, 36 + n * 4, true);
+    text(8, 'WAVEfmt ');
+    out.setUint32(16, 16, true);
+    out.setUint16(20, 1, true);
+    out.setUint16(22, 2, true);
+    out.setUint32(24, buf.sampleRate, true);
+    out.setUint32(28, buf.sampleRate * 4, true);
+    out.setUint16(32, 4, true);
+    out.setUint16(34, 16, true);
+    text(36, 'data');
+    out.setUint32(40, n * 4, true);
+    const l = buf.getChannelData(0);
+    const r = buf.getChannelData(1);
+    for (let i = 0; i < n; i++) {
+      out.setInt16(44 + i * 4, Math.max(-1, Math.min(1, l[i]!)) * 32767, true);
+      out.setInt16(46 + i * 4, Math.max(-1, Math.min(1, r[i]!)) * 32767, true);
+    }
+    const bytes = new Uint8Array(out.buffer);
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000)
+      s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+
+  /** Run `make` with its sounds sent through the room, and the tune stepping back by `duck`. */
+  private heavy(duck: number, make: () => void): void {
+    this.loud = true;
+    make();
+    this.loud = false;
+    if (duck > 0) this.tunes?.duck(duck, this.now());
   }
 
   private noise(
@@ -64,21 +220,24 @@ export class Sound {
     vol: number,
     type: BiquadFilterType = 'bandpass',
     when = 0,
+    slide = 0,
   ): void {
     const ac = this.ac;
-    if (!ac || !this.master || !this.noiseBuf) return;
-    const t = ac.currentTime + when;
+    const out = this.loud ? this.big : this.master;
+    if (!ac || !out || !this.noiseBuf) return;
+    const t = this.now() + when;
     const src = ac.createBufferSource();
     src.buffer = this.noiseBuf;
     src.playbackRate.value = 0.6 + Math.random() * 0.6;
     const f = ac.createBiquadFilter();
     f.type = type;
-    f.frequency.value = freq;
+    f.frequency.setValueAtTime(freq, t);
+    if (slide) f.frequency.exponentialRampToValueAtTime(Math.max(30, freq * slide), t + dur);
     f.Q.value = q;
     const g = ac.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    src.connect(f).connect(g).connect(this.master);
+    src.connect(f).connect(g).connect(out);
     src.start(t);
     src.stop(t + dur + 0.05);
   }
@@ -92,8 +251,9 @@ export class Sound {
     when = 0,
   ): void {
     const ac = this.ac;
-    if (!ac || !this.master) return;
-    const t = ac.currentTime + when;
+    const out = this.loud ? this.big : this.master;
+    if (!ac || !out) return;
+    const t = this.now() + when;
     const o = ac.createOscillator();
     o.type = type;
     o.frequency.setValueAtTime(freq, t);
@@ -101,49 +261,39 @@ export class Sound {
     const g = ac.createGain();
     g.gain.setValueAtTime(vol, t);
     g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-    o.connect(g).connect(this.master);
+    o.connect(g).connect(out);
     o.start(t);
     o.stop(t + dur + 0.05);
   }
 
-  /** The engine: two detuned oscillators through a low-pass; pitch follows speed. */
+  /** The engines (the car on screen and the nearest other) and the tyres start up, silent. */
   engineStart(): void {
     const ac = this.ac;
-    if (!ac || !this.master || this.engine) return;
-    const o1 = ac.createOscillator();
-    const o2 = ac.createOscillator();
-    const f = ac.createBiquadFilter();
-    const g = ac.createGain();
-    o1.type = 'sawtooth';
-    o2.type = 'square';
-    f.type = 'lowpass';
-    f.frequency.value = 600;
-    g.gain.value = 0;
-    o1.connect(f);
-    o2.connect(f);
-    f.connect(g).connect(this.master);
-    o1.start();
-    o2.start();
-    this.engine = { o1, o2, f, g };
+    if (!ac || !this.master || !this.noiseBuf || this.engine) return;
+    this.engine = {
+      own: new EngineVoice(ac, this.master, this.noiseBuf),
+      rival: new EngineVoice(ac, this.master, this.noiseBuf, 1.19),
+      skid: new SkidVoice(ac, this.master, this.noiseBuf),
+    };
   }
 
-  engineSet(speed: number, throttle: number, boost: boolean): void {
+  /** Every tick: what the car on screen is doing. */
+  drive(d: Drive): void {
     const e = this.engine;
-    if (!e || !this.ac) return;
-    const t = this.ac.currentTime;
-    const rpm = 38 + speed * 0.62 + throttle * 14 + (boost ? 18 : 0);
-    e.o1.frequency.setTargetAtTime(rpm, t, 0.05);
-    e.o2.frequency.setTargetAtTime(rpm * 0.502, t, 0.05);
-    e.f.frequency.setTargetAtTime(300 + speed * 6 + (boost ? 900 : 0), t, 0.08);
-    e.g.gain.setTargetAtTime(0.05 + throttle * 0.05, t, 0.1);
+    if (!e) return;
+    const t = this.now();
+    e.own.set(d.frac, d.throttle, d.boost, 0.2, t);
+    e.rival.set(d.rival?.frac ?? 0, d.rival?.throttle ?? 0, false, 0.1 * (d.rival?.near ?? 0), t);
+    e.skid.set(d.slide, d.loose, t);
   }
 
   engineStop(): void {
     const e = this.engine;
-    if (!e || !this.ac) return;
-    e.g.gain.setTargetAtTime(0, this.ac.currentTime, 0.05);
-    e.o1.stop(this.ac.currentTime + 0.3);
-    e.o2.stop(this.ac.currentTime + 0.3);
+    if (!e) return;
+    const t = this.now();
+    e.own.stop(t);
+    e.rival.stop(t);
+    e.skid.stop(t);
     this.engine = null;
     // the weather goes quiet with the engine (a pause, the menus)
     this.rain(0);
@@ -151,9 +301,14 @@ export class Sound {
 
   crash(power: number): void {
     const v = Math.min(0.9, 0.12 + power * 0.008);
-    this.noise(0.25 + power * 0.003, 900, 0.8, v);
-    this.noise(0.12, 2600, 2, v * 0.6);
-    this.tone(70, 0.18, v * 0.6, 'sine', 0.5);
+    this.heavy(v > 0.5 ? v * 0.3 : 0, () => {
+      this.noise(0.25 + power * 0.003, 900, 0.8, v * 1.3);
+      this.noise(0.12, 2600, 2, v * 0.8);
+      // the weight behind it, and the bodywork ringing
+      this.noise(0.2, 300, 0.8, v * 0.8, 'lowpass');
+      this.tone(100, 0.16, v * 0.5, 'sine', 0.5);
+      this.tone(410, 0.09, v * 0.16, 'square', 0.8);
+    });
   }
 
   scrape(): void {
@@ -161,9 +316,25 @@ export class Sound {
   }
 
   boom(v = 1): void {
-    this.noise(0.9, 180, 0.7, 0.9 * v, 'lowpass');
-    this.noise(0.4, 900, 0.7, 0.5 * v);
-    this.tone(55, 0.6, 0.6 * v, 'sine', 0.4);
+    this.heavy(0.55 * v, () => {
+      // the crack, the body of it falling in pitch, the thump under it, and the long tail
+      this.noise(0.09, 2200, 0.7, 1.1 * v, 'highpass');
+      this.noise(0.7, 2600, 0.5, 1.4 * v, 'lowpass', 0, 0.1);
+      this.noise(0.5, 700, 0.6, 0.9 * v, 'bandpass', 0.01, 0.4);
+      this.tone(110, 0.55, 0.6 * v, 'sine', 0.35);
+      this.tone(165, 0.3, 0.3 * v, 'triangle', 0.4, 0.01);
+      this.noise(1.7, 480, 0.4, 0.6 * v, 'bandpass', 0.03, 0.5);
+      // bits coming down after it
+      for (let i = 0; i < 5; i++)
+        this.noise(
+          0.05,
+          1400 + Math.random() * 2400,
+          1.5,
+          0.13 * v,
+          'bandpass',
+          0.22 + Math.random() * 0.7,
+        );
+    });
   }
 
   smash(): void {
@@ -180,10 +351,14 @@ export class Sound {
     this.tone(300, 0.3, 0.12, 'sawtooth', 0.3);
   }
 
-  /** One round from a gun: a short crack. */
+  /** One round from a gun: a crack, the bark of the barrel and a thump in the chest. */
   gun(v = 1): void {
-    this.noise(0.05, 1900, 0.8, 0.16 * v, 'bandpass');
-    this.tone(210, 0.04, 0.05 * v, 'square', 0.5);
+    this.heavy(0, () => {
+      this.noise(0.05, 2600, 0.7, 0.5 * v, 'highpass');
+      this.noise(0.12, 1100, 0.9, 0.5 * v, 'bandpass', 0, 0.4);
+      this.tone(190, 0.07, 0.22 * v, 'triangle', 0.4);
+      this.tone(1150, 0.014, 0.05 * v, 'square');
+    });
   }
 
   private rainNode: { g: GainNode; src: AudioBufferSourceNode } | null = null;
@@ -212,15 +387,17 @@ export class Sound {
       src.start();
       this.rainNode = { g, src };
     }
-    this.rainNode.g.gain.setTargetAtTime(0.07 * level, ac.currentTime, 0.3);
+    this.rainNode.g.gain.setTargetAtTime(0.07 * level, this.now(), 0.3);
   }
 
   /** Thunder: the crack of the strike, then the roll after it. */
   thunder(v = 1): void {
-    this.noise(0.14, 3600, 0.9, 0.5 * v, 'highpass');
-    this.noise(1.6, 140, 0.6, 0.9 * v, 'lowpass', 0.04);
-    this.noise(1.1, 420, 0.5, 0.35 * v, 'bandpass', 0.3);
-    this.tone(48, 1.2, 0.5 * v, 'sine', 0.6, 0.05);
+    this.heavy(0, () => {
+      this.noise(0.14, 3600, 0.9, 0.5 * v, 'highpass');
+      this.noise(1.6, 140, 0.6, 0.9 * v, 'lowpass', 0.04);
+      this.noise(1.1, 420, 0.5, 0.35 * v, 'bandpass', 0.3);
+      this.tone(48, 1.2, 0.5 * v, 'sine', 0.6, 0.05);
+    });
   }
 
   /** The ground shaking: a low rumble for `dur` seconds. */
@@ -256,10 +433,12 @@ export class Sound {
 
   /** A howl's shockwave: a deep thump, the air rushing out after it, and the howl falling away. */
   howl(v = 1): void {
-    this.noise(0.8, 150, 0.7, 0.9 * v, 'lowpass');
-    this.tone(60, 0.7, 0.7 * v, 'sine', 0.4);
-    this.noise(0.6, 700, 0.9, 0.35 * v, 'bandpass', 0.05);
-    this.tone(330, 0.5, 0.1 * v, 'sawtooth', 0.3, 0.03);
+    this.heavy(0, () => {
+      this.noise(0.8, 150, 0.7, 0.9 * v, 'lowpass');
+      this.tone(60, 0.7, 0.7 * v, 'sine', 0.4);
+      this.noise(0.6, 700, 0.9, 0.35 * v, 'bandpass', 0.05);
+      this.tone(330, 0.5, 0.1 * v, 'sawtooth', 0.3, 0.03);
+    });
   }
 
   /** A shock: a buzzing crack; `big` for a whole pulse going out, a snap for one bolt. */
@@ -279,9 +458,11 @@ export class Sound {
 
   /** A rail slug: a charged whine that cracks. */
   railCrack(v = 1): void {
-    this.tone(260, 0.12, 0.12 * v, 'sawtooth', 6);
-    this.noise(0.35, 3400, 0.9, 0.5 * v, 'bandpass', 0.1);
-    this.tone(70, 0.4, 0.4 * v, 'sine', 0.4, 0.1);
+    this.heavy(0, () => {
+      this.tone(260, 0.12, 0.12 * v, 'sawtooth', 6);
+      this.noise(0.35, 3400, 0.9, 0.5 * v, 'bandpass', 0.1);
+      this.tone(70, 0.4, 0.4 * v, 'sine', 0.4, 0.1);
+    });
   }
 
   /** One lightning strike: a dry, buzzing crack. */

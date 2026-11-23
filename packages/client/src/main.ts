@@ -66,6 +66,8 @@ const params = new URLSearchParams(location.search);
 const content = loadContent();
 const art = new Art(loadLooks());
 const sound = new Sound();
+// ?tape=40 tapes that many seconds of sound, in step with the game's ticks (scripts/capture-audio.mjs)
+if (params.get('tape')) sound.record(Number(params.get('tape')) || 30);
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
@@ -497,9 +499,13 @@ function setScreen(s: typeof screen): void {
   else if (s === 'game') {
     show(null);
     sound.engineStart();
+    sound.music(session?.tune ?? 'menu');
+    sound.musicMuffle(false);
   } else {
     show(s);
     sound.engineStop();
+    sound.music('menu');
+    sound.musicMuffle(false);
   }
 }
 
@@ -732,6 +738,7 @@ function togglePause(): void {
       : editing
         ? 'BACK TO THE EDITOR'
         : 'QUIT TO MENU';
+  sound.musicMuffle(paused);
   if (paused) sound.engineStop();
   else {
     sound.engineStart();
@@ -1024,9 +1031,8 @@ function boot(): void {
     else setScreen('menu');
   };
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
-  const label = () =>
-    muteBtns.forEach((b) => (b.textContent = sound.muted ? 'SOUND OFF' : 'SOUND ON'));
-  muteBtns.forEach((b) => (b.onclick = () => (sound.toggle(), label())));
+  const label = () => muteBtns.forEach((b) => (b.textContent = sound.label));
+  muteBtns.forEach((b) => (b.onclick = () => (sound.cycle(), label())));
   label();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
@@ -1059,6 +1065,7 @@ function boot(): void {
   Object.assign(window, {
     __dd: {
       renderer: rendererName,
+      sound,
       get session() {
         return session;
       },
