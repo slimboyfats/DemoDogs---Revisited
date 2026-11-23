@@ -22,6 +22,55 @@ const NAMES = [
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
+/** Depth keys are cut to this many bits for the radix sort (two passes of 11). */
+const KEY_BITS = 22;
+const HALF = 11;
+const BUCKETS = 1 << HALF;
+
+/**
+ * The order to draw instances in, nearest the camera first: indices sorted by key, largest first,
+ * stable (equal keys keep the order they were queued in). Keys are quantised to 22 bits between
+ * `lo` and `hi` and sorted with two passes of a counting sort, so the cost is linear in `n`.
+ * `tmp` and `out` hold at least `n`; `count` holds `BUCKETS + 1`. Returns `out`.
+ */
+export function nearestFirstOrder(
+  key: Float32Array,
+  n: number,
+  lo: number,
+  hi: number,
+  out: Uint32Array,
+  tmp: Uint32Array,
+  q: Uint32Array,
+  count: Uint32Array,
+): Uint32Array {
+  const top = (1 << KEY_BITS) - 1;
+  const k = top / Math.max(1e-6, hi - lo);
+  for (let i = 0; i < n; i++) {
+    // nearest (largest key) gets the smallest q
+    const v = Math.round((hi - key[i]!) * k);
+    q[i] = v < 0 ? 0 : v > top ? top : v;
+  }
+  let src = tmp;
+  for (let i = 0; i < n; i++) src[i] = i;
+  let dst = out;
+  for (let pass = 0; pass < 2; pass++) {
+    const shift = pass * HALF;
+    count.fill(0);
+    for (let i = 0; i < n; i++) count[((q[src[i]!]! >> shift) & (BUCKETS - 1)) + 1]!++;
+    for (let b = 0; b < BUCKETS; b++) count[b + 1]! += count[b]!;
+    for (let i = 0; i < n; i++) {
+      const j = src[i]!;
+      dst[count[(q[j]! >> shift) & (BUCKETS - 1)]!++] = j;
+    }
+    const t = src;
+    src = dst;
+    dst = t;
+  }
+  // after two passes the result is back in `src`, which is `tmp`: copy into `out`
+  out.set(src.subarray(0, n));
+  return out;
+}
+
 /** How the overdraw meter draws the frame's slices again (see overdraw.ts). */
 export interface CountPass {
   /** Count every fragment the quads cover, discarding nothing. */
@@ -67,6 +116,20 @@ export class StackBatch {
   private readonly u: Uniforms;
   private counters: { prog: WebGLProgram; u: Uniforms }[] = [];
   private order: Float32Array | null = null;
+  /**
+   * Draw slices nearest the camera first, so the depth test turns away what is hidden before it
+   * is shaded (a stack is queued bottom slice first, which is painter order: 12 to 20 times the
+   * fragments written; see overdraw.ts). Off only to compare (`?order=queued`).
+   */
+  frontToBack = true;
+  private sorted: Float32Array = new Float32Array(0);
+  private keys = new Float32Array(0);
+  private idx = new Uint32Array(0);
+  private idxTmp = new Uint32Array(0);
+  private q = new Uint32Array(0);
+  private readonly counts = new Uint32Array(BUCKETS + 1);
+  /** The data the last flush drew (queued or sorted), for the overdraw meter's "written". */
+  private drawn: Float32Array = new Float32Array(0);
   private v: StackView = { w: 1, h: 1, ox: 0, oy: 0, scale: 1, ys: 1, zk: 1, worldH: 1 };
 
   constructor(
@@ -194,7 +257,42 @@ export class StackBatch {
 
   flush(lights: Lights): void {
     if (this.n === 0) return;
-    this.draw(this.prog, this.u, this.atlas.tex, lights, this.data);
+    this.drawn = this.frontToBack ? this.sortNearestFirst() : this.data;
+    this.draw(this.prog, this.u, this.atlas.tex, lights, this.drawn);
+  }
+
+  /** The depth range of the view (as the vertex shader's): [nearest-to-farthest lo, hi]. */
+  private depthRange(): [number, number] {
+    const dir0 = this.v.zk / this.v.scale;
+    const dir1 = this.v.ys;
+    return [-64 * dir0, (this.v.worldH + 64) * dir0 + 96 * dir1];
+  }
+
+  /** The queued instances copied into draw order, nearest first (radix sort, linear time). */
+  private sortNearestFirst(): Float32Array {
+    const n = this.n;
+    if (this.keys.length < n) {
+      const m = Math.max(n, this.keys.length * 2, 1024);
+      this.keys = new Float32Array(m);
+      this.idx = new Uint32Array(m);
+      this.idxTmp = new Uint32Array(m);
+      this.q = new Uint32Array(m);
+    }
+    if (this.sorted.length < this.data.length) this.sorted = new Float32Array(this.data.length);
+    const d = this.data;
+    const dx = this.v.zk / this.v.scale;
+    const dy = this.v.ys;
+    const key = this.keys;
+    for (let i = 0; i < n; i++) key[i] = d[i * STRIDE + 1]! * dx + d[i * STRIDE + 2]! * dy;
+    const [lo, hi] = this.depthRange();
+    const order = nearestFirstOrder(key, n, lo, hi, this.idx, this.idxTmp, this.q, this.counts);
+    const o = this.sorted;
+    for (let j = 0; j < n; j++) {
+      const a = order[j]! * STRIDE;
+      const b = j * STRIDE;
+      for (let f = 0; f < STRIDE; f++) o[b + f] = d[a + f]!;
+    }
+    return o;
   }
 
   /**
@@ -213,7 +311,7 @@ export class StackBatch {
     gl.useProgram(c.prog);
     gl.uniform1f(c.u.u_count, p.step);
     const tex = p.shell && this.atlas.shellTex ? this.atlas.shellTex : this.atlas.tex;
-    this.draw(c.prog, c.u, tex, lights, p.front ? this.nearestFirst() : this.data);
+    this.draw(c.prog, c.u, tex, lights, p.front ? this.nearestFirst() : this.drawn);
   }
 
   /** The instances sorted nearest the camera first (largest depth along the view). */

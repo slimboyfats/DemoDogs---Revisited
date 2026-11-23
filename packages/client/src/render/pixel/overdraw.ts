@@ -10,8 +10,9 @@ import { compile, uniforms } from './gl';
  *
  * - **covered**: every fragment the slice quads cover, nothing discarded (the rasteriser's load).
  * - **solid**: fragments that are a filled texel (what runs the whole shader and survives `discard`).
- * - **written**: fragments that pass the depth test in the order the slices are queued today.
- * - **front**: the same, with the slices sorted nearest first (front-to-back).
+ * - **written**: fragments that pass the depth test in the order the slices are drawn (nearest first
+ *   by default; `?order=queued` draws them as queued, bottom slice first, to compare).
+ * - **front**: the same, with the slices in an exact nearest-first sort (the reference).
  * - **shell solid / shell written / shell front**: the three above with the atlas's interiors left
  *   out (shell stacks, see shell.ts).
  * - **particles**: fire, smoke, sparks and shadows' blended fragments (all of them are written).

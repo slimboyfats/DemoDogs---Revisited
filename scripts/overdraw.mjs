@@ -1,7 +1,8 @@
 // Overdraw bench: serve the built client in headless Chromium at a phone landscape size (844x390,
 // dpr 2), drive every venue and a heavy test-range scene, and print the overdraw meter's fragments
 // per pixel (see packages/client/src/render/pixel/overdraw.ts). Heat maps go to captures/overdraw/.
-// Run with `pnpm build && node scripts/overdraw.mjs [venue ...]`. The counts do not depend on the GPU;
+// Run with `pnpm build && node scripts/overdraw.mjs [venue ...]`; ORDER=queued draws slices as queued
+// (bottom slice first) instead of nearest first, to compare. The counts do not depend on the GPU;
 // only the screen size, the camera and the scene.
 import { createServer } from 'node:http';
 import { readFile, readdir, mkdir } from 'node:fs/promises';
@@ -29,7 +30,8 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((r) => server.listen(0, r));
 const base = `http://localhost:${server.address().port}/`;
-const out = 'captures/overdraw';
+const order = process.env.ORDER === 'queued' ? '&order=queued' : '';
+const out = `captures/overdraw${order ? '-queued' : ''}`;
 await mkdir(out, { recursive: true });
 
 const venues = process.argv.slice(2).length
@@ -78,7 +80,7 @@ const heat = async (name, ch) => {
 };
 
 for (const v of venues) {
-  await page.goto(`${base}?start=${v}&car=mutt&autoplay&seed=7&overdraw`);
+  await page.goto(`${base}?start=${v}&car=mutt&autoplay&seed=7&overdraw${order}`);
   await page.waitForTimeout(6500);
   const list = [];
   for (let k = 0; k < 4; k++) {
@@ -96,7 +98,7 @@ for (const v of venues) {
 }
 
 // the test range with everything going at once: blasts on the parked cars and around them
-await page.goto(`${base}?dev&car=mutt&overdraw`);
+await page.goto(`${base}?dev&car=mutt&overdraw${order}`);
 await page.waitForTimeout(3000);
 const busy = await page.evaluate(() => {
   const dd = window.__dd;

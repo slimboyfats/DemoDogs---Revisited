@@ -268,6 +268,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   // ---- the overdraw meter (?dev OVERDRAW, ?overdraw with the perf recorder, __dd.overdraw())
 
+  /** Draw slices nearest first (the default) or in the order they are queued (to compare). */
+  set frontToBack(on: boolean) {
+    this.stacks.frontToBack = on;
+  }
+
+  get frontToBack(): boolean {
+    return this.stacks.frontToBack;
+  }
+
   /** Turn the meter on (it keeps a shelled copy of the atlas while on) or off. */
   setMeter(on: boolean): void {
     if (on === this.metering) return;

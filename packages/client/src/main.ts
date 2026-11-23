@@ -569,6 +569,7 @@ function boot(): void {
     b.onclick = () => (perf ? stopPerf() : startPerf());
   if (params.has('perf')) startPerf();
   if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
+  if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
   resize();
   addEventListener('resize', resize);
   buildMenu();
@@ -662,6 +663,18 @@ function boot(): void {
         },
         off(): void {
           if (scene instanceof PixelScene) scene.setMeter(false);
+        },
+        /** The world as last drawn, read from the canvas (RGBA rows, bottom first), to compare looks. */
+        pixels(): Uint8Array | null {
+          if (!(scene instanceof PixelScene) || !session) return null;
+          scene.draw(session.world, session.fx, session.ground, session.cam, W, H);
+          const out = new Uint8Array(W * H * 4);
+          scene.gl.readPixels(0, 0, W, H, scene.gl.RGBA, scene.gl.UNSIGNED_BYTE, out);
+          return out;
+        },
+        /** Draw slices nearest first (true, the default) or as queued (false). */
+        order(front: boolean): void {
+          if (scene instanceof PixelScene) scene.frontToBack = front;
         },
       },
     },
