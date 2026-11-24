@@ -118,13 +118,14 @@
             <p class="help">
               <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
               BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X fire,
-              P pause, Tab names.<br /><b>Scrapped?</b> Tap (or Tab) to watch the next car, ZOOM (or
-              Z) to pull back.<br />Smash scrap bots for points and boost. Crates give rockets,
-              mines, repairs.
+              P pause, Tab names. CAMERA sets how far out you see.<br /><b>Scrapped?</b> Tap (or
+              Tab) to watch the next car, ZOOM (or Z) to pull back.<br />Smash scrap bots for points
+              and boost. Crates give rockets, mines, repairs.
             </p>
             <button class="muteBtn small">SOUND ON</button>
             <button class="hintsBtn small">KEY HINTS ON</button>
             <button class="namesBtn small">NAMES ON</button>
+            <button class="zoomBtn small">CAMERA NORMAL</button>
             <button class="resBtn small">RESOLUTION AUTO</button>
             <button id="toDev" class="small">TEST RANGE</button>
           </div>
@@ -158,6 +159,10 @@
         <h2>PAUSED</h2>
         <button id="resume">RESUME</button>
         <button id="restart">RESTART</button>
+        <label class="slide">
+          <span>CAMERA <b class="zoomName">NORMAL</b></span>
+          <input class="zoomRange" type="range" min="0" max="6" step="1" value="3" />
+        </label>
         <div id="volume"></div>
         <button class="hintsBtn">KEY HINTS ON</button>
         <button class="namesBtn">NAMES ON</button>

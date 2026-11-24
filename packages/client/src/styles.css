@@ -1352,6 +1352,29 @@ body.editing #pauseKey {
   pointer-events: none;
 }
 
+/* a slider in a narrow panel (the pause menu): a label over a wide track, easy to drag by thumb */
+.panel.narrow .slide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 2px solid rgba(255, 210, 74, 0.55);
+  background: rgba(255, 210, 74, 0.1);
+  border-radius: 12px;
+  padding: 8px 14px 10px;
+  text-align: center;
+  font-weight: 900;
+  font-size: 16px;
+}
+.panel.narrow .slide b {
+  color: #ffd24a;
+}
+.panel.narrow .slide input[type='range'] {
+  width: 100%;
+  height: 26px;
+  margin: 0;
+  accent-color: #ffd24a;
+  touch-action: pan-x;
+}
 /* the volume sliders on the pause menu: a row a thumb can grab anywhere along it */
 #volume {
   display: flex;
@@ -1388,7 +1411,8 @@ body.editing #pauseKey {
   -webkit-appearance: none;
   appearance: none;
 }
-.vol input::-webkit-slider-runnable-track {
+.vol input::-webkit-slider-runnable-track,
+.panel.narrow .slide input[type='range']::-webkit-slider-runnable-track {
   height: 10px;
   border-radius: 5px;
   background: linear-gradient(
@@ -1397,7 +1421,8 @@ body.editing #pauseKey {
     rgba(255, 255, 255, 0.22) var(--fill, 100%)
   );
 }
-.vol input::-moz-range-track {
+.vol input::-moz-range-track,
+.panel.narrow .slide input[type='range']::-moz-range-track {
   height: 10px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.22);
@@ -1407,7 +1432,8 @@ body.editing #pauseKey {
   border-radius: 5px;
   background: #ffd24a;
 }
-.vol input::-webkit-slider-thumb {
+.vol input::-webkit-slider-thumb,
+.panel.narrow .slide input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   width: 30px;
   height: 30px;
@@ -1417,7 +1443,8 @@ body.editing #pauseKey {
   background: #ffd24a;
   box-shadow: 0 0 0 2px #ffd24a;
 }
-.vol input::-moz-range-thumb {
+.vol input::-moz-range-thumb,
+.panel.narrow .slide input[type='range']::-moz-range-thumb {
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -1429,4 +1456,13 @@ body.editing #pauseKey {
   .vol input {
     height: 38px;
   }
+}
+/* the camera slider wears the same track and thumb, with nothing filled in: it is a place, not an amount */
+.panel.narrow .slide input[type='range'] {
+  height: 34px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  --fill: 0%;
 }

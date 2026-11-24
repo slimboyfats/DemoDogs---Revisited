@@ -24,6 +24,7 @@ import {
   type RaceId,
 } from './game/career';
 import { Session, type SessionOptions } from './game/session';
+import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
 import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
 import { isKey } from './input/keys';
@@ -79,6 +80,8 @@ const resolution = new Resolution(
   safeStore(),
   params.get('res') ?? (navigator.webdriver ? 'full' : null),
 );
+// how far out the race camera sits (CLOSE, NORMAL, WIDE): ?zoom=wide picks one for a visit
+const camZoom = new CameraZoom(safeStore(), params.get('zoom'));
 function safeStore(): Storage | undefined {
   try {
     return localStorage;
@@ -453,9 +456,9 @@ function resize(): void {
   overlay.height = Math.round(H * overK);
   const short = Math.min(W, H);
   const long = Math.max(W, H);
-  // about 175 art pixels up the short side: far enough out that the cells read as fine grain
-  // (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
-  scale = Math.max(2, Math.round(Math.min(short / 175, long / 310) * 2) / 2);
+  // at NORMAL about 175 art pixels up the short side: far enough out that the cells read as fine
+  // grain (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
+  scale = camZoom.scale(short, long);
   shown = editShown = scale;
   specZooms = [];
   scene.setScale(scale);
@@ -463,6 +466,7 @@ function resize(): void {
     session.setView(W / scale, H / scale);
     hud.layout(session.world, DPR);
   }
+  showZoom();
 }
 
 /** The RESOLUTION buttons say what is picked, and what it comes to on this screen. */
@@ -475,6 +479,33 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.resBtn'))
     resolution.next();
     resize();
     showRes();
+  };
+
+/** The CAMERA button and slider say which zoom is on, and what this screen can do. */
+function showZoom(): void {
+  const short = Math.min(W, H);
+  const long = Math.max(W, H);
+  // between the names: which side of NORMAL it is on
+  const name =
+    camZoom.name(short, long)?.toUpperCase() ?? (camZoom.view < VIEWS.normal ? 'CLOSER' : 'WIDER');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.zoomBtn'))
+    b.textContent = `CAMERA ${name}`;
+  for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange')) {
+    r.max = String(zoomStops(short, long).length - 1);
+    r.value = String(camZoom.stop(short, long));
+  }
+  for (const o of document.querySelectorAll<HTMLElement>('.zoomName')) o.textContent = name;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.zoomBtn'))
+  b.onclick = () => {
+    camZoom.next();
+    resize();
+  };
+// the slider: the race behind the pause menu zooms as it is dragged
+for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
+  r.oninput = () => {
+    camZoom.setStop(Number(r.value), Math.min(W, H), Math.max(W, H));
+    resize();
   };
 
 function show(id: string | null): void {
