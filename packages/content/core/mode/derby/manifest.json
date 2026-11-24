@@ -10,5 +10,20 @@
   "damageScale": 0.3,
   "timeLimit": 150,
   "ai": "ai.brawler",
-  "pickupRespawn": 7
+  "pickupRespawn": 7,
+  "crates": {
+    "arms": 2,
+    "blade": 2,
+    "kit": 4,
+    "shield": 3,
+    "weld": 2,
+    "plates": 2,
+    "cage": 2,
+    "ammo": 0.35,
+    "nitro": 0.35,
+    "jet": 0.35,
+    "cash": 0.35,
+    "springs": 0.5,
+    "magnet": 0.5
+  }
 }
