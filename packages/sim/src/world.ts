@@ -34,6 +34,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { updatePads } from './pads';
+import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
@@ -173,6 +174,8 @@ export class World {
   readonly statics: StaticProp[] = [];
   /** The statics that are track tiles (boost tiles, ramps): see pads.ts. */
   readonly pads: StaticProp[] = [];
+  /** The statics that are shapes in the road (speed bumps, dips, potholes): see mounds.ts. */
+  readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
   readonly critters: Critter[] = [];
   readonly props: LooseProp[] = [];
@@ -591,6 +594,7 @@ export class World {
       }
       updateMovers(this, c);
       updatePads(this, c);
+      updateRide(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }

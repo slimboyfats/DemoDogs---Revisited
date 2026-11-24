@@ -26,6 +26,7 @@ layout(location = 2) in vec4 a_uv;    // slice texel x, y, width, height
 layout(location = 3) in float a_alpha;
 layout(location = 4) in float a_res;   // texels per art px
 layout(location = 5) in float a_tint;  // 0, or 1 + 0xRRGGBB: drawn in that one colour, a shade behind
+layout(location = 6) in vec2 a_tilt;   // the slice lies sloped: height gained per art px east and south
 uniform vec2 u_view;
 uniform vec2 u_origin;   // device px of the world origin on the ground (whole pixels)
 uniform float u_scale;
@@ -71,8 +72,10 @@ void main() {
   } else {
     anchor -= vec2(0.0, lift);
   }
-  vec2 px = anchor + vec2(r.x * u_scale, r.y * u_scale * u_ys);
-  v_world = vec3(a_pos.xy + r, zz);
+  // a slice that lies sloped: each corner as much higher or lower as it is up or down the slope
+  float tz = dot(r, a_tilt);
+  vec2 px = anchor + vec2(r.x * u_scale, r.y * u_scale * u_ys - up * tz * u_scale * u_dir.x);
+  v_world = vec3(a_pos.xy + r, zz + tz);
   float d = v_world.y * u_dir.x + (gz + up * v_world.z) * u_dir.y;
   // an outline copy sits a shade further off than the thing it outlines, so only its rim shows
   if (a_tint > 0.5) d -= 5.0;

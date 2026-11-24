@@ -6,7 +6,7 @@ import type { ReliefLayer } from './relief-layer';
 import { STACK_FS, STACK_VS } from './stack-shaders';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
-const STRIDE = 12;
+const STRIDE = 14;
 
 /** The sky's light for a frame of slices (see Atmosphere). */
 export interface StackSky {
@@ -127,6 +127,18 @@ export interface CountPass {
   step: number;
 }
 
+/** How a thing lies tilted: see `StackBatch.tilt`. */
+export interface Lie {
+  tx: number;
+  ty: number;
+  ax: number;
+  ay: number;
+  px: number;
+  py: number;
+  pz: number;
+  lift: number;
+}
+
 /** The view a frame of slices is drawn with. */
 export interface StackView {
   /** Viewport, device px. */
@@ -211,6 +223,7 @@ export class StackBatch {
       [3, 1, 9],
       [4, 1, 10],
       [5, 1, 11],
+      [6, 2, 12],
     ];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
@@ -244,6 +257,8 @@ export class StackBatch {
     alpha: number,
     res: number,
     tint = 0,
+    tx = 0,
+    ty = 0,
   ): void {
     if ((this.n + 1) * STRIDE > this.data.length) {
       const bigger = new Float32Array(this.data.length * 2);
@@ -264,6 +279,8 @@ export class StackBatch {
     d[o + 9] = alpha;
     d[o + 10] = res;
     d[o + 11] = tint;
+    d[o + 12] = tx;
+    d[o + 13] = ty;
     this.n++;
   }
 
@@ -281,6 +298,15 @@ export class StackBatch {
   ): void {
     const a = this.atlas.slot(s);
     const zk = this.v.zk;
+    const T = this.lie;
+    if (T) {
+      // lying over: carried up or down with where it is on the thing, and off to the side with
+      // how high up it is
+      const h = z - T.pz;
+      z += T.lift + T.ax * (x - T.px) + T.ay * (y - T.py);
+      x -= h * T.tx;
+      y -= h * T.ty;
+    }
     const up = Math.round(z * zk);
     const res = s.res / this.zm;
     // a layer is drawn a row or two thick so stacks have no gaps between slices
@@ -289,7 +315,20 @@ export class StackBatch {
     const v = a.y + sliceY(s, i);
     if (!tint && this.warm) tint = -1;
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint);
+      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint, T?.tx, T?.ty);
+  }
+
+  private lie: Lie | null = null;
+
+  /**
+   * What follows lies tilted, as one thing, about (px, py, pz): its slices slope by (tx, ty)
+   * (height gained per art px east and south), and everything queued is carried round with
+   * them. (ax, ay) is the part of that slope the ground under it does not already give (the
+   * shader stands each stack on the ground where it is), and `lift` raises the whole thing.
+   * Null puts it back.
+   */
+  tilt(lie: Lie | null): void {
+    this.lie = lie;
   }
 
   private zm = 1;
@@ -331,6 +370,8 @@ export class StackBatch {
           1,
           d[o + 10]!,
           tint,
+          d[o + 12]!,
+          d[o + 13]!,
         );
       }
   }

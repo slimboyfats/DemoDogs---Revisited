@@ -341,6 +341,46 @@
           "weight": 1
         }
       ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 2,
+        "apart": 0.15
+      },
+      "items": [
+        {
+          "prop": "prop.dip",
+          "row": 3,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 3,
+        "apart": 0.12
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        }
+      ]
     }
   ],
   "bots": {

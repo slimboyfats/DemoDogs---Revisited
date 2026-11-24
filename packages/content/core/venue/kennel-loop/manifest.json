@@ -413,6 +413,52 @@
           "rot": 0
         }
       ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.2
+      },
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 2,
+        "apart": 0.2
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        }
+      ]
     }
   ],
   "bots": {

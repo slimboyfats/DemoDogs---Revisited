@@ -178,6 +178,32 @@ export function padTest(id: string | null, speed: number, rot = 0, throttle = 1)
 }
 
 /**
+ * Drive the player along +x over road shape `id` (null: over bare ground, to compare) lying
+ * across its way `side` art px to its right, starting at `speed` with the throttle at `throttle`,
+ * for two seconds. Reports how high it flew and how far it tipped.
+ */
+export function moundTest(id: string | null, speed: number, throttle = 1, side = 0) {
+  const w = flatBench();
+  const c = w.player;
+  const x = w.oval!.cx - 80;
+  const y = w.oval!.cy;
+  if (id) stand(w, loadContent().prop.get(id)!, x, y + side, 0, 0);
+  put(c, x - 40, y, 0, speed);
+  const events: string[] = [];
+  let maxZ = 0;
+  let maxPitch = 0;
+  let minPitch = 0;
+  for (let i = 0; i < 120; i++) {
+    w.step({ steer: 0, throttle, brake: false, boost: false, fire: false });
+    for (const e of w.takeEvents()) events.push(e.t);
+    maxZ = Math.max(maxZ, c.z);
+    maxPitch = Math.max(maxPitch, c.pitch);
+    minPitch = Math.min(minPitch, c.pitch);
+  }
+  return { world: w, car: c, events, maxZ, maxPitch, minPitch };
+}
+
+/**
  * Put a group of animals `id` down on open flat ground and drive the player past them at
  * `speed`, `miss` art px to one side (0: straight through the middle). `packed` stands them all
  * on the car's line, and `gap` is how far off the car starts. Reports what the car did to them over `ticks`.

@@ -39,6 +39,26 @@ export const PadSchema = z.discriminatedUnion('kind', [
 export type PadManifest = z.infer<typeof PadSchema>;
 
 /**
+ * A shape in the road's own surface, `long` art px along the way the prop is turned and `wide`
+ * across it, `high` at its middle (below zero: a hollow that deep). Cars ride over it: their
+ * wheels follow it, so the body tips and rocks, and one that comes over a crest fast leaves the
+ * ground.
+ * - `bar`: the same height all the way across, rounded off along its length (a speed bump, a dip).
+ * - `bowl`: round, deepest in the middle (a pothole).
+ * - `wedge`: rising from nothing at its foot to `high` at its lip, where it ends sheer (a ramp).
+ * `jolt` (0 to 1) is how much of its speed a car loses to a wheel dropping in, each time it
+ * drives into one fast: it is knocked askew and thrown up a little too.
+ */
+export const MoundSchema = z.strictObject({
+  shape: z.enum(['bar', 'bowl', 'wedge']).default('bar'),
+  long: z.number().positive(),
+  wide: z.number().positive(),
+  high: z.number().min(-8).max(12),
+  jolt: unit.default(0),
+});
+export type MoundManifest = z.infer<typeof MoundSchema>;
+
+/**
  * An animal. The prop is where a group of `group` of them lives; they wander within `roam` of
  * it at `walk` and bolt at `run` from a car that comes within `scare` going faster than `shy`.
  * - `ground`: runs about on the ground. One lighter than `flung` (mass 1 is a car) is knocked
@@ -89,6 +109,7 @@ export const FLUNG_BELOW = 0.6;
 /** The fields a prop may carry to be a track piece. Spread into PropSchema. */
 export const pieceFields = {
   pad: PadSchema.optional(),
+  mound: MoundSchema.optional(),
   critter: CritterSchema.optional(),
   /**
    * Static props that are not solid: flattened for good by a car that drives over them (long

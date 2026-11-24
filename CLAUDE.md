@@ -22,6 +22,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
+| `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
@@ -114,4 +115,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map
   and draws it raised through a picture-to-ground map baked once (`render/relief-map.ts`); stacks, particles and
   shadows lift themselves by the same heights in their shaders. The canvas fallback draws the ground flat.
+- **Cars lie with the ground.** The sim works out how each car lies (`pitch`, `bank` in sim/mounds.ts) from the
+  ground under its nose, tail and sides: the relief, the shapes in the road (props with a `mound`: speed bump, dip,
+  pothole, the ramps' wedges) and the climb of a deck. The client tips the whole car as one thing (`lying` in
+  render/stacks.ts, `tilt` on the stack sink): whatever is queued for a car between `tilt(lie)` and `tilt(null)` goes
+  with it at the car's size, so new gear on a car needs nothing of its own.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.

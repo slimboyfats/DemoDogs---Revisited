@@ -305,6 +305,42 @@
           "ahead": 0
         }
       ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.2
+      },
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.2
+      },
+      "items": [
+        {
+          "prop": "prop.dip",
+          "row": 3,
+          "step": 26
+        }
+      ]
     }
   ],
   "bots": {

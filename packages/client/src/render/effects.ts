@@ -1074,6 +1074,16 @@ export class Effects {
         case 'land':
           if (e.impact > 90 && this.near(w.cars[e.car]!.x, w.cars[e.car]!.y, 300)) S.crash(10);
           break;
+        case 'jolt': {
+          // a wheel in a pothole kicks up grit and sparks; a car thrown off a crest leaves dust
+          const v = this.vol(e.x, e.y);
+          const hole = e.kind === 'hole';
+          for (let i = 0; i < (hole ? 5 : 2); i++) this.puff(e.x, e.y, 1, 'dust');
+          if (hole) for (let i = 0; i < 8; i++) this.spark(e.x, e.y, 1, 70);
+          if (v > 0) S.crash((hole ? 9 : 4) * v);
+          if (hole && this.near(e.x, e.y, 60)) this.shake = Math.max(this.shake, 3.5);
+          break;
+        }
         case 'explode': {
           const { x, y, power } = e;
           const z = e.z ?? 0;

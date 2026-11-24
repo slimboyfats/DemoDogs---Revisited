@@ -1,5 +1,6 @@
 import { fitted, mounts, place } from './addon-mounts';
 import {
+  moundAt,
   pressOpen,
   pressWarning,
   type Bot,
@@ -17,6 +18,7 @@ import { tall, type Strip } from './stack';
 import { queueArms } from './arms-fx';
 import { queueArsenal } from './arsenal-fx';
 import { leanAt } from './rubble';
+import type { Lie } from './pixel/stack-batch';
 import { Builder } from './slice-fx';
 import { queueDecoys, queueGuards } from './guard-mounts';
 import { BREEZE, WIND } from './pixel/particles';
@@ -50,6 +52,8 @@ export interface StackSink {
    * times as big (a swollen car, a shrunk one). 1 puts it back.
    */
   zoom(k: number): void;
+  /** What follows lies tilted as one thing (see `Lie`); null puts it back. */
+  tilt?(lie: Lie | null): void;
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void;
   /** Where the next slice will go, and a line round everything queued since (the pixel engine). */
   mark?(): number;
@@ -374,6 +378,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   if (c.collar) queueCollar(R, art, fx, c);
   const from = R.rimOn && c === w.player && !c.wrecked ? R.mark?.() : undefined;
   R.zoom(k);
+  R.tilt?.(lying(w, c, k));
   const A = fx.carArt(c);
   const body = fx.bodies[c.index]!;
   const D = c.def;
@@ -498,8 +503,49 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       alpha,
     );
   R.zoom(1);
+  R.tilt?.(null);
   // your own car, when it is dark enough to lose it: a pale line round the whole of it
   if (from !== undefined) R.rim?.(from, RIM);
+}
+
+/** How much more a car is drawn tipped than the ground under it slopes: it has to be seen. */
+const TIP = 1.35;
+
+const lie: Lie = { tx: 0, ty: 0, ax: 0, ay: 0, px: 0, py: 0, pz: 0, lift: 0 };
+
+/**
+ * How car c lies on the ground under it: tipped nose up or down and to one side as the sim has
+ * it riding (`pitch`, `bank`), and lifted over whatever shape in the road its wheels are on.
+ * Null when it lies level on level ground.
+ */
+export function lying(w: World, c: Car, k: number): Lie | null {
+  const lift = w.mounds.length ? rideLift(w, c, k) : 0;
+  if (!c.pitch && !c.bank && !lift) return null;
+  const cs = Math.cos(c.h);
+  const sn = Math.sin(c.h);
+  lie.tx = (c.pitch * cs - c.bank * sn) * TIP;
+  lie.ty = (c.pitch * sn + c.bank * cs) * TIP;
+  // the ground's own slope is given to each stack where it stands; the rest is ours to add
+  const R = w.relief;
+  lie.ax = lie.tx - (R ? R.dx(c.x, c.y) : 0);
+  lie.ay = lie.ty - (R ? R.dy(c.x, c.y) : 0);
+  lie.px = c.x;
+  lie.py = c.y;
+  lie.pz = c.z;
+  lie.lift = lift;
+  return lie;
+}
+
+/** How far the shapes in the road hold a car's body up (or let it down): what its axles are on. */
+function rideLift(w: World, c: Car, k: number): number {
+  const L = (c.def.body.halfLength - 2) * k;
+  const dx = Math.cos(c.h) * L;
+  const dy = Math.sin(c.h) * L;
+  const mid = moundAt(w, c.x, c.y);
+  // in the air its height is over the ground under its middle
+  if (c.z > 0.6) return mid;
+  const axles = (moundAt(w, c.x + dx, c.y + dy) + moundAt(w, c.x - dx, c.y - dy)) / 2;
+  return Math.max(axles, mid * 0.7);
 }
 
 /** How far down a pit a car is: 0 not at all, 1 out of sight. */

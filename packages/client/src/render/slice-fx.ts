@@ -1,3 +1,4 @@
+import type { Lie } from './pixel/stack-batch';
 import type { Car, StaticProp, World } from '@demodogs/sim';
 import type { Strip } from './stack';
 import type { StackSink } from './stacks';
@@ -201,6 +202,9 @@ export class Builder implements StackSink {
   zoom(k: number): void {
     this.zm = k;
     this.R.zoom(k);
+  }
+  tilt(lie: Lie | null): void {
+    this.R.tilt?.(lie);
   }
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     for (let i = 0; i < n; i++) {
