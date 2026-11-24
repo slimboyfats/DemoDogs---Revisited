@@ -70,3 +70,12 @@ and down (`n`) the road. `field` plants plots of a crop in rows beside the road.
 
 If a change alters how a race plays out, the golden hashes in `golden.json` will fail: check the change
 is intended, then regenerate with `UPDATE_GOLDEN=1`.
+
+## Add-ons
+
+An add-on is a `pickup` whose `kind` is one of `ADDON_KINDS` (`rims`, `tank`, `paws`, `scoop`, `barrel`,
+`cage`, `magnet`, `jet`, `plates`, `jaws`). `packages/sim/src/addons.ts` says what each kind reads from
+its manifest. List it in a venue's `pickups` to make it loot. Give it a `price` to sell it between races:
+`sold: "garage"` bolts it to the car for good, `sold: "market"` fits it for the next race only. Its
+`look.ts` is one piece of it; `packages/client/src/render/addon-mounts.ts` says where the pieces go on a
+car. In the test range, GIVE hands any of them to a car.

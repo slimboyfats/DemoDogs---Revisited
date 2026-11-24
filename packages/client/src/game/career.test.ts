@@ -6,6 +6,8 @@ import {
   KIT,
   LOAN,
   TIERS,
+  addOns,
+  buyAddon,
   buyCar,
   buyKit,
   buyUpgrade,
@@ -185,6 +187,43 @@ describe('career', () => {
     expect(parseCareer(C, '{nope')).toBeNull();
     expect(parseCareer(C, JSON.stringify({ ...k, car: 'car.gone' }))).toBeNull();
     expect(parseCareer(C, JSON.stringify({ ...k, v: 2 }))).toBeNull();
+  });
+
+  it('sells add-ons: garage ones stay on the car, market ones last a race', () => {
+    const garage = addOns(C, 'garage');
+    const market = addOns(C, 'market');
+    expect(garage.length).toBeGreaterThanOrEqual(5);
+    expect(market.length).toBeGreaterThanOrEqual(2);
+    expect(buyAddon(C, fresh({ cash: 0 }), garage[0]!.id).ok).toBe(false);
+    expect(buyAddon(C, fresh({ cash: 1e6 }), 'pickup.repair').ok).toBe(false);
+    let k = fresh({ cash: 50000 });
+    const before = tradeIn(C, k);
+    k = ok(buyAddon(C, k, garage[0]!.id));
+    k = ok(buyAddon(C, k, market[0]!.id));
+    expect(k.cash).toBe(50000 - garage[0]!.price - market[0]!.price);
+    expect(buyAddon(C, k, garage[0]!.id).ok).toBe(false);
+    expect(buyAddon(C, k, market[0]!.id).ok).toBe(false);
+    // both come to the grid on the car
+    expect(raceSetup(C, k, 'easy').player.fit).toEqual([garage[0]!.id, market[0]!.id]);
+    // the dealer pays for what is bolted on, and it goes with the car
+    expect(tradeIn(C, k)).toBeGreaterThan(before);
+    const after = settle(k, 'easy', win).career;
+    expect(after.addons).toEqual([garage[0]!.id]);
+    expect(after.extras).toEqual([]);
+    expect(ok(buyCar(C, k, shop(C)[1]!.id)).addons).toEqual([]);
+  });
+
+  it('reads a career saved before there were add-ons, and gives the big league some', () => {
+    const old: Partial<Career> = fresh();
+    delete old.addons;
+    delete old.extras;
+    const k = parseCareer(C, JSON.stringify(old))!;
+    expect(k.addons).toEqual([]);
+    expect(k.extras).toEqual([]);
+    expect(parseCareer(C, JSON.stringify({ ...old, addons: ['pickup.gone'] }))!.addons).toEqual([]);
+    expect(raceSetup(C, k, 'easy').field.every((e) => !e.fit?.length)).toBe(true);
+    expect(raceSetup(C, k, 'hard').field.some((e) => (e.fit?.length ?? 0) > 0)).toBe(true);
+    expect(raceSetup(C, { ...k, points: 999 }, 'final').field[0]!.fit!.length).toBeGreaterThan(3);
   });
 
   it('runs a real knockout race from a setup and reads the result', () => {

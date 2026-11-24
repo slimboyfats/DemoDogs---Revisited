@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { GUARD_KINDS } from '@demodogs/shared';
 import { describe, expect, it } from 'vitest';
+import { isAddon } from '@demodogs/sim';
 import { loadContent, loadLooks } from './index';
 import { itemFolders } from './glob';
 
@@ -62,6 +63,7 @@ describe('content validate', () => {
           p.kind === 'blade' ||
           p.kind === 'springs' ||
           p.kind === 'collar' ||
+          isAddon(p.kind) ||
           (GUARD_KINDS as readonly string[]).includes(p.kind),
       )
       .map((p) => p.id);

@@ -688,6 +688,28 @@ export const GUARD_KINDS = [
 ] as const;
 export type GuardKind = (typeof GUARD_KINDS)[number];
 
+/**
+ * Add-ons: pickups that bolt gear onto the car instead of handing it something to spend.
+ * rims: spiked wheel hubs. tank: a second boost bottle. paws: knobbly tyres. scoop: an air scoop
+ * that feeds on a rival's wake. barrel: a second gun barrel. cage: a roll cage that takes the blow
+ * that would have wrecked the car. magnet: pulls pickups in. jet: a rocket bottle on the roof.
+ * plates: slabs that blow off at whoever strikes them. jaws: what they tear off a rival mends the
+ * car and pays.
+ */
+export const ADDON_KINDS = [
+  'rims',
+  'tank',
+  'paws',
+  'scoop',
+  'barrel',
+  'cage',
+  'magnet',
+  'jet',
+  'plates',
+  'jaws',
+] as const;
+export type AddonKind = (typeof ADDON_KINDS)[number];
+
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
@@ -708,6 +730,7 @@ export const PickupSchema = z.strictObject({
     'wind',
     'collar',
     'bones',
+    ...ADDON_KINDS,
   ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
@@ -751,6 +774,15 @@ export const PickupSchema = z.strictObject({
    * and how far it reaches (art px). A bond's `amount` is the share of each blow it passes on.
    */
   reach: z.number().positive().optional(),
+  /**
+   * Add-ons (the ADDON_KINDS): gear bolted to the car. `factor` and `radius` are each add-on's own
+   * numbers, as are `amount`, `seconds`, `charges` and `bite` above (sim/addons.ts says what each
+   * kind reads). One with a `price` is for sale between races: in the garage, where it stays on
+   * the car for good, or on the black market (`sold: 'market'`), fitted for the next race only.
+   */
+  factor: z.number().positive().optional(),
+  price: z.number().int().positive().optional(),
+  sold: z.enum(['garage', 'market']).optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 

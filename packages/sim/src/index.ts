@@ -42,3 +42,4 @@ export { breached, riversOf, type River } from './river';
 export { inWater } from './docks';
 export * from './dmath';
 export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';
+export * from './addons';

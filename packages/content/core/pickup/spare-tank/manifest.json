@@ -1,0 +1,15 @@
+{
+  "id": "pickup.spare-tank",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Spare tank",
+    "description": "A second boost bottle in the back: the boost lasts much longer and comes back faster.",
+    "since": "core@0.4.0"
+  },
+  "kind": "tank",
+  "weight": 0.05,
+  "hurtWeight": 0.03,
+  "factor": 1.7,
+  "price": 1200,
+  "sold": "garage"
+}

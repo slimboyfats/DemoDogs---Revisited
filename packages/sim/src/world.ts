@@ -1,7 +1,9 @@
+import { updateAddons } from './addons';
 import { updateDefence } from './defence';
 import {
   DT,
   FIELD_SIZE,
+  ADDON_KINDS,
   NO_CONTROLS,
   type Controls,
   type ModeManifest,
@@ -612,6 +614,7 @@ export class World {
     updatePickups(this);
     updateDefence(this);
     updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
+    updateAddons(this);
     updateRockets(this);
     updateMines(this);
     updateDrops(this);
@@ -674,6 +677,9 @@ export class World {
         .num(c.lap)
         .num(c.score)
         .num(c.size)
+        .num(c.nitro)
+        .num(c.cash)
+        .num(fitHash(c))
         .num(c.wrecked ? 1 : 0);
     for (const b of this.bots)
       H.num(b.x)
@@ -718,6 +724,16 @@ export class World {
     const P = this.player;
     return this.track !== null && P.wrongT > 1 && !P.wrecked;
   }
+}
+
+/** A car's add-ons as one number: which are on, and what each has left. */
+function fitHash(c: Car): number {
+  let h = 0;
+  ADDON_KINDS.forEach((k, i) => {
+    const f = c.fit[k];
+    if (f) h += (i + 1) * 7919 + f.n * 31 + f.t;
+  });
+  return h;
 }
 
 /** Is the angle from car c to (x, y) within `cone` of its heading? */

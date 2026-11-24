@@ -373,6 +373,11 @@
     "pickup.runt-ray",
     "pickup.second-wind",
     "pickup.lead-collar",
-    "pickup.bone-shower"
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

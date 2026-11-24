@@ -1,0 +1,15 @@
+{
+  "id": "pickup.mud-paws",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mud paws",
+    "description": "Knobbly tyres: grass, mud, oil, glue and ice cost a fraction of what they did.",
+    "since": "core@0.4.0"
+  },
+  "kind": "paws",
+  "weight": 0.05,
+  "hurtWeight": 0.03,
+  "factor": 0.35,
+  "price": 1000,
+  "sold": "garage"
+}
