@@ -115,6 +115,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map
   and draws it raised through a picture-to-ground map baked once (`render/relief-map.ts`); stacks, particles and
   shadows lift themselves by the same heights in their shaders. The canvas fallback draws the ground flat.
+  A venue's `track.raised` (`from`, `to`, `height`; the track creator's ELEVATE tool writes it as `raised` in the
+  `TrackFile`) lifts a stretch of road into a platform in that same height map, with a ramp at each end and steep
+  sides, so nothing else needs to know about it.
 - **Cars lie with the ground.** The sim works out how each car lies (`pitch`, `bank` in sim/mounds.ts) from the
   ground under its nose, tail and sides: the relief, the shapes in the road (props with a `mound`: speed bump, dip,
   pothole, the ramps' wedges) and the climb of a deck. The client tips the whole car as one thing (`lying` in

@@ -403,6 +403,21 @@ export const VenueSchema = z.strictObject({
       surfaces: z
         .array(z.strictObject({ from: unit, to: unit, material: id('material') }))
         .optional(),
+      /**
+       * Raised stretches: from fraction `from` of the way round to `to` (past the start line if
+       * `to` is the smaller) the road stands `height` art px up on a platform with steep sides.
+       * It climbs to that over `ramp` px at each end (a slope of about one in five if left out).
+       */
+      raised: z
+        .array(
+          z.strictObject({
+            from: unit,
+            to: unit,
+            height: z.number().positive().max(60),
+            ramp: z.number().positive().optional(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
   /** Derby venues: the walled oval. */

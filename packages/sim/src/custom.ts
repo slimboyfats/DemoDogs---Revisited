@@ -117,6 +117,7 @@ export function newTrack(look: VenueManifest, id: string, name: string): TrackFi
     pools: [],
     bridges: [],
     surfaces: [],
+    raised: [],
     areas: [],
     bots: Math.min(10, look.bots.count),
     pickups: [...look.pickups],
@@ -287,6 +288,10 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       to: near(s.x1, s.y1) / T.n,
       material: s.material,
     }));
+  // raised stretches of road: platforms, by where along the road they begin and end
+  const raised = t.raised
+    .map((r) => ({ from: near(r.x0, r.y0) / T.n, to: near(r.x1, r.y1) / T.n, height: r.height }))
+    .filter((r) => r.from !== r.to);
   let pickups = (t.pickups ?? []).filter((p) => content.pickup.has(p) || !dropped.add(p));
   if (pickups.length === 0) pickups = [...content.pickup.keys()].sort();
 
@@ -306,6 +311,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       road: t.road.width,
       points: t.road.points,
       ...(surfaces.length ? { surfaces } : {}),
+      ...(raised.length ? { raised } : {}),
     },
     colors: t.colors,
     ...(weather.length ? { weather } : {}),

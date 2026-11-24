@@ -1,4 +1,5 @@
 import type { PropManifest, TrackFile } from '@demodogs/shared';
+import { RAISE_MAX, RAISE_MIN } from '@demodogs/shared';
 import { clampPoint, sampleTrack, type Track } from '@demodogs/sim';
 
 /**
@@ -84,6 +85,13 @@ export function resize(t: TrackFile, w: number, h: number): void {
     x1: s.x1 + dx,
     y1: s.y1 + dy,
   }));
+  t.raised = t.raised.map((s) => ({
+    ...s,
+    x0: s.x0 + dx,
+    y0: s.y0 + dy,
+    x1: s.x1 + dx,
+    y1: s.y1 + dy,
+  }));
 }
 
 /**
@@ -91,14 +99,14 @@ export function resize(t: TrackFile, w: number, h: number): void {
  * has left behind (further off than the road is wide) is taken away.
  */
 export function snapBridges(t: TrackFile): void {
-  if (t.bridges.length === 0 && t.surfaces.length === 0) return;
+  if (t.bridges.length === 0 && t.surfaces.length === 0 && t.raised.length === 0) return;
   const T = sampleTrack(t.road.points, 4);
   t.bridges = t.bridges.flatMap((b) => {
     const hit = nearestSample(T, b.x, b.y);
     if (hit.d > t.road.width) return [];
     return [{ ...b, x: Math.round(T.x[hit.i]!), y: Math.round(T.y[hit.i]!) }];
   });
-  t.surfaces = t.surfaces.map((s) => {
+  const snap = <S extends { x0: number; y0: number; x1: number; y1: number }>(s: S): S => {
     const a = nearestSample(T, s.x0, s.y0).i;
     const b = nearestSample(T, s.x1, s.y1).i;
     return {
@@ -108,7 +116,9 @@ export function snapBridges(t: TrackFile): void {
       x1: Math.round(T.x[b]!),
       y1: Math.round(T.y[b]!),
     };
-  });
+  };
+  t.surfaces = t.surfaces.map(snap);
+  t.raised = t.raised.map(snap);
 }
 
 /**
@@ -146,6 +156,48 @@ export function surfaceAt(T: Track, t: TrackFile, x: number, y: number, reach: n
   if (hit.d > reach) return -1;
   for (let k = t.surfaces.length - 1; k >= 0; k--) {
     const s = t.surfaces[k]!;
+    const a = nearestSample(T, s.x0, s.y0).i;
+    const b = nearestSample(T, s.x1, s.y1).i;
+    if (onArc(T.n, a, b, hit.i)) return k;
+  }
+  return -1;
+}
+
+/** The shortest stretch of road worth raising, px: room for a way up and a way down. */
+export const RAISE_LEAST = 96;
+
+/**
+ * A stretch of road raised into a platform, from one point on the ground to another, snapped to
+ * the road. One too short to climb is drawn out about its middle.
+ */
+export function raisedBetween(
+  T: Track,
+  height: number,
+  p: readonly [number, number],
+  q: readonly [number, number],
+): TrackFile['raised'][number] {
+  let [a, b] = arc(T.n, nearestSample(T, p[0], p[1]).i, nearestSample(T, q[0], q[1]).i);
+  const least = Math.min(Math.floor(T.n / 3), Math.ceil(RAISE_LEAST / T.step));
+  const short = least - ((b - a + T.n) % T.n);
+  if (short > 0) {
+    a = (a - Math.ceil(short / 2) + T.n) % T.n;
+    b = (b + Math.floor(short / 2)) % T.n;
+  }
+  return {
+    height: Math.max(RAISE_MIN, Math.min(RAISE_MAX, height)),
+    x0: Math.round(T.x[a]!),
+    y0: Math.round(T.y[a]!),
+    x1: Math.round(T.x[b]!),
+    y1: Math.round(T.y[b]!),
+  };
+}
+
+/** The raised stretch the road at (x, y) is on, or -1. `reach` is how far off the line counts. */
+export function raisedAt(T: Track, t: TrackFile, x: number, y: number, reach: number): number {
+  const hit = nearestSample(T, x, y);
+  if (hit.d > reach) return -1;
+  for (let k = t.raised.length - 1; k >= 0; k--) {
+    const s = t.raised[k]!;
     const a = nearestSample(T, s.x0, s.y0).i;
     const b = nearestSample(T, s.x1, s.y1).i;
     if (onArc(T.n, a, b, hit.i)) return k;

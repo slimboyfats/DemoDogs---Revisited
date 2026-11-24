@@ -21,6 +21,11 @@ export const SIZE_MIN = 0.5;
 export const SIZE_MAX = 3;
 export const SIZE_STEP = 0.25;
 
+/** How high a stretch of road can be raised (art px), and the step the editor moves it by. */
+export const RAISE_MIN = 12;
+export const RAISE_MAX = 48;
+export const RAISE_STEP = 4;
+
 /** The nearest size a thing can have to `k`. */
 export const sizeStep = (k: number): number =>
   Math.min(SIZE_MAX, Math.max(SIZE_MIN, Math.round(k / SIZE_STEP) * SIZE_STEP));
@@ -112,6 +117,23 @@ export const TrackFileSchema = z.object({
       }),
     )
     .max(24)
+    .default([]),
+  /**
+   * Raised stretches of road: from the point of the road nearest to (x0, y0) on, in the direction
+   * of the race, to the one nearest to (x1, y1), the road stands `height` art px up on a platform
+   * with steep sides, and climbs to it and comes down from it at its two ends.
+   */
+  raised: z
+    .array(
+      z.strictObject({
+        x0: z.number(),
+        y0: z.number(),
+        x1: z.number(),
+        y1: z.number(),
+        height: z.number().min(RAISE_MIN).max(RAISE_MAX),
+      }),
+    )
+    .max(12)
     .default([]),
   /**
    * Areas of terrain and weather: within `r` of (x, y) the ground is `material` (snow, ice, sand;

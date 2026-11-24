@@ -30,6 +30,7 @@ const track = (things: number): TrackFile => ({
   pools: [{ material: 'material.mud', x: 700, y: 480, r: 20 }],
   bridges: [],
   surfaces: [{ material: 'material.ice', x0: 500, y0: 300, x1: 900, y1: 300 }],
+  raised: [],
   areas: [{ x: 400, y: 300, r: 260, material: 'material.snow', sky: 'snow' }],
   bots: 4,
 });
