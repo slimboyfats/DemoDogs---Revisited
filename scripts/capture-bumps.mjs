@@ -362,6 +362,8 @@ const built = async (bridge) => {
         vf: v,
         armor: 999,
       });
+      // and the camera is there with it, not on its way from the last place
+      Object.assign(s.cam, { x: c.x, y: c.y });
     };
   }, mids);
   return mids;
@@ -405,11 +407,12 @@ if (scene('drop')) {
     ([mid, span]) => (window.__dd.clear(mid, 260), window.__dd.clear(span, 260)),
     [mid, span],
   );
-  await pass('drop-far-edge-fast', [mid, -20, 0, -0.8, 170], 90, GO, 30);
-  await pass('drop-far-edge-slow', [mid, -10, -20, -1.3, 35], 120, SLOW, 50);
-  await pass('drop-bridge-near-fast', [span, -12, 0, -0.8, 160], 100, GO, 30);
-  await pass('drop-bridge-near-slow', [span, -6, -16, -1.3, 35], 130, SLOW, 56);
-  await pass('drop-bridge-far-fast', [span, -12, 0, 0.8, 160], 100, GO, 30);
+  await pass('drop-far-edge-fast', [mid, -20, 0, -0.8, 170], 60, GO, 24);
+  await pass('drop-far-edge-slow', [mid, -10, -20, -1.3, 35], 100, SLOW, 50);
+  await pass('drop-bridge-near-fast', [span, -12, 0, -0.8, 160], 64, GO, 26);
+  await pass('drop-bridge-near-slow', [span, -6, -16, -1.3, 35], 100, SLOW, 56);
+  await pass('drop-bridge-far-fast', [span, -12, 0, 0.8, 160], 64, GO, 26);
+  await pass('drop-bridge-far-slow', [span, -6, 16, 1.3, 35], 100, SLOW, 56);
   console.log(`marks ${JSON.stringify(marks)}`);
 }
 
