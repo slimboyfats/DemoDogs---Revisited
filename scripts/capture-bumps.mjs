@@ -434,6 +434,18 @@ if (scene('edges')) {
   console.log(`marks ${JSON.stringify(marks)}`);
 }
 
+// 9: the two things that tell a height with nobody driving: a platform's wall seen from the
+// front, and the shade on the ground beyond a bridge's far edge
+if (scene('faces')) {
+  const [mid, span] = await built(true);
+  await page.evaluate(
+    ([mid, span]) => (window.__dd.clear(mid, 260), window.__dd.clear(span, 260)),
+    [mid, span],
+  );
+  await pass('faces-wall', [mid, 0, 90, -Math.PI / 2, 0], 6, IDLE, 3);
+  await pass('faces-bridge-far', [span, 0, 70, Math.PI / 2, 0], 6, IDLE, 3);
+}
+
 await browser.close();
 server.close();
 if (errors.length) {

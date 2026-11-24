@@ -14,6 +14,7 @@ const DARK = 0.3;
  */
 export class ShadowLayer {
   private readonly tex: WebGLTexture;
+  private readonly deep: WebGLTexture;
   private readonly prog: WebGLProgram;
   private readonly vao: WebGLVertexArrayObject;
   private readonly u;
@@ -27,6 +28,8 @@ export class ShadowLayer {
     this.tex = texture(gl, gl.LINEAR);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, map.w, map.h, 0, gl.RED, gl.UNSIGNED_BYTE, map.mask);
+    this.deep = texture(gl, gl.LINEAR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, map.w, map.h, 0, gl.RED, gl.UNSIGNED_BYTE, map.deep);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     map.dirty = null;
     this.prog = compile(gl, GROUND_VS, shadowFs(!!relief?.map));
@@ -40,6 +43,7 @@ export class ShadowLayer {
       'u_alpha',
       'u_fine',
       'u_map',
+      'u_deep',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -57,12 +61,17 @@ export class ShadowLayer {
     if (x1 <= x0 || y1 <= y0) return;
     const bw = x1 - x0;
     const box = new Uint8Array(bw * (y1 - y0));
-    for (let y = y0; y < y1; y++)
-      box.set(M.mask.subarray(y * M.w + x0, y * M.w + x1), (y - y0) * bw);
     const gl = this.gl;
-    gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, bw, y1 - y0, gl.RED, gl.UNSIGNED_BYTE, box);
+    for (const [from, tex] of [
+      [M.mask, this.tex],
+      [M.deep, this.deep],
+    ] as const) {
+      for (let y = y0; y < y1; y++)
+        box.set(from.subarray(y * M.w + x0, y * M.w + x1), (y - y0) * bw);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, bw, y1 - y0, gl.RED, gl.UNSIGNED_BYTE, box);
+    }
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
   }
 
@@ -81,6 +90,10 @@ export class ShadowLayer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.deep);
+    gl.uniform1i(u.u_deep, 2);
+    gl.activeTexture(gl.TEXTURE0);
     if (this.relief?.map) {
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, this.relief.map);
@@ -94,6 +107,7 @@ export class ShadowLayer {
 
   dispose(): void {
     this.gl.deleteTexture(this.tex);
+    this.gl.deleteTexture(this.deep);
     this.gl.deleteVertexArray(this.vao);
     this.gl.deleteProgram(this.prog);
   }
