@@ -446,6 +446,14 @@ if (scene('faces')) {
   await pass('faces-bridge-far', [span, 0, 70, Math.PI / 2, 0], 6, IDLE, 3);
 }
 
+// 10: off the side of a raised road, left down there, and lifted back onto it
+if (scene('rescue')) {
+  const [mid] = await built(false);
+  await page.evaluate((mid) => window.__dd.clear(mid, 260), mid);
+  await pass('rescue-off-and-back', [mid, -20, 0, 0.8, 150], 250, IDLE, 190);
+  console.log(`marks ${JSON.stringify(marks)}`);
+}
+
 await browser.close();
 server.close();
 if (errors.length) {

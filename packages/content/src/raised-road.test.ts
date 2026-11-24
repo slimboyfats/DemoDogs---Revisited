@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { NO_CONTROLS, parseTrackFile, type TrackFile } from '@demodogs/shared';
-import { World, groundAt, installTrack, liftsOf, newTrack, type Content } from '@demodogs/sim';
+import {
+  RESCUE_AFTER,
+  World,
+  groundAt,
+  installTrack,
+  liftsOf,
+  newTrack,
+  type Content,
+} from '@demodogs/sim';
 import { loadContent } from './index';
 import { put, runUntil, startRace } from './testing';
 
@@ -94,7 +102,9 @@ describe('raised road', () => {
     // from the ground beside it, straight at it, and kept at it: the side is a wall, and
     // there is no crawling up it however long the throttle is held
     put(w.player, T.x[k]! + nx * far, T.y[k]! + ny * far, Math.atan2(-ny, -nx), 120);
+    // (with the lift back onto the road held off, which would carry it up)
     for (let n = 0; n < 600; n++) {
+      w.player.downT = 0;
       w.step({ ...NO_CONTROLS, throttle: 1 });
       expect(groundAt(w, w.player.x, w.player.y)).toBeLessThan(8);
     }
@@ -110,6 +120,48 @@ describe('raised road', () => {
     }
     expect(high).toBeGreaterThan(12);
     expect(groundAt(w, w.player.x, w.player.y)).toBe(0);
+  });
+
+  it('a car left down beside it is lifted back onto the road, and one by its ramp is not', () => {
+    const { w, i } = raisedTrack(24);
+    const T = w.track!;
+    startRace(w);
+    for (const o of w.statics) o.down = true;
+    w.props.length = 0;
+    const k = i(0.4);
+    const nx = -Math.sin(T.a[k]!);
+    const ny = Math.cos(T.a[k]!);
+    const c = w.player;
+    put(c, T.x[k]! + nx * (w.road / 2 + 50), T.y[k]! + ny * (w.road / 2 + 50), T.a[k]!, 0);
+    const seen: string[] = [];
+    const tick = (): void => {
+      w.step(NO_CONTROLS);
+      for (const e of w.takeEvents()) seen.push(e.t);
+    };
+    // not at once: there is time to drive off for the ramp
+    for (let n = 0; n < RESCUE_AFTER * 60 - 10; n++) tick();
+    expect(seen).not.toContain('rescue');
+    expect(groundAt(w, c.x, c.y)).toBe(0);
+    for (let n = 0; n < 30; n++) tick();
+    expect(seen.filter((t) => t === 'rescue')).toHaveLength(1);
+    expect(groundAt(w, c.x, c.y)).toBeCloseTo(24, 0);
+    expect(Math.hypot(c.x - T.x[c.idx]!, c.y - T.y[c.idx]!)).toBeLessThan(w.road / 2);
+    // it stays up there, and is not lifted again
+    for (let n = 0; n < 120; n++) tick();
+    expect(seen.filter((t) => t === 'rescue')).toHaveLength(1);
+    expect(groundAt(w, c.x, c.y)).toBeGreaterThan(20);
+    // beside the foot of the ramp the road is barely raised: the ramp is the way up
+    const r = i(0.3) + 3;
+    put(
+      c,
+      T.x[r]! - Math.sin(T.a[r]!) * (w.road / 2 + 50),
+      T.y[r]! + Math.cos(T.a[r]!) * (w.road / 2 + 50),
+      T.a[r]!,
+      0,
+    );
+    seen.length = 0;
+    for (let n = 0; n < 400; n++) tick();
+    expect(seen).not.toContain('rescue');
   });
 
   it('no scenery stands on its sides', () => {

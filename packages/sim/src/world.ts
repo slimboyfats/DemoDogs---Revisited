@@ -53,6 +53,7 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
+import { updateRescue } from './rescue';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -599,6 +600,7 @@ export class World {
       updateMovers(this, c);
       updatePads(this, c);
       updateRide(this, c);
+      updateRescue(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }

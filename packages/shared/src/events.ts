@@ -32,6 +32,8 @@ export type SimEvent =
     }
   | { t: 'wreck'; car: number; by: number }
   | { t: 'respawn'; car: number }
+  /** A car down beside a raised road was lifted back onto it, from (x, y). */
+  | { t: 'rescue'; car: number; x: number; y: number }
   | { t: 'land'; car: number; impact: number }
   /** z: up on a deck, art px; absent on the ground. */
   | { t: 'explode'; x: number; y: number; power: number; z?: number }

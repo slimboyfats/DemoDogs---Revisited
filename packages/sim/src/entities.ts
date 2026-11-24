@@ -119,6 +119,8 @@ export interface Car {
   wheelDist: number;
   wrecked: boolean;
   wreckT: number;
+  /** How long the car has been down beside a raised road (s). */
+  downT: number;
   /** Tick the car was wrecked, for derby placings. */
   wreckTick: number;
   idx: number;
