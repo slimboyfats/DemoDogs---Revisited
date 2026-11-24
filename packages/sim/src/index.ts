@@ -6,6 +6,7 @@ export * from './entities';
 export * from './math';
 export * from './prng';
 export * from './track';
+export * from './relief';
 export { circles, heft, hull, toLocal, zoneFactor } from './physics';
 export { fitCatchup, odds, place } from './catchup';
 export { FINISH_GRACE } from './race';

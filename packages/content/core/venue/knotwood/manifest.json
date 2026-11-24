@@ -37,6 +37,12 @@
     "dirt": "#6a5638",
     "outside": "#1d2a1a"
   },
+  "relief": {
+    "banks": 36,
+    "step": 18,
+    "from": 40,
+    "spread": 90
+  },
   "scenery": [
     {
       "rule": "flyover",
@@ -57,6 +63,27 @@
       "lift": [19, 30],
       "reach": 30,
       "edge": 9
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.armco",
+          "weight": 2
+        },
+        {
+          "prop": "prop.plank-fence",
+          "weight": 2
+        }
+      ]
     },
     {
       "rule": "bend-wall",

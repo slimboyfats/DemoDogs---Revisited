@@ -37,7 +37,35 @@
     "dirt": "#7a6240",
     "outside": "#22301f"
   },
+  "relief": {
+    "hills": 36,
+    "banks": 36,
+    "step": 18,
+    "from": 36,
+    "spread": 100
+  },
   "scenery": [
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.armco",
+          "weight": 3
+        },
+        {
+          "prop": "prop.barrier",
+          "weight": 1
+        }
+      ]
+    },
     {
       "rule": "bend-wall",
       "props": ["prop.tyres", "prop.tyres-red"],

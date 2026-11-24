@@ -2,6 +2,7 @@ import { sliceX, sliceY, type Strip } from '../stack';
 import { compile, compileKept, countingShader, uniforms } from './gl';
 import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
+import type { ReliefLayer } from './relief-layer';
 import { STACK_FS, STACK_VS } from './stack-shaders';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
@@ -47,6 +48,9 @@ const NAMES = [
   'u_cone',
   'u_ccount',
   'u_grow',
+  'u_relief',
+  'u_rgrid',
+  'u_rface',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -138,6 +142,14 @@ export interface StackView {
   zk: number;
   /** The world's height, for the depth range. */
   worldH: number;
+  /** The highest the ground stands (0 or left out: flat). */
+  top?: number;
+}
+
+/** The depth range of a view along its line of sight (as the vertex shader's): [lo, hi]. */
+export function depthRange(v: StackView): [number, number] {
+  const dir0 = v.zk / v.scale;
+  return [-64 * dir0, (v.worldH + 64) * dir0 + (96 + (v.top ?? 0)) * v.ys];
 }
 
 /**
@@ -175,6 +187,8 @@ export class StackBatch {
   /** Slices queued while this is set are of something warm and moving: snow hardly lies on it. */
   warm = false;
   private isReady = false;
+  /** The ground the slices stand on (set by the scene before it draws). */
+  relief: ReliefLayer | null = null;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -374,9 +388,7 @@ export class StackBatch {
 
   /** The depth range of the view (as the vertex shader's): [nearest-to-farthest lo, hi]. */
   private depthRange(): [number, number] {
-    const dir0 = this.v.zk / this.v.scale;
-    const dir1 = this.v.ys;
-    return [-64 * dir0, (this.v.worldH + 64) * dir0 + 96 * dir1];
+    return depthRange(this.v);
   }
 
   /** The queued instances copied into draw order, nearest first (radix sort, linear time). */
@@ -491,9 +503,9 @@ export class StackBatch {
     // depth along the view direction (cos, sin of the pitch); the range covers the world plus headroom
     const dir: [number, number] = [v.zk / v.scale, v.ys];
     gl.uniform2f(u.u_dir, dir[0], dir[1]);
-    const lo = -64 * dir[0];
-    const hi = (v.worldH + 64) * dir[0] + 96 * dir[1];
+    const [lo, hi] = depthRange(v);
     gl.uniform2f(u.u_drange, lo, 1 / (hi - lo));
+    this.relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1i(u.u_atlas, 0);

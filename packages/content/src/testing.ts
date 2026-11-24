@@ -29,6 +29,9 @@ export function startRace(w: World): World {
   return w;
 }
 
+/** What lines the bench venue's road (its `trackside` and `gantry` rules). */
+const TRACKSIDE = new Set(['prop.barrier', 'prop.armco', 'prop.gantry-leg', 'prop.gantry-beam']);
+
 /** A field with only the player, no bots, no loose props, no animals, no tiles and no mud: a clean bench for physics tests. */
 export function bench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   const w = startRace(makeWorld({ rivals: 0, ...opts }));
@@ -37,6 +40,8 @@ export function bench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World 
   w.spills.length = 0;
   w.critters.length = 0;
   w.pads.length = 0;
+  // and no walls beside the road or gantry over it: the bench is open ground
+  for (const s of w.statics) if (TRACKSIDE.has(s.def.id)) s.down = true;
   return w;
 }
 

@@ -41,7 +41,35 @@
     "terrain": "gravel",
     "road": "dirt"
   },
+  "relief": {
+    "hills": 20,
+    "banks": 60,
+    "step": 20,
+    "from": 34,
+    "spread": 110
+  },
   "scenery": [
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.block",
+          "weight": 2
+        },
+        {
+          "prop": "prop.concrete-wall",
+          "weight": 2
+        }
+      ]
+    },
     {
       "rule": "bend-wall",
       "props": ["prop.block", "prop.tyres"],
@@ -294,7 +322,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00008,
+      "perArea": 8e-5,
       "clear": 6,
       "items": [
         {

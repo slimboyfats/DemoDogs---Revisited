@@ -24,6 +24,12 @@
     "dirt": "#463c31",
     "outside": "#26221f"
   },
+  "relief": {
+    "banks": 36,
+    "step": 18,
+    "from": 24,
+    "spread": 80
+  },
   "scenery": [
     {
       "rule": "oval-wall",

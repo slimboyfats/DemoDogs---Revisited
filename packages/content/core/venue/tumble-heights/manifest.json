@@ -43,6 +43,12 @@
     "outside": "#1e2024",
     "terrain": "paved"
   },
+  "relief": {
+    "banks": 26,
+    "step": 26,
+    "from": 44,
+    "spread": 60
+  },
   "scenery": [
     {
       "rule": "overpass",
@@ -70,6 +76,27 @@
         {
           "prop": "prop.cone",
           "weight": 0.4
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.concrete-wall",
+          "weight": 3
+        },
+        {
+          "prop": "prop.barrier",
+          "weight": 2
         }
       ]
     },
@@ -128,7 +155,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.000012,
+      "perArea": 1.2e-5,
       "clear": 34,
       "items": [
         {
