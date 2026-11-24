@@ -1551,8 +1551,32 @@ export class Effects {
             0xe0a830,
           );
           this.flashes.push({ x, y, r: 34, life: 0.1, max: 0.1, rgb: 0xffd070 });
-          if (e.hit >= 0) for (let i = 0; i < 6; i++) this.spark(e.tx, e.ty, 4, 70);
-          else this.puff(e.tx, e.ty, 0.5, 'dust');
+          if (e.hit >= 0) {
+            // the round strikes: a white burst on the bodywork, hot bits thrown off it, a flash
+            for (let i = 0; i < 12; i++) {
+              const a = rand(0, TAU);
+              const sp = rand(25, 110);
+              this.emit(
+                'glitter',
+                e.tx,
+                e.ty,
+                5,
+                Math.cos(a) * sp - ux * 30,
+                Math.sin(a) * sp - uy * 30,
+                rand(20, 80),
+                rand(0.12, 0.3),
+                i < 4 ? 2.6 : 1.6,
+                i < 4 ? 0xffffff : i % 2 ? 0xffe070 : 0xff7a20,
+              );
+            }
+            for (let i = 0; i < 4; i++) this.spark(e.tx, e.ty, 4, 70);
+            this.flashes.push({ x: e.tx, y: e.ty, r: 24, life: 0.1, max: 0.1, rgb: 0xfff0c0 });
+            if (e.hit === w.player.index) this.shake = Math.max(this.shake, 1.2);
+          }
+          // a miss kicks up the ground where it lands
+          else
+            for (let i = 0; i < 3; i++)
+              this.puff(e.tx + rand(-2, 2), e.ty + rand(-2, 2), 0.6, 'dust');
           const vol = this.vol(e.x, e.y);
           if (vol > 0) S.gun(vol);
           break;
