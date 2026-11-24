@@ -1351,3 +1351,82 @@ body.editing #pauseKey {
   text-overflow: ellipsis;
   pointer-events: none;
 }
+
+/* the volume sliders on the pause menu: a row a thumb can grab anywhere along it */
+#volume {
+  display: flex;
+  flex-direction: column;
+  border: 2px solid rgba(255, 210, 74, 0.55);
+  background: rgba(255, 210, 74, 0.1);
+  border-radius: 12px;
+  padding: 2px 12px;
+}
+.vol {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.vol span {
+  width: 62px;
+}
+.vol b {
+  width: 40px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.vol input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.vol input::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(
+    to right,
+    #ffd24a var(--fill, 100%),
+    rgba(255, 255, 255, 0.22) var(--fill, 100%)
+  );
+}
+.vol input::-moz-range-track {
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.22);
+}
+.vol input::-moz-range-progress {
+  height: 10px;
+  border-radius: 5px;
+  background: #ffd24a;
+}
+.vol input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 30px;
+  height: 30px;
+  margin-top: -10px;
+  border-radius: 50%;
+  border: 3px solid #1a1420;
+  background: #ffd24a;
+  box-shadow: 0 0 0 2px #ffd24a;
+}
+.vol input::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 3px solid #1a1420;
+  background: #ffd24a;
+  box-shadow: 0 0 0 2px #ffd24a;
+}
+@media (max-height: 520px) {
+  .vol input {
+    height: 38px;
+  }
+}
