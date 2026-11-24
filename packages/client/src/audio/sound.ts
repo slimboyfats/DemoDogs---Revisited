@@ -25,6 +25,9 @@ export class Sound {
   private master: GainNode | null = null;
   /** Where loud things go: a soft clip, and a room that answers them. */
   private big: GainNode | null = null;
+  /** Where gunfire goes: a hard clip, and only a little of the room. */
+  private guns: GainNode | null = null;
+  private lastShot = -1;
   private musicOut: GainNode | null = null;
   private tunes: Music | null = null;
   private noiseBuf: AudioBuffer | null = null;
@@ -119,6 +122,13 @@ export class Sound {
     wet.gain.value = 0.3;
     this.big.connect(clip).connect(this.master);
     clip.connect(echo).connect(wet).connect(this.master);
+    this.guns = ac.createGain();
+    const bite = ac.createWaveShaper();
+    bite.curve = clipCurve(4);
+    const send = ac.createGain();
+    send.gain.value = 0.3;
+    this.guns.connect(bite).connect(this.master);
+    bite.connect(send).connect(echo);
     this.tunes = new Music(ac, this.musicOut, this.noiseBuf);
     if (this.wanted) this.tunes.play(tune(this.wanted), this.now());
     if (ac instanceof AudioContext) setInterval(() => this.tunes?.pump(this.now()), 60);
@@ -351,14 +361,61 @@ export class Sound {
     this.tone(300, 0.3, 0.12, 'sawtooth', 0.3);
   }
 
-  /** One round from a gun: a crack, the bark of the barrel and a thump in the chest. */
-  gun(v = 1): void {
-    this.heavy(0, () => {
-      this.noise(0.05, 2600, 0.7, 0.5 * v, 'highpass');
-      this.noise(0.12, 1100, 0.9, 0.5 * v, 'bandpass', 0, 0.4);
-      this.tone(190, 0.07, 0.22 * v, 'triangle', 0.4);
-      this.tone(1150, 0.014, 0.05 * v, 'square');
-    });
+  /**
+   * One round from a gun: the bark of the barrel (a square falling fast through a low-pass), the
+   * crack (noise that starts bright and shuts), and a short report after it. Rounds come eight a
+   * second from several cars, so they stay dry: only a little of each reaches the room. `pitch`
+   * sets one car's gun apart from another's.
+   */
+  gun(v = 1, pitch = 1): void {
+    const ac = this.ac;
+    const out = this.guns;
+    if (!ac || !out || !this.noiseBuf) return;
+    const t = this.now();
+    // two rounds in the same instant are one sound, a little louder
+    if (t - this.lastShot < 0.03) return;
+    this.lastShot = t;
+    const p = pitch * (0.96 + Math.random() * 0.08);
+    const burst = (
+      type: BiquadFilterType,
+      from: number,
+      to: number,
+      q: number,
+      dur: number,
+      vol: number,
+      when = 0,
+    ) => {
+      const src = ac.createBufferSource();
+      src.buffer = this.noiseBuf;
+      const f = ac.createBiquadFilter();
+      f.type = type;
+      f.Q.value = q;
+      f.frequency.setValueAtTime(from * p, t + when);
+      f.frequency.exponentialRampToValueAtTime(to * p, t + when + dur);
+      const g = ac.createGain();
+      g.gain.setValueAtTime(vol * v, t + when);
+      g.gain.exponentialRampToValueAtTime(0.001, t + when + dur);
+      src.connect(f).connect(g).connect(out);
+      src.start(t + when, Math.random() * 0.8);
+      src.stop(t + when + dur + 0.02);
+    };
+    const o = ac.createOscillator();
+    o.type = 'square';
+    o.frequency.setValueAtTime(230 * p, t);
+    o.frequency.exponentialRampToValueAtTime(62 * p, t + 0.07);
+    const lp = ac.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(3200, t);
+    lp.frequency.exponentialRampToValueAtTime(420, t + 0.08);
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.4 * v, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.085);
+    o.connect(lp).connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.1);
+    burst('lowpass', 5200, 900, 0.7, 0.06, 1.3);
+    burst('bandpass', 1300, 650, 1.2, 0.08, 1.8);
+    burst('lowpass', 1600, 400, 0.5, 0.2, 0.2, 0.03);
   }
 
   private rainNode: { g: GainNode; src: AudioBufferSourceNode } | null = null;

@@ -1488,7 +1488,8 @@ export class Effects {
           if (e.hit >= 0) for (let i = 0; i < 3; i++) this.spark(e.tx, e.ty, 4, 40);
           else this.puff(e.tx, e.ty, 0.5, 'dust');
           const vol = this.vol(e.x, e.y);
-          if (vol > 0) S.gun(vol);
+          // each car's gun has its own voice, and this screen's own is the deepest
+          if (vol > 0) S.gun(vol, e.car === w.player.index ? 0.9 : 1 + (e.car % 4) * 0.07);
           break;
         }
         case 'rail':
