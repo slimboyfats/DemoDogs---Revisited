@@ -347,9 +347,9 @@ void main() {
   wp.y += shift;
   // the face of a drop is bare earth or rock in beds; all of it takes the light as it lies
   if (rl.b > 0.5) {
-    float bed = mod(shift, 4.0) < 1.0 ? 0.8 : 1.0;
+    float bed = mod(shift, 4.0) < 1.0 ? 0.72 : 1.0;
     float lum = dot(c, vec3(0.3, 0.5, 0.2));
-    c = mix(c, mix(vec3(0.5, 0.4, 0.3), vec3(0.42), tar) * (0.5 + lum), 0.6) * bed;
+    c = mix(c, mix(vec3(0.38, 0.29, 0.21), vec3(0.34, 0.35, 0.38), tar) * (0.75 + 0.5 * lum), 0.85) * bed;
   }
   c = min(vec3(1.0), c * rl.g * (255.0 / 128.0));
   gl_FragDepth = clamp(1.0 - (wp.y * u_depth.x + shift * u_hk * u_depth.y - 4.0 - u_depth.z) * u_depth.w, 0.0, 1.0);

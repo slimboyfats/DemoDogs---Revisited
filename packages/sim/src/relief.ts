@@ -107,6 +107,9 @@ function noise(x: number, y: number, seed: number): number {
   return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
 }
 
+/** How far through a terrace's face is, foot to lip (px). */
+const FACE = 5;
+
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 type Spec = NonNullable<VenueManifest['relief']>;
@@ -146,8 +149,8 @@ export function buildRelief(
   const steps = spec.banks > 0 ? Math.max(1, Math.round(spec.banks / spec.step)) : 0;
   R.step = spec.step;
   R.steps = steps;
-  // a face about a px and a half through, however wide the terraces are
-  R.face = Math.min(1, (1.5 * Math.max(1, steps)) / spec.spread);
+  // a face five px through, however wide the terraces are: steep, but with a front to be seen from any side
+  R.face = Math.min(1, (FACE * Math.max(1, steps)) / spec.spread);
   let max = 0;
   for (let gy = 0; gy < R.gh; gy++)
     for (let gx = 0; gx < R.gw; gx++) {

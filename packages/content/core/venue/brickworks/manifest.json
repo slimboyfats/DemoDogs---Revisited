@@ -39,9 +39,9 @@
     "terrain": "paved"
   },
   "relief": {
-    "banks": 22,
-    "step": 22,
-    "from": 40,
+    "banks": 28,
+    "step": 28,
+    "from": 44,
     "spread": 60
   },
   "scenery": [
