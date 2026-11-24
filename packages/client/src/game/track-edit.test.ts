@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TRACK_FORMAT, TRACK_VERSION, type TrackFile } from '@demodogs/shared';
+import { TRACK_FORMAT, TRACK_VERSION, parseTrackFile, type TrackFile } from '@demodogs/shared';
 import { sampleTrack, trackProblems } from '@demodogs/sim';
 import type { PropManifest } from '@demodogs/shared';
 import {
@@ -7,6 +7,9 @@ import {
   drawRoad,
   onArc,
   propGroup,
+  raisedAt,
+  raisedBetween,
+  RAISE_LEAST,
   surfaceAt,
   surfaceBetween,
   History,
@@ -43,6 +46,7 @@ const track = (): TrackFile => ({
   pools: [{ material: 'material.mud', x: 700, y: 480, r: 20 }],
   bridges: [],
   surfaces: [],
+  raised: [],
   areas: [],
   bots: 4,
 });
@@ -179,6 +183,31 @@ describe('editing a track', () => {
     const before = t.surfaces[0]!.x0;
     resize(t, 1800, 1240);
     expect(t.surfaces[0]!.x0).toBe(before + 200);
+  });
+
+  it('raises a stretch of road: snapped to the road, long enough to climb, found by a tap', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]!];
+    };
+    t.raised.push(raisedBetween(T, 20, at(0.3), at(0.2)));
+    expect(t.raised[0]!.height).toBe(20);
+    expect(raisedAt(T, t, ...at(0.25), 40)).toBe(0);
+    expect(raisedAt(T, t, ...at(0.6), 40)).toBe(-1);
+    // a stretch too short to climb is drawn out about its middle, and no height is out of range
+    const short = raisedBetween(T, 999, at(0.7), at(0.7));
+    expect(Math.hypot(short.x1 - short.x0, short.y1 - short.y0)).toBeGreaterThan(RAISE_LEAST * 0.8);
+    expect(short.height).toBe(48);
+    expect(parseTrackFile(JSON.stringify({ ...t, raised: [short] })).ok).toBe(true);
+    // it keeps to the road when the road moves, and to its place when the map grows
+    t.road.points[0] = [300, 200];
+    snapBridges(t);
+    expect(roadAt(t.road.points, t.raised[0]!.x0, t.raised[0]!.y0).d).toBeLessThan(3);
+    const before = t.raised[0]!.x0;
+    resize(t, 1800, 1240);
+    expect(t.raised[0]!.x0).toBe(before + 200);
   });
 
   it('the pencil: a loop drawn by hand becomes a road that can be raced', () => {
