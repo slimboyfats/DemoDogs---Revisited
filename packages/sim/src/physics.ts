@@ -11,6 +11,7 @@ import {
   type CarManifest,
   type Controls,
 } from '@demodogs/shared';
+import { draft, fitAddon, gearGuard, grind, jetOf, ramOf, roughOf, tankOf } from './addons';
 import type { Car, Setup, StaticProp } from './entities';
 import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
@@ -40,7 +41,7 @@ export function makeCar(
   const lv = (n: number | undefined) => clamp(Math.floor(n ?? 0), 0, TUNE_MAX);
   const hp = clamp(setup.hp ?? 100, 1, 100);
   const gun = setup.weapon ? (w.content.weapon.get(setup.weapon.id) ?? null) : null;
-  return {
+  const c: Car = {
     index: 0,
     def,
     stats: {
@@ -138,7 +139,14 @@ export function makeCar(
     morph: null,
     wind: null,
     collar: null,
+    fit: {},
+    draft: false,
   };
+  for (const id of setup.fit ?? []) {
+    const def = w.content.pickup.get(id);
+    if (def) fitAddon(w, c, def, true);
+  }
+  return c;
 }
 
 /** The two hull circles of a car (each of radius `hull(c)`). */
@@ -177,6 +185,12 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
 export function drive(w: World, c: Car, ctl: Controls): void {
   const S = c.stats;
   const off = w.offroad(c.x, c.y);
+  // a lit rocket bottle drives the car: flat out, no brakes, and it turns like a barge
+  const jet = jetOf(c);
+  if (jet > 1) ctl = { ...ctl, throttle: 1, brake: false, steer: ctl.steer * 0.6 };
+  // knobbly tyres pay only part of what rough ground and slicks cost
+  const rough = roughOf(c);
+  const wake = draft(w, c);
   const floor = (c.deck = w.support(c));
   // climbing a ramp: the deck lifts the car with it
   if (floor > 0 && c.z < floor) {
@@ -191,14 +205,14 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
   // the deck is clean: pools and pits are on the ground below it
   const foot = airborne || floor > 0 ? ([1, 0, false] as const) : footing(w, c.x, c.y);
-  let dry: number = foot[0];
-  let bog: number = foot[1];
+  let dry: number = 1 - (1 - foot[0]) * rough;
+  let bog: number = foot[1] * rough;
   const pit = foot[2];
   // a stretch of road with a surface of its own (dirt, ice, sand) grips and drags like it
   const surface = w.roadSurface && !off && !airborne && floor <= 0 ? w.roadSurface[c.idx] : null;
   if (surface) {
-    dry = Math.min(dry, surface.grip);
-    bog = Math.max(bog, surface.drag);
+    dry = Math.min(dry, 1 - (1 - surface.grip) * rough);
+    bog = Math.max(bog, surface.drag * rough);
   }
   // rain takes grip everywhere, the deck included
   const hold = dry * w.grip;
@@ -223,29 +237,42 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   let vl = -c.vx * sn + c.vy * cs;
   const boost = ctl.boost && c.nitro > 0.02 && !airborne;
   c.boosting = boost;
-  c.nitro = boost ? Math.max(0, c.nitro - 0.32 * DT) : Math.min(1, c.nitro + 0.025 * DT);
+  const tank = tankOf(c);
+  c.nitro = boost
+    ? Math.max(0, c.nitro - (0.32 * DT) / tank)
+    : Math.min(1, c.nitro + 0.025 * DT * tank);
   const maxS =
     BASE_SPEED *
     S.speed *
     weak *
-    (off ? 0.56 : 1) *
+    (off ? 1 - 0.44 * rough : 1) *
     (boost ? 1.33 * c.fuel : 1) *
     c.aiSpeed *
     c.pace *
     (c.surge > 0 ? c.surgeK : 1) *
-    pace(w, c);
+    pace(w, c) *
+    jet *
+    wake;
   const before = vf;
   if (!airborne) {
     if (ctl.brake) {
       if (vf > 15) vf -= 330 * DT;
       else vf = Math.max(-72, vf - 150 * DT);
     } else if (ctl.throttle > 0 && vf < maxS) {
-      const acc = 240 * S.accel * (boost || c.surge > 0 ? 1.8 : 1) * Math.max(1, c.pace);
+      const acc =
+        240 *
+        S.accel *
+        (boost || c.surge > 0 ? 1.8 : 1) *
+        Math.max(1, c.pace) *
+        (jet > 1 ? 3 : 1) *
+        (wake > 1 ? 1.3 : 1);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
-    vf -= vf * ((off ? 1.4 : 0.42) + bog) * DT;
+    vf -= vf * ((off ? 0.42 + 0.98 * rough : 0.42) + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
-    vl *= Math.exp(-8 * S.grip * hold * (off ? 0.55 : 1) * (c.handbrake ? 0.22 : 1) * DT);
+    vl *= Math.exp(
+      -8 * S.grip * hold * (off ? 1 - 0.45 * rough : 1) * (c.handbrake ? 0.22 : 1) * DT,
+    );
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
@@ -483,6 +510,9 @@ export function collideCars(w: World, a: Car, b: Car): void {
   a.y -= (best.ny * best.ov * mb) / tot;
   b.x += (best.nx * best.ov * ma) / tot;
   b.y += (best.ny * best.ov * ma) / tot;
+  // spiked hubs chew whatever runs alongside, however gently the two are touching
+  grind(w, a, b, toLocal(a, best.px, best.py), best.px, best.py);
+  grind(w, b, a, toLocal(b, best.px, best.py), best.px, best.py);
   const vrel = (b.vx - a.vx) * best.nx + (b.vy - a.vy) * best.ny;
   if (vrel >= 0) return;
   const j = (-(1 + 0.32) * vrel) / (1 / ma + 1 / mb);
@@ -510,8 +540,10 @@ export function collideCars(w: World, a: Car, b: Car): void {
   const fresh = a.hitCd <= 0 && b.hitCd <= 0;
   a.hitCd = b.hitCd = 0.3;
   if (fresh) {
-    damage(w, a, ((base * zoneFactor(ra[0]) * mb) / 1.1) * b.ram, b, best.px, best.py);
-    damage(w, b, ((base * zoneFactor(rb[0]) * ma) / 1.1) * a.ram, a, best.px, best.py);
+    const da = ((base * zoneFactor(ra[0]) * mb) / 1.1) * ramOf(b) * gearGuard(a, ra);
+    const db = ((base * zoneFactor(rb[0]) * ma) / 1.1) * ramOf(a) * gearGuard(b, rb);
+    damage(w, a, da, b, best.px, best.py);
+    damage(w, b, db, a, best.px, best.py);
   }
   if (w.kind === 'derby' && impact > 60) {
     if (a.ai) a.ai.revT = w.rng.range(0.3, 0.7);

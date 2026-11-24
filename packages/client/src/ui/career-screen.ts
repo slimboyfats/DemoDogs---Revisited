@@ -5,6 +5,8 @@ import {
   KIT,
   LOAN,
   TIERS,
+  addOns,
+  buyAddon,
   buyCar,
   buyKit,
   buyUpgrade,
@@ -189,6 +191,20 @@ export class CareerScreen {
             ),
           );
         }
+        // add-ons: bolted on once and kept until the car is traded in
+        for (const a of addOns(C, 'garage')) {
+          const has = k.addons.includes(a.id);
+          out.push(
+            this.item(
+              a.name.toUpperCase(),
+              a.blurb,
+              has ? 'FITTED' : money(a.price),
+              has ? null : () => this.buy(buyAddon(C, k, a.id), `${a.name} bolted on.`),
+              'addon',
+            ),
+          );
+        }
+        out.push(el('p', 'help', 'Add-ons stay on this car. Trade it in and they go with it.'));
         return out;
       }
       case 'cars': {
@@ -220,7 +236,7 @@ export class CareerScreen {
           el(
             'p',
             'help',
-            `Prices are after trading in your car (${money(back)}). Upgrades stay with the old car.`,
+            `Prices are after trading in your car (${money(back)}). Upgrades and add-ons stay with the old car.`,
           ),
         );
         return out;
@@ -236,6 +252,17 @@ export class CareerScreen {
               : () => this.buy(buyKit(k, id), `${KIT[id].name}: ready for the next race.`),
           ),
         );
+        for (const a of addOns(C, 'market')) {
+          const has = k.extras.includes(a.id);
+          out.push(
+            this.item(
+              a.name.toUpperCase(),
+              a.blurb,
+              has ? 'LOADED' : money(a.price),
+              has ? null : () => this.buy(buyAddon(C, k, a.id), `${a.name}: on for the next race.`),
+            ),
+          );
+        }
         out.push(
           this.item(
             'LOAN SHARK',

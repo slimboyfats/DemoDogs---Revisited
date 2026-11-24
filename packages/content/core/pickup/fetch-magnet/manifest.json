@@ -1,0 +1,16 @@
+{
+  "id": "pickup.fetch-magnet",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fetch magnet",
+    "description": "A horseshoe magnet on a mast: for a while every pickup you pass near flies to you.",
+    "since": "core@0.4.0"
+  },
+  "kind": "magnet",
+  "weight": 0.08,
+  "hurtWeight": 0.07,
+  "lead": 1.2,
+  "trail": 0.1,
+  "seconds": 14,
+  "radius": 85
+}

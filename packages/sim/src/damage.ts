@@ -6,6 +6,7 @@ import {
   type CarPart,
   type MaterialManifest,
 } from '@demodogs/shared';
+import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
 import { blastCritters } from './critters';
 import type { Car, LooseProp, StaticProp } from './entities';
@@ -32,14 +33,15 @@ export function damage(
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
   // a swollen car shrugs blows off; one zapped small feels them more
   const tough = c.size > 1.05 ? 0.6 : c.size < 0.95 ? 1.25 : 1;
-  const [dealt, other, pass] = shared(
+  const [through, other, pass] = shared(
     w,
     c,
     absorb(w, c, (amount * tough * w.mode.damageScale) / c.stats.armor, px, py),
   );
   // a leash hands part of the blow on: that car takes exactly what this one was spared
   if (other) damage(w, other, (pass * other.stats.armor) / w.mode.damageScale, c, other.x, other.y);
-  if (dealt <= 0) return;
+  if (through <= 0) return;
+  const dealt = plateOff(w, c, through, by, px, py);
   c.hp -= dealt;
   const L = toLocal(c, px, py);
   const lx = clamp(L[0] / c.size, -12, 12);
@@ -53,8 +55,9 @@ export function damage(
     by.score += pts;
     if (dealt > 9)
       w.emit({ t: 'score', car: by.index, x: c.x, y: c.y, points: pts, label: `+${pts}` });
+    chew(w, by, c, dealt, px, py);
   }
-  if (c.hp <= 0) wreck(w, c, by);
+  if (c.hp <= 0 && !caged(w, c)) wreck(w, c, by);
 }
 
 export function detach(w: World, c: Car, part: CarPart): void {
@@ -70,9 +73,9 @@ export function detach(w: World, c: Car, part: CarPart): void {
     t: 'detach',
     car: c.index,
     part,
-    x: c.x + Math.cos(c.h) * off,
-    y: c.y + Math.sin(c.h) * off,
-    z: c.z + (part === 'top' ? c.def.top.z : 1),
+    x: c.x + Math.cos(c.h) * off * c.size,
+    y: c.y + Math.sin(c.h) * off * c.size,
+    z: c.z + (part === 'top' ? c.def.top.z : 1) * c.size,
     vx: c.vx * 0.5 + w.rng.range(-50, 50),
     vy: c.vy * 0.5 + w.rng.range(-50, 50),
   });

@@ -272,6 +272,11 @@
     "pickup.springs",
     "pickup.kennel-kit",
     "pickup.big-dog",
-    "pickup.runt-ray"
+    "pickup.runt-ray",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
   ]
 }

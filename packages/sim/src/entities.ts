@@ -6,6 +6,7 @@ import type {
   PropManifest,
   WeaponManifest,
 } from '@demodogs/shared';
+import type { Fit } from './addons';
 import type { AiBehaviour } from './behaviours';
 import type { Guards } from './guards';
 
@@ -46,6 +47,8 @@ export interface Setup {
   weapon?: { id: string; ammo: number };
   /** Rounds for the gun at the start, instead of the gun's own load. */
   rounds?: number;
+  /** Add-ons (pickup ids) already bolted on at the start. */
+  fit?: string[];
   /** A fixed driving skill for an AI driver, instead of one drawn from the AI's range. */
   skill?: number;
 }
@@ -181,6 +184,10 @@ export interface Car {
   morph: { def: PickupManifest; t: number } | null;
   wind: { def: PickupManifest; t: number } | null;
   collar: { def: PickupManifest; t: number; by: number } | null;
+  /** Add-ons bolted on (see addons.ts), by kind. */
+  fit: Fit;
+  /** In a rival's wake with a scoop to feed on it, this tick. */
+  draft: boolean;
 }
 
 export interface Bot {

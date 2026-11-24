@@ -138,7 +138,7 @@ export function earthed(w: World, c: Car): boolean {
   if (!g) return false;
   if (g.cd <= 0) {
     g.cd = 0.15;
-    const back = c.def.body.halfLength + 5;
+    const back = (c.def.body.halfLength + 5) * c.size;
     used(w, c, g, false, c.x - Math.cos(c.h) * back, c.y - Math.sin(c.h) * back);
   }
   return true;
@@ -251,8 +251,8 @@ function decoy(w: World, c: Car, g: Guard): void {
   const a = c.h + Math.PI + (g.n % 2 ? 0.8 : -0.8);
   const d: Decoy = {
     id: ++w.decoySeq,
-    x: c.x - Math.cos(c.h) * (c.def.body.halfLength + 2),
-    y: c.y - Math.sin(c.h) * (c.def.body.halfLength + 2),
+    x: c.x - Math.cos(c.h) * (c.def.body.halfLength + 2) * c.size,
+    y: c.y - Math.sin(c.h) * (c.def.body.halfLength + 2) * c.size,
     z: c.deck,
     up: 3,
     vx: c.vx * 0.45 + Math.cos(a) * 95,

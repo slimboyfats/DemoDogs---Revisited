@@ -1,0 +1,16 @@
+{
+  "id": "pickup.sniff-scoop",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sniff scoop",
+    "description": "An air scoop on the bonnet: tuck in behind a rival and its wake pulls you past it.",
+    "since": "core@0.4.0"
+  },
+  "kind": "scoop",
+  "weight": 0.05,
+  "hurtWeight": 0.03,
+  "factor": 1.14,
+  "radius": 95,
+  "price": 1500,
+  "sold": "garage"
+}

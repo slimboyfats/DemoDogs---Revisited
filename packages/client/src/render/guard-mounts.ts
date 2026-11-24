@@ -15,14 +15,20 @@ export function queueGuards(
   fx: Effects,
   c: Car,
   alpha: number,
+  k = c.size,
+  up = k,
+  base = c.z,
 ): void {
   const G = c.guards;
   const D = c.def;
   const hl = D.body.halfLength;
   const hw = D.body.halfWidth;
-  const cs = Math.cos(c.h);
-  const sn = Math.sin(c.h);
-  const sill = c.z + 0.6 + c.bounce;
+  // a car that has grown or shrunk is laid out `k` times as far from its middle and stands `up`
+  // times as tall, and what is bolted to it goes with it
+  const cs = Math.cos(c.h) * k;
+  const sn = Math.sin(c.h) * k;
+  /** `h` art px above the ground under the car, at the car's own size. */
+  const high = (h: number): number => base + h * up;
   // leaning with the body: the higher up, the further over
   const put = (id: string, lx: number, ly: number, z: number, rot = c.h, lean = 0): void => {
     const o = c.roll * lean;
@@ -37,7 +43,7 @@ export function queueGuards(
   };
   /** On top of the body at (lx, ly). */
   const onBody = (id: string, lx: number, ly: number, rot = c.h): void =>
-    put(id, lx, ly, sill + art.carHeight(D.id, lx, ly), rot, 0.8);
+    put(id, lx, ly, high(0.6 + c.bounce + art.carHeight(D.id, lx, ly)), rot, 0.8);
 
   const roof = art.carRoof(D.id);
   if (G.flak) onBody(G.flak.def.id, roof + 0.8, 0, fx.guards.aim(c));
@@ -48,13 +54,13 @@ export function queueGuards(
   if (G.mirror)
     // plates all the way round: both flanks, and across the nose and the tail
     for (const side of [-1, 1]) {
-      put(G.mirror.def.id, -0.5, side * (hw + 0.35), sill - 0.4);
-      put(G.mirror.def.id, side * (hl + 0.4), 0, sill - 0.4, c.h + Math.PI / 2);
+      put(G.mirror.def.id, -0.5, side * (hw + 0.35), high(0.2 + c.bounce));
+      put(G.mirror.def.id, side * (hl + 0.4), 0, high(0.2 + c.bounce), c.h + Math.PI / 2);
     }
   if (G.sweep) {
     // the feelers quiver, and whip when they have just touched something
     const q = Math.sin(w.time * 31 + c.index) * (0.03 + fx.guards.twitch(c) * 0.25);
-    put(G.sweep.def.id, hl + 4.3, 0, c.z + 0.8 + c.bounce, c.h + q);
+    put(G.sweep.def.id, hl + 4.3, 0, high(0.8 + c.bounce), c.h + q);
   }
   if (G.earth) {
     // the chain drags on the ground behind and snakes with the car's speed
@@ -66,26 +72,26 @@ export function queueGuards(
       art.prop(G.earth.def.id),
       c.x + cs * lx - sn * o,
       c.y + sn * lx + cs * o,
-      Math.max(c.deck, c.z - 1.2),
+      Math.max(c.deck, base - 1.2 * up),
       c.h - q,
       alpha,
     );
   }
   if (G.anchor) {
     // claws ride clear of the ground until something shoves the car, then slam down
-    const up = 1.8 * (1 - fx.guards.bite(c));
+    const lift = 1.8 * (1 - fx.guards.bite(c));
     for (const wh of D.wheels)
       for (const side of [-1, 1])
         put(
           G.anchor.def.id,
           wh[0] * 0.92,
           side * (hw + 0.7),
-          c.z + up,
+          high(lift),
           side > 0 ? c.h : c.h + Math.PI,
         );
   }
   if (G.pads)
-    for (const end of [-1, 1]) put(G.pads.def.id, end * (hl + 1), 0, c.z + 0.5 + c.bounce);
+    for (const end of [-1, 1]) put(G.pads.def.id, end * (hl + 1), 0, high(0.5 + c.bounce));
 }
 
 /** Decoys on the ground: a squeaky ball, bouncing and spinning. */

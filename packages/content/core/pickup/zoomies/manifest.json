@@ -1,0 +1,19 @@
+{
+  "id": "pickup.zoomies",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Zoomies",
+    "description": "A rocket bottle strapped on the back: three seconds flat out, far past top speed, no brakes. What you hit, you hit hard.",
+    "since": "core@0.4.0"
+  },
+  "kind": "jet",
+  "weight": 0.08,
+  "hurtWeight": 0.05,
+  "lead": 1.2,
+  "trail": 0.1,
+  "seconds": 3,
+  "factor": 1.75,
+  "bite": 2.2,
+  "price": 350,
+  "sold": "market"
+}

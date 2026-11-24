@@ -1,4 +1,4 @@
-import { GUARD_KINDS } from '@demodogs/shared';
+import { ADDON_KINDS, GUARD_KINDS } from '@demodogs/shared';
 import type { Car, World } from '@demodogs/sim';
 import type { Effects } from './effects';
 
@@ -155,6 +155,13 @@ export class Hud {
       P.morph ? `${P.morph.def.kind === 'grow' ? 'BIG' : 'RUNT'} ${Math.ceil(P.morph.t)}s` : '',
       P.wind ? `WIND ${Math.ceil(P.wind.t)}s` : '',
       P.collar ? `COLLARED ${Math.ceil(P.collar.t)}s` : '',
+      // add-ons that run down or get used up; the rest can be seen on the car
+      ...ADDON_KINDS.map((k) => {
+        const f = P.fit[k];
+        if (!f || (f.t <= 0 && f.n <= 0)) return '';
+        const name = f.def.meta.name.toUpperCase();
+        return f.t > 0 ? `${name} ${Math.ceil(f.t)}s` : f.n > 1 ? `${name} x${f.n}` : name;
+      }),
     ]
       .filter(Boolean)
       .join('  ');

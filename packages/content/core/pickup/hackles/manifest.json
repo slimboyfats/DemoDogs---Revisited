@@ -1,0 +1,20 @@
+{
+  "id": "pickup.hackles",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hackles",
+    "description": "Four slabs bolted to the flanks. A hard blow sets one off: it takes most of the blow and throws the rest back at whoever struck.",
+    "since": "core@0.4.0"
+  },
+  "kind": "plates",
+  "weight": 0.07,
+  "hurtWeight": 0.09,
+  "lead": 1.2,
+  "trail": 0.1,
+  "charges": 4,
+  "factor": 0.35,
+  "amount": 14,
+  "radius": 32,
+  "price": 450,
+  "sold": "market"
+}

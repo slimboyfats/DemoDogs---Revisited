@@ -161,7 +161,7 @@ export function armsWants(w: World, c: Car): boolean {
 export function fireArms(w: World, c: Car, d: WeaponManifest, at?: [number, number]): void {
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const nose = c.def.body.halfLength + 2;
+  const nose = (c.def.body.halfLength + 2) * c.size;
   const x = c.x + cs * nose;
   const y = c.y + sn * nose;
   const A = w.arms;
@@ -220,7 +220,7 @@ function spray(w: World): void {
     const d = s.def;
     const v = d.speed ?? 200;
     const life = (d.range ?? 110) / v;
-    const nose = c.def.body.halfLength + 2;
+    const nose = (c.def.body.halfLength + 2) * c.size;
     for (let k = 0; k < 2; k++) {
       const a = c.h + w.rng.range(-1, 1) * (d.spread ?? 0.15);
       const sp = v * w.rng.range(0.85, 1.1);
@@ -651,8 +651,9 @@ function burst(w: World, s: Shell, x: number, y: number): void {
 export function stickyAt(w: World, s: Sticky): [number, number] {
   if (s.car < 0) return [s.x, s.y];
   const c = w.cars[s.car]!;
-  const cs = Math.cos(c.h);
-  const sn = Math.sin(c.h);
+  // it rides on the roof of a car of any size
+  const cs = Math.cos(c.h) * c.size;
+  const sn = Math.sin(c.h) * c.size;
   return [c.x + cs * s.lx - sn * s.ly, c.y + sn * s.lx + cs * s.ly];
 }
 

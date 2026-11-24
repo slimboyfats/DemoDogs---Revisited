@@ -228,8 +228,8 @@ function rim(
   out = 1.5,
   ends = false,
 ): void {
-  const hl = c.def.body.halfLength + out;
-  const hw = c.def.body.halfWidth + out;
+  const hl = (c.def.body.halfLength + out) * c.size;
+  const hw = (c.def.body.halfWidth + out) * c.size;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
   const at = (lx: number, ly: number): void =>
@@ -245,7 +245,7 @@ function rim(
   }
 }
 
-const roofOf = (c: Car): number => c.z + c.def.top.z + 2;
+const roofOf = (c: Car): number => c.z + (c.def.top.z + 2) * c.size;
 
 export function guardEvent(fx: Effects, w: World, e: GuardEvent, S: Sound): void {
   const c = w.cars[e.car]!;
@@ -336,8 +336,9 @@ export function guardEvent(fx: Effects, w: World, e: GuardEvent, S: Sound): void
     case 'sweep': {
       // the feeler whips out to what it found
       fx.guards.whip(e.car);
-      const nx = c.x + Math.cos(c.h) * (c.def.body.halfLength + 8);
-      const ny = c.y + Math.sin(c.h) * (c.def.body.halfLength + 8);
+      const nose = (c.def.body.halfLength + 8) * c.size;
+      const nx = c.x + Math.cos(c.h) * nose;
+      const ny = c.y + Math.sin(c.h) * nose;
       bolt(fx, nx, ny, c.z + 2, tx, ty, 1, TRACER, 0.5, 0.2, 2);
       spray(fx, tx, ty, 2, 18, 12, TRACER, 0.35, 2);
       ring(fx, tx, ty, 1, 2, 10, TRACER, 0.3);
@@ -359,8 +360,8 @@ export function guardEvent(fx: Effects, w: World, e: GuardEvent, S: Sound): void
     case 'anchor': {
       // the claws slam in: dirt thrown up at all four corners, and the ground jumps round the car
       fx.guards.dig(e.car);
-      const cs = Math.cos(c.h);
-      const sn = Math.sin(c.h);
+      const cs = Math.cos(c.h) * c.size;
+      const sn = Math.sin(c.h) * c.size;
       for (const wh of c.def.wheels)
         for (const side of [-1, 1]) {
           const ly = side * (c.def.body.halfWidth + 1.5);
@@ -370,7 +371,7 @@ export function guardEvent(fx: Effects, w: World, e: GuardEvent, S: Sound): void
           spray(fx, x, y, 0.5, 6, 9, DIRT, 0.45, 2);
           spray(fx, x, y, 1, 4, 6, CLAW, 0.25);
         }
-      ring(fx, c.x, c.y, 0.5, c.def.body.halfLength + 2, 12, DIRT, 0.4, 2);
+      ring(fx, c.x, c.y, 0.5, (c.def.body.halfLength + 2) * c.size, 12, DIRT, 0.4, 2);
       rim(fx, c, CLAW, c.z + 2, 0.25);
       light(c.x, c.y, 36);
       if (v > 0) S.thud(v);
@@ -417,8 +418,10 @@ export function guardTick(fx: Effects, w: World, S: Sound): void {
     for (const k of GUARD_KINDS) if (c.guards[k]) any = true;
     if (!any) continue;
     const g = c.guards;
-    const cs = Math.cos(c.h);
-    const sn = Math.sin(c.h);
+    // everything here is laid out in the car's own frame, which is as big as the car is just now
+    const big = c.size;
+    const cs = Math.cos(c.h) * big;
+    const sn = Math.sin(c.h) * big;
     const hl = c.def.body.halfLength;
     const hw = c.def.body.halfWidth;
     /** A cell that rides with the car at (lx, ly) in the car's own frame. */
@@ -482,21 +485,30 @@ export function guardTick(fx: Effects, w: World, S: Sound): void {
         }
         // and a collar of the same red round each end of it
         if (due(key('b'), 0.4)) {
-          ring(fx, c.x, c.y, c.z + 3, hl + 1, 2, LEASH, 0.18);
-          ring(fx, best.x, best.y, best.z + 3, best.def.body.halfLength + 1, 2, LEASH, 0.18);
+          ring(fx, c.x, c.y, c.z + 3, (hl + 1) * big, 2, LEASH, 0.18);
+          ring(
+            fx,
+            best.x,
+            best.y,
+            best.z + 3,
+            (best.def.body.halfLength + 1) * best.size,
+            2,
+            LEASH,
+            0.18,
+          );
         }
       }
     }
     if (g.sweep && due(key('s'), 0.4)) {
       // the feelers feel ahead: a fan of cells going out in front, as far as they reach
       const reach = g.sweep.def.reach ?? 34;
-      const v = (reach - hl - 6) * 4.5;
+      const v = (reach - (hl + 6) * big) * 4.5;
       for (let a = -1; a <= 1.01; a += 0.125) {
         const q = c.h + a;
         dot(
           fx,
-          c.x + Math.cos(q) * (hl + 6),
-          c.y + Math.sin(q) * (hl + 6),
+          c.x + Math.cos(q) * (hl + 6) * big,
+          c.y + Math.sin(q) * (hl + 6) * big,
           c.z + 1.5,
           c.vx + Math.cos(q) * v,
           c.vy + Math.sin(q) * v,

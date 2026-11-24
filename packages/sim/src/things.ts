@@ -1,4 +1,5 @@
 import { CAR_RADIUS, DT, GRAVITY, type BotManifest, type PickupManifest } from '@demodogs/shared';
+import { barrelOf, fitAddon, reachOf } from './addons';
 import { fitCatchup, odds, place } from './catchup';
 import { hull } from './physics';
 import { grantDefence } from './defence';
@@ -243,12 +244,12 @@ export function updatePickups(w: World): void {
       continue;
     }
     for (const c of w.cars) {
-      if (
-        c.wrecked ||
-        Math.abs(c.deck - p.z) > 8 ||
-        Math.hypot(c.x - p.x, c.y - p.y) > reach + hull(c)
-      )
-        continue;
+      if (c.wrecked || Math.abs(c.deck - p.z) > 8) continue;
+      const far = Math.hypot(c.x - p.x, c.y - p.y);
+      const plain = reach + hull(c);
+      if (far > reachOf(c, plain)) continue;
+      // a magnet's catch flies in from where it lay
+      if (far > plain) w.emit({ t: 'fetch', car: c.index, x: p.x, y: p.y });
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
@@ -283,6 +284,8 @@ export function grant(w: World, c: Car, got: PickupManifest): string {
   if (got.kind === 'kit') return grant(w, c, w.content.pickup.get(w.rng.pick(got.kits ?? []))!);
   const help = fitCatchup(w, c, got);
   if (help !== null) return help;
+  const addon = fitAddon(w, c, got);
+  if (addon !== null) return addon;
   let label: string;
   if (got.kind === 'repair') {
     c.hp = Math.min(100, c.hp + (got.amount ?? 40));
@@ -362,7 +365,8 @@ export function shoot(w: World, c: Car): void {
   const g = c.gun;
   c.gunCd -= DT;
   if (!g || c.rounds <= 0 || c.gunCd > 0) return;
-  const range = g.range ?? 110;
+  const fast = barrelOf(c);
+  const range = (g.range ?? 110) * (fast > 1 ? 1.2 : 1);
   const aim = g.aim ?? 0.12;
   let best: Car | null = null;
   let bd = range;
@@ -378,11 +382,12 @@ export function shoot(w: World, c: Car): void {
   }
   if (!best) return;
   c.rounds--;
-  c.gunCd = g.cooldown;
+  c.gunCd = g.cooldown / fast;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const x = c.x + cs * (c.def.body.halfLength + 1);
-  const y = c.y + sn * (c.def.body.halfLength + 1);
+  const nose = (c.def.body.halfLength + 1) * c.size;
+  const x = c.x + cs * nose;
+  const y = c.y + sn * nose;
   const hit = w.rng.next() < 0.8;
   // a hit lands on the near side of the target, a miss flies on past it
   const off = w.rng.range(-3, 3);

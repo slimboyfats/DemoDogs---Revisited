@@ -1,0 +1,16 @@
+{
+  "id": "pickup.spur-rims",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Spur rims",
+    "description": "Spiked hubs on all four wheels: they grind pieces off any car that runs alongside, and your own doors take less.",
+    "since": "core@0.4.0"
+  },
+  "kind": "rims",
+  "weight": 0.05,
+  "hurtWeight": 0.03,
+  "bite": 45,
+  "factor": 0.6,
+  "price": 1800,
+  "sold": "garage"
+}

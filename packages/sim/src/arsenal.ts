@@ -307,7 +307,7 @@ export function fireArsenal(w: World, c: Car, d: WeaponManifest, at?: [number, n
   if (isWild(d.kind)) return fireWild(w, c, d, at);
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const nose = c.def.body.halfLength + 3;
+  const nose = (c.def.body.halfLength + 3) * c.size;
   const x = c.x + cs * nose;
   const y = c.y + sn * nose;
   const K = w.arsenal;
@@ -852,8 +852,8 @@ function updateFleas(w: World): void {
 export function fleaAt(w: World, f: Flea): [number, number] {
   if (f.host < 0) return [f.x, f.y];
   const c = w.cars[f.host]!;
-  const cs = Math.cos(c.h);
-  const sn = Math.sin(c.h);
+  const cs = Math.cos(c.h) * c.size;
+  const sn = Math.sin(c.h) * c.size;
   return [c.x + cs * f.lx - sn * f.ly, c.y + sn * f.lx + cs * f.ly];
 }
 
@@ -873,7 +873,7 @@ function updateBeams(w: World): void {
     }
     const cs = Math.cos(c.h);
     const sn = Math.sin(c.h);
-    const nose = c.def.body.halfLength + 2;
+    const nose = (c.def.body.halfLength + 2) * c.size;
     b.x = c.x + cs * nose;
     b.y = c.y + sn * nose;
     const range = d.range ?? 190;
@@ -977,7 +977,7 @@ function updateTrails(w: World): void {
     t.ly = c.y;
     // nothing burns up on a deck, in the air or on water
     if (c.deck > 4 || c.z > 4) continue;
-    const back = c.def.body.halfLength + 4;
+    const back = (c.def.body.halfLength + 4) * c.size;
     const x = c.x - Math.cos(c.h) * back;
     const y = c.y - Math.sin(c.h) * back;
     if (w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r)) continue;

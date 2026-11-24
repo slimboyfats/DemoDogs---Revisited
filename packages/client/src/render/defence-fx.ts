@@ -58,7 +58,13 @@ export class DefenceFx {
 
   /** The bubble round a car: along it, across it and up. */
   private shape(c: Car): BubbleShape {
-    return { rx: c.def.body.halfLength + 5, ry: c.def.body.halfWidth + 6, rz: 10, h: c.h };
+    const k = c.size;
+    return {
+      rx: (c.def.body.halfLength + 5) * k,
+      ry: (c.def.body.halfWidth + 6) * k,
+      rz: 10 * k,
+      h: c.h,
+    };
   }
 
   handle(e: SimEvent): void {
@@ -184,8 +190,8 @@ export class DefenceFx {
       wd.done = to;
       body.stale = true;
       this.h.changed.add(body);
-      const cs = Math.cos(c.h);
-      const sn = Math.sin(c.h);
+      const cs = Math.cos(c.h) * c.size;
+      const sn = Math.sin(c.h) * c.size;
       for (const b of beads) {
         const x = c.x + cs * b.x - sn * b.y;
         const y = c.y + sn * b.x + cs * b.y;
@@ -194,7 +200,7 @@ export class DefenceFx {
             'spark',
             x,
             y,
-            c.z + b.z + 0.5,
+            c.z + (b.z + 0.5) * c.size,
             c.vx + rand(-40, 40),
             c.vy + rand(-40, 40),
             rand(40, 110),
