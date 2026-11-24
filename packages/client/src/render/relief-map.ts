@@ -15,6 +15,13 @@ import type { Relief } from '@demodogs/sim';
  * near, nearer ground over further, and where the picture jumps down a drop the rows between are
  * the drop's face.
  */
+/**
+ * How far past what the top of a drop hides its shade reaches on the ground behind it (px), and
+ * how dark it is at its foot. The stacks' shader shades what stands there by the same two.
+ */
+export const FAR_SHADE = 26;
+export const FAR_DARK = 0.62;
+
 export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8Array {
   // the height of every px, read between the grid's points a row at a time
   const hh = new Float32Array(w * h);
@@ -47,6 +54,19 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       // and the foot of a face is in its shade, whichever way it looks
       else if (Math.max(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) - v > 4)
         shade *= 0.8;
+      // a drop seen from behind shows no face, so it is told by its shade: the ground beyond
+      // the far edge of higher ground lies dark, deepest at the foot and fading out past where
+      // the top stops hiding it, the darker the higher the drop
+      let sunk = 0;
+      for (let d = 2; d <= 56; d += 2) {
+        const dh = at(x, y + d) - v;
+        if (dh < 5) continue;
+        const k = Math.min(1, (dh * rise + FAR_SHADE - d) / FAR_SHADE) * Math.min(1, dh / 14);
+        if (k > sunk) sunk = k;
+      }
+      if (sunk > 0) shade *= 1 - FAR_DARK * sunk;
+      // and its far lip, with nothing but air behind it, is a bright line
+      else if (v - at(x, y - 3) > 5) shade *= 1.3;
       // (and where the picture jumps down a drop, the rows between are its face too)
       const face = steep || (s - prev >= 2 && at(x, y - 1) - v > 1);
       const g = Math.max(0, Math.min(255, Math.round(128 * shade)));

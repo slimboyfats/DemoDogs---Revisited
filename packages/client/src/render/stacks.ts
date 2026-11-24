@@ -346,6 +346,8 @@ function sway(t: number, seed: number): readonly [number, number] {
 
 /** cot of the camera pitch: how far north on the ground a thing at height 1 is drawn over. */
 const OVER = 0.67;
+/** How wide the shade beyond a deck's far edge is at full height, art px. */
+const DECK_SHADE = 11;
 
 /**
  * Is the player's car under this lifted piece (a crown, a deck), so that it would hide it? The
@@ -631,7 +633,13 @@ export function queueShadows(
       if (!R.visible(x, y, 40)) continue;
       const st = art.prop(s.def.id);
       if (s.def.crown) shadow(x, y, (st.cw / st.res) * 0.42, (st.ch / st.res) * 0.38, 0, 0.2);
-      else shadow(x, y, st.cw / st.res / 2, st.ch / st.res / 2 - 2, s.rot, 0.24, true);
+      else {
+        shadow(x, y, st.cw / st.res / 2, st.ch / st.res / 2 - 2, s.rot, 0.24, true);
+        // and a deck is seen from this side only: the ground beyond its far edge lies in shade
+        // just past what the deck hides, or nothing would tell the drop there
+        const far = lift * OVER + DECK_SHADE * Math.min(1, lift / 14);
+        shadow(s.x, s.y - far, st.cw / st.res / 2 + 1, st.ch / st.res / 2, s.rot, 0.34, true);
+      }
       continue;
     }
     if (s.def.sway && R.visible(s.x, s.y, 14)) {
@@ -642,13 +650,15 @@ export function queueShadows(
   for (const c of w.cars)
     // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
     if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
+      // (off the ground its shadow falls away from it, down and to the right, and thins: it is
+      // how you see a car has left an edge and is in the air)
       shadow(
-        c.x + 1.5,
-        c.y + 1.5,
+        c.x + 1.5 + c.z * 0.45,
+        c.y + 1.5 + c.z * 0.3,
         (c.def.body.halfLength + 2) * (1 - Math.min(0.4, c.z / 80)) * c.size,
-        (c.def.body.halfWidth + 1.9) * c.size,
+        (c.def.body.halfWidth + 1.9) * (1 - Math.min(0.3, c.z / 100)) * c.size,
         c.h,
-        0.3,
+        0.3 + Math.min(0.12, c.z / 150),
       );
   for (const b of w.bots) if (b.alive && R.visible(b.x, b.y, 8)) shadow(b.x, b.y, 4, 3, 0, 0.25);
   // an animal's shadow stays on the ground under it: it is how you see a bird is up in the air

@@ -21,7 +21,13 @@ type Add = (id: string, x: number, y: number, rot: number) => StaticProp | null;
  */
 export function buildScenery(w: World, rng: Rng): void {
   const prop = (id: string): PropManifest => w.content.prop.get(id)!;
-  const add: Add = (id, x, y, rot) => putProp(w, prop(id), x, y, rot, rng);
+  // (nothing a rule scatters stands on the side of raised road, or hard against it: it is a wall)
+  const R = w.relief;
+  const onSide = (x: number, y: number): boolean =>
+    !!R?.plat &&
+    Math.hypot(R.platAt(x + 8, y) - R.platAt(x - 8, y), R.platAt(x, y + 8) - R.platAt(x, y - 8)) >
+      6.5;
+  const add: Add = (id, x, y, rot) => (onSide(x, y) ? null : putProp(w, prop(id), x, y, rot, rng));
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
     for (const i of items) {
