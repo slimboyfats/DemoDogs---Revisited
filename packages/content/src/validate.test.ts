@@ -34,7 +34,6 @@ describe('content validate', () => {
     // sparks, a spray is a jet of single cells, a rail is a line of light, an arc is lightning and
     // a vortex is a swirl of cells, and a howl is dust, motes and bent air; the rest are drawn
     const bare = new Set([
-      'gun',
       'slick',
       'smoke',
       'pulse',
