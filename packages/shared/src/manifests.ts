@@ -431,7 +431,8 @@ export const VenueSchema = z.strictObject({
     .optional(),
   /**
    * The ground's colours. `terrain` says what country it is (else the client reads it off the
-   * ground colour) and `road` what the road is made of (tarmac unless said): looks only.
+   * ground colour), `road` what the road is made of (tarmac unless said) and `style` how tidy
+   * it all is: looks only.
    */
   colors: z.strictObject({
     ground: hex,
@@ -440,6 +441,8 @@ export const VenueSchema = z.strictObject({
     outside: hex,
     terrain: z.enum(['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved']).optional(),
     road: z.enum(['tarmac', 'dirt']).optional(),
+    /** How the ground is drawn: `toy` is clean, bright and tidy (mown lawn, a spotless road). */
+    style: z.enum(['toy']).optional(),
   }),
   /**
    * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so

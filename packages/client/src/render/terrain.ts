@@ -8,6 +8,8 @@
 
 export type Terrain = 'grass' | 'dirt' | 'sand' | 'snow' | 'gravel' | 'paved';
 export type RoadStyle = 'tarmac' | 'dirt';
+/** `toy`: everything clean and bright, like a model on a table. */
+export type GroundStyle = 'toy';
 
 export interface GroundColors {
   ground: string;
@@ -16,6 +18,7 @@ export interface GroundColors {
   outside: string;
   terrain?: Terrain | undefined;
   road?: RoadStyle | undefined;
+  style?: GroundStyle | undefined;
 }
 
 export type Rgb = [number, number, number];
@@ -308,6 +311,37 @@ export function terrainPixel(
   out[2] = clamp255(pb * k);
 }
 
+/** How wide a mown stripe of a toy lawn is. */
+export const MOWN = 30;
+
+/**
+ * One pixel of a toy venue's ground: one flat colour mown in broad stripes, with a tuft or a
+ * daisy here and there and nothing else. No ledges, no bare earth, no shade.
+ */
+export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
+  // stripes run up the map, leaning a little, every other one the lighter green
+  const stripe = Math.floor((x + y * 0.35) / MOWN) & 1;
+  const C = stripe ? G2 : G;
+  let k = 1;
+  const h = hash2(x, y, F.seed);
+  // a blade two pixels tall, dark or light, in loose clumps
+  const blade = hash2(x, y >> 1, F.seed + 5);
+  if (F.small.at(x, y) > 0.62) {
+    if (blade < 0.07) k = 0.9;
+    else if (blade > 0.95) k = 1.08;
+  }
+  if (h > 0.9988) {
+    // a daisy
+    out[0] = 250;
+    out[1] = 248;
+    out[2] = 236;
+    return;
+  }
+  out[0] = clamp255(C[0] * k);
+  out[1] = clamp255(C[1] * k);
+  out[2] = clamp255(C[2] * k);
+}
+
 /** Fill a whole RGBA map with a venue's country. */
 export function paintTerrain(
   px: Uint8ClampedArray,
@@ -322,9 +356,11 @@ export function paintTerrain(
   const D = rgbOf(colors.dirt);
   const out: Rgb = [0, 0, 0];
   let k = 0;
+  const toy = colors.style === 'toy';
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      terrainPixel(out, x, y, terrain, G, G2, D, F);
+      if (toy) toyPixel(out, x, y, G, G2, F);
+      else terrainPixel(out, x, y, terrain, G, G2, D, F);
       px[k] = out[0];
       px[k + 1] = out[1];
       px[k + 2] = out[2];
@@ -456,6 +492,10 @@ export interface RoadPaint {
   use: (i: number) => boolean;
 }
 
+/** A toy road's tarmac, and how wide its kerbs are. */
+const TOY_TAR: Rgb = [0x62, 0x66, 0x72];
+const TOY_KERB = 8;
+
 /** How far past the road's edge the verge can reach. */
 export const VERGE = 36;
 
@@ -469,6 +509,7 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
   const half = o.road / 2;
   const terrain = terrainOf(colors);
   const style: RoadStyle = colors.road ?? 'tarmac';
+  const toy = colors.style === 'toy' && style === 'tarmac';
   const G = rgbOf(colors.ground);
   const D = rgbOf(colors.dirt);
   const N = measure(T, w, h, half + VERGE, o.use);
@@ -541,7 +582,44 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
       let g: number;
       let b: number;
       let m = 1;
-      if (style === 'dirt') {
+      if (toy) {
+        // a toy road: one clean grey, crisp white lines, fat red and white kerbs round every
+        // bend, and a neat dark trim where it meets the lawn
+        if (d > half + TOY_KERB + 1.5) continue;
+        if (d <= half) {
+          r = TOY_TAR[0];
+          g = TOY_TAR[1];
+          b = TOY_TAR[2];
+          // two lanes a touch darker than the middle and the edges
+          if (Math.abs(d - half * 0.46) < half * 0.2) m = 0.965;
+          if (d > half - 5 && d < half - 2.5) {
+            r = 244;
+            g = 244;
+            b = 236;
+            m = 1;
+          } else if (d < 1.4 && ((ali % 34) + 34) % 34 < 17) {
+            r = 240;
+            g = 240;
+            b = 230;
+            m = 1;
+          }
+        } else if (kerbed && d <= half + TOY_KERB) {
+          const red = (Math.floor(al / 10) & 1) === 0;
+          r = red ? 0xe2 : 0xf6;
+          g = red ? 0x36 : 0xf3;
+          b = red ? 0x32 : 0xea;
+          // it stands proud: a lit lip towards the light, a dark foot away from it
+          if (d > half + TOY_KERB - 1.4) m = lit < 0 ? 0.62 : 0.88;
+          else if (d < half + 1.2 && lit < 0) m = 1.06;
+        } else if (d <= (kerbed ? half + TOY_KERB : half) + 1.5) {
+          const p = k * 4;
+          const f = lit < -0.15 ? 0.72 : 0.86;
+          px[p] = clamp255(px[p]! * f);
+          px[p + 1] = clamp255(px[p + 1]! * f);
+          px[p + 2] = clamp255(px[p + 2]! * f);
+          continue;
+        } else continue;
+      } else if (style === 'dirt') {
         const ext = half + (mid - 0.5) * 9;
         if (d > ext + 4) continue;
         if (d > ext) {

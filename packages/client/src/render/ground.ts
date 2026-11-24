@@ -1,6 +1,7 @@
 import { moundHeight, type StaticProp, type World } from '@demodogs/sim';
 import {
   type Fields,
+  type GroundColors,
   makeFields,
   paintBowl,
   paintGully,
@@ -62,12 +63,26 @@ export function markGround(g: Ground, x: number, y: number, r: number): void {
 }
 
 /**
+ * The look asked for from outside the venue (`?look=toy`, `?look=classic`, the LOOK switch):
+ * `toy` draws any venue tidy, `classic` draws a toy venue the old way, null leaves it to the venue.
+ */
+export const lookChoice: { style: 'toy' | 'classic' | null } = { style: null };
+
+/** A venue's ground colours with the look that was asked for. */
+export function coloursOf<T extends GroundColors>(c: T): T {
+  if (lookChoice.style === 'toy') return { ...c, style: 'toy' };
+  if (lookChoice.style === 'classic') return { ...c, style: undefined };
+  return c;
+}
+
+/**
  * The ground as one canvas at art resolution: grass, the road with kerbs and the start line, or the
  * derby bowl. Skid marks, scorches and splats are painted onto it as the race goes.
  */
 export function makeGround(w: World): Ground {
   const V = w.venue;
-  const C = V.colors;
+  const C = coloursOf(V.colors);
+  const toy = C.style === 'toy';
   const cv = document.createElement('canvas');
   cv.width = w.w;
   cv.height = w.h;
@@ -82,7 +97,7 @@ export function makeGround(w: World): Ground {
   const img = g.createImageData(w.w, w.h);
   paintTerrain(img.data, w.w, w.h, C, F);
   if (T) {
-    paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
+    if (!toy) paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
     if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
     paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
   }
@@ -92,7 +107,7 @@ export function makeGround(w: World): Ground {
     const road = w.road;
     g.lineJoin = 'round';
     g.lineCap = 'round';
-    dressRoad(g, w, r, up);
+    if (!toy) dressRoad(g, w, r, up);
     // stretches with a surface of their own: the road in that material's colour, roughened
     const S = w.roadSurface;
     if (S)
@@ -164,7 +179,7 @@ export function makeGround(w: World): Ground {
       g.translate(T.x[i]! + sn * side * road * 0.22, T.y[i]! + cs * side * road * 0.22);
       g.rotate(T.a[i]!);
       // the rubber every start has left: two black streaks out of the front of the box
-      for (const o of [-4.5, 4.5])
+      for (const o of toy ? [] : [-4.5, 4.5])
         for (let q = 0; q < 46; q++) {
           g.fillStyle = `rgba(10,10,12,${0.5 * (1 - q / 46) * (0.6 + r() * 0.4)})`;
           g.fillRect(8 + q, o - 1 + Math.sin(q * 0.2 + slot) * 0.8, 1, 2);
@@ -196,12 +211,12 @@ export function makeGround(w: World): Ground {
     g.lineWidth = 3;
     g.stroke();
   }
-  dressVerge(g, w, r, F);
+  if (!toy) dressVerge(g, w, r, F);
   // a little grain per art pixel; the fine grain (blades, gravel, pebbles) is the shader's
   const id = g.getImageData(0, 0, w.w, w.h);
   const px = id.data;
   for (let i = 0; i < px.length; i += 4) {
-    const n = (r() - 0.5) * 9;
+    const n = (r() - 0.5) * (toy ? 3 : 9);
     px[i] = px[i]! + n;
     px[i + 1] = px[i + 1]! + n;
     px[i + 2] = px[i + 2]! + n;

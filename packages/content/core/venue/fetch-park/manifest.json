@@ -1,0 +1,207 @@
+{
+  "id": "venue.fetch-park",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Fetch Park",
+    "description": "Race. A wide easy loop round the dog park: mown lawn, clipped hedges, and giant tennis balls loose on the road.",
+    "since": "core@0.9.0"
+  },
+  "mode": "mode.race",
+  "seed": 912,
+  "size": {
+    "w": 1560,
+    "h": 1040
+  },
+  "track": {
+    "road": 100,
+    "points": [
+      [900, 810],
+      [520, 810],
+      [310, 740],
+      [230, 560],
+      [290, 360],
+      [470, 250],
+      [760, 225],
+      [1050, 225],
+      [1250, 300],
+      [1330, 480],
+      [1290, 680],
+      [1150, 790]
+    ]
+  },
+  "colors": {
+    "ground": "#58b03c",
+    "ground2": "#66bf46",
+    "dirt": "#9a7a4c",
+    "outside": "#2f6a2a",
+    "terrain": "grass",
+    "style": "toy"
+  },
+  "scenery": [
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 22,
+      "run": [150, 320],
+      "gap": [70, 150],
+      "items": [
+        {
+          "prop": "prop.hedge",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.plank-fence",
+      "spacing": 9
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.3,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.3,
+          "ahead": 2
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.07, 0.3, 0.56, 0.8],
+      "items": [
+        {
+          "prop": "prop.paw-pad",
+          "row": 2,
+          "step": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.13],
+      "items": [
+        {
+          "prop": "prop.ball-launcher",
+          "lane": -1.75,
+          "rot": 1.2
+        },
+        {
+          "prop": "prop.tennis-ball",
+          "lane": -0.5,
+          "ahead": 60
+        },
+        {
+          "prop": "prop.tennis-ball",
+          "lane": 0.3,
+          "ahead": 120
+        },
+        {
+          "prop": "prop.tennis-ball",
+          "lane": -0.15,
+          "ahead": 190
+        },
+        {
+          "prop": "prop.tennis-ball",
+          "lane": 0.6,
+          "ahead": 250
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.44],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 3,
+          "step": 30
+        },
+        {
+          "prop": "prop.tennis-ball",
+          "ahead": 60,
+          "row": 5,
+          "step": 16
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.68],
+      "items": [
+        {
+          "prop": "prop.sheep",
+          "lane": 1.9
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 6e-5,
+      "clear": 40,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 1
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.8
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00025,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 6
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

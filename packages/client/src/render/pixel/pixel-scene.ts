@@ -3,7 +3,7 @@ import { armsLights } from '../arms-fx';
 import { arsenalLights } from '../arsenal-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
-import type { Ground } from '../ground';
+import { coloursOf, type Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
 import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
@@ -352,6 +352,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
 
     gl.viewport(0, 0, W, H);
+    // a toy venue has a warm afternoon sun of its own
+    this.sky.warm = coloursOf(w.venue.colors).style === 'toy' ? 1 : 0;
     const bg = hex(w.venue.colors.outside);
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
     gl.clearDepth(1);
