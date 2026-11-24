@@ -221,6 +221,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       deck: kit.deck,
       pillar: kit.pillar,
       span: BRIDGE.span,
+      ...(b.rails === false ? { rails: false } : {}),
     });
   });
   for (const d of t.dressing) {

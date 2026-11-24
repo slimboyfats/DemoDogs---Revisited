@@ -11,5 +11,6 @@
   "solid": false,
   "made": "material.concrete",
   "integrity": 150,
-  "rebuild": 14
+  "rebuild": 14,
+  "bare": "prop.flyover-deck-bare"
 }

@@ -186,6 +186,8 @@ export class TrackEditor {
   size = 1;
   /** How high the next stretch of road to be raised will stand. */
   height = RAISE_FIRST;
+  /** Whether the next bridge to be raised has rails. */
+  rails = true;
   /** What is wrong with the track, if anything (it cannot be raced until it is put right). */
   problems: string[] = [];
   private s: Session | null = null;
@@ -509,6 +511,24 @@ export class TrackEditor {
       const b = sel?.kind === 'bridge' ? t.bridges[sel.index] : undefined;
       if (b) this.lengthIn.value = String(b.length);
       r.append(el('label', { textContent: 'LENGTH' }), this.lengthIn);
+      const railed = b ? b.rails !== false : this.rails;
+      btn(
+        railed ? 'RAILS ON' : 'RAILS OFF',
+        'With no rails a car can drive off the edge and fall',
+        () => {
+          if (b)
+            this.change(() => {
+              if (railed) b.rails = false;
+              else delete b.rails;
+            });
+          else {
+            this.rails = !this.rails;
+            this.showRow2();
+          }
+        },
+        false,
+        railed,
+      );
       btn('DELETE', 'Take the chosen bridge away', () => this.erase(sel!), !b);
     }
     this.hint.textContent = this.pencil ? PENCIL_HINT : TOOLS.find(([k]) => k === this.tool)![2];
@@ -1212,7 +1232,12 @@ export class TrackEditor {
         return;
       }
       this.change(() => {
-        t.bridges.push({ x: Math.round(x), y: Math.round(y), length: Number(this.lengthIn.value) });
+        t.bridges.push({
+          x: Math.round(x),
+          y: Math.round(y),
+          length: Number(this.lengthIn.value),
+          ...(this.rails ? {} : { rails: false }),
+        });
         this.sel = { kind: 'bridge', index: t.bridges.length - 1 };
       });
     } else {

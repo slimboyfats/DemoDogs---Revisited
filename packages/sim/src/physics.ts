@@ -412,7 +412,7 @@ export function collideWorld(w: World, c: Car): void {
     }
   }
   if (c.deck > 4) {
-    rails(w, c);
+    if (!w.deckOpen?.[c.idx]) rails(w, c);
     return;
   }
   for (const s of w.near(c.x, c.y, 20 * big)) {
@@ -467,7 +467,10 @@ function trample(w: World, c: Car, s: StaticProp, R: number): void {
   }
 }
 
-/** A car up on a deck is kept on it by the rails along its edges; nothing below is in its way. */
+/**
+ * A car up on a deck is kept on it by the rails along its edges (where it has them: see
+ * `deckOpen`); nothing below is in its way.
+ */
 function rails(w: World, c: Car): void {
   const T = w.track!;
   const i = c.idx;

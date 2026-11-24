@@ -110,6 +110,8 @@ export const FLUNG_BELOW = 0.6;
 export const pieceFields = {
   pad: PadSchema.optional(),
   mound: MoundSchema.optional(),
+  /** A piece of raised deck with rails: the prop that is the same piece with none. */
+  bare: z.string().optional(),
   critter: CritterSchema.optional(),
   /**
    * Static props that are not solid: flattened for good by a car that drives over them (long
