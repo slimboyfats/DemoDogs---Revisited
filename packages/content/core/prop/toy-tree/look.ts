@@ -26,7 +26,10 @@ export function toyTree(
     h: size,
     layers,
     smooth: true,
-    fn: (x, y, z) => {
+    fn: (px, py, z) => {
+      // the cubes lie cornerwise to the map, so a corner and two faces of each show
+      const x = (px - py) * Math.SQRT1_2;
+      const y = (px + py) * Math.SQRT1_2;
       // the trunk, wider at the foot
       const flare = trunk + Math.max(0, 3 - z) * 0.35 * trunk;
       if (z < bole + cube && Math.abs(x) < flare && Math.abs(y) < flare)
@@ -54,11 +57,11 @@ const look: LookModule = {
   look: {
     kind: 'prop',
     materials: TOY_LEAVES,
-    part: toyTree(22, 24, 1.5, 9, 2, [
-      [0, 0, 15, 7.5],
-      [-3.5, 2.5, 12.5, 5.5],
-      [3.5, -2, 12.5, 5.5],
-      [1, 3, 18, 4.5],
+    part: toyTree(24, 28, 2, 10, 3, [
+      [0, 0, 18, 8.5],
+      [-3.5, 3, 15, 6.5],
+      [3.5, -2.5, 15, 6.5],
+      [1, 3, 22, 5],
     ]),
   },
 };

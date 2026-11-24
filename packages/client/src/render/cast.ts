@@ -3,6 +3,8 @@ import { sliceX, sliceY, tall, type Strip } from './stack';
 
 /** Where the sun throws a shadow: art px across the ground per art px of height. */
 export const SUN: readonly [number, number] = [0.32, 0.22];
+/** How many times longer than that shadows are thrown: a low afternoon sun on a toy venue. */
+export const sunReach = { k: 1 };
 
 /** Scenery this tall (art px), or standing up off the ground, throws a shadow of its own shape. */
 const TALL = 14;
@@ -77,8 +79,8 @@ export class ShadowMap {
     return [
       Math.floor(s.x - r),
       Math.floor(s.y - r - ((s.lift ?? 0) > 0 ? top * OVER + FAR_BAND : 0)),
-      Math.ceil(s.x + r + top * SUN[0]),
-      Math.ceil(s.y + r + top * SUN[1]),
+      Math.ceil(s.x + r + top * SUN[0] * sunReach.k),
+      Math.ceil(s.y + r + top * SUN[1] * sunReach.k),
     ];
   }
 
@@ -109,8 +111,8 @@ export class ShadowMap {
     for (let i = Math.floor(R / 2); i < st.n; i += R) {
       const z = lift + i / R;
       if (z < 0) continue;
-      const ox = s.x + z * SUN[0];
-      const oy = s.y + z * SUN[1];
+      const ox = s.x + z * SUN[0] * sunReach.k;
+      const oy = s.y + z * SUN[1] * sunReach.k;
       const sx0 = sliceX(st, i);
       const sy0 = sliceY(st, i);
       for (let ty = Math.floor(R / 2); ty < st.ch; ty += R)

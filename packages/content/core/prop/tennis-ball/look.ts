@@ -10,17 +10,17 @@ const look: LookModule = {
       seam: ['#c9cbb8', '#eceedd', '#ffffff'],
     },
     part: {
-      w: 12,
-      h: 12,
-      layers: 11,
+      w: 15,
+      h: 15,
+      layers: 14,
       smooth: true,
       fn: (x, y, z) => {
-        const dz = z - 5.4;
+        const dz = z - 6.8;
         const r = Math.hypot(x, y, dz);
-        if (r > 5.3) return null;
+        if (r > 6.7) return null;
         // the seam: a wave that goes twice up and down on its way round the ball
-        const wave = Math.sin(Math.atan2(y, x) * 2) * 2.6;
-        return r > 3.6 && Math.abs(dz - wave) < 0.75 ? 'seam' : 'tennis';
+        const wave = Math.sin(Math.atan2(y, x) * 2) * 3.2;
+        return r > 4.6 && Math.abs(dz - wave) < 0.9 ? 'seam' : 'tennis';
       },
     },
   },

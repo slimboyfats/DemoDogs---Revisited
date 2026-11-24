@@ -4,6 +4,7 @@ import { rr } from '../../../src/shapes';
 /** The barrel's axis: from its breech low at the back to its mouth high at the front. */
 const A = [-7, 0, 7] as const;
 const B = [9, 0, 14] as const;
+const BIG = 1.3;
 const LEN = Math.hypot(B[0] - A[0], B[2] - A[2]);
 const UX = (B[0] - A[0]) / LEN;
 const UZ = (B[2] - A[2]) / LEN;
@@ -22,11 +23,15 @@ const look: LookModule = {
       tennis: ['#8fae12', '#c4e02a', '#e6f65a'],
     },
     part: {
-      w: 24,
-      h: 18,
-      layers: 20,
+      w: 31,
+      h: 24,
+      layers: 26,
       smooth: true,
-      fn: (x, y, z) => {
+      fn: (bx, by, bz) => {
+        // drawn a third bigger than it was first built
+        const x = bx / BIG;
+        const y = by / BIG;
+        const z = bz / BIG;
         // the slab
         if (z < 2) {
           if (!rr(x, y, 11.5, 8.5, 1.5)) return null;

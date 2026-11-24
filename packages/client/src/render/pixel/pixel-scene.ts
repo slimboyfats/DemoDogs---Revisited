@@ -56,8 +56,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private fxGrid = fineGrid(4);
   /** Fire and smoke on the GPU; null where it cannot (then they stay on the CPU). */
   private gas: GasGpu | null | undefined = undefined;
-  private readonly ys = Math.sin(PITCH);
-  private readonly cosP = Math.cos(PITCH);
+  private get ys(): number {
+    return Math.sin(PITCH);
+  }
+  private get cosP(): number {
+    return Math.cos(PITCH);
+  }
   private ox = 0;
   private oy = 0;
   private vw = 1;
