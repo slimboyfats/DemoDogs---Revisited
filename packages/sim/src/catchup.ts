@@ -56,11 +56,20 @@ export function place(w: World, c: Car): number {
   return n < 2 ? 0.5 : ahead / (n - 1);
 }
 
-/** The chance of pickup `k` for car c: its weight, leaned by where c is running. */
-export function odds(k: PickupManifest, hurt: boolean, at: number): number {
+/**
+ * The chance of pickup `k` for car c: its weight, leaned by where c is running, and by how much
+ * the mode `favours` crates of its kind (a mode's `crates`).
+ */
+export function odds(
+  k: PickupManifest,
+  hurt: boolean,
+  at: number,
+  favours?: Readonly<Record<string, number>>,
+): number {
   const lead = k.lead ?? 1;
   const trail = k.trail ?? 1;
-  return (hurt ? k.hurtWeight : k.weight) * (lead + (trail - lead) * at);
+  const lean = favours?.[k.kind] ?? 1;
+  return (hurt ? k.hurtWeight : k.weight) * (lead + (trail - lead) * at) * lean;
 }
 
 /** The rivals an item of c's goes for: all those ahead in a race, else those within `radius`. */

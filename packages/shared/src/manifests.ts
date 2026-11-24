@@ -500,6 +500,16 @@ export const ModeSchema = z.strictObject({
       pace: z.number().min(1),
     })
     .optional(),
+  /**
+   * Which crates this mode favours: a pickup's chance is multiplied by the number under its kind
+   * (1 when the kind is not listed). It leans the venue's own mix and adds nothing to it.
+   */
+  crates: z
+    .record(z.string(), z.number().min(0))
+    .refine((r) => Object.keys(r).every((k) => PickupSchema.shape.kind.safeParse(k).success), {
+      message: 'crates: every key must be a pickup kind',
+    })
+    .optional(),
 });
 export type ModeManifest = z.infer<typeof ModeSchema>;
 
