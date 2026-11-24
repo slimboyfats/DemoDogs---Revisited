@@ -36,7 +36,7 @@ export { fitMover, nose } from './movers';
 export { grant } from './things';
 export * from './guards';
 export * from './arms';
-export { light } from './damage';
+export { damage, light } from './damage';
 export * from './arcs';
 export * from './arsenal';
 export * from './wild';

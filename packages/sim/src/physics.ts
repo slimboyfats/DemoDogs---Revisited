@@ -194,6 +194,7 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
  */
 export function drive(w: World, c: Car, ctl: Controls): void {
   const S = c.stats;
+  const T = w.tuning;
   const off = w.offroad(c.x, c.y);
   // a lit rocket bottle drives the car: flat out, no brakes, and it turns like a barge
   const jet = jetOf(c);
@@ -249,14 +250,16 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   c.boosting = boost;
   const tank = tankOf(c);
   c.nitro = boost
-    ? Math.max(0, c.nitro - (0.32 * DT) / tank)
-    : Math.min(1, c.nitro + 0.025 * DT * tank);
+    ? Math.max(0, c.nitro - (0.32 * T.boostDrain * DT) / tank)
+    : Math.min(1, c.nitro + 0.025 * T.boostRefill * DT * tank);
   const maxS =
     BASE_SPEED *
+    T.topSpeed *
+    (c.ai ? T.botSpeed : 1) *
     S.speed *
     weak *
-    (off ? 1 - 0.44 * rough : 1) *
-    (boost ? 1.33 * c.fuel : 1) *
+    (off ? 1 - T.offroad * rough : 1) *
+    (boost ? T.boostPower * c.fuel : 1) *
     c.aiSpeed *
     c.pace *
     (c.surge > 0 ? c.surgeK : 1) *
@@ -271,6 +274,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     } else if (ctl.throttle > 0 && vf < maxS) {
       const acc =
         240 *
+        T.accel *
         S.accel *
         (boost || c.surge > 0 ? 1.8 : 1) *
         Math.max(1, c.pace) *
@@ -281,7 +285,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     vf -= vf * ((off ? 0.42 + 0.98 * rough : 0.42) + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
     vl *= Math.exp(
-      -8 * S.grip * hold * (off ? 1 - 0.45 * rough : 1) * (c.handbrake ? 0.22 : 1) * DT,
+      -8 * T.grip * S.grip * hold * (off ? 1 - 0.45 * rough : 1) * (c.handbrake ? 0.22 : 1) * DT,
     );
   }
   c.vx = cs * vf - sn * vl;
@@ -327,7 +331,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     c.z = floor;
     c.vz = 0;
   } else if (c.z > floor || c.vz !== 0) {
-    c.vz -= GRAVITY * w.gravity * DT;
+    c.vz -= GRAVITY * w.gravity * w.tuning.gravity * DT;
     c.z += c.vz * DT;
     if (c.z <= floor) {
       c.z = floor;

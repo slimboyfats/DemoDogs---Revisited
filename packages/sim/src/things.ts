@@ -237,7 +237,7 @@ export function updatePickups(w: World): void {
   for (const p of w.pickups) {
     p.t += DT;
     if (!p.on) {
-      if (p.t > w.mode.pickupRespawn) {
+      if (p.t > w.mode.pickupRespawn * w.tuning.crateTime) {
         p.on = true;
         p.t = 0;
       }

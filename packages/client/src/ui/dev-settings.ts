@@ -1,10 +1,11 @@
 import { TUNABLES, type Tunable, type TuningKey } from '@demodogs/shared';
 import type { TuningStore } from '../game/tuning';
 
-const show = (t: Tunable, v: number): string =>
-  t.key === 'rescueCount' && v === 0
-    ? 'OFF'
-    : `${Number.isInteger(t.step) ? v : v.toFixed(1)}${t.unit ? ` ${t.unit}` : ''}`;
+const show = (t: Tunable, v: number): string => {
+  if (v === 0 && t.zero) return t.zero;
+  const n = Number.isInteger(t.step) ? String(v) : v.toFixed(t.step < 0.1 ? 2 : 1);
+  return t.unit === 'x' ? `×${n}` : t.unit ? `${n} ${t.unit}` : n;
+};
 
 /**
  * The DEV SETTINGS pane: a slider for each rule number of shared/tuning.ts, with what it does
@@ -18,7 +19,13 @@ export function devSettings(
   changed: (key: TuningKey | null) => void,
 ): () => void {
   host.textContent = '';
+  let group = '';
   const rows = TUNABLES.map((t: Tunable & { key: TuningKey }) => {
+    if (t.group !== group) {
+      const h = document.createElement('h3');
+      h.textContent = group = t.group;
+      host.append(h);
+    }
     const row = document.createElement('label');
     row.className = 'tune';
     const head = document.createElement('span');
