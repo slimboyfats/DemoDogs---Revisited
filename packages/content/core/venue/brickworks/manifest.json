@@ -38,7 +38,34 @@
     "outside": "#2e2826",
     "terrain": "paved"
   },
+  "relief": {
+    "banks": 22,
+    "step": 22,
+    "from": 40,
+    "spread": 60
+  },
   "scenery": [
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.brick-wall",
+          "weight": 2
+        },
+        {
+          "prop": "prop.concrete-wall",
+          "weight": 2
+        }
+      ]
+    },
     {
       "rule": "barricade",
       "every": 90,
@@ -88,7 +115,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.000029,
+      "perArea": 2.9e-5,
       "clear": 30,
       "items": [
         {

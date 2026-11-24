@@ -109,4 +109,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **The ground is painted once, per pixel** (client `render/terrain.ts`, then decals in `render/ground.ts`). A venue's
   `colors.terrain` (grass, dirt, sand, snow, gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are
   optional and looks only, so the sim never reads them.
+- **The ground has height** where a venue has `relief` (hills under the road, sheer terraces beyond it): `Relief`
+  (sim/relief.ts) is the one height map. The sim uses it for slopes, faces a car cannot climb and edges it drives off;
+  every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map
+  and draws it raised through a picture-to-ground map baked once (`render/relief-map.ts`); stacks, particles and
+  shadows lift themselves by the same heights in their shaders. The canvas fallback draws the ground flat.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.

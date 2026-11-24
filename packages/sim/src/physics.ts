@@ -19,6 +19,13 @@ import { flatten } from './catchup';
 import type { World } from './world';
 import { pace } from './modifiers';
 
+/** How hard a slope pulls a car down it (px/s² for a slope of one in one). */
+const SLOPE = 300;
+/** Ground steeper than this (height per px) is a face: a car on the ground cannot drive up it. */
+const CLIFF = 1.1;
+/** Ground that falls away faster than this in a tick leaves the car in the air. */
+const DROP = 2;
+
 export function makeCar(
   w: World,
   def: CarManifest,
@@ -242,9 +249,34 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
+  // the lie of the land: a car on a slope is pulled down it (uphill is slower, downhill faster,
+  // and a steep bank throws it back)
+  const land = floor <= 0 ? w.relief : null;
+  if (land && !airborne) {
+    // (a terrace's face is not a slope to roll down: only the hills pull)
+    c.vx -= clamp(land.dx(c.x, c.y), -0.5, 0.5) * SLOPE * DT;
+    c.vy -= clamp(land.dy(c.x, c.y), -0.5, 0.5) * SLOPE * DT;
+    vf = c.vx * cs + c.vy * sn;
+  }
   c.vf = vf;
+  const x0 = c.x;
+  const y0 = c.y;
   c.x += c.vx * DT;
   c.y += c.vy * DT;
+  if (land) {
+    // the ground the car has come to: higher, lower, or a face it cannot climb
+    const rise = land.at(c.x, c.y) - land.at(x0, y0);
+    const [ex, ey] = land.edge(c.x, c.y);
+    const steep = Math.hypot(ex, ey);
+    if (rise > 0 && steep > CLIFF && c.z < rise - 1) {
+      c.x = x0;
+      c.y = y0;
+      bump(w, c, x0 + (ex / steep) * 6, y0 + (ey / steep) * 6, -ex / steep, -ey / steep, 0, 0.6);
+    } else if (rise < -DROP) {
+      // off the edge of a terrace: the car is in the air as high as the ground fell away
+      c.z -= rise;
+    } else if (c.z > 0) c.z = Math.max(0, c.z - rise);
+  }
   if (floor > 0 && c.vz <= 0 && c.z - floor < 1.5) {
     // running down a ramp keeps the wheels on it
     c.z = floor;

@@ -25,6 +25,12 @@
     "outside": "#2a2a2c",
     "terrain": "paved"
   },
+  "relief": {
+    "banks": 18,
+    "step": 18,
+    "from": 24,
+    "spread": 60
+  },
   "scenery": [
     {
       "rule": "oval-wall",

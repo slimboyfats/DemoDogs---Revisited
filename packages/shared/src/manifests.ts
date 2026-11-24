@@ -173,7 +173,7 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
           post: id('prop').optional(),
           roof: id('prop').optional(),
           inside: z.array(id('prop')).default([]),
-          step: z.number().positive().default(8),
+          step: z.number().positive().default(12),
           long: z.tuple([z.number().int().min(2), z.number().int().min(2)]),
           deep: z.tuple([z.number().int().min(2), z.number().int().min(2)]).default([2, 2]),
         }),
@@ -349,6 +349,32 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     chance: unit.default(1),
     items: z.array(ScatterItem).min(1),
   }),
+  /**
+   * Walls beside the road, both sides: runs of one of `items` laid end to end, `offset` art px
+   * past the road's edge and turned to run with it, each run between the two `run` lengths
+   * (art px) with a gap between the two `gap` lengths before the next. Left out on a flyover,
+   * across the inside of a tight bend and where something already stands.
+   */
+  z.strictObject({
+    rule: z.literal('trackside'),
+    offset: z.number(),
+    run: z.tuple([z.number().positive(), z.number().positive()]),
+    gap: z.tuple([z.number().nonnegative(), z.number().nonnegative()]),
+    items: z.array(ScatterItem).min(1),
+  }),
+  /**
+   * The start gantry: a `leg` either side of the road at fraction `at` of the way round (0 is
+   * the start line) and `span` pieces `step` apart high across the road between them. Bring
+   * down a leg and the gantry comes down.
+   */
+  z.strictObject({
+    rule: z.literal('gantry'),
+    at: unit.default(0),
+    leg: id('prop'),
+    span: id('prop'),
+    step: z.number().positive().default(9),
+    offset: z.number().default(6),
+  }),
   AlongRule,
   FieldRule,
 ]);
@@ -395,6 +421,22 @@ export const VenueSchema = z.strictObject({
     terrain: z.enum(['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved']).optional(),
     road: z.enum(['tarmac', 'dirt']).optional(),
   }),
+  /**
+   * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so
+   * cars climb and coast; and `banks` that rise in sheer terraces `step` high, beginning `from` past the
+   * road's edge (or a derby bowl's wall) and reaching full height `spread` further on. Left out,
+   * the venue is flat.
+   */
+  relief: z
+    .strictObject({
+      hills: z.number().min(0).max(60).default(0),
+      wave: z.number().min(120).default(520),
+      banks: z.number().min(0).max(120).default(0),
+      from: z.number().min(0).default(60),
+      spread: z.number().positive().default(150),
+      step: z.number().positive().default(8),
+    })
+    .optional(),
   /**
    * Weather that lies over part of the map: within `r` of (x, y) the sky is the one named (a name
    * the client knows: snow, rain, night ...). The screen takes the sky of the area it is over;

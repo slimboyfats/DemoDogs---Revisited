@@ -222,5 +222,9 @@
   "prop.ram",
   "prop.moose",
   "prop.windmill",
-  "prop.radar-tower"
+  "prop.radar-tower",
+  "prop.barrier",
+  "prop.armco",
+  "prop.gantry-leg",
+  "prop.gantry-beam"
 ]

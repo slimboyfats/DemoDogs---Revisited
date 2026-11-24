@@ -11,6 +11,7 @@ import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { ShadowLayer } from './shadow-layer';
+import { ReliefLayer } from './relief-layer';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights, MAX_CONES } from './lighting';
@@ -46,6 +47,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private readonly glow: QuadBatch;
   private readonly lights = new Lights();
   private groundLayer: GroundLayer | null = null;
+  private relief: ReliefLayer | null = null;
   private shadowLayer: ShadowLayer | null = null;
   private shadows: ShadowMap | null = null;
   private ground: Ground | null = null;
@@ -81,6 +83,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
   outline: 'on' | 'off' | 'auto' = 'auto';
+  /** Draw a venue's raised ground raised (off: flat, as the canvas renderer does; to compare). */
+  raised = true;
   /** Let a new race rise out of the ground, slice by slice. */
   bloom = true;
   /** Seconds the sky moves on each frame drawn, instead of the clock's (captures). */
@@ -165,6 +169,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   visible(x: number, y: number, rad: number, ht = 0): boolean {
     const sx = this.sx(x);
     const sy = this.sy(y);
+    // (raised ground lifts things up the screen: allow for the highest it stands)
+    ht += this.relief?.top ?? 0;
     const m = rad * this.scale;
     return sx > -m && sx < this.vw + m && sy > -m && sy < this.vh + m + ht * this.scale * this.cosP;
   }
@@ -194,6 +200,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   /** Projected "map" y for the quad batch: ground y squashed, lifted by height. */
   private my(y: number, z: number): number {
     return y * this.ys - z * this.cosP;
+  }
+
+  /** How high the ground stands at (x, y): everything drawn there is lifted by it. */
+  rise(x: number, y: number): number {
+    return this.relief ? this.relief.at(x, y) : 0;
   }
 
   private gatherLights(w: World, fx: Effects): void {
@@ -249,7 +260,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const S = this.scale;
     if (ground !== this.ground) {
       this.groundLayer?.dispose();
-      this.groundLayer = new GroundLayer(gl, ground);
+      this.relief?.dispose();
+      this.relief = new ReliefLayer(
+        gl,
+        this.raised ? w.relief : null,
+        w.w,
+        w.h,
+        this.cosP / this.ys,
+      );
+      this.stacks.relief = this.relief;
+      this.groundLayer = new GroundLayer(gl, ground, this.relief);
       this.ground = ground;
     }
     // a new race: nothing of the last one's damaged art will be drawn again
@@ -277,7 +297,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         pixels,
       );
       this.shadows.build(w.statics);
-      this.shadowLayer = new ShadowLayer(gl, this.shadows);
+      this.shadowLayer = new ShadowLayer(gl, this.shadows, this.relief);
     }
     // the sky follows its targets, and strips waiting for their lighting get a little time
     const clock = performance.now();
@@ -310,7 +330,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.vw = W;
     this.vh = H;
     this.ox = Math.round(W / 2 - cx * S);
-    this.oy = Math.round(H / 2 - cy * S * this.ys);
+    // (the camera point is on the ground, however high the ground stands there)
+    this.oy = Math.round(H / 2 - cy * S * this.ys + this.rise(cam.x, cam.y) * S * this.cosP);
     const view: StackView = {
       w: W,
       h: H,
@@ -320,6 +341,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       ys: this.ys,
       zk: S * this.cosP,
       worldH: w.h,
+      top: this.relief!.top,
     };
 
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
@@ -331,10 +353,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    gl.disable(gl.DEPTH_TEST);
     gl.disable(gl.BLEND);
     this.gatherLights(w, fx);
-    this.groundLayer!.draw(view, this.lights, { ground: A.ground, snow: sky.snow, wet: sky.wet });
+    // raised ground writes its depth as it is drawn, so a bank hides what is behind it
+    const raised = !!this.relief!.map;
+    if (raised) {
+      gl.enable(gl.DEPTH_TEST);
+      gl.depthFunc(gl.ALWAYS);
+      gl.depthMask(true);
+    } else gl.disable(gl.DEPTH_TEST);
+    const groundSky = { ground: A.ground, snow: sky.snow, wet: sky.wet };
+    this.groundLayer!.draw(view, this.lights, groundSky);
+    gl.disable(gl.DEPTH_TEST);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
     const quadView: [number, number] = [W, H];
@@ -361,6 +391,14 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       // wet ground: the stacks upside down under their feet first, then the depth buffer afresh
       this.stacks.mirror(this.lights, sky);
       gl.clear(gl.DEPTH_BUFFER_BIT);
+      if (raised) {
+        // (and the raised ground's depth again, without its colour)
+        gl.colorMask(false, false, false, false);
+        gl.depthFunc(gl.ALWAYS);
+        this.groundLayer!.draw(view, this.lights, groundSky);
+        gl.depthFunc(gl.LESS);
+        gl.colorMask(true, true, true, true);
+      }
     }
     this.stacks.flush(this.lights, sky);
     gl.disable(gl.DEPTH_TEST);
@@ -378,15 +416,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       ys: this.ys,
       cosP: this.cosP,
     };
-    this.gas?.draw(gas, this.lights, 0, tint);
+    this.gas?.draw(gas, this.lights, 0, tint, this.relief!);
     this.queueParticles(fx);
     this.queueSnow(W, H);
     this.quads.flush(quadView, quadOrigin, S / this.fxGrid, undefined, tint);
     this.darken(fx, W, H);
-    this.gas?.draw(gas, this.lights, 1, tint);
+    this.gas?.draw(gas, this.lights, 1, tint, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE);
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
-    this.gas?.draw(gas, this.lights, 2);
+    this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
     if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
@@ -436,7 +474,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (!this.visible(r.x, r.y, at.r + 4)) continue;
       L.push({
         x: this.sx(r.x),
-        y: this.sy(r.y, r.z),
+        y: this.sy(r.y, r.z + this.rise(r.x, r.y)),
         r: at.r * S,
         width: at.width * S,
         strength: at.strength,
@@ -451,7 +489,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     queueShadows(this, art, w, cast, (x, y, rx, ry, rot, a, box) =>
       this.quads.push(
         x,
-        this.my(y, 0),
+        this.my(y, this.rise(x, y)),
         rx * 2,
         ry * 2 * this.ys,
         0x000000,
@@ -476,17 +514,17 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // sizes in art px (blobs)
     const normal: Put = (x, y, z, d, rgb, a, shape) => {
       const n = Math.max(1, Math.round(d * G));
-      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+      this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
     };
     const glow: Put = (x, y, z, d, rgb, a) => {
       const n = Math.max(1, Math.round(d * G));
-      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
     };
     // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
     const cellN: Put = (x, y, z, n, rgb, a, shape) =>
-      this.quads.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, shape);
+      this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
     const cellG: Put = (x, y, z, n, rgb, a) =>
-      this.glow.push(at(x, n), at(this.my(y, z), n), n, n, rgb, a, Shape.Rect);
+      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
     const one = 1 / G;
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
@@ -506,7 +544,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       bar: (x, y, z, bw, bh, rgb, a, rot) =>
         this.quads.push(
           Math.round(x * G),
-          Math.round(this.my(y, z) * G),
+          Math.round(this.my(y, z + this.rise(x, y)) * G),
           bw,
           bh,
           rgb,
@@ -515,7 +553,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
           rot,
         ),
       shade: (x, y, d, a) =>
-        this.quads.push(x * G, this.my(y, 0) * G, d * G, d * G * this.ys, 0x000000, a, Shape.Disc),
+        this.quads.push(
+          x * G,
+          this.my(y, this.rise(x, y)) * G,
+          d * G,
+          d * G * this.ys,
+          0x000000,
+          a,
+          Shape.Disc,
+        ),
       ys: this.ys,
       cosP: this.cosP,
     };

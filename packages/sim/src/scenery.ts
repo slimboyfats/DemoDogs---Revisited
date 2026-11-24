@@ -159,37 +159,45 @@ function apply(
     }
     case 'arch': {
       if (!T) return;
-      let group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
       // never over the starting grid
-      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every) {
-        const a = T.a[i]!;
-        const nx = -Math.sin(a);
-        const ny = Math.cos(a);
-        const legOff = half + rule.offset + prop(rule.leg).radius;
-        const legs: [number, number][] = [-1, 1].map((sd) => [
-          T.x[i]! + nx * legOff * sd,
-          T.y[i]! + ny * legOff * sd,
-        ]);
-        // a leg must stand clear of the road everywhere, also across the inside of a bend
-        if (w.grid && legs.some(([x, y]) => w.grid!.at(x, y) < legOff - 4)) continue;
-        if (!legs.every(([x, y]) => w.free(x, y, prop(rule.leg).radius + 2))) continue;
-        for (const [x, y] of legs) {
-          const s = add(rule.leg, x, y, a);
-          if (s) {
-            s.group = group;
-            s.bears = true;
+      for (let i = Math.floor(rule.every / 2) + 20; i < T.n - 20; i += rule.every)
+        archAt(w, i, rule, add, prop);
+      return;
+    }
+    case 'gantry': {
+      if (!T) return;
+      archAt(w, Math.round(rule.at * T.n) % T.n, rule, add, prop);
+      return;
+    }
+    case 'trackside': {
+      if (!T || !w.grid) return;
+      const out = half + rule.offset;
+      for (const side of [-1, 1]) {
+        let i = rng.int(Math.round(rule.gap[1] / T.step) + 1);
+        while (i < T.n) {
+          const id = weighted(rule.items);
+          const r = prop(id).radius;
+          const end = Math.min(T.n, i + Math.round(rng.range(rule.run[0], rule.run[1]) / T.step));
+          let lx = -1e9;
+          let ly = -1e9;
+          for (let j = i; j < end; j++) {
+            if (w.deckH && w.deckH[j]! > 0) continue;
+            const a = T.a[j]!;
+            const x = T.x[j]! - Math.sin(a) * side * out;
+            const y = T.y[j]! + Math.cos(a) * side * out;
+            // end to end: the next piece starts where the last one stops
+            if (Math.hypot(x - lx, y - ly) < r * 1.96) continue;
+            if (x < 8 || y < 8 || x > w.w - 8 || y > w.h - 8) continue;
+            // not across the inside of a tight bend, nor where another stretch of road runs
+            if (w.grid.at(x, y) < out - 2 || !w.free(x, y, r * 0.5)) continue;
+            // nor in water, tar or mud that is already there (a river and its bridge stay open)
+            if (w.spills.some((p) => p.fixed && Math.hypot(p.x - x, p.y - y) < p.r + 10)) continue;
+            add(id, x, y, a);
+            lx = x;
+            ly = y;
           }
+          i = end + Math.round(rng.range(rule.gap[0], rule.gap[1]) / T.step);
         }
-        const n = Math.max(1, Math.round((legOff * 2) / rule.step) - 1);
-        for (let k = 1; k <= n; k++) {
-          const o = -legOff + (k * legOff * 2) / (n + 1);
-          const s = add(rule.span, T.x[i]! + nx * o, T.y[i]! + ny * o, a + Math.PI / 2);
-          if (s) {
-            s.group = group;
-            s.bears = false;
-          }
-        }
-        group++;
       }
       return;
     }
@@ -345,6 +353,46 @@ function apply(
         add(id, x, y, rot);
       }
       return;
+    }
+  }
+}
+
+/** An arch or a gantry across the road at sample i: a leg either side, span pieces between. */
+function archAt(
+  w: World,
+  i: number,
+  rule: { leg: string; span: string; step: number; offset: number },
+  add: Add,
+  prop: (id: string) => PropManifest,
+): void {
+  const T = w.track!;
+  const half = w.road / 2;
+  const group = w.statics.reduce((m, s) => Math.max(m, (s.group ?? -1) + 1), 0);
+  const a = T.a[i]!;
+  const nx = -Math.sin(a);
+  const ny = Math.cos(a);
+  const legOff = half + rule.offset + prop(rule.leg).radius;
+  const legs: [number, number][] = [-1, 1].map((sd) => [
+    T.x[i]! + nx * legOff * sd,
+    T.y[i]! + ny * legOff * sd,
+  ]);
+  // a leg must stand clear of the road everywhere, also across the inside of a bend
+  if (w.grid && legs.some(([x, y]) => w.grid!.at(x, y) < legOff - 4)) return;
+  if (!legs.every(([x, y]) => w.free(x, y, prop(rule.leg).radius + 2))) return;
+  for (const [x, y] of legs) {
+    const s = add(rule.leg, x, y, a);
+    if (s) {
+      s.group = group;
+      s.bears = true;
+    }
+  }
+  const n = Math.max(1, Math.round((legOff * 2) / rule.step) - 1);
+  for (let k = 1; k <= n; k++) {
+    const o = -legOff + (k * legOff * 2) / (n + 1);
+    const s = add(rule.span, T.x[i]! + nx * o, T.y[i]! + ny * o, a + Math.PI / 2);
+    if (s) {
+      s.group = group;
+      s.bears = false;
     }
   }
 }

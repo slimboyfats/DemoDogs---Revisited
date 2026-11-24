@@ -1,7 +1,8 @@
 import { fineGrid } from '../strips';
 import type { ShadowMap } from '../cast';
 import { compile, texture, uniforms } from './gl';
-import { GROUND_VS, SHADOW_FS } from './stack-shaders';
+import { GROUND_VS, shadowFs } from './stack-shaders';
+import type { ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
 
 /** How dark a cast shadow is. */
@@ -20,6 +21,7 @@ export class ShadowLayer {
   constructor(
     private readonly gl: WebGL2RenderingContext,
     private readonly map: ShadowMap,
+    private readonly relief: ReliefLayer | null = null,
   ) {
     // filtered: the edge of the mask blends over one art px, and the shader dithers that
     this.tex = texture(gl, gl.LINEAR);
@@ -27,7 +29,7 @@ export class ShadowLayer {
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, map.w, map.h, 0, gl.RED, gl.UNSIGNED_BYTE, map.mask);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     map.dirty = null;
-    this.prog = compile(gl, GROUND_VS, SHADOW_FS);
+    this.prog = compile(gl, GROUND_VS, shadowFs(!!relief?.map));
     this.u = uniforms(gl, this.prog, [
       'u_view',
       'u_origin',
@@ -37,6 +39,7 @@ export class ShadowLayer {
       'u_tex',
       'u_alpha',
       'u_fine',
+      'u_map',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -78,6 +81,12 @@ export class ShadowLayer {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);
+    if (this.relief?.map) {
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, this.relief.map);
+      gl.uniform1i(u.u_map, 1);
+      gl.activeTexture(gl.TEXTURE0);
+    }
     gl.bindVertexArray(this.vao);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     gl.bindVertexArray(null);

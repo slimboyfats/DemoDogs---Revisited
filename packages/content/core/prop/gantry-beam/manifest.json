@@ -1,0 +1,14 @@
+{
+  "id": "prop.gantry-beam",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Gantry beam",
+    "description": "A length of the start gantry, high over the road: a steel truss with a chequered board and lamps. Cars drive under it.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "solid": false,
+  "made": "material.steel",
+  "integrity": 50
+}

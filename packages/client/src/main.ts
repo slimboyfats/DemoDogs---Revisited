@@ -978,6 +978,8 @@ function boot(): void {
     // the sky and its switches: ?sky=night, ?light=flat, ?bloom=0, ?outline=on|off, ?reflect=0
     if (params.get('light') === 'flat') scene.setFlat(true);
     if (params.get('bloom') === '0') scene.bloom = false;
+    // ?relief=0 draws raised ground flat (the cars still feel it): to compare what it costs
+    if (params.get('relief') === '0') scene.raised = false;
     if (params.get('reflect') === '0') scene.reflections = false;
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;
