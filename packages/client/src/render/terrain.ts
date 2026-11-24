@@ -19,6 +19,8 @@ export interface GroundColors {
   terrain?: Terrain | undefined;
   road?: RoadStyle | undefined;
   style?: GroundStyle | undefined;
+  /** Footpaths across a toy lawn: lines of points and their width. */
+  paths?: { points: [number, number][]; width: number }[] | undefined;
 }
 
 export type Rgb = [number, number, number];
@@ -325,6 +327,8 @@ export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fie
   const C = a > 0.56 ? G2 : G;
   let k = 1;
   if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.025;
+  // the lawn is laid in squares three art px across, each a touch lighter or deeper
+  k *= 0.965 + 0.07 * hash2(Math.floor(x / 3), Math.floor(y / 3), F.seed + 3);
   const tuft = hash2(x >> 1, y >> 1, F.seed + 7);
   if (tuft > 0.975) k *= 0.9;
   else if (tuft < 0.03) k *= 1.07;
@@ -339,6 +343,42 @@ export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fie
   out[0] = clamp255(C[0] * k);
   out[1] = clamp255(C[1] * k);
   out[2] = clamp255(C[2] * k);
+}
+
+/**
+ * A toy venue's footpaths over one pixel of its lawn: bare earth in squares, ragged at the edges,
+ * a shade deeper down the two ruts feet and wheels have worn.
+ */
+export function pathPixel(
+  out: Rgb,
+  x: number,
+  y: number,
+  paths: NonNullable<GroundColors['paths']>,
+  D: Rgb,
+  F: Fields,
+): void {
+  // (in squares two art px across, like the lawn's tufts)
+  const qx = (x >> 1) * 2 + 1;
+  const qy = (y >> 1) * 2 + 1;
+  for (const P of paths) {
+    let best = 1e9;
+    for (let i = 0; i + 1 < P.points.length; i++) {
+      const [ax, ay] = P.points[i]!;
+      const [bx, by] = P.points[i + 1]!;
+      const dx = bx - ax;
+      const dy = by - ay;
+      const t = Math.max(0, Math.min(1, ((qx - ax) * dx + (qy - ay) * dy) / (dx * dx + dy * dy)));
+      best = Math.min(best, Math.hypot(qx - ax - dx * t, qy - ay - dy * t));
+    }
+    const half = P.width / 2 + (hash2(qx, qy, F.seed + 11) - 0.5) * 5;
+    if (best > half) continue;
+    const rut = Math.abs(best - P.width * 0.22) < 1.4 ? 0.84 : 1;
+    const k = rut * (0.94 + 0.12 * hash2(qx, qy, F.seed + 13));
+    out[0] = clamp255(D[0] * k);
+    out[1] = clamp255(D[1] * k);
+    out[2] = clamp255(D[2] * k);
+    return;
+  }
 }
 
 /** Fill a whole RGBA map with a venue's country. */
@@ -358,8 +398,10 @@ export function paintTerrain(
   const toy = colors.style === 'toy';
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      if (toy) toyPixel(out, x, y, G, G2, F);
-      else terrainPixel(out, x, y, terrain, G, G2, D, F);
+      if (toy) {
+        toyPixel(out, x, y, G, G2, F);
+        if (colors.paths) pathPixel(out, x, y, colors.paths, D, F);
+      } else terrainPixel(out, x, y, terrain, G, G2, D, F);
       px[k] = out[0];
       px[k + 1] = out[1];
       px[k + 2] = out[2];

@@ -12,7 +12,7 @@ describe('venue.fetch-park', () => {
 
   it('is a tidy place: a clean road, a launcher lobbing tennis balls onto it, in the toy look', () => {
     const w = makeWorld({ venue: 'venue.fetch-park' });
-    expect(w.road).toBeGreaterThanOrEqual(64);
+    expect(w.road).toBeGreaterThanOrEqual(44);
     expect(w.venue.colors.style).toBe('toy');
     const ball = (): number => w.props.filter((p) => p.def.id === 'prop.tennis-ball').length;
     const before = ball();

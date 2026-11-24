@@ -17,12 +17,12 @@ const look: LookModule = {
       hedge4: ['#124a1e', '#1a5c26', '#2a7a30'],
     },
     part: {
-      w: 9,
+      w: 12,
       h: 9,
       layers: 11,
       smooth: true,
       fn: (x, y, z) => {
-        if (Math.abs(x) > 4.5 || Math.abs(y) > 3.9) return null;
+        if (Math.abs(x) > 6 || Math.abs(y) > 3.9) return null;
         const qx = Math.floor((x + 20) / 1.5);
         const qy = Math.floor((y + 20) / 1.3);
         // every column of cubes its own height, the outer ones a cube lower

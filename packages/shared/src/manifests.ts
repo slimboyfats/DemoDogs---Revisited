@@ -445,6 +445,18 @@ export const VenueSchema = z.strictObject({
     road: z.enum(['tarmac', 'dirt']).optional(),
     /** How the ground is drawn: `toy` is clean, bright and tidy (mown lawn, a spotless road). */
     style: z.enum(['toy']).optional(),
+    /**
+     * Footpaths worn into a toy venue's lawn: each a line of points (art px from the top left)
+     * and how wide it is. Painted only; nothing drives differently on one.
+     */
+    paths: z
+      .array(
+        z.strictObject({
+          points: z.array(z.tuple([z.number(), z.number()])).min(2),
+          width: z.number().positive(),
+        }),
+      )
+      .optional(),
   }),
   /**
    * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so

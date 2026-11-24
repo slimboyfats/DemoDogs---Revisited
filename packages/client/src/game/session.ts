@@ -8,7 +8,7 @@ import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
 import { coloursOf, makeGround, type Ground } from '../render/ground';
 import { PITCH, PITCH_PLAIN, PITCH_TOY, setPitch, type Camera } from '../render/scene';
-import { sunReach } from '../render/cast';
+import { shadeDepth, sunReach } from '../render/cast';
 import { terrainOf } from '../render/terrain';
 
 /** How far off another car's engine can be heard, in art pixels. */
@@ -109,11 +109,13 @@ export class Session {
     made?: { world: World; ground: Ground },
   ) {
     this.world = made?.world ?? makeWorld(o);
-    // a toy venue is seen from lower down, so things stand up, under a low sun that throws long
-    // shadows; whoever made the session sets the view next, which takes the pitch up
+    // a toy venue is seen from lower down, so things stand up, under a high sun that keeps shadows
+    // short; whoever made the session sets the view next, which takes the pitch up
     const toy = coloursOf(this.world.venue.colors).style === 'toy';
     setPitch(toy ? PITCH_TOY : PITCH_PLAIN);
-    sunReach.k = toy ? 1.7 : 1;
+    sunReach.k = toy ? 0.8 : 1;
+    shadeDepth.k = toy ? 1.4 : 1;
+    o.art.chunky(toy);
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;

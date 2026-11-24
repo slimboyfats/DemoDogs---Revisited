@@ -774,6 +774,11 @@ export class Effects {
   private litter(): void {
     const L = this.cells.landed;
     if (!L.length) return;
+    // (a toy venue's ground stays spotless)
+    if (coloursOf(this.w.venue.colors).style === 'toy') {
+      L.length = 0;
+      return;
+    }
     const g = this.ground.g;
     for (let i = 0; i < L.length; i += 3) {
       g.fillStyle = hex(L[i + 2]!);
@@ -1782,6 +1787,8 @@ export class Effects {
 
   /** A loose block that has stopped becomes a mark on the ground: a crumb a speck, a block its own size. */
   private soak(vx: number, vy: number, size: number, rgb: number): void {
+    // (a toy venue's ground stays spotless)
+    if (coloursOf(this.w.venue.colors).style === 'toy') return;
     const g = this.ground.g;
     const [x, y] = this.w.keepInside(vx, vy, 1);
     const d = Math.max(1, Math.round(size));
@@ -1946,7 +1953,8 @@ export class Effects {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
       // up on a deck, the marks would land on the ground below it
-      if (c.sliding && c.deck < 1)
+      // (a toy road stays spotless)
+      if (c.sliding && c.deck < 1 && !toy)
         for (const sgn of [-1, 1]) {
           const wx = -7;
           const wy = 5.4 * sgn;
@@ -1960,8 +1968,8 @@ export class Effects {
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       // on a toy venue every car at speed trails a little cloud, as toy cars do
-      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 80 && Math.random() < 0.4)
-        this.puff(c.x - cs * 10 + rand(-2, 2), c.y - sn * 10 + rand(-2, 2), 1.5, 'dust');
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 80 && Math.random() < 0.3)
+        this.puff(c.x - cs * 10 + rand(-2, 2), c.y - sn * 10 + rand(-2, 2), 1.5, 'smoke');
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;

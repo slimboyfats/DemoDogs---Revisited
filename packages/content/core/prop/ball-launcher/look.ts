@@ -17,7 +17,7 @@ const look: LookModule = {
   id: 'prop.ball-launcher',
   look: {
     kind: 'prop',
-    scale: 2.2,
+    scale: 2,
     materials: {
       launch: ['#b98a08', '#f2bc10', '#ffdc4e'],
       launch2: ['#8a6406', '#c28f0a', '#e6b62a'],

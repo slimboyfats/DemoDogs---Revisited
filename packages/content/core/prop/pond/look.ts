@@ -1,58 +1,80 @@
 import type { LookModule } from '@demodogs/shared';
-import { noise3 } from '../../../src/shapes';
+import { hash3, noise3 } from '../../../src/shapes';
 
 /** The lily pads: x, y, radius, and whether one is in flower. */
 const PADS = [
-  [-30, -10, 4, 1],
-  [-22, 6, 3, 0],
-  [-8, -16, 3.4, 0],
-  [6, 12, 4.2, 1],
-  [20, -8, 3.2, 0],
-  [30, 6, 3.6, 0],
-  [-2, 2, 2.6, 0],
-  [38, -2, 2.8, 1],
+  [-15, -5, 2.2, 1],
+  [-11, 3, 1.7, 0],
+  [-4, -8, 1.9, 0],
+  [3, 6, 2.3, 1],
+  [8, -6, 1.7, 0],
+  [-1, 1, 1.5, 0],
+  [-18, 2, 1.6, 1],
 ] as const;
 
 /**
- * A park pond, flat on the ground: blue water in two bands with pale ripples, a rim of wet
- * earth and reeds, lily pads with a flower on some.
+ * A park pond: deep blue water with pale ripples and lily pads, a bank of earth with reeds and
+ * bulrushes standing round it, and a little plank jetty out over one end. Built small and drawn
+ * bigger.
  */
 const look: LookModule = {
   id: 'prop.pond',
   look: {
     kind: 'prop',
+    scale: 2,
     materials: {
-      pond: ['#1f5fae', '#2b78cf', '#3d8fe0'],
+      pond: ['#1d59a8', '#2a72cc', '#3a8ae0'],
       pond2: ['#2a74c4', '#3a8fe0', '#58a9ee'],
-      pondlit: ['#6fb6ee', '#8fcaf6', '#b9e0fb'],
+      pondlit: ['#6fb6ee', '#8fcaf6', '#c4e6fc'],
       bank: ['#4a3a22', '#66502e', '#7d653c'],
-      reed: ['#2f6a2a', '#3f8a34', '#57a844'],
+      reed: ['#2f6a2a', '#3f8a34', '#62b048'],
+      rush: ['#4a2e14', '#6a4420', '#86582c'],
       lily: ['#2f7f3a', '#41a04a', '#62c060'],
       lilyflower: ['#c85a9a', '#ee7fbc', '#ffc0e0'],
+      jetty: ['#7a5228', '#a8763c', '#cf9a56'],
     },
     part: {
-      w: 112,
-      h: 72,
-      layers: 1,
-      fn: (x, y) => {
+      w: 58,
+      h: 38,
+      layers: 6,
+      smooth: true,
+      fn: (x, y, z) => {
+        // the jetty: planks out over the water from the east bank, on four posts
+        if (x > 13 && x < 27 && Math.abs(y - 2) < 3.2) {
+          if (z > 1.4 && z < 2.3) return Math.abs(((x + 30) % 2) - 1) > 0.82 ? null : 'jetty';
+          if (
+            z <= 1.4 &&
+            Math.abs(Math.abs(y - 2) - 2.4) < 0.6 &&
+            (Math.abs(x - 15) < 0.6 || Math.abs(x - 22) < 0.6)
+          )
+            return 'rush';
+        }
         // a rounded shape, wobbling in and out round its edge
-        const wob = (noise3(x * 0.07 + 3, y * 0.07, 0.5) - 0.5) * 0.36;
-        const r = Math.hypot(x / 53, y / 33) + wob;
+        const wob = (noise3(x * 0.14 + 3, y * 0.14, 0.5) - 0.5) * 0.36;
+        const r = Math.hypot(x / 27, y / 17) + wob;
         if (r > 1) return null;
-        if (r > 0.93) return noise3(x * 0.9, y * 0.9, 2) > 0.62 ? 'reed' : 'bank';
+        if (r > 0.86) {
+          // the bank, and reeds standing out of it, some with a brown head
+          if (z < 0.7) return 'bank';
+          const k = hash3(Math.floor(x / 0.7) + 60, Math.floor(y / 0.7) + 60, 2);
+          if (k < 0.62) return null;
+          const top = 2 + (k - 0.62) * 9;
+          if (z > top) return null;
+          return k > 0.9 && z > top - 1.2 ? 'rush' : 'reed';
+        }
+        if (z >= 0.7) return null;
         for (const [px, py, pr, flower] of PADS) {
           const d = Math.hypot(x - px, y - py);
           if (d < pr) {
-            // a notch out of each pad, and a flower in the middle of some
-            if (flower && d < 1.3) return 'lilyflower';
-            return Math.abs(y - py) < 0.6 && x > px ? 'pond2' : 'lily';
+            if (flower && d < 0.7) return 'lilyflower';
+            return Math.abs(y - py) < 0.35 && x > px ? 'pond2' : 'lily';
           }
         }
         // short pale ripples, in rows
-        const row = Math.floor(y / 5);
-        if (Math.abs((y % 5) - 2.5) < 0.6 && noise3(x * 0.16 + row * 7, row, 4) > 0.66)
+        const row = Math.floor(y / 3);
+        if (Math.abs((y % 3) - 1.5) < 0.4 && noise3(x * 0.3 + row * 7, row, 4) > 0.68)
           return 'pondlit';
-        return r < 0.6 ? 'pond2' : 'pond';
+        return r < 0.55 ? 'pond2' : 'pond';
       },
     },
   },

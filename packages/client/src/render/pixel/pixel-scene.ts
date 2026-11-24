@@ -21,6 +21,7 @@ import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
+import { arcDots, type ArcDot } from '../arc-fx';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
@@ -77,6 +78,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private shade = 1;
   /** The shockwave lens (made on first use), and whether to bend the picture at all. */
   private lens: LensPass | null = null;
+  private readonly arc: ArcDot[] = [];
   private readonly lenses: Lens[] = [];
   distort = true;
   /** The sky: how dark, how wet, how much snow (set its `dark`, `wet`, `snow`; see Atmosphere). */
@@ -396,6 +398,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    // what is thrown shows its path through the air and the spot it will land on
+    for (const v of arcDots(w, this.arc)) this.stacks.voxel(v.rgb, v.x, v.y, v.z, 0, v.s);
     this.stacks.ready();
     if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
       // wet ground: the stacks upside down under their feet first, then the depth buffer afresh

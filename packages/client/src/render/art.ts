@@ -43,7 +43,9 @@ const scale = (hex: string, k: number): string =>
  * are built per paint colour, since paint is baked into the strip.
  */
 export class Art {
-  readonly wheels: Strip[];
+  wheels: Strip[];
+  /** Texels to the art pixel that cars are built at (see `chunky`). */
+  private carDetail = CAR_DETAIL;
   readonly pickup: Strip;
   readonly plank: Strip;
   /** A decoy thrown out for rockets to chase. */
@@ -215,6 +217,18 @@ export class Art {
     for (let p = 1; p < this.poses(id); p++) this.prop(id, undefined, p);
   }
 
+  /**
+   * Cars built of big cubes, half as fine as usual (a toy venue), or as fine as ever. Cars built
+   * the other way are forgotten, so call it before a race's cars are drawn.
+   */
+  chunky(on: boolean): void {
+    const d = on ? CAR_DETAIL / 2 : CAR_DETAIL;
+    if (d === this.carDetail) return;
+    this.carDetail = d;
+    this.cars.clear();
+    this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, d));
+  }
+
   car(id: string, paint: string): CarArt {
     const key = id + paint;
     let a = this.cars.get(key);
@@ -230,9 +244,9 @@ export class Art {
         paint2: tones(scale(paint, 0.68)),
       };
       a = {
-        body: this.make(L.body, m, CAR_DETAIL),
-        top: this.make(L.top, m, CAR_DETAIL),
-        bumper: this.make(kit.BUMPER, m, CAR_DETAIL),
+        body: this.make(L.body, m, this.carDetail),
+        top: this.make(L.top, m, this.carDetail),
+        bumper: this.make(kit.BUMPER, m, this.carDetail),
         chunk: this.make(kit.CHUNK, m),
       };
       this.cars.set(key, a);
