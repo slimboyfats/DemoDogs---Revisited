@@ -30,6 +30,7 @@ export function damage(
   px: number,
   py: number,
 ): void {
+  amount *= w.tuning.damage;
   if (c.wrecked || c.invuln > 0 || amount <= 0.5 || w.phase !== 'race') return;
   // a swollen car shrugs blows off; one zapped small feels them more
   const tough = c.size > 1.05 ? 0.6 : c.size < 0.95 ? 1.25 : 1;
@@ -39,7 +40,15 @@ export function damage(
     absorb(w, c, (amount * tough * w.mode.damageScale) / c.stats.armor, px, py),
   );
   // a leash hands part of the blow on: that car takes exactly what this one was spared
-  if (other) damage(w, other, (pass * other.stats.armor) / w.mode.damageScale, c, other.x, other.y);
+  if (other)
+    damage(
+      w,
+      other,
+      (pass * other.stats.armor) / (w.mode.damageScale * w.tuning.damage),
+      c,
+      other.x,
+      other.y,
+    );
   if (through <= 0) return;
   const dealt = plateOff(w, c, through, by, px, py);
   c.hp -= dealt;

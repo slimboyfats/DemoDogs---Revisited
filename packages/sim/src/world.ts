@@ -340,7 +340,9 @@ export class World {
       if (!def) throw new Error(`no car ${e.car}`);
       rivals.push(makeCar(this, def, e.paint, e.name, false, this.sandbox ? null : aiDef, e));
     }
-    const count = opts.field ? 0 : (opts.rivals ?? Math.max(0, FIELD_SIZE - this.humans.length));
+    const count = opts.field
+      ? 0
+      : (opts.rivals ?? Math.max(0, Math.min(this.tuning.rivals, FIELD_SIZE - this.humans.length)));
     for (let i = 0; i < count; i++) {
       const t = types[(types.indexOf(opts.car) + 1 + i) % types.length]!;
       rivals.push(
@@ -458,7 +460,10 @@ export class World {
   }
 
   get laps(): number {
-    return this.lapsOpt ?? this.mode.laps ?? 0;
+    return (
+      this.lapsOpt ??
+      (this.tuning.laps > 0 && this.mode.laps ? this.tuning.laps : (this.mode.laps ?? 0))
+    );
   }
 
   emit(e: SimEvent): void {

@@ -1524,3 +1524,11 @@ body.editing #pauseKey {
   opacity: 0.75;
   line-height: 1.25;
 }
+#tuneRows h3 {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #ffd24a;
+}
