@@ -180,7 +180,7 @@ function apply(
     case 'trackside': {
       if (!T || !w.grid) return;
       const out = half + rule.offset;
-      for (const side of [-1, 1]) {
+      for (const side of rule.side ? [rule.side] : [-1, 1]) {
         let i = rng.int(Math.round(rule.gap[1] / T.step) + 1);
         while (i < T.n) {
           const id = weighted(rule.items);

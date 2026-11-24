@@ -366,6 +366,8 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     run: z.tuple([z.number().positive(), z.number().positive()]),
     gap: z.tuple([z.number().nonnegative(), z.number().nonnegative()]),
     items: z.array(ScatterItem).min(1),
+    /** Along one side of the road only: -1 its left going round, 1 its right (absent: both). */
+    side: z.union([z.literal(-1), z.literal(1)]).optional(),
   }),
   /**
    * The start gantry: a `leg` either side of the road at fraction `at` of the way round (0 is

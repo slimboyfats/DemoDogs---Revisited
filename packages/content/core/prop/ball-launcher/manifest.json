@@ -7,16 +7,16 @@
     "since": "core@0.9.0"
   },
   "body": "static",
-  "radius": 9,
+  "radius": 15,
   "made": "material.steel",
   "integrity": 220,
   "thrower": {
     "ball": "prop.tennis-ball",
     "every": 2.6,
-    "reach": [130, 260],
+    "reach": [140, 250],
     "spread": 0.16,
-    "apex": 40,
-    "mouth": [16, 18],
+    "apex": 46,
+    "mouth": [28, 31],
     "pool": 6
   }
 }

@@ -166,6 +166,7 @@ export class Art {
       s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
       // at another size it is the same thing with bigger or smaller pixels
       if (!this.looks.has(id)) s.res /= sizeOfId(id)[1];
+      s.res /= L.scale ?? 1;
       this.props.set(key, s);
     }
     return s;

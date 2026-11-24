@@ -3,7 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
-import { markGround, paintHollow, type Ground } from './ground';
+import { coloursOf, markGround, paintHollow, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import { tall, type Strip } from './stack';
 import {
@@ -1941,6 +1941,7 @@ export class Effects {
       this.voxels[i] = this.voxels[this.voxels.length - 1]!;
       this.voxels.pop();
     }
+    const toy = coloursOf(w.venue.colors).style === 'toy';
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
@@ -1958,6 +1959,9 @@ export class Effects {
       if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
+      // on a toy venue every car at speed trails a little cloud, as toy cars do
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 80 && Math.random() < 0.4)
+        this.puff(c.x - cs * 10 + rand(-2, 2), c.y - sn * 10 + rand(-2, 2), 1.5, 'dust');
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;

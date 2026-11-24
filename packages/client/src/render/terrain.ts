@@ -319,12 +319,15 @@ export const MOWN = 30;
  * daisy here and there and nothing else. No ledges, no bare earth, no shade.
  */
 export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
-  // broad soft patches of lighter and deeper green, in three flat steps, and over them the
-  // mower's stripes, only just there
+  // broad soft patches of a lighter green, the mower's stripes only just there, and tufts: a
+  // deeper or a brighter square of grass here and there, two art px across
   const a = F.big.at(x, y) * 0.6 + F.mid.at(x, y) * 0.4;
-  const C = a > 0.6 ? G2 : G;
-  let k = a < 0.36 ? 0.94 : 1;
+  const C = a > 0.56 ? G2 : G;
+  let k = 1;
   if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.025;
+  const tuft = hash2(x >> 1, y >> 1, F.seed + 7);
+  if (tuft > 0.975) k *= 0.9;
+  else if (tuft < 0.03) k *= 1.07;
   const h = hash2(x, y, F.seed);
   if (h > 0.9988) {
     // a daisy
