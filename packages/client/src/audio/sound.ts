@@ -2,9 +2,11 @@
 import { EngineVoice, SkidVoice } from './engine';
 import { clipCurve, Music } from './music';
 import { tune, type Tune } from './tunes';
+import { FULL, gainOf, readVolume, type Channel, type Volume } from './volume';
 
 const MUTE_KEY = 'dd-muted';
 const MUSIC_KEY = 'dd-music';
+const VOLUME_KEY = 'dd-volume';
 const LEVEL = 0.6;
 
 /** What the car on screen is doing, for its engine and tyres. */
@@ -22,6 +24,9 @@ export interface Drive {
 
 export class Sound {
   private ac: BaseAudioContext | null = null;
+  /** The last thing before the speakers: the VOLUME slider. */
+  private out: GainNode | null = null;
+  /** Every sound but the tune meets here: the FX slider. */
   private master: GainNode | null = null;
   /** Where loud things go: a soft clip, and a room that answers them. */
   private big: GainNode | null = null;
@@ -34,6 +39,7 @@ export class Sound {
   private engine: { own: EngineVoice; rival: EngineVoice; skid: SkidVoice } | null = null;
   private muted_ = false;
   private music_ = true;
+  private volume: Volume = { ...FULL };
   /** The tune asked for, which starts once there is an audio context to play it. */
   private wanted: Tune | null = null;
   /** Loud sounds are being sent to the room. */
@@ -46,6 +52,7 @@ export class Sound {
     try {
       this.muted_ = localStorage.getItem(MUTE_KEY) === '1';
       this.music_ = localStorage.getItem(MUSIC_KEY) !== '0';
+      this.volume = readVolume(localStorage.getItem(VOLUME_KEY));
     } catch {
       /* storage blocked */
     }
@@ -57,7 +64,8 @@ export class Sound {
 
   /** What the sound button says. */
   get label(): string {
-    return this.muted_ ? 'SOUND OFF' : this.music_ ? 'SOUND + MUSIC' : 'SOUND, NO MUSIC';
+    if (this.level('master') === 0) return 'SOUND OFF';
+    return this.level('music') > 0 ? 'SOUND + MUSIC' : 'SOUND, NO MUSIC';
   }
 
   get taping(): boolean {
@@ -92,7 +100,9 @@ export class Sound {
     squash.ratio.value = 5;
     squash.attack.value = 0.004;
     squash.release.value = 0.22;
-    squash.connect(ac.destination);
+    // the volume comes after it, so turning the game down never changes how it is squeezed
+    this.out = ac.createGain();
+    squash.connect(this.out).connect(ac.destination);
     this.master = ac.createGain();
     this.master.connect(squash);
     this.musicOut = ac.createGain();
@@ -135,23 +145,54 @@ export class Sound {
   }
 
   private levels(): void {
-    if (this.master) this.master.gain.value = this.muted_ ? 0 : LEVEL;
-    if (this.musicOut) this.musicOut.gain.value = this.muted_ || !this.music_ ? 0 : 1;
+    const set = (g: GainNode | null, v: number) => {
+      if (!g) return;
+      // a slider being dragged moves the level smoothly, without a click
+      if (this.ac instanceof AudioContext) g.gain.setTargetAtTime(v, this.ac.currentTime, 0.02);
+      else g.gain.value = v;
+    };
+    set(this.out, gainOf(this.level('master')));
+    set(this.master, LEVEL * gainOf(this.level('fx')));
+    set(this.musicOut, gainOf(this.level('music')));
+  }
+
+  private save(): void {
+    try {
+      localStorage.setItem(MUTE_KEY, this.muted_ ? '1' : '0');
+      localStorage.setItem(MUSIC_KEY, this.music_ ? '1' : '0');
+      localStorage.setItem(VOLUME_KEY, JSON.stringify(this.volume));
+    } catch {
+      /* ignore */
+    }
   }
 
   /** The sound button: everything, then no music, then nothing. */
   cycle(): void {
-    if (this.muted_) {
+    if (this.level('master') === 0) {
+      // a slider left at nothing would keep the button from bringing the sound back
       this.muted_ = false;
       this.music_ = true;
-    } else if (this.music_) this.music_ = false;
+      if (this.volume.master === 0) this.volume.master = 1;
+      if (this.volume.music === 0) this.volume.music = 1;
+    } else if (this.level('music') > 0) this.music_ = false;
     else this.muted_ = true;
-    try {
-      localStorage.setItem(MUTE_KEY, this.muted_ ? '1' : '0');
-      localStorage.setItem(MUSIC_KEY, this.music_ ? '1' : '0');
-    } catch {
-      /* ignore */
-    }
+    this.save();
+    this.levels();
+  }
+
+  /** Where a volume slider stands, 0 to 1: nothing while the sound button has that part off. */
+  level(c: Channel): number {
+    if (c === 'master') return this.muted_ ? 0 : this.volume.master;
+    if (c === 'music') return this.music_ ? this.volume.music : 0;
+    return this.volume.fx;
+  }
+
+  /** Move a volume slider. Moving one turns its part back on if the sound button had it off. */
+  setLevel(c: Channel, v: number): void {
+    this.volume[c] = Math.min(1, Math.max(0, v));
+    if (c === 'master') this.muted_ = false;
+    if (c === 'music') this.music_ = true;
+    this.save();
     this.levels();
   }
 

@@ -39,6 +39,7 @@ import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
 import { KeyHints } from './ui/key-hints';
+import { volumeSliders } from './ui/volume';
 import { NameTags } from './ui/name-tags';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
@@ -1065,7 +1066,8 @@ function boot(): void {
   };
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () => muteBtns.forEach((b) => (b.textContent = sound.label));
-  muteBtns.forEach((b) => (b.onclick = () => (sound.cycle(), label())));
+  const sliders = volumeSliders($('volume'), sound, label);
+  muteBtns.forEach((b) => (b.onclick = () => (sound.cycle(), label(), sliders())));
   label();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
