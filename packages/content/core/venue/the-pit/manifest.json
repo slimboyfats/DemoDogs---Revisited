@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "The Pit",
-    "description": "Derby. Six cars in a walled bowl.",
+    "description": "Derby. A bowl of humps and hollows: four ramps throw you over the wrecks in the middle.",
     "since": "core@0.1.0"
   },
   "mode": "mode.derby",
@@ -25,6 +25,8 @@
     "outside": "#3a3a3e"
   },
   "relief": {
+    "hills": 18,
+    "wave": 200,
     "banks": 66,
     "step": 22,
     "from": 24,
@@ -169,6 +171,155 @@
         }
       ],
       "clear": 0
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "x": -285,
+          "y": 0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": -175,
+          "y": 0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 285,
+          "y": 0,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 175,
+          "y": 0,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 0,
+          "y": -230,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 0,
+          "y": -135,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 0,
+          "y": 230,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 0,
+          "y": 135,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 231,
+          "y": 73,
+          "rot": 2.07
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 96,
+          "y": 176,
+          "rot": 2.837
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -96,
+          "y": 176,
+          "rot": -2.837
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -231,
+          "y": 73,
+          "rot": -2.07
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -231,
+          "y": -73,
+          "rot": -1.072
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -96,
+          "y": -176,
+          "rot": -0.305
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 96,
+          "y": -176,
+          "rot": 0.305
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 231,
+          "y": -73,
+          "rot": 1.072
+        },
+        {
+          "prop": "prop.dip",
+          "x": 152,
+          "y": 113,
+          "rot": 2.502
+        },
+        {
+          "prop": "prop.dip",
+          "x": -152,
+          "y": 113,
+          "rot": -2.502
+        },
+        {
+          "prop": "prop.dip",
+          "x": -152,
+          "y": -113,
+          "rot": -0.64
+        },
+        {
+          "prop": "prop.dip",
+          "x": 152,
+          "y": -113,
+          "rot": 0.64
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 244,
+          "y": 180,
+          "rot": 2.505
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": -244,
+          "y": 180,
+          "rot": -2.505
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": -244,
+          "y": -180,
+          "rot": -0.637
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 244,
+          "y": -180,
+          "rot": 0.637
+        }
+      ]
     }
   ],
   "bots": {

@@ -9,7 +9,7 @@ import {
 import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
-import { loadContent, loadLooks } from '@demodogs/content';
+import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
 import {
@@ -660,17 +660,14 @@ function startGame(venue: string, custom: Installed | null = null): void {
 function startDev(car: string): void {
   careerRace = null;
   // ?dev&venue=<id> opens the range on that venue (a flyover to test on, say); otherwise the
-  // plain bowl, so new derby maps (crushers, towers) do not end up under the targets
+  // range's own plain bowl, which is not one of the game's arenas, so nothing built for a derby
+  // (crushers, towers, ramps, hills) ends up under the targets
   const pick = params.get('venue');
-  const venue =
-    venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`)) ??
-    venues.find((v) => v.id === 'venue.the-pit') ??
-    venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ??
-    venues[0]!;
+  const venue = venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`));
   const rocket = [...content.weapon.values()].find((w) => w.kind === 'rocket');
   void launch(
     {
-      venue: venue.id,
+      ...(venue ? { venue: venue.id } : { venue: RANGE, content: withRange(content) }),
       car,
       seed: 1,
       autopilot: false,

@@ -29,7 +29,8 @@ describe('track pieces', () => {
       for (const r of ramps) {
         const i = w.grid!.nearest(r.x, r.y);
         for (const o of w.pads) {
-          if (o === r) continue;
+          // (the ramps beside it in the same row are the same jump)
+          if (o === r || (o.def.id === r.def.id && Math.hypot(o.x - r.x, o.y - r.y) < 80)) continue;
           const d = (w.grid!.nearest(o.x, o.y) - i + T.n) % T.n;
           expect(d * T.step, `${id} after its ramp`).toBeGreaterThan(200);
         }

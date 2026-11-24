@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Tar Flats",
-    "description": "Derby. An old filling station sunk in tar: pits that hold a car fast and burn for ages, pumps that go up, and kegs of powder everywhere.",
+    "description": "Derby. Tar pits, powder kegs and a field of potholes.",
     "since": "core@0.4.0"
   },
   "mode": "mode.derby",
@@ -25,6 +25,8 @@
     "outside": "#19191b"
   },
   "relief": {
+    "hills": 12,
+    "wave": 200,
     "banks": 24,
     "step": 24,
     "from": 24,
@@ -149,35 +151,6 @@
       ]
     },
     {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "x": -270,
-          "y": -110,
-          "rot": 0.4
-        },
-        {
-          "prop": "prop.boost-pad",
-          "x": 270,
-          "y": 110,
-          "rot": 3.5416
-        },
-        {
-          "prop": "prop.ramp",
-          "x": -180,
-          "y": 200,
-          "rot": -0.6
-        },
-        {
-          "prop": "prop.ramp",
-          "x": 180,
-          "y": -200,
-          "rot": 2.5416
-        }
-      ]
-    },
-    {
       "rule": "oval-scatter",
       "count": 4,
       "qMin": 0.3,
@@ -202,6 +175,245 @@
         }
       ],
       "clear": 0
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "x": -270,
+          "y": -110,
+          "rot": 0.4
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 270,
+          "y": 110,
+          "rot": 3.542
+        },
+        {
+          "prop": "prop.ramp",
+          "x": -180,
+          "y": 200,
+          "rot": -0.6
+        },
+        {
+          "prop": "prop.ramp",
+          "x": 180,
+          "y": -200,
+          "rot": 2.542
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": -240,
+          "y": 0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": -120,
+          "y": 0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 240,
+          "y": 0,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 120,
+          "y": 0,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 147,
+          "y": 23,
+          "rot": 1.829
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 93,
+          "y": 90,
+          "rot": 2.593
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -4,
+          "y": 115,
+          "rot": -3.122
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -99,
+          "y": 86,
+          "rot": -2.546
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -148,
+          "y": 17,
+          "rot": -1.764
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -128,
+          "y": -60,
+          "rot": -0.897
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -48,
+          "y": -109,
+          "rot": -0.252
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 55,
+          "y": -107,
+          "rot": 0.293
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 132,
+          "y": -55,
+          "rot": 0.954
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 351,
+          "y": 139,
+          "rot": 2.217
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 208,
+          "y": 248,
+          "rot": 2.726
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 9,
+          "y": 290,
+          "rot": 3.124
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -192,
+          "y": 254,
+          "rot": -2.764
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -342,
+          "y": 151,
+          "rot": -2.27
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -400,
+          "y": 7,
+          "rot": -1.603
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -351,
+          "y": -139,
+          "rot": -0.925
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -208,
+          "y": -248,
+          "rot": -0.416
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -9,
+          "y": -290,
+          "rot": -0.017
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 192,
+          "y": -254,
+          "rot": 0.377
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 342,
+          "y": -151,
+          "rot": 0.872
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 400,
+          "y": -7,
+          "rot": 1.538
+        },
+        {
+          "prop": "prop.dip",
+          "x": 233,
+          "y": 170,
+          "rot": 2.513
+        },
+        {
+          "prop": "prop.dip",
+          "x": -233,
+          "y": 170,
+          "rot": -2.513
+        },
+        {
+          "prop": "prop.dip",
+          "x": -233,
+          "y": -170,
+          "rot": -0.629
+        },
+        {
+          "prop": "prop.dip",
+          "x": 233,
+          "y": -170,
+          "rot": 0.629
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": -354,
+          "rot": 0
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": -330,
+          "rot": 0
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": -306,
+          "rot": 0
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": 354,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": 330,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 0,
+          "y": 306,
+          "rot": 3.142
+        }
+      ]
     }
   ],
   "bots": {

@@ -23,6 +23,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
+| `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
@@ -123,4 +124,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   pothole, the ramps' wedges) and the climb of a deck. The client tips the whole car as one thing (`lying` in
   render/stacks.ts, `tilt` on the stack sink): whatever is queued for a car between `tilt(lie)` and `tilt(null)` goes
   with it at the car's size, so new gear on a car needs nothing of its own.
+- **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
+  `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
+  built-in track can be rebuilt without touching tests. A test about a real venue names it.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.

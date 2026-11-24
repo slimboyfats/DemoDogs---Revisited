@@ -45,6 +45,13 @@
         "to": 0.32,
         "material": "material.sand"
       }
+    ],
+    "raised": [
+      {
+        "from": 0.44,
+        "to": 0.57,
+        "height": 28
+      }
     ]
   },
   "colors": {
@@ -409,6 +416,19 @@
         {
           "prop": "prop.dip",
           "ahead": 116
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.75],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
         }
       ]
     },

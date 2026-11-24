@@ -48,6 +48,14 @@
         "to": 0.73,
         "material": "material.ice"
       }
+    ],
+    "raised": [
+      {
+        "from": 0.05,
+        "to": 0.36,
+        "height": 30,
+        "ramp": 180
+      }
     ]
   },
   "colors": {
