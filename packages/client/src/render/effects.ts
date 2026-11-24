@@ -155,6 +155,8 @@ export class Effects {
   readonly bodies: Strip[] = [];
   /** Short bursts of light (explosions, muzzle flashes) for renderers that light the world. */
   readonly flashes: Flash[] = [];
+  /** Each car's nose gun: which barrel fired last, and when. */
+  private readonly gunShots = new Map<number, { side: number; at: number }>();
   /** Loose voxels knocked off cars and props, flying until they settle into the ground. */
   readonly voxels: Voxel[] = [];
   /** What is left of scenery that came down: pieces, heaps of grit, and all of it flying home. */
@@ -302,6 +304,13 @@ export class Effects {
   }
 
   // ------------------------------------------------------------ helpers
+  /** How far back a car's gun barrel on `side` is kicked just now, 1 to 0. */
+  gunKick(c: Car, side: number): number {
+    const g = this.gunShots.get(c.index);
+    if (!g || g.side !== side) return 0;
+    return Math.max(0, 1 - (this.w.time - g.at) / 0.1);
+  }
+
   emit(
     kind: FxKind,
     x: number,
@@ -1478,18 +1487,74 @@ export class Effects {
           break;
         }
         case 'shot': {
-          // a tracer down the line of fire, a flash at the muzzle, sparks where it lands
-          const dx = e.tx - e.x;
-          const dy = e.ty - e.y;
+          // the barrels of a car's nose gun fire in turn: the round leaves the one whose go it is
+          const c = w.cars[e.car];
+          let x = e.x;
+          let y = e.y;
+          if (c && c.gun) {
+            const last = this.gunShots.get(c.index);
+            const side = last ? -last.side : 1;
+            this.gunShots.set(c.index, { side, at: w.time });
+            const off = side * this.art.gunMount(c.def.id, c.def.body)[1];
+            x -= Math.sin(c.h) * off;
+            y += Math.cos(c.h) * off;
+          }
+          // a line of tracer all the way down the line of fire, hottest at the muzzle
+          const dx = e.tx - x;
+          const dy = e.ty - y;
           const d = Math.hypot(dx, dy) || 1;
-          const v = 620;
-          this.emit('spark', e.x, e.y, 4.5, (dx / d) * v, (dy / d) * v, 8, d / v, 1, 0xfff0a0);
-          this.flashes.push({ x: e.x, y: e.y, r: 16, life: 0.06, max: 0.06, rgb: 0xffd070 });
-          if (e.hit >= 0) for (let i = 0; i < 3; i++) this.spark(e.tx, e.ty, 4, 40);
+          const ux = dx / d;
+          const uy = dy / d;
+          const n = Math.ceil(d / 2.5);
+          for (let i = 0; i <= n; i++) {
+            const k = i / n;
+            this.emit(
+              'glitter',
+              x + dx * k,
+              y + dy * k,
+              5,
+              ux * 30,
+              uy * 30,
+              0,
+              rand(0.07, 0.12),
+              k < 0.25 ? 2 : 1.4,
+              k < 0.2 ? 0xffffff : i % 2 ? 0xfff0a0 : 0xffb040,
+            );
+          }
+          // a burst of flame out of the muzzle, a flash that lights the ground, a case thrown clear
+          for (let i = 0; i < 9; i++) {
+            const a = Math.atan2(uy, ux) + rand(-0.6, 0.6);
+            const sp = rand(30, 120);
+            this.emit(
+              'glitter',
+              x + ux * 1.5,
+              y + uy * 1.5,
+              5,
+              Math.cos(a) * sp,
+              Math.sin(a) * sp,
+              rand(0, 20),
+              rand(0.08, 0.16),
+              i < 3 ? 3 : 2,
+              i % 3 === 0 ? 0xffffff : i % 3 === 1 ? 0xffd050 : 0xff8a20,
+            );
+          }
+          this.emit(
+            'glitter',
+            x,
+            y,
+            6,
+            -uy * rand(25, 50),
+            ux * rand(25, 50),
+            70,
+            0.4,
+            1.4,
+            0xe0a830,
+          );
+          this.flashes.push({ x, y, r: 34, life: 0.1, max: 0.1, rgb: 0xffd070 });
+          if (e.hit >= 0) for (let i = 0; i < 6; i++) this.spark(e.tx, e.ty, 4, 70);
           else this.puff(e.tx, e.ty, 0.5, 'dust');
           const vol = this.vol(e.x, e.y);
-          // each car's gun has its own voice, and this screen's own is the deepest
-          if (vol > 0) S.gun(vol, e.car === w.player.index ? 0.9 : 1 + (e.car % 4) * 0.07);
+          if (vol > 0) S.gun(vol);
           break;
         }
         case 'rail':

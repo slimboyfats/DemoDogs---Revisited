@@ -104,6 +104,8 @@ export class Art {
   }
 
   /** Where along a car the roof is: the middle of the highest stretch of its centre line. */
+  private readonly gunMounts = new Map<string, [number, number, number]>();
+
   carRoof(id: string): number {
     let x = this.roofs.get(id);
     if (x === undefined) {
@@ -122,6 +124,26 @@ export class Art {
       this.roofs.set(id, x);
     }
     return x;
+  }
+
+  /**
+   * Where a car's nose gun sits: how far forward, how far out each barrel is from the centre line,
+   * and how high. As wide apart as the bonnet allows, so a car with a narrow nose has them side
+   * by side, and clear of whatever the body has under the length of a barrel.
+   */
+  gunMount(id: string, body: { halfLength: number; halfWidth: number }): [number, number, number] {
+    let m = this.gunMounts.get(id);
+    if (!m) {
+      const x = body.halfLength - 4.5;
+      let y = Math.max(1.4, body.halfWidth - 2);
+      while (y > 1.4 && this.carHeight(id, x, y + 0.8) < 0.5) y -= 0.4;
+      y = Math.max(1.4, y);
+      let top = 0;
+      for (const dx of [-3.5, -1.5, 0.5, 2.5])
+        for (const dy of [-0.9, 0, 0.9]) top = Math.max(top, this.carHeight(id, x + dx, y + dy));
+      this.gunMounts.set(id, (m = [x, y, top]));
+    }
+    return m;
   }
 
   /** How many poses a prop's look has: 1, plus its `alts`. */

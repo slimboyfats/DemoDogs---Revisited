@@ -446,6 +446,23 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       alpha,
     );
   }
+  // the nose gun: a barrel on each side of the bonnet, the one that just fired kicked back
+  if (c.gun && !c.wrecked && flat >= 1) {
+    const gun = art.prop(c.gun.id);
+    const [gx, gy, gz] = art.gunMount(D.id, D.body);
+    for (const side of [-1, 1]) {
+      const lx = gx - fx.gunKick(c, side) * 2;
+      const ly = side * gy + roll * 0.6;
+      R.stack(
+        gun,
+        c.x + cs * lx - sn * ly,
+        c.y + sn * lx + cs * ly,
+        z + 0.5 + c.bounce + gz,
+        c.h,
+        alpha,
+      );
+    }
+  }
   queueGuards(R, art, w, fx, c, alpha);
   if (c.springs && c.hop >= 0 && c.hop < 0.4) {
     const coil = art.prop(c.springs.def.id);
