@@ -106,8 +106,8 @@ export function mounts(c: Car, kind: AddonKind, body: Strip, n = c.fit[kind]?.n 
       return [{ x, y: 0, z: topAt(body, x - 1, 0) - 0.25, rot: 0 }];
     }
     case 'barrel':
-      // in the nose, either side of the grille: only the barrels show
-      return [{ x: hl - 1.4, y: 0, z: 1.7, rot: 0 }];
+      // not a piece of its own: the nose gun is drawn with a second barrel over each of its two
+      return [];
     case 'cage':
       return [{ x: S.roofX, y: 0, z: S.roofZ + 1.2 - CAGE_TOP, rot: 0 }];
     case 'magnet':
