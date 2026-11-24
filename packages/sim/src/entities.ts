@@ -119,6 +119,10 @@ export interface Car {
   wheelDist: number;
   wrecked: boolean;
   wreckT: number;
+  /** How long the car has been off the course in a race (s), and the last road it was on: sample and lap. */
+  downT: number;
+  onIdx: number;
+  onLap: number;
   /** Tick the car was wrecked, for derby placings. */
   wreckTick: number;
   idx: number;

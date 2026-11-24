@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { NO_CONTROLS, parseTrackFile, type TrackFile } from '@demodogs/shared';
-import { World, groundAt, installTrack, liftsOf, newTrack, type Content } from '@demodogs/sim';
+import {
+  RESCUE_COUNT,
+  RESCUE_GRACE,
+  World,
+  groundAt,
+  installTrack,
+  liftsOf,
+  slipsOf,
+  newTrack,
+  type Content,
+} from '@demodogs/sim';
 import { loadContent } from './index';
 import { put, runUntil, startRace } from './testing';
 
@@ -31,6 +41,25 @@ function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => n
   return { t, w, i };
 }
 
+/** Samples of the raised stretch beside a wall and beside a way up its side, well inside each. */
+function sides(w: World): { wall: number; slip: number } {
+  const T = w.track!;
+  const lift = liftsOf(T, w.venue.track!.raised!);
+  const S = slipsOf(T, lift);
+  const clear = (k: number, v: number, far: number): boolean => {
+    for (let q = -far; q <= far; q++)
+      if (S[k + q] !== v || lift[k + q] !== lift[k] || lift[k]! <= 0) return false;
+    return true;
+  };
+  let wall = -1;
+  let slip = -1;
+  for (let k = 20; k < T.n - 20; k++) {
+    if (wall < 0 && clear(k, 0, 6)) wall = k + 0;
+    if (slip < 0 && clear(k, 1, 4)) slip = k;
+  }
+  return { wall, slip };
+}
+
 describe('raised road', () => {
   it('stands as high as it was raised, with a way up at each end and level ground elsewhere', () => {
     const { w, i } = raisedTrack(24);
@@ -52,9 +81,9 @@ describe('raised road', () => {
   });
 
   it('is level across the road and falls away steeply past its shoulder', () => {
-    const { w, i } = raisedTrack(24);
+    const { w } = raisedTrack(24);
     const T = w.track!;
-    const k = i(0.4);
+    const k = sides(w).wall;
     const nx = -Math.sin(T.a[k]!);
     const ny = Math.cos(T.a[k]!);
     const out = (d: number): number => groundAt(w, T.x[k]! + nx * d, T.y[k]! + ny * d);
@@ -84,17 +113,19 @@ describe('raised road', () => {
   });
 
   it('its side is a wall to a car on the ground below, and a car that drives off the top is in the air', () => {
-    const { w, i } = raisedTrack(24);
+    const { w } = raisedTrack(24);
     startRace(w);
     const T = w.track!;
-    const k = i(0.4);
+    const k = sides(w).wall;
     const nx = -Math.sin(T.a[k]!);
     const ny = Math.cos(T.a[k]!);
     const far = w.road / 2 + 60;
     // from the ground beside it, straight at it, and kept at it: the side is a wall, and
     // there is no crawling up it however long the throttle is held
     put(w.player, T.x[k]! + nx * far, T.y[k]! + ny * far, Math.atan2(-ny, -nx), 120);
+    // (with the lift back onto the road held off, which would carry it up)
     for (let n = 0; n < 600; n++) {
+      w.player.downT = 0;
       w.step({ ...NO_CONTROLS, throttle: 1 });
       expect(groundAt(w, w.player.x, w.player.y)).toBeLessThan(8);
     }
@@ -110,6 +141,68 @@ describe('raised road', () => {
     }
     expect(high).toBeGreaterThan(12);
     expect(groundAt(w, w.player.x, w.player.y)).toBe(0);
+  });
+
+  it('a car left down beside it is lifted back onto the road', () => {
+    const { w } = raisedTrack(24);
+    const T = w.track!;
+    startRace(w);
+    for (const o of w.statics) o.down = true;
+    w.props.length = 0;
+    const k = sides(w).wall;
+    const nx = -Math.sin(T.a[k]!);
+    const ny = Math.cos(T.a[k]!);
+    const c = w.player;
+    put(c, T.x[k]! + nx * (w.road / 2 + 50), T.y[k]! + ny * (w.road / 2 + 50), T.a[k]!, 0);
+    // (it went over the edge here: this is the last road it was on)
+    c.onIdx = k;
+    const seen: string[] = [];
+    const tick = (): void => {
+      w.step(NO_CONTROLS);
+      for (const e of w.takeEvents()) seen.push(e.t);
+    };
+    // not at once: there is time to drive off for the ramp
+    for (let n = 0; n < (RESCUE_GRACE + RESCUE_COUNT) * 60 - 10; n++) tick();
+    expect(seen).not.toContain('rescue');
+    expect(groundAt(w, c.x, c.y)).toBe(0);
+    for (let n = 0; n < 30; n++) tick();
+    expect(seen.filter((t) => t === 'rescue')).toHaveLength(1);
+    expect(groundAt(w, c.x, c.y)).toBeCloseTo(24, 0);
+    expect(Math.hypot(c.x - T.x[c.idx]!, c.y - T.y[c.idx]!)).toBeLessThan(w.road / 2);
+    // it stays up there, and is not lifted again
+    for (let n = 0; n < 120; n++) tick();
+    expect(seen.filter((t) => t === 'rescue')).toHaveLength(1);
+    expect(groundAt(w, c.x, c.y)).toBeGreaterThan(20);
+  });
+
+  it('has a way up its side that a car on the ground below can drive up, kept clear', () => {
+    const { w } = raisedTrack(24);
+    startRace(w);
+    const T = w.track!;
+    const { wall, slip } = sides(w);
+    expect(wall).toBeGreaterThan(0);
+    expect(slip).toBeGreaterThan(0);
+    const R = w.relief!;
+    for (const side of [1, -1]) {
+      const nx = -Math.sin(T.a[slip]!) * side;
+      const ny = Math.cos(T.a[slip]!) * side;
+      const far = w.road / 2 + 140;
+      expect(
+        R.slipAt(T.x[slip]! + nx * (w.road / 2 + 30), T.y[slip]! + ny * (w.road / 2 + 30)),
+      ).toBe(true);
+      put(w.player, T.x[slip]! + nx * far, T.y[slip]! + ny * far, Math.atan2(-ny, -nx), 60);
+      let top = 0;
+      for (let n = 0; n < 280; n++) {
+        const c = w.player;
+        const on = Math.hypot(c.x - T.x[slip]!, c.y - T.y[slip]!) < w.road / 2 - 8;
+        w.step({ ...NO_CONTROLS, throttle: on ? 0 : 1, brake: on });
+        top = Math.max(top, on ? groundAt(w, c.x, c.y) : 0);
+      }
+      expect(top).toBeCloseTo(24, 0);
+    }
+    // nothing a rule scatters stands on one
+    expect(w.statics.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
+    expect(w.props.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
   });
 
   it('no scenery stands on its sides', () => {

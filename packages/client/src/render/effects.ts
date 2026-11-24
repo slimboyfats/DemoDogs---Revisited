@@ -1074,6 +1074,16 @@ export class Effects {
           this.slices.start(c, c.z);
           break;
         }
+        case 'rescue': {
+          const c = w.cars[e.car]!;
+          // gone from where it sat in a burst, and put together on the road slice by slice
+          for (let k = 0; k < 10; k++) this.puff(e.x, e.y, 3, 'smoke');
+          this.slices.start(c, c.z);
+          if (this.near(c.x, c.y, 320)) S.whoosh();
+          if (e.car === w.player.index) this.setMsg('BACK ON THE ROAD', 1.4);
+          else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'LIFTED BACK', '#9fe8ff');
+          break;
+        }
         case 'land':
           if (e.impact > 90 && this.near(w.cars[e.car]!.x, w.cars[e.car]!.y, 300)) S.crash(10);
           break;

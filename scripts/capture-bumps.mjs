@@ -446,6 +446,28 @@ if (scene('faces')) {
   await pass('faces-bridge-far', [span, 0, 70, Math.PI / 2, 0], 6, IDLE, 3);
 }
 
+// 10: off the side of a raised road, left down there, and lifted back onto it
+if (scene('rescue')) {
+  const [mid] = await built(false);
+  await page.evaluate((mid) => window.__dd.clear(mid, 260), mid);
+  // (the middle of the first way up the side near the middle of the stretch)
+  const slip = await page.evaluate((mid) => {
+    const w = window.__dd.session.world;
+    const T = w.track;
+    for (let k = mid - 60 + T.n; k < mid + 200 + T.n; k++) {
+      const a = T.a[k % T.n];
+      const d = w.road / 2 + 30;
+      if (w.relief.slipAt(T.x[k % T.n] - Math.sin(a) * d, T.y[k % T.n] + Math.cos(a) * d))
+        return (k + 6) % T.n;
+    }
+    return mid;
+  }, mid);
+  await page.evaluate((k) => window.__dd.clear(k, 260), slip);
+  await pass('rescue-up-the-side', [slip, 0, 170, -Math.PI / 2, 60], 150, GO, 70);
+  await pass('rescue-off-and-back', [mid, -20, 0, 0.8, 150], 460, IDLE, 200);
+  console.log(`marks ${JSON.stringify(marks)}`);
+}
+
 await browser.close();
 server.close();
 if (errors.length) {
