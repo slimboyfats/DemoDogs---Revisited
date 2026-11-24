@@ -108,6 +108,8 @@ export function makeCar(
     wrecked: false,
     wreckT: 0,
     downT: 0,
+    onIdx: 0,
+    onLap: 0,
     wreckTick: 0,
     idx: 0,
     lap: 0,

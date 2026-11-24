@@ -27,7 +27,9 @@ export function buildScenery(w: World, rng: Rng): void {
     !!R?.plat &&
     Math.hypot(R.platAt(x + 8, y) - R.platAt(x - 8, y), R.platAt(x, y + 8) - R.platAt(x, y - 8)) >
       6.5;
-  const add: Add = (id, x, y, rot) => (onSide(x, y) ? null : putProp(w, prop(id), x, y, rot, rng));
+  // (nor on a way up one, which must stay clear)
+  const add: Add = (id, x, y, rot) =>
+    onSide(x, y) || R?.slipAt(x, y) ? null : putProp(w, prop(id), x, y, rot, rng);
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
     for (const i of items) {

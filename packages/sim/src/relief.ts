@@ -17,6 +17,8 @@ export class Relief {
   readonly bank: Float32Array;
   /** Raised road: how much of each point's height is a platform's (null where a venue has none). */
   plat: Float32Array | null = null;
+  /** Where a way up the side of raised road lies, a byte to each point of the grid (null: none). */
+  slip: Uint8Array | null = null;
   /** How high one terrace stands above the last, how many there are, and how much of one is its face. */
   step = 0;
   steps = 0;
@@ -65,6 +67,15 @@ export class Relief {
     const fl = Math.floor(q);
     const up = (q - fl - (1 - this.face)) / this.face;
     return v + Math.min(this.steps, fl + (up > 0 ? up : 0)) * this.step;
+  }
+
+  /** Whether (x, y) is on, or at the head or foot of, a way up the side of raised road. */
+  slipAt(x: number, y: number): boolean {
+    const S = this.slip;
+    if (!S) return false;
+    const gx = Math.min(this.gw - 1, Math.max(0, Math.round(x / Relief.CELL)));
+    const gy = Math.min(this.gh - 1, Math.max(0, Math.round(y / Relief.CELL)));
+    return S[gy * this.gw + gx] === 1;
   }
 
   /** How much of the ground's height at (x, y) is raised road: its platform, ramps and sides. */
@@ -145,6 +156,45 @@ const SIDE = 9;
 /** A raised stretch climbs one px in this many unless it says how long its ramps are. */
 const RAMP = 5;
 
+/**
+ * Ways back up: a platform's sides are walls, so every so far along one (px) a stretch of each
+ * side this wide is a slope instead, one px up in SLIP_RUN, for a car that went over the edge.
+ */
+const SLIP_GAP = 300;
+const SLIP_WIDE = 52;
+const SLIP_RUN = 3.4;
+
+/** Which samples of the track have a way up the side beside them (1), given `liftsOf`'s heights. */
+export function slipsOf(track: Track, lift: Float32Array): Uint8Array {
+  const N = track.n;
+  const out = new Uint8Array(N);
+  const wide = Math.max(2, Math.round(SLIP_WIDE / track.step));
+  // each run of road at its full height (level: its end ramps are not part of it)
+  const level = (i: number): boolean =>
+    lift[i]! > 0 && lift[i] === lift[(i + 1) % N] && lift[i] === lift[(i - 1 + N) % N];
+  let start = 0;
+  while (start < N && level(start)) start++;
+  if (start === N) start = 0;
+  for (let k = 0; k < N;) {
+    const i0 = (start + k) % N;
+    if (!level(i0)) {
+      k++;
+      continue;
+    }
+    let len = 0;
+    while (len < N && level((i0 + len) % N)) len++;
+    // spread evenly: one in the middle of a short run, more as it gets longer
+    const n = len >= wide + 4 ? Math.max(1, Math.round((len * track.step) / SLIP_GAP)) : 0;
+    for (let j = 0; j < n; j++) {
+      const mid = Math.floor(((j + 0.5) * len) / n);
+      for (let q = -(wide >> 1); q <= wide >> 1; q++)
+        if (mid + q >= 0 && mid + q < len) out[(i0 + mid + q) % N] = 1;
+    }
+    k += len;
+  }
+  return out;
+}
+
 /** How high the road stands at each sample of the track, for its raised stretches. */
 export function liftsOf(track: Track, raised: readonly Raised[]): Float32Array {
   const N = track.n;
@@ -181,12 +231,19 @@ export function buildRelief(
   const C = Relief.CELL;
   const half = road / 2;
   // how far each point of the grid is from the road, out to where the banks stop rising
-  const reach = half + spec.from + spec.spread + 40;
+  let reach = half + spec.from + spec.spread + 40;
   const dist = new Float32Array(R.gw * R.gh).fill(reach);
   // raised stretches: how high the road stands at each of its samples, and which sample each
   // point of the grid is nearest to
   const lift = track && raised.length ? liftsOf(track, raised) : null;
   const near = lift ? new Int32Array(R.gw * R.gh).fill(-1) : null;
+  const slip = lift ? slipsOf(track!, lift) : null;
+  // (the ways up the sides reach further out than the banks may)
+  if (lift)
+    reach = Math.max(
+      reach,
+      half + SHOULDER + lift.reduce((a, b) => Math.max(a, b), 0) * SLIP_RUN + 24,
+    );
   if (track) {
     const rc = Math.ceil(reach / C);
     for (let i = 0; i < track.n; i += 2) {
@@ -225,8 +282,13 @@ export function buildRelief(
       }
       if (lift && near![k]! >= 0) {
         // the platform: the road's own height out to its shoulder, then down a steep side
-        const side = clamp01((half + SHOULDER + SIDE - dist[k]!) / SIDE);
-        const up = lift[near![k]!]! * side;
+        // (or, at a way up, a slope a car can climb)
+        const top = lift[near![k]!]!;
+        const run = slip![near![k]!] ? Math.max(SIDE, top * SLIP_RUN) : SIDE;
+        const side = clamp01((half + SHOULDER + run - dist[k]!) / run);
+        const up = top * side;
+        if (run > SIDE && dist[k]! > half - 6 && dist[k]! < half + SHOULDER + run + 12)
+          (R.slip ??= new Uint8Array(R.gw * R.gh))[k] = 1;
         (R.plat ??= new Float32Array(R.gw * R.gh))[k] = up;
         const v = (R.hills[k]! += up);
         if (v > max) max = v;

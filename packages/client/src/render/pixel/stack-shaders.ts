@@ -404,7 +404,11 @@ void main() {
 #ifdef RELIEF
   wp.y += shift;
   // the face of a drop is bare earth or rock in beds; all of it takes the light as it lies
-  if (rl.b > 0.5) {
+  if (rl.b > 0.25 && rl.b < 0.75) {
+    // a way up the side of raised road: packed earth, with a pale bar every few px of its climb
+    float lum = dot(c, vec3(0.3, 0.5, 0.2));
+    c = mix(c, vec3(0.6, 0.47, 0.3) * (0.75 + 0.5 * lum), 0.85) * (mod(shift, 5.0) < 1.5 ? 1.3 : 1.0);
+  } else if (rl.b > 0.75) {
     float bed = mod(shift, 4.0) < 1.0 ? 0.72 : 1.0;
     float lum = dot(c, vec3(0.3, 0.5, 0.2));
     c = mix(c, mix(vec3(0.38, 0.29, 0.21), vec3(0.34, 0.35, 0.38), tar) * (0.75 + 0.5 * lum), 0.85) * bed;

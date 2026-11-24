@@ -2,40 +2,53 @@ import { DT } from '@demodogs/shared';
 import type { Car } from './entities';
 import type { World } from './world';
 
-/** How long a car is down beside a raised road before it is lifted back onto it (s). */
-export const RESCUE_AFTER = 2.5;
-/** How high the road must stand over the car for that: lower, and its ramp is the way up. */
+/** How long a racing car may be off the course before the count starts, and how long the count is (s). */
+export const RESCUE_GRACE = 1.5;
+export const RESCUE_COUNT = 5;
+/** How far past the road's edge still counts as on the course (px). */
+const VERGE = 48;
+/** How high raised road must stand over a car beside it for the car to be off it. */
 const HIGH = 8;
-/** And how far from the road the car may be (px past the road's edge). */
-const NEAR = 240;
+
+/** Seconds left of the count before `c` is put back on the road, or 0 while none is running. */
+export function rescueIn(c: Car): number {
+  return c.downT > RESCUE_GRACE ? RESCUE_GRACE + RESCUE_COUNT - c.downT : 0;
+}
 
 /**
- * A raised road has walls for sides, so a car that goes over its edge can only get back by a
- * ramp at one of its ends, which may be far behind it. One that stays down beside the raised
- * road is lifted back onto it where it is, rolling.
+ * In a race a car that leaves the course has a while to find its own way back: over the grass,
+ * or, below raised road (whose sides are walls), up a ramp at its end or a way up its side.
+ * After RESCUE_GRACE off the course a count starts, shown to the player, and at its end the car
+ * is put back on the nearest road it has already driven: never further on than where it left,
+ * so there is nothing to gain by it.
  */
 export function updateRescue(w: World, c: Car): void {
   const T = w.track;
-  const R = w.relief;
-  if (!T || !R?.plat || c.wrecked || c.finished || w.phase !== 'race') {
+  if (!T || w.kind !== 'race' || c.wrecked || c.finished || w.phase !== 'race') {
     c.downT = 0;
     return;
   }
   const i = c.idx;
-  const top = R.platAt(T.x[i]!, T.y[i]!);
-  const far = Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!);
-  const down = top >= HIGH && top - R.platAt(c.x, c.y) > HIGH * 0.75 && far < w.road / 2 + NEAR;
-  if (!down) {
+  const R = w.relief;
+  const top = R?.plat ? R.platAt(T.x[i]!, T.y[i]!) : 0;
+  const below = top >= HIGH && top - R!.platAt(c.x, c.y) > HIGH * 0.75;
+  const off = below || Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) > w.road / 2 + VERGE;
+  if (!off) {
     c.downT = 0;
+    c.onIdx = i;
+    c.onLap = c.lap;
     return;
   }
-  // (in the air on its way down it is not yet waiting)
+  // (in the air it is not yet waiting)
   if (c.z > 2) return;
   c.downT += DT;
-  if (c.downT < RESCUE_AFTER) return;
+  if (c.downT < RESCUE_GRACE + RESCUE_COUNT) return;
   const x = c.x;
   const y = c.y;
-  w.placeOnTrack(c, i, 0);
+  // the road beside it, unless that is further on than it has driven: then where it left
+  const ahead = (c.lap - c.onLap) * T.n + i - c.onIdx > 2;
+  if (ahead) c.lap = c.onLap;
+  w.placeOnTrack(c, ahead ? c.onIdx : i, 0);
   for (
     let tries = 0;
     tries < 6 && w.cars.some((o) => o !== c && Math.hypot(o.x - c.x, o.y - c.y) < 18);
@@ -48,8 +61,8 @@ export function updateRescue(w: World, c: Car): void {
   c.vx = Math.cos(c.h) * v;
   c.vy = Math.sin(c.h) * v;
   c.vz = c.spin = 0;
-  c.z = 6;
-  c.deck = 0;
+  c.deck = w.deckAt(c.idx);
+  c.z = c.deck + 6;
   c.downT = 0;
   c.invuln = Math.max(c.invuln, 1);
   w.emit({ t: 'rescue', car: c.index, x, y });
