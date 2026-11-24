@@ -162,6 +162,8 @@ export class World {
   readonly roadSurface: (MaterialManifest | null)[] | null = null;
   deckH: Float32Array | null = null;
   deckPiece: Int32Array | null = null;
+  /** Where the deck has no rails (1): a car can leave its edge there. */
+  deckOpen: Uint8Array | null = null;
   readonly road: number;
   readonly knockout: boolean;
   readonly playOn: boolean;

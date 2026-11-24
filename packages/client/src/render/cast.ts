@@ -6,6 +6,9 @@ export const SUN: readonly [number, number] = [0.32, 0.22];
 
 /** Scenery this tall (art px), or standing up off the ground, throws a shadow of its own shape. */
 const TALL = 14;
+/** cot of the camera pitch, and how wide the shade beyond a deck's far edge is (art px). */
+const OVER = 0.67;
+const FAR_BAND = 30;
 
 /** Does this piece of scenery throw a shadow of its own shape (rather than a soft oval)? */
 export function casts(s: StaticProp, strip: Strip): boolean {
@@ -68,7 +71,7 @@ export class ShadowMap {
     const r = Math.hypot(st.cw, st.ch) / st.res / 2 + 1;
     return [
       Math.floor(s.x - r),
-      Math.floor(s.y - r),
+      Math.floor(s.y - r - ((s.lift ?? 0) > 0 ? top * OVER + FAR_BAND : 0)),
       Math.ceil(s.x + r + top * SUN[0]),
       Math.ceil(s.y + r + top * SUN[1]),
     ];
@@ -116,6 +119,24 @@ export class ShadowMap {
           M[gy * this.w + gx] = 255;
         }
     }
+    if (lift <= 0 || s.def.crown) return;
+    // a deck is only ever seen from this side: the ground beyond its far edge lies in shade
+    // just past what the deck hides, or nothing would tell the drop there
+    // (deepest at the foot of the drop, thinning out over the band)
+    const hid = (lift + st.n / R) * OVER;
+    for (let ly = -hh; ly < hh; ly++)
+      for (let lx = -hw; lx < hw; lx++) {
+        const gx = Math.floor(s.x + (lx + 0.5) * cs - (ly + 0.5) * sn);
+        const y0 = s.y - hid + (lx + 0.5) * sn + (ly + 0.5) * cs;
+        if (gx < bx0 || gx >= bx1) continue;
+        for (let k = 0; k < FAR_BAND; k++) {
+          const gy = Math.floor(y0 - k);
+          if (gy < by0 || gy >= by1) continue;
+          const t = 1 - k / FAR_BAND;
+          const v = Math.round(255 * Math.min(1, t * 1.5));
+          if (v > M[gy * this.w + gx]!) M[gy * this.w + gx] = v;
+        }
+      }
   }
 }
 

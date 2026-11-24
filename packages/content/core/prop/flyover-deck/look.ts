@@ -11,8 +11,8 @@ const S = DECK_SURFACE;
  * a tarmac top with a dashed middle line, hazard-striped kerbs and a steel rail along each edge.
  * The road surface is DECK_SURFACE up, where the cars ride.
  */
-const look: LookModule = {
-  id: 'prop.flyover-deck',
+export const deckLook = (id: string, rails: boolean): LookModule => ({
+  id,
   look: {
     kind: 'prop',
     materials: {
@@ -23,7 +23,7 @@ const look: LookModule = {
     part: {
       w: 9,
       h: EDGE * 2 + 1,
-      layers: S + 4,
+      layers: rails ? S + 4 : S,
       smooth: true,
       fn: (x, y, z) => {
         const ay = Math.abs(y);
@@ -47,7 +47,7 @@ const look: LookModule = {
           return noise3(x * 1.7, y * 1.7, 0) > 0.66 ? 'tarmac2' : 'tarmac';
         }
         // the rail: posts and two rails along the outer edge
-        if (ay < EDGE - 1.6) return null;
+        if (!rails || ay < EDGE - 1.6) return null;
         const post = Math.abs(((x + 4.6) % 4.6) - 2.3) < 0.55;
         if (post || z > S + 3.2 || Math.abs(z - (S + 1.8)) < 0.35)
           return z > S + 3.2 ? 'hazard' : 'chrome';
@@ -55,5 +55,5 @@ const look: LookModule = {
       },
     },
   },
-};
-export default look;
+});
+export default deckLook('prop.flyover-deck', true);

@@ -118,7 +118,9 @@ describe(V, () => {
   });
 
   it('racers get through a street full of rubble', () => {
-    const w = makeWorld({ venue: V, autopilot: true });
+    // (one run of it: how long the rubble holds a car up differs from one to the next, from
+    // under four minutes to over seven)
+    const w = makeWorld({ venue: V, autopilot: true, seed: 2 });
     // bring every block down before the start
     for (const g of new Set(w.statics.filter((s) => s.def.fallOver && s.bears).map((s) => s.group)))
       if (g !== undefined) bringDown(w, g);

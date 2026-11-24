@@ -99,7 +99,15 @@ export const TrackFileSchema = z.object({
    * road can cross over itself. Each follows the road when it is moved.
    */
   bridges: z
-    .array(z.strictObject({ x: z.number(), y: z.number(), length: z.number().min(80).max(600) }))
+    .array(
+      z.strictObject({
+        x: z.number(),
+        y: z.number(),
+        length: z.number().min(80).max(600),
+        /** False for a bridge with no rails: a car can drive off its edge and fall. */
+        rails: z.boolean().optional(),
+      }),
+    )
     .max(6)
     .default([]),
   /**

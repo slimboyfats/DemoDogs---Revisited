@@ -80,6 +80,11 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     deck: id('prop'),
     pillar: id('prop'),
     span: z.number().int().min(1),
+    /**
+     * False for a deck with no rails (laid in the deck piece's `bare` twin): nothing keeps a car
+     * on it, and one that leaves its edge falls to the ground below.
+     */
+    rails: z.boolean().optional(),
   }),
   /**
    * Great trees beside the road whose crowns hang out over it: a `trunk` with `clumps` of

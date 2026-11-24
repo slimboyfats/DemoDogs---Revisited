@@ -14,6 +14,7 @@
 
 import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
+import { FAR_DARK, FAR_SHADE } from '../relief-map';
 import { RELIEF_GLSL } from './relief-layer';
 
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
@@ -42,6 +43,23 @@ flat out vec4 v_uv;
 flat out float v_alpha;
 flat out vec2 v_cs;
 flat out float v_tint;
+flat out float v_shade;
+// What stands in the shade of higher ground is in it too, the way the ground itself is painted
+// (relief-map.ts): under a cliff to its upper left, and in the dark beyond the far edge of a drop.
+float shadeAt(vec2 p, float g) {
+  if (textureSize(u_relief, 0).x < 2) return 1.0;
+  if (groundAt(p - 5.0) - g > 4.0 || groundAt(p - 12.0) - g > 10.0 || groundAt(p - 20.0) - g > 17.0)
+    return 0.64;
+  float rise = u_dir.x / u_ys;
+  float sunk = 0.0;
+  for (int i = 0; i < 4; i++) {
+    float d = 4.0 + float(i) * 12.0;
+    float dh = groundAt(p + vec2(0.0, d)) - g;
+    if (dh < 5.0) continue;
+    sunk = max(sunk, min(1.0, (dh * rise + ${FAR_SHADE.toFixed(1)} - d) / ${FAR_SHADE.toFixed(1)}) * min(1.0, dh / 14.0));
+  }
+  return 1.0 - ${FAR_DARK.toFixed(2)} * sunk;
+}
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
@@ -51,6 +69,7 @@ void main() {
   vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5);
   // whatever it is stands on the ground, however high the ground is there
   float gz = groundAt(a_pos.xy);
+  v_shade = shadeAt(a_pos.xy, gz);
   anchor.y -= floor(gz * u_scale * u_dir.x + 0.5);
   float lift = a_pos.w;
   float zz = a_pos.z;
@@ -137,6 +156,7 @@ flat in vec4 v_uv;
 flat in float v_alpha;
 flat in vec2 v_cs;
 flat in float v_tint;
+flat in float v_shade;
 uniform highp sampler2D u_atlas;
 uniform highp sampler2D u_aux;
 uniform vec4 u_lpos[${MAX_LIGHTS}];  // x, y, radius, strength
@@ -255,7 +275,7 @@ void main() {
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
   }
   vec3 k = min(vec3(0.7), l);
-  vec3 rgb = min(vec3(1.0), c.rgb * (base + k * 1.1) + k * (30.0 / 255.0));
+  vec3 rgb = min(vec3(1.0), c.rgb * (base * v_shade + k * 1.1) + k * (30.0 / 255.0));
   // a lamp shows its own colour however dark it is round it
   rgb = mix(rgb, min(vec3(1.0), c.rgb * 1.25 + 0.1), lamp * u_glow);
   o = vec4(rgb, 1.0);

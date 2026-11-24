@@ -44,10 +44,15 @@ export function flyover(w: World, rule: Rule<'flyover'>, add: Add, surface: numb
   const at = (o: number) => (((mid + o) % N) + N) % N;
   const deck = (w.deckH ??= new Float32Array(N));
   const piece = (w.deckPiece ??= new Int32Array(N).fill(-1));
+  // a deck with no rails is laid in the piece's bare twin, and nothing keeps a car on it
+  const bare = rule.rails === false;
+  const made = (bare && w.content.prop.get(rule.deck)?.bare) || rule.deck;
+  const open = bare ? (w.deckOpen ??= new Uint8Array(N)) : null;
   for (let o = -reach; o <= reach; o++) {
     const d = Math.abs(o) * T.step;
     const t = d <= flat ? 1 : Math.max(0, 1 - (d - flat) / rule.ramp);
     deck[at(o)] = H * t * t * (3 - 2 * t);
+    if (open) open[at(o)] = 1;
   }
   const lo = at(-reach - 6);
   const hi = at(reach + 6);
@@ -62,7 +67,7 @@ export function flyover(w: World, rule: Rule<'flyover'>, add: Add, surface: numb
     const i = at(o);
     const h = deck[i]!;
     if (h < 0.5) continue;
-    const s = add(rule.deck, T.x[i]!, T.y[i]!, T.a[i]!);
+    const s = add(made, T.x[i]!, T.y[i]!, T.a[i]!);
     if (!s) continue;
     s.lift = h - surface;
     piece[i] = s.index;

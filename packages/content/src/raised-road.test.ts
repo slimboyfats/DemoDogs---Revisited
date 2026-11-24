@@ -99,6 +99,9 @@ describe('raised road', () => {
       expect(groundAt(w, w.player.x, w.player.y)).toBeLessThan(8);
     }
     // from the top, straight off the side
+    // (with nothing standing along the edge: a roadside wall would hold it)
+    for (const o of w.statics) o.down = true;
+    w.props.length = 0;
     put(w.player, T.x[k]!, T.y[k]!, Math.atan2(ny, nx), 160);
     let high = 0;
     for (let n = 0; n < 40; n++) {
@@ -107,6 +110,14 @@ describe('raised road', () => {
     }
     expect(high).toBeGreaterThan(12);
     expect(groundAt(w, w.player.x, w.player.y)).toBe(0);
+  });
+
+  it('no scenery stands on its sides', () => {
+    const { w } = raisedTrack(24);
+    const R = w.relief!;
+    const steep = (x: number, y: number): boolean => Math.hypot(...R.edge(x, y)) > 1.1;
+    expect(w.statics.filter((s) => R.platAt(s.x, s.y) > 1 && steep(s.x, s.y))).toEqual([]);
+    expect(w.props.filter((p) => R.platAt(p.x, p.y) > 1 && steep(p.x, p.y))).toEqual([]);
   });
 
   it('bots race over it, lap after lap', () => {
