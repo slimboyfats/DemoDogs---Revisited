@@ -8,7 +8,7 @@ export const SUN: readonly [number, number] = [0.32, 0.22];
 const TALL = 14;
 /** cot of the camera pitch, and how wide the shade beyond a deck's far edge is (art px). */
 const OVER = 0.67;
-const FAR_BAND = 30;
+const FAR_BAND = 36;
 
 /** Does this piece of scenery throw a shadow of its own shape (rather than a soft oval)? */
 export function casts(s: StaticProp, strip: Strip): boolean {
@@ -23,6 +23,8 @@ export function casts(s: StaticProp, strip: Strip): boolean {
  */
 export class ShadowMap {
   readonly mask: Uint8Array;
+  /** How much deeper than a cast shadow the shade is, a byte per art px: the far side of a deck. */
+  readonly deep: Uint8Array;
   dirty: [number, number, number, number] | null = null;
   private readonly casters: StaticProp[] = [];
   private readonly seen = new Map<StaticProp, number>();
@@ -34,6 +36,7 @@ export class ShadowMap {
     private readonly rgba: (s: Strip) => Uint8ClampedArray,
   ) {
     this.mask = new Uint8Array(w * h);
+    this.deep = new Uint8Array(w * h);
   }
 
   /** Cast every tall piece of scenery that is standing. */
@@ -54,8 +57,10 @@ export class ShadowMap {
       if (now === this.seen.get(s)) continue;
       this.seen.set(s, now);
       const [x0, y0, x1, y1] = this.reach(s);
-      for (let y = Math.max(0, y0); y < Math.min(this.h, y1); y++)
+      for (let y = Math.max(0, y0); y < Math.min(this.h, y1); y++) {
         this.mask.fill(0, y * this.w + Math.max(0, x0), y * this.w + Math.min(this.w, x1));
+        this.deep.fill(0, y * this.w + Math.max(0, x0), y * this.w + Math.min(this.w, x1));
+      }
       // what else throws a shadow into that box: its neighbours, and tall things a little way off
       const r = Math.max(x1 - x0, y1 - y0);
       for (const o of w.near((x0 + x1) / 2, (y0 + y1) / 2, r))
@@ -133,8 +138,10 @@ export class ShadowMap {
           const gy = Math.floor(y0 - k);
           if (gy < by0 || gy >= by1) continue;
           const t = 1 - k / FAR_BAND;
-          const v = Math.round(255 * Math.min(1, t * 1.5));
+          const v = Math.round(255 * Math.min(1, t * 2));
           if (v > M[gy * this.w + gx]!) M[gy * this.w + gx] = v;
+          const d = Math.round(255 * t);
+          if (d > this.deep[gy * this.w + gx]!) this.deep[gy * this.w + gx] = d;
         }
       }
   }

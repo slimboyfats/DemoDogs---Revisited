@@ -470,6 +470,7 @@ uniform sampler2D u_tex;
 uniform vec2 u_size;
 uniform float u_alpha;
 uniform float u_fine;
+uniform sampler2D u_deep;
 #ifdef RELIEF
 uniform sampler2D u_map;
 #endif
@@ -488,5 +489,6 @@ void main() {
 #endif
   float a = texture(u_tex, at / u_size).r;
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
-  o = vec4(0.0, 0.0, 0.0, u_alpha);
+  // the far side of a deck is in deeper shade than a thrown shadow, deepest at its foot
+  o = vec4(0.0, 0.0, 0.0, u_alpha * (1.0 + 1.2 * texture(u_deep, at / u_size).r));
 }`;

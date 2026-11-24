@@ -41,7 +41,18 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       // the light is at the top left: ground that rises to the south-east faces it
       const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
       // a face: ground too steep to stand on, whichever way it looks; it takes the light harder
-      const steep = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1)) / 2 > 1;
+      const sx = (at(x + 1, y) - at(x - 1, y)) / 2;
+      const sy = (at(x, y + 1) - at(x, y - 1)) / 2;
+      const slope = Math.hypot(sx, sy);
+      let steep = slope > 1;
+      // the side of a platform eases out at its foot, and the foot is still wall: a gentle
+      // slope there with the steep of the side just above it is face too, or grass shows in it
+      if (!steep && slope > 0.04 && R.plat && R.platAt(x + 0.5, y + 0.5) > 0.1)
+        for (let d = 2; d <= 16 && !steep; d += 2) {
+          const ux = Math.round(x + (sx / slope) * d);
+          const uy = Math.round(y + (sy / slope) * d);
+          steep = Math.hypot(at(ux + 1, uy) - at(ux - 1, uy), at(ux, uy + 1) - at(ux, uy - 1)) > 2;
+        }
       let shade = steep
         ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
         : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
