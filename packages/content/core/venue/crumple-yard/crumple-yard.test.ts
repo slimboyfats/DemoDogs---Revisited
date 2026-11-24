@@ -26,7 +26,7 @@ describe('venue.crumple-yard', () => {
       venue: 'venue.crumple-yard',
       car: 'car.bruiser',
       autopilot: true,
-      seed: 4,
+      seed: 1,
     });
     let slams = 0;
     let falls = 0;

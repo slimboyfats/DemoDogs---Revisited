@@ -25,7 +25,7 @@
     "outside": "#19191b"
   },
   "relief": {
-    "hills": 12,
+    "hills": 8,
     "wave": 200,
     "banks": 24,
     "step": 24,
@@ -228,132 +228,6 @@
           "rot": 3.142
         },
         {
-          "prop": "prop.pothole",
-          "x": 147,
-          "y": 23,
-          "rot": 1.829
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 93,
-          "y": 90,
-          "rot": 2.593
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -4,
-          "y": 115,
-          "rot": -3.122
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -99,
-          "y": 86,
-          "rot": -2.546
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -148,
-          "y": 17,
-          "rot": -1.764
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -128,
-          "y": -60,
-          "rot": -0.897
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -48,
-          "y": -109,
-          "rot": -0.252
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 55,
-          "y": -107,
-          "rot": 0.293
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 132,
-          "y": -55,
-          "rot": 0.954
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 351,
-          "y": 139,
-          "rot": 2.217
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 208,
-          "y": 248,
-          "rot": 2.726
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 9,
-          "y": 290,
-          "rot": 3.124
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -192,
-          "y": 254,
-          "rot": -2.764
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -342,
-          "y": 151,
-          "rot": -2.27
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -400,
-          "y": 7,
-          "rot": -1.603
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -351,
-          "y": -139,
-          "rot": -0.925
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -208,
-          "y": -248,
-          "rot": -0.416
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -9,
-          "y": -290,
-          "rot": -0.017
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 192,
-          "y": -254,
-          "rot": 0.377
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 342,
-          "y": -151,
-          "rot": 0.872
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 400,
-          "y": -7,
-          "rot": 1.538
-        },
-        {
           "prop": "prop.dip",
           "x": 233,
           "y": 170,
@@ -364,54 +238,6 @@
           "x": -233,
           "y": 170,
           "rot": -2.513
-        },
-        {
-          "prop": "prop.dip",
-          "x": -233,
-          "y": -170,
-          "rot": -0.629
-        },
-        {
-          "prop": "prop.dip",
-          "x": 233,
-          "y": -170,
-          "rot": 0.629
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": -354,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": -330,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": -306,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": 354,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": 330,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 0,
-          "y": 306,
-          "rot": 3.142
         }
       ]
     }

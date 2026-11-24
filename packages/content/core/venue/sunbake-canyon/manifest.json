@@ -13,44 +13,40 @@
     "h": 1400
   },
   "track": {
-    "road": 72,
+    "road": 88,
     "points": [
       [260, 760],
-      [250, 480],
-      [360, 290],
-      [600, 220],
-      [860, 300],
-      [1000, 480],
-      [1180, 580],
-      [1400, 520],
-      [1520, 340],
-      [1720, 230],
-      [1920, 320],
-      [1980, 560],
-      [1960, 860],
-      [1860, 1100],
-      [1640, 1200],
-      [1380, 1160],
-      [1240, 1000],
-      [1080, 900],
-      [880, 960],
-      [760, 1120],
-      [560, 1200],
-      [360, 1120],
-      [270, 940]
+      [260, 460],
+      [380, 290],
+      [620, 230],
+      [900, 300],
+      [1100, 500],
+      [1350, 520],
+      [1550, 340],
+      [1760, 250],
+      [1940, 360],
+      [1980, 640],
+      [1940, 940],
+      [1800, 1140],
+      [1500, 1200],
+      [1100, 1180],
+      [800, 1180],
+      [500, 1200],
+      [320, 1100],
+      [260, 940]
     ],
     "surfaces": [
       {
-        "from": 0.27,
-        "to": 0.32,
+        "from": 0.24,
+        "to": 0.29,
         "material": "material.sand"
       }
     ],
     "raised": [
       {
-        "from": 0.44,
-        "to": 0.57,
-        "height": 28
+        "from": 0.38,
+        "to": 0.48,
+        "height": 26
       }
     ]
   },
@@ -62,12 +58,13 @@
     "road": "dirt"
   },
   "relief": {
-    "hills": 22,
-    "wave": 280,
-    "banks": 108,
+    "hills": 14,
+    "wave": 420,
+    "banks": 72,
     "step": 36,
-    "from": 50,
-    "spread": 130
+    "from": 70,
+    "spread": 130,
+    "infield": false
   },
   "scenery": [
     {
@@ -113,7 +110,7 @@
     {
       "rule": "patches",
       "material": "material.sand",
-      "count": 26,
+      "count": 6,
       "r": [20, 40],
       "on": "off"
     },
@@ -194,7 +191,7 @@
     },
     {
       "rule": "roadside",
-      "every": 24,
+      "every": 60,
       "pair": "prop.cone",
       "stack": "prop.crate",
       "drum": "prop.dynamite-crate",
@@ -240,7 +237,7 @@
       "rule": "along",
       "pick": {
         "where": "bend",
-        "count": 7,
+        "count": 5,
         "apart": 0.05
       },
       "items": [
@@ -260,33 +257,22 @@
     },
     {
       "rule": "along",
-      "at": [0.12, 0.4, 0.66, 0.88],
-      "items": [
-        {
-          "prop": "prop.crows",
-          "lane": 0.3,
-          "ahead": 0
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.25, 0.75],
+      "at": [0.3, 0.8],
       "items": [
         {
           "prop": "prop.rabbits",
-          "lane": 1.6,
+          "lane": 2,
           "ahead": 0
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.3, 0.72],
+      "at": [0.5],
       "items": [
         {
           "prop": "prop.ram",
-          "lane": 2.3,
+          "lane": 2.4,
           "ahead": 0
         }
       ]
@@ -304,124 +290,53 @@
     },
     {
       "rule": "along",
-      "at": [0.12],
+      "at": [0.024],
       "items": [
         {
           "prop": "prop.boost-pad",
           "row": 2,
-          "step": 26
+          "step": 30
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.2],
+      "at": [0.227],
       "items": [
         {
-          "prop": "prop.dip",
-          "n": 2,
-          "gap": 84
+          "prop": "prop.dip"
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.25, 0.36, 0.62, 0.8],
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.pothole",
-          "lane": 0.35
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.3,
-          "ahead": 26
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": 0.1,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.55,
-          "ahead": 84
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.42],
-      "items": [
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 46
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.53],
+      "at": [0.709],
       "items": [
         {
           "prop": "prop.turbo-pad",
-          "ahead": -120
+          "ahead": -60
         },
         {
           "prop": "prop.big-ramp",
           "row": 2,
-          "step": 30
+          "step": 40
         },
         {
           "prop": "prop.barrel",
-          "ahead": 64,
-          "row": 7,
-          "step": 9
-        },
-        {
-          "prop": "prop.barrel",
-          "ahead": 78,
-          "row": 6,
-          "step": 9
+          "ahead": 56,
+          "row": 9
         },
         {
           "prop": "prop.oil-drum",
-          "ahead": 130,
+          "ahead": 70,
           "row": 3,
-          "step": 16
+          "step": 20
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.68],
-      "items": [
-        {
-          "prop": "prop.dip"
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.dip",
-          "ahead": 116
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.75],
+      "at": [0.78],
       "mirror": true,
       "items": [
         {
@@ -434,14 +349,18 @@
     },
     {
       "rule": "along",
-      "at": [0.9],
+      "at": [0.851],
       "items": [
         {
           "prop": "prop.speed-bump",
-          "row": 3,
+          "row": 4,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 4,
           "step": 24,
-          "n": 4,
-          "gap": 34
+          "ahead": 50
         }
       ]
     }

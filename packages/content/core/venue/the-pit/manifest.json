@@ -25,9 +25,9 @@
     "outside": "#3a3a3e"
   },
   "relief": {
-    "hills": 18,
+    "hills": 8,
     "wave": 200,
-    "banks": 66,
+    "banks": 22,
     "step": 22,
     "from": 24,
     "spread": 90
@@ -224,54 +224,6 @@
           "rot": -1.571
         },
         {
-          "prop": "prop.pothole",
-          "x": 231,
-          "y": 73,
-          "rot": 2.07
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 96,
-          "y": 176,
-          "rot": 2.837
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -96,
-          "y": 176,
-          "rot": -2.837
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -231,
-          "y": 73,
-          "rot": -2.07
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -231,
-          "y": -73,
-          "rot": -1.072
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -96,
-          "y": -176,
-          "rot": -0.305
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 96,
-          "y": -176,
-          "rot": 0.305
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 231,
-          "y": -73,
-          "rot": 1.072
-        },
-        {
           "prop": "prop.dip",
           "x": 152,
           "y": 113,
@@ -282,18 +234,6 @@
           "x": -152,
           "y": 113,
           "rot": -2.502
-        },
-        {
-          "prop": "prop.dip",
-          "x": -152,
-          "y": -113,
-          "rot": -0.64
-        },
-        {
-          "prop": "prop.dip",
-          "x": 152,
-          "y": -113,
-          "rot": 0.64
         },
         {
           "prop": "prop.boost-pad",

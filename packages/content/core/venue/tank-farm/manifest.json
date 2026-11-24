@@ -26,7 +26,7 @@
     "terrain": "paved"
   },
   "relief": {
-    "hills": 14,
+    "hills": 8,
     "wave": 220,
     "banks": 24,
     "step": 24,
@@ -180,102 +180,6 @@
           "x": -262,
           "y": 194,
           "rot": -2.502
-        },
-        {
-          "prop": "prop.dip",
-          "x": -262,
-          "y": -194,
-          "rot": -0.639
-        },
-        {
-          "prop": "prop.dip",
-          "x": 262,
-          "y": -194,
-          "rot": 0.639
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -180,
-          "y": -324,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -180,
-          "y": -300,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -180,
-          "y": -276,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 180,
-          "y": 324,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 180,
-          "y": 300,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 180,
-          "y": 276,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 412,
-          "y": 62,
-          "rot": 1.839
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 232,
-          "y": 258,
-          "rot": 2.687
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -83,
-          "y": 304,
-          "rot": -2.993
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -350,
-          "y": 171,
-          "rot": -2.303
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -412,
-          "y": -62,
-          "rot": -1.303
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -232,
-          "y": -258,
-          "rot": -0.455
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 83,
-          "y": -304,
-          "rot": 0.149
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 350,
-          "y": -171,
-          "rot": 0.839
         }
       ]
     }
