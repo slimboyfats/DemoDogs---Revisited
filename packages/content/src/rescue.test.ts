@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { NO_CONTROLS } from '@demodogs/shared';
-import { RESCUE_COUNT, RESCUE_GRACE, rescueIn, type World } from '@demodogs/sim';
+import { DEFAULT_TUNING, NO_CONTROLS } from '@demodogs/shared';
+import { rescueIn, type World } from '@demodogs/sim';
 import { bench, makeWorld, put, startRace } from './testing';
 
+const { rescueGrace: RESCUE_GRACE, rescueCount: RESCUE_COUNT } = DEFAULT_TUNING;
 const WAIT = (RESCUE_GRACE + RESCUE_COUNT) * 60;
 
 /** Run n ticks with nobody driving; how many times a car was put back. */
@@ -33,13 +34,13 @@ describe('back on the road', () => {
     put(c, ...beside(w, k, w.road / 2 + 150), T.a[k]!, 0);
     // a while to turn round in before anything is said
     expect(idle(w, RESCUE_GRACE * 60 - 5)).toBe(0);
-    expect(rescueIn(c)).toBe(0);
+    expect(rescueIn(w, c)).toBe(0);
     idle(w, 10);
-    expect(Math.ceil(rescueIn(c))).toBe(RESCUE_COUNT);
+    expect(Math.ceil(rescueIn(w, c))).toBe(RESCUE_COUNT);
     expect(idle(w, WAIT - RESCUE_GRACE * 60 - 15)).toBe(0);
-    expect(Math.ceil(rescueIn(c))).toBe(1);
+    expect(Math.ceil(rescueIn(w, c))).toBe(1);
     expect(idle(w, 20)).toBe(1);
-    expect(rescueIn(c)).toBe(0);
+    expect(rescueIn(w, c)).toBe(0);
     expect(Math.hypot(c.x - T.x[k]!, c.y - T.y[k]!)).toBeLessThan(w.road / 2 + 40);
     expect(idle(w, 300)).toBe(0);
   });
@@ -68,10 +69,38 @@ describe('back on the road', () => {
     const k = (c.idx + 30) % T.n;
     put(c, ...beside(w, k, w.road / 2 + 150), T.a[k]!, 0);
     idle(w, RESCUE_GRACE * 60 + 60);
-    expect(rescueIn(c)).toBeGreaterThan(0);
+    expect(rescueIn(w, c)).toBeGreaterThan(0);
     put(c, ...beside(w, k, w.road / 2 + 20), T.a[k]!, 0);
     expect(idle(w, WAIT + 60)).toBe(0);
-    expect(rescueIn(c)).toBe(0);
+    expect(rescueIn(w, c)).toBe(0);
+  });
+
+  it('runs on the numbers it is given: a longer count, a wider margin, or none at all', () => {
+    const off = (tuning: Partial<typeof DEFAULT_TUNING>, d: number, ticks: number): number => {
+      const w = bench({ tuning });
+      const c = w.player;
+      idle(w, 5);
+      const k = (c.idx + 30) % w.track!.n;
+      c.onIdx = k;
+      put(c, ...beside(w, k, w.road / 2 + d), w.track!.a[k]!, 0);
+      return idle(w, ticks);
+    };
+    expect(off({}, 150, WAIT + 10)).toBe(1);
+    expect(off({ rescueCount: 10 }, 150, WAIT + 10)).toBe(0);
+    expect(off({ rescueCount: 10 }, 150, WAIT + 310)).toBe(1);
+    expect(off({ rescueGrace: 0, rescueCount: 2 }, 150, 130)).toBe(1);
+    expect(off({ verge: 200 }, 150, WAIT + 60)).toBe(0);
+    expect(off({ rescueCount: 0 }, 150, WAIT * 3)).toBe(0);
+    // changed in a race under way, it is felt at once
+    const w = bench();
+    const c = w.player;
+    idle(w, 5);
+    const k = (c.idx + 30) % w.track!.n;
+    c.onIdx = k;
+    put(c, ...beside(w, k, w.road / 2 + 150), w.track!.a[k]!, 0);
+    idle(w, 200);
+    w.tuning = { ...w.tuning, rescueCount: 2 };
+    expect(idle(w, 20)).toBe(1);
   });
 
   it('a derby has no course to leave', () => {

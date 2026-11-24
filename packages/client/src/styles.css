@@ -1466,3 +1466,61 @@ body.editing #pauseKey {
   appearance: none;
   --fill: 0%;
 }
+
+/* DEV SETTINGS: one rule number a row, its name and value over a slider, what it does under it */
+.panel.narrow.wide > * {
+  flex-shrink: 0;
+}
+.panel.narrow.wide {
+  width: min(560px, 100%);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+#tuneRows {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px;
+}
+#tuneRows button {
+  grid-column: 1 / -1;
+}
+.tune {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 6px 12px 8px;
+}
+.tune.changed {
+  border-color: rgba(255, 210, 74, 0.8);
+  background: rgba(255, 210, 74, 0.12);
+}
+.tune span {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.tune span i {
+  font-style: normal;
+}
+.tune span b {
+  color: #ffd24a;
+  font-variant-numeric: tabular-nums;
+}
+.tune input[type='range'] {
+  width: 100%;
+  height: 30px;
+  margin: 0;
+  accent-color: #ffd24a;
+  touch-action: pan-y;
+}
+.tune small {
+  font-size: 11px;
+  font-weight: 700;
+  opacity: 0.75;
+  line-height: 1.25;
+}

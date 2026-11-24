@@ -6,3 +6,4 @@ export * from './manifests';
 export * from './protocol';
 export * from './track-file';
 export * from './pieces';
+export * from './tuning';
