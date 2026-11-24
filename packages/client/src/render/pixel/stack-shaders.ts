@@ -294,14 +294,24 @@ uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, 
 uniform float u_hk;        // height for one row of the map's shift
 #endif
 out vec4 o;${SKY_GLSL}
+const float EDGE = 0.07;
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
+}
+// Two texels are of the same thing when their colours are close: shades of one grass or one
+// tarmac are, a white line and the road under it are not.
+float like(vec3 a, vec3 b) {
+  vec3 e = a - b;
+  return dot(e, e) < EDGE * EDGE ? 1.0 : 0.0;
 }
 void main() {
   // The ground is painted one texel to the art pixel and drawn on the screen's fine grid (u_fine
   // cells to the art pixel, about two device pixels a cell). Nothing is blended: every fine cell
-  // takes one texel's colour whole, and where two texels meet the edge is dithered between them
-  // on the Bayer grid, so a kerb or a road edge steps in fine cells, crisp, as in mudders.
+  // takes one texel's colour whole. Where the four texels round a cell are of different things (a
+  // painted line on tarmac, a kerb, the road's edge) the cell goes to whichever has the most of
+  // them near it, so the edge between two things is one clean line that steps in fine cells, as
+  // sharp as a car's own edge, and a stair of art pixels along a bend comes out a straight slope.
+  // Texels of the same thing (two shades of grass) are still dithered into each other.
   vec2 cell = floor(v_uv * u_size * u_fine);
   vec2 p = (cell + 0.5) / u_fine - 0.5;
 #ifdef RELIEF
@@ -314,7 +324,32 @@ void main() {
   vec2 f = p - i;
   ivec2 ci = ivec2(cell);
   vec2 d = vec2(bayer(ci), bayer(ci.yx + ivec2(2, 1)));
-  vec3 c = tex(i + step(d, f));
+  vec3 c00 = tex(i);
+  vec3 c10 = tex(i + vec2(1.0, 0.0));
+  vec3 c01 = tex(i + vec2(0.0, 1.0));
+  vec3 c11 = tex(i + vec2(1.0, 1.0));
+  // how much of the cell's surroundings each texel and the texels like it hold
+  vec4 wt = vec4((1.0 - f.x) * (1.0 - f.y), f.x * (1.0 - f.y), (1.0 - f.x) * f.y, f.x * f.y);
+  float e01 = like(c00, c10);
+  float e02 = like(c00, c01);
+  float e03 = like(c00, c11);
+  float e12 = like(c10, c01);
+  float e13 = like(c10, c11);
+  float e23 = like(c01, c11);
+  vec4 sc = wt * 1.001 + vec4(
+    wt.y * e01 + wt.z * e02 + wt.w * e03,
+    wt.x * e01 + wt.z * e12 + wt.w * e13,
+    wt.x * e02 + wt.y * e12 + wt.w * e23,
+    wt.x * e03 + wt.y * e13 + wt.z * e23);
+  vec3 c = c00;
+  float top = sc.x;
+  if (sc.y > top) { top = sc.y; c = c10; }
+  if (sc.z > top) { top = sc.z; c = c01; }
+  if (sc.w > top) { c = c11; }
+  // within one thing, the dither as before
+  vec2 pk = step(d, f);
+  vec3 dth = pk.y < 0.5 ? (pk.x < 0.5 ? c00 : c10) : (pk.x < 0.5 ? c01 : c11);
+  if (like(dth, c) > 0.5) c = dth;
   // The material under the cell, from its colour: grass is green, tarmac is grey, the rest dirt.
   float mx = max(c.r, max(c.g, c.b));
   float sat = mx - min(c.r, min(c.g, c.b));
