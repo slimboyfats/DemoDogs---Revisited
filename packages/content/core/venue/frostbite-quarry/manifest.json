@@ -39,9 +39,9 @@
   },
   "relief": {
     "hills": 14,
-    "banks": 72,
-    "step": 24,
-    "from": 32,
+    "banks": 90,
+    "step": 30,
+    "from": 46,
     "spread": 120
   },
   "scenery": [

@@ -33,15 +33,22 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       if (s < 0) continue;
       // the light is at the top left: ground that rises to the south-east faces it
       const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
-      let shade = 1 + Math.max(-0.4, Math.min(0.34, lit * 0.9));
+      // a face: ground too steep to stand on, whichever way it looks; it takes the light harder
+      const steep = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1)) / 2 > 1;
+      let shade = steep
+        ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
+        : 1 + Math.max(-0.4, Math.min(0.34, lit * 0.9));
       // and higher ground up and to the left throws its shadow here
       if (at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17)
         shade *= 0.64;
       // the lip of a drop catches the light
       else if (v - Math.min(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) > 4)
         shade *= 1.16;
-      // a face: the ground just behind stands well above this, and the picture jumps down it
-      const face = s - prev >= 2 && at(x, y - 1) - v > 1;
+      // and the foot of a face is in its shade, whichever way it looks
+      else if (Math.max(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) - v > 4)
+        shade *= 0.8;
+      // (and where the picture jumps down a drop, the rows between are its face too)
+      const face = steep || (s - prev >= 2 && at(x, y - 1) - v > 1);
       const g = Math.max(0, Math.min(255, Math.round(128 * shade)));
       for (let j = Math.max(0, Math.min(prev + 1, s)); j <= s; j++) {
         const k = (j * w + x) * 4;

@@ -38,9 +38,9 @@
     "outside": "#1d2a1a"
   },
   "relief": {
-    "banks": 36,
-    "step": 18,
-    "from": 40,
+    "banks": 44,
+    "step": 22,
+    "from": 42,
     "spread": 90
   },
   "scenery": [

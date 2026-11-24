@@ -26,8 +26,8 @@
     "terrain": "paved"
   },
   "relief": {
-    "banks": 18,
-    "step": 18,
+    "banks": 24,
+    "step": 24,
     "from": 24,
     "spread": 60
   },
