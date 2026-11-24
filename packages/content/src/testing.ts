@@ -1,12 +1,40 @@
-import { NO_CONTROLS, type Controls, type SimEvent } from '@demodogs/shared';
-import { World, putProp, stand, type Critter, type WorldOptions } from '@demodogs/sim';
+import { NO_CONTROLS, VenueSchema, type Controls, type SimEvent } from '@demodogs/shared';
+import {
+  World,
+  putProp,
+  stand,
+  type Content,
+  type Critter,
+  type WorldOptions,
+} from '@demodogs/sim';
+import benchPit from './fixtures/bench-pit.json';
+import benchVenue from './fixtures/bench.json';
 import { loadContent } from './index';
 
-/** A world on the shipped content, for tests. */
+/**
+ * The venues tests stand on, which are not in the game: a race track (`venue.bench`) and a derby
+ * bowl (`venue.bench-pit`) that never change, so the game's own tracks can be rebuilt without a
+ * test that leans on where a bend or a tree is having to be put right.
+ */
+export const BENCH = 'venue.bench';
+export const BENCH_PIT = 'venue.bench-pit';
+
+let withBench: Content | null = null;
+
+/** The shipped content, with the tests' two venues beside the game's own. */
+export function testContent(): Content {
+  if (withBench) return withBench;
+  const C = loadContent();
+  const venue = new Map(C.venue);
+  for (const v of [benchVenue, benchPit]) venue.set(v.id, VenueSchema.parse(v));
+  return (withBench = { ...C, venue });
+}
+
+/** A world on the shipped content, for tests: on the bench track unless a venue is named. */
 export function makeWorld(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   return new World({
-    content: loadContent(),
-    venue: 'venue.kennel-loop',
+    content: testContent(),
+    venue: BENCH,
     car: 'car.mutt',
     seed: 1,
     ...opts,
@@ -121,7 +149,7 @@ export function propTest(id: string, speed: number, clearance = 30) {
 /** The derby bowl emptied of everything: open flat ground with no road to leave. */
 export function flatBench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   // one parked rival out of the way, or the derby would be won on the spot
-  const w = bench({ venue: 'venue.the-pit', rivals: 1, ...opts });
+  const w = bench({ venue: BENCH_PIT, rivals: 1, ...opts });
   w.statics.length = 0;
   const r = w.cars.find((c) => !c.isPlayer)!;
   r.ai = null;

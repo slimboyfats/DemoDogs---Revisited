@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Knotwood",
-    "description": "Race. A figure of eight through old oaks: one half climbs a girder flyover, the other dives under it, and great crowns hang over the road.",
+    "description": "Race. A figure of eight under giant trees, over and under the flyover.",
     "since": "core@0.4.0"
   },
   "mode": "mode.race",
@@ -15,20 +15,26 @@
   "track": {
     "road": 72,
     "points": [
-      [1860, 520],
-      [1780, 900],
-      [1450, 1060],
-      [1220, 900],
+      [1840, 560],
+      [1800, 860],
+      [1600, 1060],
+      [1340, 1000],
+      [1160, 810],
       [1000, 650],
-      [760, 380],
-      [420, 250],
-      [160, 520],
-      [220, 900],
-      [560, 1060],
-      [800, 900],
+      [840, 490],
+      [640, 300],
+      [400, 240],
+      [250, 400],
+      [330, 620],
+      [220, 820],
+      [340, 1020],
+      [580, 1090],
+      [790, 920],
       [1000, 650],
-      [1300, 360],
-      [1620, 250]
+      [1220, 370],
+      [1400, 200],
+      [1640, 190],
+      [1790, 330]
     ]
   },
   "colors": {
@@ -46,7 +52,7 @@
   "scenery": [
     {
       "rule": "flyover",
-      "at": 0.7745,
+      "at": 0.7503,
       "length": 220,
       "ramp": 150,
       "height": 24,
@@ -187,76 +193,6 @@
     {
       "rule": "along",
       "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.12
-      },
-      "items": [
-        {
-          "prop": "prop.ramp"
-        },
-        {
-          "prop": "prop.hay-wall",
-          "ahead": 50,
-          "row": 9,
-          "step": 8
-        },
-        {
-          "prop": "prop.hay-bale",
-          "ahead": 120,
-          "row": 3,
-          "step": 13
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "lane": 0.5,
-          "n": 2,
-          "gap": 44
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
         "where": "bend",
         "count": 6,
         "apart": 0.05
@@ -282,7 +218,7 @@
       "items": [
         {
           "prop": "prop.deer",
-          "lane": 2.0,
+          "lane": 2,
           "ahead": 0
         }
       ]
@@ -336,6 +272,133 @@
         {
           "prop": "prop.flowers",
           "weight": 0.5
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18],
+      "items": [
+        {
+          "prop": "prop.dip"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.32, 0.47],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.55,
+          "ahead": 84
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.36],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.58],
+      "items": [
+        {
+          "prop": "prop.dip"
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.dip",
+          "ahead": 116
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.855],
+      "items": [
+        {
+          "prop": "prop.turbo-pad"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.91],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.04],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
         }
       ]
     }

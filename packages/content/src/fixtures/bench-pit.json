@@ -1,0 +1,199 @@
+{
+  "id": "venue.bench-pit",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bench Pit",
+    "description": "A venue for tests only: the-pit as it was before the tracks were rebuilt.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.derby",
+  "seed": 99,
+  "size": {
+    "w": 1060,
+    "h": 840
+  },
+  "oval": {
+    "cx": 530,
+    "cy": 420,
+    "rx": 470,
+    "ry": 360
+  },
+  "colors": {
+    "ground": "#7b6446",
+    "ground2": "#866e4e",
+    "dirt": "#6a5439",
+    "outside": "#3a3a3e"
+  },
+  "relief": {
+    "banks": 66,
+    "step": 22,
+    "from": 24,
+    "spread": 90
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.block",
+      "spacing": 12
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 7,
+      "r": [16, 28],
+      "on": "any"
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.husk",
+          "x": -40,
+          "y": -10,
+          "rot": 0.4
+        },
+        {
+          "prop": "prop.husk-van",
+          "x": 36,
+          "y": 14,
+          "rot": 2.6
+        }
+      ]
+    },
+    {
+      "rule": "ring",
+      "props": ["prop.tyres", "prop.tyres-red"],
+      "count": 10,
+      "rx": 64,
+      "ry": 50
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 8,
+      "qMin": 0.45,
+      "qMax": 0.8,
+      "clear": 22,
+      "items": [
+        {
+          "prop": "prop.rock",
+          "weight": 1
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 26,
+      "qMin": 0.3,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.barrel",
+          "weight": 1
+        },
+        {
+          "prop": "prop.crate",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 16,
+      "qMin": 0.2,
+      "qMax": 0.9,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.cone",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 8,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.powder-keg",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 12,
+      "qMin": 0.25,
+      "qMax": 0.9,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.bush",
+          "weight": 3
+        },
+        {
+          "prop": "prop.snag",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 2,
+      "qMin": 0.3,
+      "qMax": 0.85,
+      "items": [
+        {
+          "prop": "prop.crows",
+          "weight": 1
+        }
+      ],
+      "clear": 0
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 5,
+      "qMin": 0.2,
+      "qMax": 0.9,
+      "items": [
+        {
+          "prop": "prop.tumbleweed",
+          "weight": 1
+        }
+      ],
+      "clear": 0
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 14
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

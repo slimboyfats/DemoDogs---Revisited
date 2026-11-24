@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Pinewood Sprint",
-    "description": "Race. Long fast sweepers through the pines.",
+    "description": "Race. Flat out over the hills: a long straight, a big jump, a twisting way home.",
     "since": "core@0.3.0"
   },
   "mode": "mode.race",
@@ -15,20 +15,25 @@
   "track": {
     "road": 76,
     "points": [
-      [240, 600],
-      [300, 300],
-      [560, 180],
-      [900, 240],
-      [1180, 400],
-      [1480, 260],
-      [1760, 340],
-      [1800, 640],
-      [1640, 900],
-      [1340, 980],
-      [1100, 820],
-      [840, 760],
-      [640, 960],
-      [380, 960]
+      [220, 640],
+      [260, 380],
+      [420, 220],
+      [700, 190],
+      [1000, 230],
+      [1300, 190],
+      [1600, 210],
+      [1800, 340],
+      [1820, 560],
+      [1740, 820],
+      [1540, 960],
+      [1280, 960],
+      [1120, 820],
+      [1000, 640],
+      [820, 560],
+      [640, 640],
+      [600, 820],
+      [480, 960],
+      [300, 880]
     ]
   },
   "colors": {
@@ -38,7 +43,8 @@
     "outside": "#22301f"
   },
   "relief": {
-    "hills": 36,
+    "hills": 46,
+    "wave": 240,
     "banks": 48,
     "step": 24,
     "from": 42,
@@ -197,101 +203,6 @@
     {
       "rule": "along",
       "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.12
-      },
-      "items": [
-        {
-          "prop": "prop.big-ramp"
-        },
-        {
-          "prop": "prop.hay-wall",
-          "ahead": 62,
-          "row": 9,
-          "step": 8
-        },
-        {
-          "prop": "prop.hay-bale",
-          "ahead": 132,
-          "row": 3,
-          "step": 13
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.12
-      },
-      "items": [
-        {
-          "prop": "prop.ramp"
-        },
-        {
-          "prop": "prop.hay-wall",
-          "ahead": 50,
-          "row": 9,
-          "step": 8
-        },
-        {
-          "prop": "prop.hay-bale",
-          "ahead": 120,
-          "row": 3,
-          "step": 13
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 3,
-        "apart": 0.1
-      },
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "lane": 0.5,
-          "n": 2,
-          "gap": 44
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
         "where": "bend",
         "count": 6,
         "apart": 0.05
@@ -317,7 +228,7 @@
       "items": [
         {
           "prop": "prop.deer",
-          "lane": 2.0,
+          "lane": 2,
           "ahead": 0
         }
       ]
@@ -379,15 +290,185 @@
       "items": [
         {
           "prop": "prop.windmill",
-          "x": -245,
-          "y": -331,
+          "x": -406,
+          "y": -530,
           "rot": 0
         },
         {
           "prop": "prop.windmill",
-          "x": 602,
-          "y": -265,
+          "x": 885,
+          "y": 144,
           "rot": 0
+        },
+        {
+          "prop": "prop.windmill",
+          "x": 20,
+          "y": -81,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.1],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.2],
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "ahead": -120
+        },
+        {
+          "prop": "prop.big-ramp",
+          "row": 2,
+          "step": 30
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 60,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 110,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 170,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.3],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "n": 4,
+          "gap": 34
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.45],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.52],
+      "items": [
+        {
+          "prop": "prop.dip"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.6, 0.76],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.55,
+          "ahead": 84
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.56],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.68],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.8],
+      "items": [
+        {
+          "prop": "prop.dip"
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.dip",
+          "ahead": 116
         }
       ]
     }

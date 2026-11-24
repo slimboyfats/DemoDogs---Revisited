@@ -37,7 +37,7 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       const steep = Math.hypot(at(x + 1, y) - at(x - 1, y), at(x, y + 1) - at(x, y - 1)) / 2 > 1;
       let shade = steep
         ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
-        : 1 + Math.max(-0.4, Math.min(0.34, lit * 0.9));
+        : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
       // and higher ground up and to the left throws its shadow here
       if (at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17)
         shade *= 0.64;
