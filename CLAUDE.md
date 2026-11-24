@@ -22,6 +22,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
+| `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
