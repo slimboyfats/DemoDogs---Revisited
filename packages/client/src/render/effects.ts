@@ -3,7 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
-import { markGround, type Ground } from './ground';
+import { markGround, paintHollow, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import { tall, type Strip } from './stack';
 import {
@@ -688,6 +688,9 @@ export class Effects {
   ): void {
     this.debris.push({ strip, x, y, z, vx, vy, vz, rot, spin: rand(-14, 14), life });
   }
+
+  /** How many of the world's shapes in the road have been looked at for painting. */
+  private hollows = 0;
 
   paintGround(x: number, y: number, r: number, fn: (g: CanvasRenderingContext2D) => void): void {
     fn(this.ground.g);
@@ -2052,6 +2055,11 @@ export class Effects {
     guardTick(this, w, this.sound);
     this.catchup.step(this, w);
     this.life.step(this, w);
+    // hollows in the road are light and shade on the ground: each painted once, as it is laid
+    for (; this.hollows < w.mounds.length; this.hollows++) {
+      const s = w.mounds[this.hollows]!;
+      if (s.def.mound!.high < 0 && s.def.mound!.shape === 'bar') paintHollow(this.ground, s);
+    }
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

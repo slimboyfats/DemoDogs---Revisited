@@ -336,9 +336,7 @@
       },
       "items": [
         {
-          "prop": "prop.dip",
-          "row": 3,
-          "step": 26
+          "prop": "prop.dip"
         }
       ]
     }

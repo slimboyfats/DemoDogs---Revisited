@@ -36,7 +36,7 @@ const STEEPEST = 0.6;
 const JOLT_SPEED = 55;
 
 /** How high shape s stands at (x, y): 0 outside it. */
-function moundHeight(s: StaticProp, x: number, y: number): number {
+export function moundHeight(s: StaticProp, x: number, y: number): number {
   const M = s.def.mound!;
   const dx = x - s.x;
   const dy = y - s.y;

@@ -142,7 +142,7 @@ if (scene('parked')) {
     dd.put(1, -62, -22, 0);
     for (const k of [-1, 0, 1]) dd.lay('speed-bump', -14, -22 + k * 24, 0);
     dd.put(2, -21, -22, 0);
-    for (const k of [-1, 0, 1]) dd.lay('dip', 40, -22 + k * 26, 0);
+    dd.lay('dip', 40, -22, 0);
     dd.put(3, 31, -22, 0);
     dd.lay('pothole', 84, -19);
     dd.put(4, 79, -22, 0);
@@ -186,7 +186,7 @@ if (scene('drive')) {
     const dd = window.__dd;
     dd.put(0, -330, 0, 0, 150);
     for (const x of [-230, -170]) for (const k of [-1, 0, 1]) dd.lay('speed-bump', x, k * 24, 0);
-    for (const k of [-1, 0, 1]) dd.lay('dip', -90, k * 26, 0);
+    dd.lay('dip', -90, 0, 0);
     dd.lay('pothole', -20, 3);
     dd.lay('pothole', 30, -4);
     dd.lay('pothole', 34, 12);
