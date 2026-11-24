@@ -32,7 +32,10 @@ export function updateRescue(w: World, c: Car): void {
   const R = w.relief;
   const top = R?.plat ? R.platAt(T.x[i]!, T.y[i]!) : 0;
   const below = top >= HIGH && top - R!.platAt(c.x, c.y) > HIGH * 0.75;
-  const off = below || Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) > w.road / 2 + VERGE;
+  // (a way up the side is the way back: on one it is not off the course)
+  const off =
+    !R?.slipAt(c.x, c.y) &&
+    (below || Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) > w.road / 2 + VERGE);
   if (!off) {
     c.downT = 0;
     c.onIdx = i;
