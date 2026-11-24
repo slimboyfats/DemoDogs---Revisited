@@ -1,4 +1,4 @@
-import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
+import { BASE_SPEED, DT, type Controls, type Tuning } from '@demodogs/shared';
 import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import { tuneFor, type Tune } from '../audio/tunes';
@@ -40,6 +40,8 @@ export interface SessionOptions {
   paint?: string;
   /** World modifiers on for this race (content ids). */
   modifiers?: string[];
+  /** Rule numbers from the DEV SETTINGS pane (never for an online race). */
+  tuning?: Partial<Tuning>;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -63,6 +65,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.name ? { name: o.name } : {}),
     ...(o.paint ? { paint: o.paint } : {}),
     ...(o.modifiers?.length ? { modifiers: o.modifiers } : {}),
+    ...(o.tuning && !o.humans ? { tuning: o.tuning } : {}),
   });
 }
 

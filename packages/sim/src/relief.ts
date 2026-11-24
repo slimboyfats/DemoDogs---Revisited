@@ -1,4 +1,4 @@
-import type { VenueManifest } from '@demodogs/shared';
+import { DEFAULT_TUNING, type Tuning, type VenueManifest } from '@demodogs/shared';
 import type { Track } from './track';
 
 /**
@@ -158,17 +158,16 @@ const RAMP = 5;
 
 /**
  * Ways back up: a platform's sides are walls, so every so far along one (px) a stretch of each
- * side this wide is a slope instead, one px up in SLIP_RUN, for a car that went over the edge.
+ * side this wide is a slope instead, for a car that went over the edge (the `slip` numbers of
+ * shared/tuning.ts: how far apart, how wide, and how many px along for each px up).
  */
-const SLIP_GAP = 300;
-const SLIP_WIDE = 52;
-const SLIP_RUN = 3.4;
+export type Slips = Pick<Tuning, 'slipGap' | 'slipWide' | 'slipRun'>;
 
 /** Which samples of the track have a way up the side beside them (1), given `liftsOf`'s heights. */
-export function slipsOf(track: Track, lift: Float32Array): Uint8Array {
+export function slipsOf(track: Track, lift: Float32Array, S: Slips = DEFAULT_TUNING): Uint8Array {
   const N = track.n;
   const out = new Uint8Array(N);
-  const wide = Math.max(2, Math.round(SLIP_WIDE / track.step));
+  const wide = Math.max(2, Math.round(S.slipWide / track.step));
   // each run of road at its full height (level: its end ramps are not part of it)
   const level = (i: number): boolean =>
     lift[i]! > 0 && lift[i] === lift[(i + 1) % N] && lift[i] === lift[(i - 1 + N) % N];
@@ -184,7 +183,7 @@ export function slipsOf(track: Track, lift: Float32Array): Uint8Array {
     let len = 0;
     while (len < N && level((i0 + len) % N)) len++;
     // spread evenly: one in the middle of a short run, more as it gets longer
-    const n = len >= wide + 4 ? Math.max(1, Math.round((len * track.step) / SLIP_GAP)) : 0;
+    const n = len >= wide + 4 ? Math.max(1, Math.round((len * track.step) / S.slipGap)) : 0;
     for (let j = 0; j < n; j++) {
       const mid = Math.floor(((j + 0.5) * len) / n);
       for (let q = -(wide >> 1); q <= wide >> 1; q++)
@@ -226,6 +225,7 @@ export function buildRelief(
   road: number,
   oval: { cx: number; cy: number; rx: number; ry: number } | null,
   raised: readonly Raised[] = [],
+  slips: Slips = DEFAULT_TUNING,
 ): Relief {
   const R = new Relief(w, h);
   const C = Relief.CELL;
@@ -237,12 +237,12 @@ export function buildRelief(
   // point of the grid is nearest to
   const lift = track && raised.length ? liftsOf(track, raised) : null;
   const near = lift ? new Int32Array(R.gw * R.gh).fill(-1) : null;
-  const slip = lift ? slipsOf(track!, lift) : null;
+  const slip = lift ? slipsOf(track!, lift, slips) : null;
   // (the ways up the sides reach further out than the banks may)
   if (lift)
     reach = Math.max(
       reach,
-      half + SHOULDER + lift.reduce((a, b) => Math.max(a, b), 0) * SLIP_RUN + 24,
+      half + SHOULDER + lift.reduce((a, b) => Math.max(a, b), 0) * slips.slipRun + 24,
     );
   if (track) {
     const rc = Math.ceil(reach / C);
@@ -284,7 +284,7 @@ export function buildRelief(
         // the platform: the road's own height out to its shoulder, then down a steep side
         // (or, at a way up, a slope a car can climb)
         const top = lift[near![k]!]!;
-        const run = slip![near![k]!] ? Math.max(SIDE, top * SLIP_RUN) : SIDE;
+        const run = slip![near![k]!] ? Math.max(SIDE, top * slips.slipRun) : SIDE;
         const side = clamp01((half + SHOULDER + run - dist[k]!) / run);
         const up = top * side;
         if (run > SIDE && dist[k]! > half - 6 && dist[k]! < half + SHOULDER + run + 12)
