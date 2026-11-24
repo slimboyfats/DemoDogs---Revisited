@@ -15,6 +15,8 @@ export class Relief {
   readonly hills: Float32Array;
   /** The banks: how many terraces up each point of the grid is (a fraction: part way to the next). */
   readonly bank: Float32Array;
+  /** Raised road: how much of each point's height is a platform's (null where a venue has none). */
+  plat: Float32Array | null = null;
   /** How high one terrace stands above the last, how many there are, and how much of one is its face. */
   step = 0;
   steps = 0;
@@ -63,6 +65,25 @@ export class Relief {
     const fl = Math.floor(q);
     const up = (q - fl - (1 - this.face)) / this.face;
     return v + Math.min(this.steps, fl + (up > 0 ? up : 0)) * this.step;
+  }
+
+  /** How much of the ground's height at (x, y) is raised road: its platform, ramps and sides. */
+  platAt(x: number, y: number): number {
+    const P = this.plat;
+    if (!P) return 0;
+    const C = Relief.CELL;
+    const fx = Math.min(this.gw - 1, Math.max(0, x / C));
+    const fy = Math.min(this.gh - 1, Math.max(0, y / C));
+    const xi = Math.min(this.gw - 2, Math.floor(fx));
+    const yi = Math.min(this.gh - 2, Math.floor(fy));
+    const tx = fx - xi;
+    const ty = fy - yi;
+    const k = yi * this.gw + xi;
+    const k1 = k + this.gw;
+    const a = P[k]!;
+    return (
+      a + (P[k + 1]! - a) * tx + (P[k1]! - a) * ty + (a - P[k + 1]! - P[k1]! + P[k1 + 1]!) * tx * ty
+    );
   }
 
   /** How steeply the ground rises to the east at (x, y): height gained per px. */
@@ -205,7 +226,9 @@ export function buildRelief(
       if (lift && near![k]! >= 0) {
         // the platform: the road's own height out to its shoulder, then down a steep side
         const side = clamp01((half + SHOULDER + SIDE - dist[k]!) / SIDE);
-        const v = (R.hills[k]! += lift[near![k]!]! * side);
+        const up = lift[near![k]!]! * side;
+        (R.plat ??= new Float32Array(R.gw * R.gh))[k] = up;
+        const v = (R.hills[k]! += up);
         if (v > max) max = v;
       }
       if (steps > 0) {

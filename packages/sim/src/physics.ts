@@ -302,7 +302,10 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     const rise = groundAt(w, c.x, c.y) - groundAt(w, x0, y0);
     const [ex, ey] = land ? land.edge(c.x, c.y) : [0, 0];
     const steep = Math.hypot(ex, ey);
-    if (rise > 0 && steep > CLIFF && c.z < rise - 1) {
+    // (the side of a raised road is a wall to anything not well clear of the ground: there is
+    // no crawling up it, the way up is the ramp)
+    const wall = land?.plat && c.z < 2 && land.platAt(c.x, c.y) > land.platAt(x0, y0);
+    if (rise > 0 && steep > CLIFF && (wall || c.z < rise - 1)) {
       c.x = x0;
       c.y = y0;
       c.climb = 0;
