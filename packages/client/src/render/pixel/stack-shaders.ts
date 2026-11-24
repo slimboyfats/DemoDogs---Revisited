@@ -15,6 +15,7 @@
 import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
 import { RELIEF_GLSL } from './relief-layer';
+import { FOG_GLSL, VIEW_GLSL } from './view-hack';
 
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
 const MIRROR_TALL = 14;
@@ -34,7 +35,7 @@ uniform vec2 u_dir;      // depth along the view: y * dir.x + z * dir.y
 uniform vec2 u_drange;   // nearest depth, 1 / depth range
 uniform float u_mirror;  // 1: the stacks upside down under the ground line (wet ground)
 uniform float u_time;
-uniform vec3 u_grow;     // a race rising out of the ground: focus x, y and how far it has got; z < 0: off${RELIEF_GLSL}
+uniform vec3 u_grow;     // a race rising out of the ground: focus x, y and how far it has got; z < 0: off${RELIEF_GLSL}${VIEW_GLSL}
 out vec2 v_tex;
 out vec3 v_world;
 flat out vec4 v_uv;
@@ -47,7 +48,14 @@ void main() {
   vec2 local = (corner - 0.5) * a_uv.zw / a_res;
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
-  vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5);
+  vec2 base = a_pos.xy;
+  vec2 rr = r;
+  if (u_hmode == 1) {
+    base = hturn(a_pos.xy);
+    float c2 = cos(a_rot + u_hcam.z), s2 = sin(a_rot + u_hcam.z);
+    rr = vec2(local.x * c2 - local.y * s2, local.x * s2 + local.y * c2);
+  }
+  vec2 anchor = floor(u_origin + vec2(base.x * u_scale, base.y * u_scale * u_ys) + 0.5);
   // whatever it is stands on the ground, however high the ground is there
   float gz = groundAt(a_pos.xy);
   anchor.y -= floor(gz * u_scale * u_dir.x + 0.5);
@@ -71,9 +79,9 @@ void main() {
   } else {
     anchor -= vec2(0.0, lift);
   }
-  vec2 px = anchor + vec2(r.x * u_scale, r.y * u_scale * u_ys);
+  vec2 px = anchor + vec2(rr.x * u_scale, rr.y * u_scale * u_ys);
   v_world = vec3(a_pos.xy + r, zz);
-  float d = v_world.y * u_dir.x + (gz + up * v_world.z) * u_dir.y;
+  float d = (base.y + rr.y) * u_dir.x + (gz + up * v_world.z) * u_dir.y;
   // an outline copy sits a shade further off than the thing it outlines, so only its rim shows
   if (a_tint > 0.5) d -= 5.0;
   float far = clamp(1.0 - (d - u_drange.x) * u_drange.y, 0.0, 1.0);
@@ -81,6 +89,10 @@ void main() {
   // only what stands low is mirrored (cars, drums, the foot of a tree): the rest would land far
   // down the screen, and every slice mirrored is a slice drawn twice
   if (u_mirror > 0.5 && (zz > ${MIRROR_TALL.toFixed(1)} || a_tint > 0.5)) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+  if (u_hmode == 2) {
+    gl_Position = u_hpv * vec4(v_world.xy, zz + gz, 1.0);
+    if (a_tint > 0.5 || u_mirror > 0.5) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+  }
   v_tex = corner * a_uv.zw;
   v_uv = a_uv;
   v_alpha = a_alpha;
@@ -151,7 +163,7 @@ uniform float u_glow;    // how far lamps stand out, 0 to 1
 uniform float u_snow;    // how much snow lies, 0 to 1
 uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
-out vec4 o;${SKY_GLSL}
+out vec4 o;${SKY_GLSL}${FOG_GLSL}
 void main() {
   if (u_mirror > 0.5) {
     // the reflection in wet ground shows through a screen door, most where water stands: the
@@ -183,7 +195,7 @@ void main() {
   float b = bayer(cell);
   // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
   // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
-  if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
+  if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * (u_hmode == 2 ? 0.5 : 3.0 / u_scale)))) >= v_alpha) discard;
   // which way the texel faces (turned with the thing it is part of), whether sky is over it, and
   // whether it is a lamp: baked from the stack's shape, read from the atlas's second texture
   vec3 n = vec3(0.0, 0.0, 1.0);
@@ -255,7 +267,7 @@ void main() {
   vec3 rgb = min(vec3(1.0), c.rgb * (base + k * 1.1) + k * (30.0 / 255.0));
   // a lamp shows its own colour however dark it is round it
   rgb = mix(rgb, min(vec3(1.0), c.rgb * 1.25 + 0.1), lamp * u_glow);
-  o = vec4(rgb, 1.0);
+  o = vec4(hfog(rgb, v_world.xy), 1.0);
 }`;
 
 /** The ground: one textured quad over the world rectangle, squashed by the pitch. */
@@ -264,13 +276,18 @@ uniform vec2 u_view;
 uniform vec2 u_origin;
 uniform float u_scale;
 uniform float u_ys;
-uniform vec2 u_size;
+uniform vec2 u_size;${VIEW_GLSL}
 out vec2 v_uv;
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
-  vec2 px = u_origin + vec2(corner.x * u_size.x * u_scale, corner.y * u_size.y * u_scale * u_ys);
+  // (the other views show ground past the edge of the map: the quad reaches out, its edge repeated)
+  if (u_hmode != 0) corner = corner * 5.0 - 2.0;
+  vec2 wp = corner * u_size;
+  if (u_hmode == 1) wp = hturn(wp);
+  vec2 px = u_origin + vec2(wp.x * u_scale, wp.y * u_scale * u_ys);
   gl_Position = vec4(px.x / u_view.x * 2.0 - 1.0, 1.0 - px.y / u_view.y * 2.0, 1.0, 1.0);
+  if (u_hmode == 2) gl_Position = u_hpv * vec4(wp, 0.0, 1.0);
   v_uv = corner;
 }`;
 
@@ -293,7 +310,7 @@ uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
 uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
 uniform float u_hk;        // height for one row of the map's shift
 #endif
-out vec4 o;${SKY_GLSL}
+out vec4 o;${SKY_GLSL}${FOG_GLSL}
 const float EDGE = 0.07;
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
@@ -431,7 +448,7 @@ void main() {
   }
   vec3 q = min(vec3(0.7), l);
   c = min(vec3(1.0), c * (u_amb + q * 1.1) + q * (30.0 / 255.0));
-  o = vec4(c, 1.0);
+  o = vec4(hfog(c, wp), 1.0);
 }`;
 
 /**
@@ -457,6 +474,7 @@ float bayer(ivec2 p) {
   return (float(t[i]) + 0.5) / 16.0;
 }
 void main() {
+  if (v_uv.x < 0.0 || v_uv.y < 0.0 || v_uv.x > 1.0 || v_uv.y > 1.0) discard;
   vec2 cell = floor(v_uv * u_size * u_fine);
   vec2 at = (cell + 0.5) / u_fine;
 #ifdef RELIEF

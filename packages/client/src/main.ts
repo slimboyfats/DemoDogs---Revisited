@@ -1,3 +1,4 @@
+import { VIEW } from './render/pixel/view-hack';
 import {
   PerfRecorder,
   SlowWatch,
@@ -904,7 +905,7 @@ function frame(t: number): void {
     if (input.takePause()) togglePause();
     session.ticks = session.simMs = session.stepMs = 0;
     // an online race never stops for one player's pause menu
-    if ((!paused || online.racing) && session.advance(dt)) {
+    if ((!paused || online.racing) && !VIEW.freeze && session.advance(dt)) {
       finish();
       return;
     }
@@ -980,6 +981,11 @@ function boot(): void {
     if (params.get('bloom') === '0') scene.bloom = false;
     // ?relief=0 draws raised ground flat (the cars still feel it): to compare what it costs
     if (params.get('relief') === '0') scene.raised = false;
+    // HACK (research): ?view=turn or ?view=chase, and the chase camera's numbers
+    VIEW.mode = { turn: 1, chase: 2 }[params.get('view') ?? ''] ?? 0;
+    for (const k of ['back', 'up', 'ahead', 'fov', 'fog0', 'fog1'] as const)
+      if (params.has(k)) VIEW[k] = Number(params.get(k));
+    if (VIEW.mode) scene.raised = false;
     if (params.get('reflect') === '0') scene.reflections = false;
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;
@@ -1064,6 +1070,7 @@ function boot(): void {
       startCareerRace(race);
     else openCareer();
   }
+  Object.assign(window, { __ddView: VIEW, __ddScene: scene });
   Object.assign(window, {
     __dd: {
       renderer: rendererName,

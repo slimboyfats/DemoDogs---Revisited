@@ -3,6 +3,17 @@ import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { Camera } from './scene';
 
+/** HACK (research): a world point on the screen under whichever camera is on. */
+function spot(
+  P: { sx(x: number): number; sy(y: number, z?: number): number },
+  x: number,
+  y: number,
+  z: number,
+): [number, number] {
+  const q = (P as { spot?: (x: number, y: number, z: number) => [number, number] }).spot;
+  return q ? q.call(P, x, y, z) : [P.sx(x), P.sy(y, z)];
+}
+
 /** World to device pixels, for drawing flat things over the world. */
 export interface Projector {
   sx(x: number): number;
@@ -33,8 +44,7 @@ export function drawOverlay(
   for (const tx of fx.texts) {
     ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2.5);
     ctx.font = `900 ${Math.round((tx.big ? 22 : 15) * dpr)}px system-ui, sans-serif`;
-    const sx = P.sx(tx.x);
-    const sy = P.sy(tx.y, tx.z + P.rise(tx.x, tx.y));
+    const [sx, sy] = spot(P, tx.x, tx.y, tx.z + P.rise(tx.x, tx.y));
     ctx.lineWidth = 4 * dpr;
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
     ctx.strokeText(tx.text, sx, sy);
@@ -47,8 +57,7 @@ export function drawOverlay(
   if (w.kind === 'derby')
     for (const c of w.cars) {
       if (c === w.player || c.wrecked) continue;
-      const sx = P.sx(c.x);
-      const sy = P.sy(c.y, 4 + P.rise(c.x, c.y));
+      const [sx, sy] = spot(P, c.x, c.y, 4 + P.rise(c.x, c.y));
       if (sx > 0 && sx < W && sy > 0 && sy < H) continue;
       const a = Math.atan2(sy - H / 2, sx - W / 2);
       const ex = W / 2 + Math.cos(a) * (W / 2 - 24 * dpr);
@@ -93,8 +102,8 @@ export function drawNames(
   for (const c of order) {
     if (c.wrecked || c === skip) continue;
     const on = c === watched;
-    const sx = P.sx(c.x);
-    const sy = P.sy(c.y, c.z + 16 + P.rise(c.x, c.y)) - 4 * dpr;
+    const [sx, sy0] = spot(P, c.x, c.y, c.z + 16 + P.rise(c.x, c.y));
+    const sy = sy0 - 4 * dpr;
     if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
     ctx.font = `900 ${Math.round((on ? 13 : 10) * dpr)}px system-ui, sans-serif`;
     ctx.lineWidth = 3.5 * dpr;

@@ -4,6 +4,7 @@ import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
 import type { ReliefLayer } from './relief-layer';
 import { STACK_FS, STACK_VS } from './stack-shaders';
+import { setView, VIEW } from './view-hack';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
 const STRIDE = 12;
@@ -279,6 +280,7 @@ export class StackBatch {
     alpha = 1,
     tint = 0,
   ): void {
+    if (VIEW.mode) alpha = 1;
     const a = this.atlas.slot(s);
     const zk = this.v.zk;
     const up = Math.round(z * zk);
@@ -288,6 +290,13 @@ export class StackBatch {
     const u = a.x + sliceX(s, i);
     const v = a.y + sliceY(s, i);
     if (!tint && this.warm) tint = -1;
+    if (VIEW.mode === 2) {
+      // seen from low down a slice is nearly edge on: each layer is drawn as several sheets
+      const n = 3;
+      for (let k = 0; k < n; k++)
+        this.push(x, y, z + (k * thick) / (res * n), 0, rot, u, v, s.cw, s.ch, alpha, res, tint);
+      return;
+    }
     for (let k = 0; k < rows; k++)
       this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint);
   }
@@ -342,7 +351,13 @@ export class StackBatch {
   voxel(rgb: number, x: number, y: number, z: number, rot: number, size = 1): void {
     const zk = this.v.zk;
     const up = Math.round(z * zk);
-    const rows = Math.max(1, Math.ceil(zk * size - 0.02));
+    const rows =
+      VIEW.mode === 2 ? Math.max(2, Math.ceil(size * 6)) : Math.max(1, Math.ceil(zk * size - 0.02));
+    if (VIEW.mode === 2) {
+      for (let k = 0; k < rows; k++)
+        this.push(x, y, z + (k * size) / rows, 0, rot, rgb, -1, size, size, 1, 1);
+      return;
+    }
     for (let k = 0; k < rows; k++)
       this.push(x, y, z + k / zk, up + k, rot, rgb, -1, size, size, 1, 1);
   }
@@ -480,6 +495,7 @@ export class StackBatch {
     const sky = this.sky;
     gl.useProgram(prog);
     const lit = sky.lit && !!this.atlas.auxTex;
+    setView(gl, prog);
     gl.uniform1f(u.u_lit, lit ? 1 : 0);
     gl.uniform3fv(u.u_amb, sky.amb);
     gl.uniform3fv(u.u_sun, sky.sun);
@@ -503,7 +519,12 @@ export class StackBatch {
     // depth along the view direction (cos, sin of the pitch); the range covers the world plus headroom
     const dir: [number, number] = [v.zk / v.scale, v.ys];
     gl.uniform2f(u.u_dir, dir[0], dir[1]);
-    const [lo, hi] = depthRange(v);
+    let [lo, hi] = depthRange(v);
+    if (VIEW.mode === 1) {
+      // turned: the depth range is about the point the view turns on
+      lo = (VIEW.cy - 900) * dir[0];
+      hi = (VIEW.cy + 900) * dir[0] + 96 * v.ys;
+    }
     gl.uniform2f(u.u_drange, lo, 1 / (hi - lo));
     this.relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
     gl.activeTexture(gl.TEXTURE0);

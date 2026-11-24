@@ -1,3 +1,4 @@
+import { setView, VIEW_GLSL } from './view-hack';
 import { compile, uniforms } from './gl';
 import { BANG_RAMP, CKind, FIRE_RAMP, HOT, ringStrength, type Gust, type Ring } from './cells';
 import { LIGHT_BANDS, MAX_LIGHTS, type Lights } from './lighting';
@@ -263,7 +264,7 @@ uniform vec2 u_origin;
 uniform float u_cell;  // device px per fine cell
 uniform float u_grid;  // fine cells per art px
 uniform float u_ys;
-uniform float u_cosP;${RELIEF_GLSL}
+uniform float u_cosP;${RELIEF_GLSL}${VIEW_GLSL}
 uniform int u_pass;
 uniform vec3 u_fire[13];
 uniform vec3 u_bang[9];
@@ -344,11 +345,17 @@ void main() {
     c = min(vec3(1.0), c + L * 0.55);
   }
   // on the fine grid: odd sizes sit on a cell, even ones on the line between cells
-  vec2 m = vec2(a0.x, a0.y * u_ys - (a0.z + groundAt(a0.xy)) * u_cosP) * u_grid;
+  vec2 gp = u_hmode == 1 ? hturn(a0.xy) : a0.xy;
+  vec2 m = vec2(gp.x, gp.y * u_ys - (a0.z + groundAt(a0.xy)) * u_cosP) * u_grid;
   vec2 at = mod(n, 2.0) > 0.5 ? floor(m) + 0.5 : floor(m + 0.5);
   vec2 px = u_origin + at * u_cell;
   gl_Position = vec4(px.x / u_view.x * 2.0 - 1.0, 1.0 - px.y / u_view.y * 2.0, 0.0, 1.0);
   gl_PointSize = n * u_cell;
+  if (u_hmode == 2) {
+    vec4 cp = u_hpv * vec4(a0.xyz, 1.0);
+    gl_Position = cp.w > 2.0 ? vec4(cp.xy, 0.0, cp.w) : vec4(2.0, 2.0, 2.0, 1.0);
+    gl_PointSize = max(1.0, n * u_cell * u_hpt / cp.w);
+  }
   v_color = vec4(c * a, a);
 }`;
 
@@ -674,6 +681,7 @@ export class GasGpu {
     const gl = this.gl;
     const u = this.du;
     gl.useProgram(this.drw);
+    setView(gl, this.drw);
     gl.uniform2f(u.u_view, v.w, v.h);
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_cell, v.scale / v.grid);

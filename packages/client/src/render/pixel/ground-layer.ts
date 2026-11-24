@@ -1,6 +1,7 @@
 import { fineGrid } from '../strips';
 import type { Ground } from '../ground';
 import { compile, texture, uniforms } from './gl';
+import { setView } from './view-hack';
 import { groundFs, GROUND_VS } from './stack-shaders';
 import type { ReliefLayer } from './relief-layer';
 import type { Lights } from './lighting';
@@ -77,6 +78,7 @@ export class GroundLayer {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
+    setView(gl, this.prog);
     gl.uniform2f(u.u_view, v.w, v.h);
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_scale, v.scale);

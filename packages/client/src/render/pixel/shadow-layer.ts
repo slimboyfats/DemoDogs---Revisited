@@ -1,6 +1,7 @@
 import { fineGrid } from '../strips';
 import type { ShadowMap } from '../cast';
 import { compile, texture, uniforms } from './gl';
+import { setView } from './view-hack';
 import { GROUND_VS, shadowFs } from './stack-shaders';
 import type { ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
@@ -71,6 +72,7 @@ export class ShadowLayer {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
+    setView(gl, this.prog);
     gl.uniform2f(u.u_view, v.w, v.h);
     gl.uniform2f(u.u_origin, v.ox, v.oy);
     gl.uniform1f(u.u_scale, v.scale);

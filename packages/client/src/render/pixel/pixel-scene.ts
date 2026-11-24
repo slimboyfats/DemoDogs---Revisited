@@ -24,6 +24,7 @@ import { Atmosphere } from '../atmosphere';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
+import { VIEW, aimChase, chasePoint } from './view-hack';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
 const hex = (h: string) => parseInt(h.slice(1), 16);
@@ -166,7 +167,52 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
 
   // StackSink: visibility and forwarding to the batch (the GPU needs no grouping)
+  /** HACK: a world point in the quad batch's flat map space, and how big an art px is there. */
+  private mp(x: number, y: number, z: number): [number, number, number] {
+    if (VIEW.mode === 2) {
+      const [px, py, k] = chasePoint(x, y, z);
+      return [px / this.scale, py / this.scale, k / this.scale];
+    }
+    if (VIEW.mode === 1) {
+      const c = Math.cos(VIEW.yaw);
+      const s = Math.sin(VIEW.yaw);
+      const dx = x - VIEW.cx;
+      const dy = y - VIEW.cy;
+      return [VIEW.cx + dx * c - dy * s, this.my(VIEW.cy + dx * s + dy * c, z), 1];
+    }
+    return [x, this.my(y, z), 1];
+  }
+
+  /** HACK: a world point in device px under whichever camera is on. */
+  spot(x: number, y: number, z: number): [number, number] {
+    const [mx, my] = this.mp(x, y, z);
+    return [this.ox + mx * this.scale, this.oy + my * this.scale];
+  }
+
+  /** HACK: raised ground on or off, taking effect on the next frame. */
+  setRaised(on: boolean): void {
+    this.raised = on;
+    this.ground = null;
+  }
+
   visible(x: number, y: number, rad: number, ht = 0): boolean {
+    if (VIEW.mode === 2) {
+      const dx = x - VIEW.eye[0];
+      const dy = y - VIEW.eye[1];
+      const along = dx * VIEW.fwd[0] + dy * VIEW.fwd[1];
+      if (along < -rad - 10 || along > VIEW.fog1 + rad) return false;
+      const side = Math.abs(dx * -VIEW.fwd[1] + dy * VIEW.fwd[0]);
+      return side < (along + 30) * 1.6 + rad + 20;
+    }
+    if (VIEW.mode === 1) {
+      const [mx, my] = this.mp(x, y, 0);
+      const px = this.ox + mx * this.scale;
+      const py = this.oy + my * this.scale;
+      const m2 = rad * this.scale;
+      return (
+        px > -m2 && px < this.vw + m2 && py > -m2 && py < this.vh + m2 + ht * this.scale * this.cosP
+      );
+    }
     const sx = this.sx(x);
     const sy = this.sy(y);
     // (raised ground lifts things up the screen: allow for the highest it stands)
@@ -332,6 +378,21 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.ox = Math.round(W / 2 - cx * S);
     // (the camera point is on the ground, however high the ground stands there)
     this.oy = Math.round(H / 2 - cy * S * this.ys + this.rise(cam.x, cam.y) * S * this.cosP);
+    // HACK: the other two cameras follow your car's heading
+    VIEW.scale = S;
+    const P = w.player;
+    if (VIEW.mode === 1) {
+      VIEW.cx = P.x;
+      VIEW.cy = P.y;
+      VIEW.yaw = -Math.PI / 2 - P.h;
+      this.ox = Math.round(W / 2 - P.x * S);
+      this.oy = Math.round(H * 0.68 - P.y * S * this.ys);
+    } else if (VIEW.mode === 2) {
+      aimChase(P.x, P.y, P.h, W, H);
+      this.ox = 0;
+      this.oy = 0;
+    }
+    this.stacks.frontToBack = VIEW.mode === 0;
     const view: StackView = {
       w: W,
       h: H,
@@ -353,6 +414,26 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    if (VIEW.mode === 2) {
+      // a sky: bands from the haze at the horizon up to blue
+      const hz = chasePoint(VIEW.eye[0] + VIEW.fwd[0] * 1e5, VIEW.eye[1] + VIEW.fwd[1] * 1e5, 0)[1];
+      const top = [0.3, 0.52, 0.8];
+      const N = 14;
+      gl.enable(gl.SCISSOR_TEST);
+      for (let i = 0; i < N; i++) {
+        const k = Math.pow(i / (N - 1), 0.8);
+        const y0 = Math.round((hz * i) / N);
+        const y1 = Math.round((hz * (i + 1)) / N);
+        gl.scissor(0, H - y1, W, y1 - y0);
+        const c = VIEW.fog.map((f, j) => top[j]! + (f - top[j]!) * k);
+        gl.clearColor(c[0]!, c[1]!, c[2]!, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+      }
+      gl.scissor(0, 0, W, Math.max(0, H - Math.round(hz)));
+      gl.clearColor(VIEW.fog[0], VIEW.fog[1], VIEW.fog[2], 1);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.disable(gl.SCISSOR_TEST);
+    }
     gl.disable(gl.BLEND);
     this.gatherLights(w, fx);
     // raised ground writes its depth as it is drawn, so a bank hides what is behind it
@@ -486,18 +567,24 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private queueShadows(w: World, fx: Effects): void {
     const art = this.art;
     const cast = (s: StaticProp) => casts(s, fx.scarred.get(s) ?? art.prop(s.def.id));
-    queueShadows(this, art, w, cast, (x, y, rx, ry, rot, a, box) =>
+    queueShadows(this, art, w, cast, (x, y, rx, ry, rot, a, box) => {
+      const [mx, my, k] = this.mp(x, y, this.rise(x, y));
+      let ys = this.ys;
+      if (VIEW.mode)
+        rot += VIEW.mode === 1 ? VIEW.yaw : -Math.PI / 2 - Math.atan2(VIEW.fwd[1], VIEW.fwd[0]);
+      if (VIEW.mode === 2)
+        ys = Math.min(1, VIEW.eye[2] / Math.hypot(x - VIEW.eye[0], y - VIEW.eye[1]));
       this.quads.push(
-        x,
-        this.my(y, this.rise(x, y)),
-        rx * 2,
-        ry * 2 * this.ys,
+        mx,
+        my,
+        rx * 2 * k,
+        ry * 2 * ys * k,
         0x000000,
         a * this.shade,
         box ? Shape.Rect : Shape.Disc,
-        Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
-      ),
-    );
+        Math.atan2(Math.sin(rot) * ys, Math.cos(rot)),
+      );
+    });
   }
 
   /**
@@ -513,18 +600,30 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const at = (v: number, n: number) => (n & 1 ? Math.floor(v * G) + 0.5 : Math.round(v * G));
     // sizes in art px (blobs)
     const normal: Put = (x, y, z, d, rgb, a, shape) => {
-      const n = Math.max(1, Math.round(d * G));
-      this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
+      const [mx, my, k0] = this.mp(x, y, z + this.rise(x, y));
+      const k = Math.min(1.5, k0);
+      const n = Math.max(1, Math.round(d * G * k));
+      this.quads.push(at(mx, n), at(my, n), n, n, rgb, a, shape);
     };
     const glow: Put = (x, y, z, d, rgb, a) => {
-      const n = Math.max(1, Math.round(d * G));
-      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
+      const [mx, my, k0] = this.mp(x, y, z + this.rise(x, y));
+      const k = Math.min(1.5, k0);
+      const n = Math.max(1, Math.round(d * G * k));
+      this.glow.push(at(mx, n), at(my, n), n, n, rgb, a, Shape.Rect);
     };
     // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
-    const cellN: Put = (x, y, z, n, rgb, a, shape) =>
-      this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
-    const cellG: Put = (x, y, z, n, rgb, a) =>
-      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
+    const cellN: Put = (x, y, z, n0, rgb, a, shape) => {
+      const [mx, my, k0] = this.mp(x, y, z + this.rise(x, y));
+      const k = Math.min(1.5, k0);
+      const n = Math.max(1, Math.round(n0 * k));
+      this.quads.push(at(mx, n), at(my, n), n, n, rgb, a, shape);
+    };
+    const cellG: Put = (x, y, z, n0, rgb, a) => {
+      const [mx, my, k0] = this.mp(x, y, z + this.rise(x, y));
+      const k = Math.min(1.5, k0);
+      const n = Math.max(1, Math.round(n0 * k));
+      this.glow.push(at(mx, n), at(my, n), n, n, rgb, a, Shape.Rect);
+    };
     const one = 1 / G;
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);
