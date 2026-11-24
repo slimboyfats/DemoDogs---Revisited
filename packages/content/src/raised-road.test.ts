@@ -83,7 +83,7 @@ describe('raised road', () => {
     expect(Math.abs(park(i(0.4)).pitch)).toBeLessThan(0.02);
   });
 
-  it('its side stops a car coming at it from the ground below, and a car that drives off the top is in the air', () => {
+  it('its side is a wall to a car on the ground below, and a car that drives off the top is in the air', () => {
     const { w, i } = raisedTrack(24);
     startRace(w);
     const T = w.track!;
@@ -91,12 +91,13 @@ describe('raised road', () => {
     const nx = -Math.sin(T.a[k]!);
     const ny = Math.cos(T.a[k]!);
     const far = w.road / 2 + 60;
-    // from the ground beside it, straight at it: it is thrown back from the foot of the side
-    // (and can crawl up from there, as a car can up any face: nobody is left stranded below)
+    // from the ground beside it, straight at it, and kept at it: the side is a wall, and
+    // there is no crawling up it however long the throttle is held
     put(w.player, T.x[k]! + nx * far, T.y[k]! + ny * far, Math.atan2(-ny, -nx), 120);
-    for (let n = 0; n < 30; n++) w.step({ ...NO_CONTROLS, throttle: 1 });
-    expect(groundAt(w, w.player.x, w.player.y)).toBeLessThan(6);
-    expect(Math.hypot(w.player.vx, w.player.vy)).toBeLessThan(40);
+    for (let n = 0; n < 600; n++) {
+      w.step({ ...NO_CONTROLS, throttle: 1 });
+      expect(groundAt(w, w.player.x, w.player.y)).toBeLessThan(8);
+    }
     // from the top, straight off the side
     put(w.player, T.x[k]!, T.y[k]!, Math.atan2(ny, nx), 160);
     let high = 0;

@@ -32,6 +32,8 @@ const STIFF = 620;
 const DAMP = 13;
 /** The steepest a car is drawn lying, height per px. */
 const STEEPEST = 0.6;
+/** Ground that climbs or falls faster than this from under a car's middle is a face, not a slope. */
+const FACE = 1.1;
 /** A car slower than this rolls through a pothole without a jolt. */
 const JOLT_SPEED = 55;
 
@@ -134,10 +136,15 @@ export function updateRide(w: World, c: Car): void {
     const sn = Math.sin(c.h);
     const L = (c.def.body.halfLength - 2) * c.size;
     const W = (c.def.body.halfWidth - 0.5) * c.size;
-    nose =
-      (groundAt(w, c.x + cs * L, c.y + sn * L) - groundAt(w, c.x - cs * L, c.y - sn * L)) / (2 * L);
-    side =
-      (groundAt(w, c.x - sn * W, c.y + cs * W) - groundAt(w, c.x + sn * W, c.y - cs * W)) / (2 * W);
+    // (an end that is up against a face, or out over a drop, is not standing on that ground:
+    // a car does not lie up a wall or down a cliff)
+    const mid = groundAt(w, c.x, c.y);
+    const on = (dx: number, dy: number, far: number): number => {
+      const g = groundAt(w, c.x + dx, c.y + dy);
+      return Math.abs(g - mid) > far * FACE ? mid : g;
+    };
+    nose = (on(cs * L, sn * L, L) - on(-cs * L, -sn * L, L)) / (2 * L);
+    side = (on(-sn * W, cs * W, W) - on(sn * W, -cs * W, W)) / (2 * W);
     nose = clamp(nose, -STEEPEST, STEEPEST);
     side = clamp(side, -STEEPEST, STEEPEST);
   }

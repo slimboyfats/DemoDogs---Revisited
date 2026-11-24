@@ -306,6 +306,10 @@ export class StackBatch {
       z += T.lift + T.ax * (x - T.px) + T.ay * (y - T.py);
       x -= h * T.tx;
       y -= h * T.ty;
+      // the shader stands each slice on the ground where it is; a thing that lies as one stands
+      // on the ground under its middle, or over an edge its far end would drop down the face
+      const R = this.relief;
+      if (R) z += R.at(T.px, T.py) - R.at(x, y);
     }
     const up = Math.round(z * zk);
     const res = s.res / this.zm;
@@ -323,8 +327,8 @@ export class StackBatch {
   /**
    * What follows lies tilted, as one thing, about (px, py, pz): its slices slope by (tx, ty)
    * (height gained per art px east and south), and everything queued is carried round with
-   * them. (ax, ay) is the part of that slope the ground under it does not already give (the
-   * shader stands each stack on the ground where it is), and `lift` raises the whole thing.
+   * them. (ax, ay) is how its parts are carried up and down with where they are on it (the
+   * whole of it stands on the ground under its middle), and `lift` raises the whole thing.
    * Null puts it back.
    */
   tilt(lie: Lie | null): void {

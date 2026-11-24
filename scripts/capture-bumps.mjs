@@ -1,7 +1,7 @@
 // How cars lie on the ground: stage cars on ramps, speed bumps, dips, potholes, hills and a
 // flyover in headless Chromium (844x390, dpr 2) and save stills, and frames for a video when
 // asked. `pnpm build && node scripts/capture-bumps.mjs [out-dir] [--only=scene] [--frames]
-// [--dpr=1] [--dist=dir]` (default captures/bumps/). Scenes: parked, sizes, drive, slope, deck.
+// [--dpr=1] [--dist=dir]` (default captures/bumps/). Scenes: parked, sizes, drive, slope, deck, raise.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -84,7 +84,9 @@ const step = (n, ctl) =>
   page.evaluate(
     ([n, ctl]) => {
       const s = window.__dd.session;
-      if (ctl) s.o.input.read = () => ctl;
+      // (a scene may leave `dd.steer` to keep the car on the road)
+      if (ctl)
+        s.o.input.read = ctl.follow ? () => ({ ...ctl, steer: window.__dd.steer() }) : () => ctl;
       for (let i = 0; i < n; i++) s.step();
     },
     [n, ctl],
@@ -258,6 +260,110 @@ if (scene('deck')) {
     return [best, w.deckH[best]];
   });
   await shot('deck');
+}
+
+// 6: a stretch of road raised with the track creator's ELEVATE tool: up its ramp, over it, and
+// off its edges fast and slow, then into its side from the ground below
+if (scene('raise')) {
+  await page.goto(`${base}?edit&zoom=close`);
+  await page.waitForFunction(() => window.__dd?.editor?.track && window.__dd.session, null, {
+    timeout: 180000,
+  });
+  await page.waitForTimeout(1500);
+  // the middle of the longest run of road heading east: its near side then faces the camera
+  const mid = await page.evaluate(() => {
+    const dd = window.__dd;
+    const T = dd.session.world.track;
+    let best = 0;
+    let most = 0;
+    for (let i = 0, run = 0; i < T.n; i++) {
+      run = Math.abs(Math.atan2(Math.sin(T.a[i]), Math.cos(T.a[i]))) < 0.12 ? run + 1 : 0;
+      if (run > most) [most, best] = [run, i - (run >> 1)];
+    }
+    const at = (k) => [T.x[(best + k + T.n) % T.n], T.y[(best + k + T.n) % T.n]];
+    dd.editor.pick('raise');
+    dd.editor.height = 28;
+    dd.editor.lay(at(-60), at(60));
+    return best;
+  });
+  await page.waitForTimeout(800);
+  await page.locator('#editPanel button', { hasText: 'TEST DRIVE' }).first().tap();
+  await page.waitForFunction(
+    () =>
+      window.__dd.screen === 'game' &&
+      !document.body.classList.contains('editing') &&
+      window.__dd.session?.world.phase === 'race',
+    null,
+    { timeout: 180000 },
+  );
+  await page.evaluate((mid) => {
+    const dd = window.__dd;
+    const s = dd.session;
+    const w = s.world;
+    const T = w.track;
+    s.rate = 0;
+    s.fx.quality = 1;
+    w.critters.length = 0;
+    // the field parked out of the way, round the far side of the lap
+    w.cars.forEach((c, n) => {
+      if (c === w.player) return;
+      const k = (mid + (T.n >> 1) + n * 10) % T.n;
+      Object.assign(c, { ai: null, x: T.x[k], y: T.y[k], h: T.a[k], vx: 0, vy: 0 });
+    });
+    // steering that holds the player to the road
+    dd.steer = () => {
+      const c = w.player;
+      const k = (c.idx + 8) % T.n;
+      const want = Math.atan2(T.y[k] - c.y, T.x[k] - c.x) - c.h;
+      return Math.max(-1, Math.min(1, Math.atan2(Math.sin(want), Math.cos(want)) * 2.5));
+    };
+    // the player `along` samples from the middle of the platform, `side` px to the right of the
+    // road's middle, turned `turn` from the way the road runs, at speed v
+    dd.stage = (along, side, turn, v) => {
+      const k = (mid + along + T.n) % T.n;
+      const a = T.a[k];
+      const c = w.player;
+      const h = a + turn;
+      Object.assign(c, {
+        x: T.x[k] - Math.sin(a) * side,
+        y: T.y[k] + Math.cos(a) * side,
+        h,
+        z: 0,
+        vz: 0,
+        spin: 0,
+        pitch: 0,
+        pitchV: 0,
+        bank: 0,
+        bankV: 0,
+        vx: Math.cos(h) * v,
+        vy: Math.sin(h) * v,
+        vf: v,
+      });
+    };
+  }, mid);
+  const marks = [];
+  const pass = async (name, stage, n, ctl, still = 0) => {
+    await page.evaluate((a) => window.__dd.stage(...a), stage);
+    marks.push([name, reel]);
+    await roll(8, IDLE);
+    if (still) {
+      await roll(still, ctl);
+      await shot(`raise-${name}`);
+      await roll(n - still, ctl);
+    } else await roll(n, ctl);
+    const c = await page.evaluate(() => {
+      const c = window.__dd.session.world.player;
+      return [c.z, c.pitch, c.bank].map((v) => v.toFixed(2)).join(' ');
+    });
+    console.log(`raise ${name}: ends z pitch bank ${c}`);
+  };
+  const SLOW = { ...GO, throttle: 0.3 };
+  await pass('up-and-over', [-85, 0, 0, 150], 200, { ...GO, follow: true }, 40);
+  await pass('off-the-edge-fast', [-20, 0, 0.8, 170], 80, GO, 26);
+  await pass('off-the-edge-slow', [-10, 20, 1.3, 35], 110, SLOW, 44);
+  await pass('off-the-far-edge', [-20, 0, -0.8, 170], 80, GO, 26);
+  await pass('into-the-side', [0, 110, -Math.PI / 2, 150], 70, GO, 30);
+  console.log(`raise marks ${JSON.stringify(marks)}`);
 }
 
 await browser.close();

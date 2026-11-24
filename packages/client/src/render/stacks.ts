@@ -510,6 +510,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
 
 /** How much more a car is drawn tipped than the ground under it slopes: it has to be seen. */
 const TIP = 1.35;
+/** The steepest a car is ever drawn lying, height per px. */
+const TIP_MOST = 0.5;
 
 const lie: Lie = { tx: 0, ty: 0, ax: 0, ay: 0, px: 0, py: 0, pz: 0, lift: 0 };
 
@@ -523,12 +525,15 @@ export function lying(w: World, c: Car, k: number): Lie | null {
   if (!c.pitch && !c.bank && !lift) return null;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  lie.tx = (c.pitch * cs - c.bank * sn) * TIP;
-  lie.ty = (c.pitch * sn + c.bank * cs) * TIP;
-  // the ground's own slope is given to each stack where it stands; the rest is ours to add
-  const R = w.relief;
-  lie.ax = lie.tx - (R ? R.dx(c.x, c.y) : 0);
-  lie.ay = lie.ty - (R ? R.dy(c.x, c.y) : 0);
+  // (never so far over that it is drawn as a sliver: a car hung on a lip lies at the sim's limit)
+  const far = Math.hypot(c.pitch, c.bank) * TIP;
+  const tip = far > TIP_MOST ? (TIP * TIP_MOST) / far : TIP;
+  lie.tx = (c.pitch * cs - c.bank * sn) * tip;
+  lie.ty = (c.pitch * sn + c.bank * cs) * tip;
+  // it stands on the ground under its middle (the stack batch sees to that), so all of how it
+  // lies is ours to give
+  lie.ax = lie.tx;
+  lie.ay = lie.ty;
   lie.px = c.x;
   lie.py = c.y;
   lie.pz = c.z;
