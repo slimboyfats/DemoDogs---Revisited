@@ -1,7 +1,7 @@
 // How cars lie on the ground: stage cars on ramps, speed bumps, dips, potholes, hills and a
 // flyover in headless Chromium (844x390, dpr 2) and save stills, and frames for a video when
 // asked. `pnpm build && node scripts/capture-bumps.mjs [out-dir] [--only=scene] [--frames]
-// [--dpr=1] [--dist=dir]` (default captures/bumps/). Scenes: parked, sizes, drive, slope, deck, raise, drop.
+// [--dpr=1] [--dist=dir]` (default captures/bumps/). Scenes: parked, sizes, drive, slope, deck, raise, drop, edges.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -413,6 +413,24 @@ if (scene('drop')) {
   await pass('drop-bridge-near-slow', [span, -6, -16, -1.3, 35], 100, SLOW, 56);
   await pass('drop-bridge-far-fast', [span, -12, 0, 0.8, 160], 64, GO, 20);
   await pass('drop-bridge-far-slow', [span, -6, 16, 1.3, 35], 100, SLOW, 56);
+  console.log(`marks ${JSON.stringify(marks)}`);
+}
+
+// 8: the edges of raised road and of a bare bridge from every side, for one clip: off the near
+// edge and into the wall with the roadside left as it is, then with nothing along the edges
+if (scene('edges')) {
+  const [mid, span] = await built(true);
+  await pass('edges-near-fast', [mid, -20, 0, 0.8, 170], 70, GO, 26);
+  await pass('edges-into-the-wall', [mid, 0, 110, -Math.PI / 2, 150], 70, GO, 30);
+  await page.evaluate(
+    ([mid, span]) => (window.__dd.clear(mid, 260), window.__dd.clear(span, 260)),
+    [mid, span],
+  );
+  await pass('edges-far-fast', [mid, -20, 0, -0.8, 170], 60, GO, 16);
+  await pass('edges-far-slow', [mid, -10, -20, -1.3, 35], 100, SLOW, 50);
+  await pass('edges-bridge-near-fast', [span, -12, 0, -0.8, 160], 64, GO, 20);
+  await pass('edges-bridge-far-fast', [span, -12, 0, 0.8, 160], 64, GO, 20);
+  await pass('edges-bridge-far-slow', [span, -6, 16, 1.3, 35], 100, SLOW, 56);
   console.log(`marks ${JSON.stringify(marks)}`);
 }
 
