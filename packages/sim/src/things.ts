@@ -255,11 +255,11 @@ export function updatePickups(w: World): void {
       const hurt = c.hp < 70;
       // where the car is running leans the odds: the back of the field rolls the strong ones
       const at = place(w, c);
-      const total = kinds.reduce((s, k) => s + odds(k, hurt, at), 0);
+      const total = kinds.reduce((s, k) => s + odds(k, hurt, at, w.mode.crates), 0);
       let roll = w.rng.next() * total;
       let got = kinds[kinds.length - 1]!;
       for (const k of kinds) {
-        roll -= odds(k, hurt, at);
+        roll -= odds(k, hurt, at, w.mode.crates);
         if (roll < 0) {
           got = k;
           break;
