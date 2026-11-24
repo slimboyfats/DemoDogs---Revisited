@@ -88,6 +88,6 @@ describe('raised ground', () => {
   });
 
   it('a flat venue has no relief', () => {
-    expect(bench({ venue: 'venue.sluice-hollow' }).relief).toBeNull();
+    expect(bench({ venue: 'venue.rustwater-wharf' }).relief).toBeNull();
   });
 });

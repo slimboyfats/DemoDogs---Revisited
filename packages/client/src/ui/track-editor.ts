@@ -1,4 +1,13 @@
-import { SIZE_STEP, sizeStep, sizedId, type SceneryRule, type TrackFile } from '@demodogs/shared';
+import {
+  RAISE_MAX,
+  RAISE_MIN,
+  RAISE_STEP,
+  SIZE_STEP,
+  sizeStep,
+  sizedId,
+  type SceneryRule,
+  type TrackFile,
+} from '@demodogs/shared';
 import {
   clampPoint,
   dressingOf,
@@ -17,6 +26,8 @@ import {
   insertPoint,
   nearest,
   nearestSample,
+  raisedAt,
+  raisedBetween,
   removePoint,
   resize,
   reverse,
@@ -33,7 +44,11 @@ import { PITCH } from '../render/scene';
 import { StackRenderer } from '../render/stack';
 import { EditPalette } from './edit-palette';
 
-export type EditTool = 'road' | 'surface' | 'area' | 'place' | 'pool' | 'bridge' | 'erase';
+export type EditTool =
+  'road' | 'surface' | 'raise' | 'area' | 'place' | 'pool' | 'bridge' | 'erase';
+
+/** How high a stretch of road stands when it is first raised (art px). */
+const RAISE_FIRST = 20;
 
 const TOOLS: [EditTool, string, string][] = [
   ['road', 'ROAD', 'Drag a point to bend the road. Tap the road to add a point.'],
@@ -41,6 +56,11 @@ const TOOLS: [EditTool, string, string][] = [
     'surface',
     'ROAD TYPE',
     'Pick a surface, then drag along the road to lay it. Tap for a short stretch.',
+  ],
+  [
+    'raise',
+    'ELEVATE',
+    'Drag along the road to raise that stretch into a platform. Tap one to choose it.',
   ],
   [
     'area',
@@ -57,7 +77,7 @@ const TOOLS: [EditTool, string, string][] = [
   [
     'erase',
     'ERASE',
-    'Tap a thing, a pool, a bridge, a stretch of surface or a road point to take it away.',
+    'Tap a thing, a pool, a bridge, a stretch of surface, a raised stretch or a road point to take it away.',
   ],
 ];
 
@@ -90,7 +110,10 @@ export interface EditHooks {
   exit(): void;
 }
 
-type Pick = { kind: 'point' | 'item' | 'pool' | 'bridge' | 'surface' | 'area'; index: number };
+type Pick = {
+  kind: 'point' | 'item' | 'pool' | 'bridge' | 'surface' | 'raised' | 'area';
+  index: number;
+};
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -161,6 +184,8 @@ export class TrackEditor {
   /** How things are turned when they are put down, radians, and how many times their size. */
   rot = 0;
   size = 1;
+  /** How high the next stretch of road to be raised will stand. */
+  height = RAISE_FIRST;
   /** What is wrong with the track, if anything (it cannot be raced until it is put right). */
   problems: string[] = [];
   private s: Session | null = null;
@@ -391,6 +416,7 @@ export class TrackEditor {
       this.tool === 'erase' ||
       (this.tool === 'road' && p.kind === 'point') ||
       (this.tool === 'surface' && p.kind === 'surface') ||
+      (this.tool === 'raise' && p.kind === 'raised') ||
       (this.tool === 'area' && p.kind === 'area') ||
       (this.tool === 'place' && p.kind === 'item') ||
       (this.tool === 'pool' && p.kind === 'pool') ||
@@ -435,6 +461,13 @@ export class TrackEditor {
     } else if (this.tool === 'surface') {
       const on = sel?.kind === 'surface';
       btn('DELETE', 'Take the chosen stretch of surface away', () => this.erase(sel!), !on);
+    } else if (this.tool === 'raise') {
+      const up = sel?.kind === 'raised' ? t.raised[sel.index] : undefined;
+      const h = up ? up.height : this.height;
+      btn('LOWER', 'Bring it down', () => this.raiseBy(-RAISE_STEP), h <= RAISE_MIN);
+      r.append(el('label', { textContent: `${up ? 'CHOSEN' : 'NEXT'}: ↑ ${h}` }));
+      btn('HIGHER', 'Lift it up', () => this.raiseBy(RAISE_STEP), h >= RAISE_MAX);
+      btn('DELETE', 'Put the chosen stretch back on the ground', () => this.erase(sel!), !up);
     } else if (this.tool === 'area') {
       const a = sel?.kind === 'area' ? t.areas[sel.index] : undefined;
       if (a) {
@@ -511,6 +544,7 @@ export class TrackEditor {
     snapBridges(t);
     if (this.sel?.kind === 'bridge' && !t.bridges[this.sel.index]) this.sel = null;
     if (this.sel?.kind === 'surface' && !t.surfaces[this.sel.index]) this.sel = null;
+    if (this.sel?.kind === 'raised' && !t.raised[this.sel.index]) this.sel = null;
     if (this.sel?.kind === 'area' && !t.areas[this.sel.index]) this.sel = null;
     this.problems = trackProblems(t);
     this.hooks.save(t);
@@ -622,6 +656,7 @@ export class TrackEditor {
       else if (p.kind === 'item') t.items.splice(p.index, 1);
       else if (p.kind === 'bridge') t.bridges.splice(p.index, 1);
       else if (p.kind === 'surface') t.surfaces.splice(p.index, 1);
+      else if (p.kind === 'raised') t.raised.splice(p.index, 1);
       else if (p.kind === 'area') t.areas.splice(p.index, 1);
       else t.pools.splice(p.index, 1);
       this.sel = null;
@@ -688,12 +723,19 @@ export class TrackEditor {
               ? ['bridge']
               : this.tool === 'surface'
                 ? ['surface']
-                : this.tool === 'area'
-                  ? ['area']
-                  : ['item', 'pool', 'bridge', 'point', 'area', 'surface'];
+                : this.tool === 'raise'
+                  ? ['raised']
+                  : this.tool === 'area'
+                    ? ['area']
+                    : ['item', 'pool', 'bridge', 'point', 'area', 'surface', 'raised'];
     for (const kind of tries) {
       if (kind === 'surface') {
         const index = surfaceAt(this.road(), t, x, y, t.road.width / 2 + this.reach('item'));
+        if (index >= 0) return { kind, index };
+        continue;
+      }
+      if (kind === 'raised') {
+        const index = raisedAt(this.road(), t, x, y, t.road.width / 2 + this.reach('item'));
         if (index >= 0) return { kind, index };
         continue;
       }
@@ -804,7 +846,7 @@ export class TrackEditor {
       if (this.tool === 'road' && this.pencil) {
         mode = 'pencil';
         this.stroke = [at];
-      } else if (this.tool === 'surface') {
+      } else if (this.tool === 'surface' || this.tool === 'raise') {
         if (nearestSample(this.road(), x, y).d <= t.road.width / 2 + this.reach('item'))
           mode = 'lay';
       } else if (this.tool !== 'erase') {
@@ -923,7 +965,7 @@ export class TrackEditor {
       const T = this.road();
       const i = nearestSample(T, x, y).i;
       Object.assign(t.bridges[g.index]!, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) });
-    } else if (g.kind !== 'surface') {
+    } else if (g.kind !== 'surface' && g.kind !== 'raised') {
       const o =
         g.kind === 'item'
           ? t.items[g.index]!
@@ -974,10 +1016,11 @@ export class TrackEditor {
     this.pencil = false;
     this.change(() => {
       t.road.points = tried.road.points;
-      // a whole new road leaves the old one's bridges and surfaces behind
+      // a whole new road leaves the old one's bridges, surfaces and platforms behind
       if (what === 'loop') {
         t.bridges = [];
         t.surfaces = [];
+        t.raised = [];
       }
       this.sel = null;
     });
@@ -990,9 +1033,33 @@ export class TrackEditor {
     );
   }
 
+  /** Raise the chosen stretch of road, or the next one to be laid, by this much. */
+  private raiseBy(by: number): void {
+    const t = this.track;
+    if (!t) return;
+    const step = (h: number): number => Math.max(RAISE_MIN, Math.min(RAISE_MAX, h + by));
+    const up = this.sel?.kind === 'raised' ? t.raised[this.sel.index] : undefined;
+    if (up) this.change(() => (up.height = step(up.height)));
+    else {
+      this.height = step(this.height);
+      this.showRow2();
+    }
+  }
+
   /** Lay the surface in hand along the road between two points on the ground. */
   private lay(p: readonly [number, number], q: readonly [number, number]): void {
     const t = this.track!;
+    if (this.tool === 'raise') {
+      if (t.raised.length >= 12) {
+        this.say('That is as many raised stretches as a track can have.');
+        return;
+      }
+      this.change(() => {
+        t.raised.push(raisedBetween(this.road(), this.height, p, q));
+        this.sel = { kind: 'raised', index: t.raised.length - 1 };
+      });
+      return;
+    }
     const material = this.palette.surface;
     if (!this.content.material.has(material)) return;
     if (t.surfaces.length >= 24) {
@@ -1101,7 +1168,7 @@ export class TrackEditor {
       this.change(() => (this.sel = { kind: 'point', index: insertPoint(t, x, y) }));
     } else if (tool === 'place') {
       this.put(this.palette.prop, x, y);
-    } else if (tool === 'surface') {
+    } else if (tool === 'surface' || tool === 'raise') {
       // a tap lays a short stretch, the tap in the middle of it
       const T = this.road();
       const near = nearestSample(T, x, y);
@@ -1390,7 +1457,7 @@ export class TrackEditor {
         const what = [m?.meta.name.toUpperCase(), a.sky && skyLabel(a.sky)].filter(Boolean);
         this.label(g, what.join(' · '), x, y - 16 * k, k);
       });
-    if (this.tool === 'surface' || this.tool === 'erase') {
+    if (this.tool === 'surface' || this.tool === 'raise' || this.tool === 'erase') {
       // stretches of surface: a band along the road in the material's colour
       const T = this.road();
       const band = (a: number, b: number, color: string, on: boolean): void => {
@@ -1410,18 +1477,36 @@ export class TrackEditor {
         g.stroke();
         g.lineCap = 'round';
       };
-      t.surfaces.forEach((sf, i) => {
-        const a = nearestSample(T, sf.x0, sf.y0).i;
-        const b = nearestSample(T, sf.x1, sf.y1).i;
-        const m = this.content.material.get(sf.material);
-        const on = this.sel?.kind === 'surface' && this.sel.index === i;
-        band(a, b, m?.colour ?? '#888', on);
-        const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
-        const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
-        this.label(g, (m?.meta.name ?? '').toUpperCase(), x, y + 4 * k, k);
-      });
+      if (this.tool !== 'surface') {
+        // raised stretches: a band along the road, and how high each stands
+        t.raised.forEach((up, i) => {
+          const a = nearestSample(T, up.x0, up.y0).i;
+          const b = nearestSample(T, up.x1, up.y1).i;
+          const on = this.sel?.kind === 'raised' && this.sel.index === i;
+          band(a, b, '#ffd23d', on);
+          const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
+          const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
+          this.label(g, `↑ ${up.height}`, x, y + 4 * k, k);
+        });
+        const d = this.drag;
+        if (this.tool === 'raise' && d?.mode === 'lay' && d.moved) {
+          const up = raisedBetween(T, this.height, d.from, d.to);
+          band(nearestSample(T, up.x0, up.y0).i, nearestSample(T, up.x1, up.y1).i, '#ffd23d', true);
+        }
+      }
+      if (this.tool !== 'raise')
+        t.surfaces.forEach((sf, i) => {
+          const a = nearestSample(T, sf.x0, sf.y0).i;
+          const b = nearestSample(T, sf.x1, sf.y1).i;
+          const m = this.content.material.get(sf.material);
+          const on = this.sel?.kind === 'surface' && this.sel.index === i;
+          band(a, b, m?.colour ?? '#888', on);
+          const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
+          const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
+          this.label(g, (m?.meta.name ?? '').toUpperCase(), x, y + 4 * k, k);
+        });
       const d = this.drag;
-      if (d?.mode === 'lay' && d.moved) {
+      if (this.tool === 'surface' && d?.mode === 'lay' && d.moved) {
         const sf = surfaceBetween(T, '', d.from, d.to);
         band(
           nearestSample(T, sf.x0, sf.y0).i,

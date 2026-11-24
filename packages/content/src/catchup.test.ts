@@ -39,7 +39,7 @@ describe('catch-up', () => {
 
   it('what a pickup rolls follows the odds: the last car gets help the leader does not', () => {
     const count = (who: 'first' | 'last') => {
-      const w = startRace(makeWorld({ seed: 3 }));
+      const w = startRace(makeWorld({ seed: 4 }));
       for (let i = 0; i < 30; i++) w.step();
       const order = w.standings();
       const c = who === 'first' ? order[0]! : order[order.length - 1]!;

@@ -17,6 +17,7 @@ import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
+import { crest, groundAt } from './mounds';
 import type { World } from './world';
 import { pace } from './modifiers';
 
@@ -96,6 +97,12 @@ export function makeCar(
     hp0: hp,
     roll: 0,
     lurch: 0,
+    pitch: 0,
+    pitchV: 0,
+    bank: 0,
+    bankV: 0,
+    climb: 0,
+    hole: -1,
     bounce: 0,
     wheelDist: 0,
     wrecked: false,
@@ -290,20 +297,28 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const y0 = c.y;
   c.x += c.vx * DT;
   c.y += c.vy * DT;
-  if (land) {
+  if ((land || w.mounds.length) && floor <= 0) {
     // the ground the car has come to: higher, lower, or a face it cannot climb
-    const rise = land.at(c.x, c.y) - land.at(x0, y0);
-    const [ex, ey] = land.edge(c.x, c.y);
+    const rise = groundAt(w, c.x, c.y) - groundAt(w, x0, y0);
+    const [ex, ey] = land ? land.edge(c.x, c.y) : [0, 0];
     const steep = Math.hypot(ex, ey);
-    if (rise > 0 && steep > CLIFF && c.z < rise - 1) {
+    // (the side of a raised road is a wall to anything not well clear of the ground: there is
+    // no crawling up it, the way up is the ramp)
+    const wall = land?.plat && c.z < 2 && land.platAt(c.x, c.y) > land.platAt(x0, y0);
+    if (rise > 0 && steep > CLIFF && (wall || c.z < rise - 1)) {
       c.x = x0;
       c.y = y0;
+      c.climb = 0;
       bump(w, c, x0 + (ex / steep) * 6, y0 + (ey / steep) * 6, -ex / steep, -ey / steep, 0, 0.6);
     } else if (rise < -DROP) {
       // off the edge of a terrace: the car is in the air as high as the ground fell away
       c.z -= rise;
-    } else if (c.z > 0) c.z = Math.max(0, c.z - rise);
-  }
+      c.climb = 0;
+    } else if (c.z > 0) {
+      c.z = Math.max(0, c.z - rise);
+      c.climb = 0;
+    } else crest(w, c);
+  } else c.climb = 0;
   if (floor > 0 && c.vz <= 0 && c.z - floor < 1.5) {
     // running down a ramp keeps the wheels on it
     c.z = floor;

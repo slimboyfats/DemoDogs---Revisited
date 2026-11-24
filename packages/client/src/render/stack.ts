@@ -15,6 +15,7 @@
 //
 // World coordinates: x and y lie on the ground, z is height, all in art pixels.
 
+import type { Lie } from './pixel/stack-batch';
 import { settle } from './strips';
 
 /**
@@ -163,6 +164,14 @@ export class StackRenderer {
     thick = 1,
     alpha = 1,
   ): void {
+    const T = this.lie;
+    if (T) {
+      // lying over: slices stay level here, but each is carried round with the tilt
+      const h = z - T.pz;
+      z += T.lift + T.tx * (x - T.px) + T.ty * (y - T.py);
+      x -= h * T.tx;
+      y -= h * T.ty;
+    }
     const sx = this.ox + Math.round((x - this.camX) * this.scale);
     const sy = this.oy + Math.round((y - this.camY) * this.scale * this.ys);
     const up = Math.round(z * this.zk);
@@ -186,6 +195,13 @@ export class StackRenderer {
       it.n = this.count;
       it.a = alpha;
     }
+  }
+
+  private lie: Lie | null = null;
+
+  /** What follows lies tilted as one thing (see `Lie`); null puts it back. */
+  tilt(lie: Lie | null): void {
+    this.lie = lie;
   }
 
   private zm = 1;

@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Rustwater Wharf",
-    "description": "Derby. A dead container port cut in two by a deep basin: three plank piers across it, gantry cranes over it, fuel barges moored in it, and yards of stacked boxes on both quays that tip over when you hit them.",
+    "description": "Derby. Two quays and the harbour between them: take a pier, or a ramp over the water.",
     "since": "core@0.4.0"
   },
   "mode": "mode.derby",
@@ -110,6 +110,167 @@
         }
       ],
       "clear": 0
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "x": -250,
+          "y": -212,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": -250,
+          "y": -92,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 250,
+          "y": 212,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 250,
+          "y": 92,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": -500,
+          "y": 212,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": -500,
+          "y": 92,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.turbo-pad",
+          "x": 500,
+          "y": -212,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.big-ramp",
+          "x": 500,
+          "y": -92,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": -420,
+          "y": -250,
+          "rot": 0
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 420,
+          "y": 250,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 0,
+          "y": -300,
+          "rot": 3.142
+        },
+        {
+          "prop": "prop.boost-pad",
+          "x": 0,
+          "y": 300,
+          "rot": 0
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 12,
+          "y": -110,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": -12,
+          "y": -110,
+          "rot": 1.571
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": -12,
+          "y": 110,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.speed-bump",
+          "x": 12,
+          "y": 110,
+          "rot": -1.571
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 433,
+          "y": 125,
+          "rot": 2.126
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 177,
+          "y": 297,
+          "rot": 2.872
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -183,
+          "y": 295,
+          "rot": -2.861
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -436,
+          "y": 120,
+          "rot": -2.108
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -433,
+          "y": -125,
+          "rot": -1.015
+        },
+        {
+          "prop": "prop.pothole",
+          "x": -177,
+          "y": -297,
+          "rot": -0.269
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 183,
+          "y": -295,
+          "rot": 0.28
+        },
+        {
+          "prop": "prop.pothole",
+          "x": 436,
+          "y": -120,
+          "rot": 1.033
+        },
+        {
+          "prop": "prop.dip",
+          "x": -160,
+          "y": -280,
+          "rot": 0
+        },
+        {
+          "prop": "prop.dip",
+          "x": 160,
+          "y": 280,
+          "rot": 0
+        }
+      ]
     }
   ],
   "bots": {

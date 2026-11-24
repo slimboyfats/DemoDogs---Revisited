@@ -9,7 +9,7 @@ import {
 import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
-import { loadContent, loadLooks } from '@demodogs/content';
+import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
 import {
@@ -394,6 +394,8 @@ let overK = 1;
 /** Device pixels per art pixel when driving, and as shown now (a spectator can pull back). */
 let scale = 4;
 let shown = 4;
+/** A scale set from outside to look at the map from (for scripts' pictures): no HUD is drawn. */
+let overview: number | null = null;
 
 // once this screen's car is out of it, the camera can follow the others: a viewpoint, not a rule
 const spectator = new Spectator();
@@ -422,7 +424,7 @@ function spectate(dt: number): void {
   const z = on ? (specZooms[spectator.zoom] ?? specZooms[0]!) : null;
   s.watch = on ? spectator.target : null;
   // whole art pixels where there is room for them; the arena view takes what fits
-  const drive = editMode ? editShown : scale;
+  const drive = editMode ? editShown : (overview ?? scale);
   const want = z ? (z.whole ? z.k * scale : Math.max(1, Math.round(z.k * scale * 2) / 2)) : drive;
   if (want !== shown) {
     shown = want;
@@ -658,17 +660,14 @@ function startGame(venue: string, custom: Installed | null = null): void {
 function startDev(car: string): void {
   careerRace = null;
   // ?dev&venue=<id> opens the range on that venue (a flyover to test on, say); otherwise the
-  // plain bowl, so new derby maps (crushers, towers) do not end up under the targets
+  // range's own plain bowl, which is not one of the game's arenas, so nothing built for a derby
+  // (crushers, towers, ramps, hills) ends up under the targets
   const pick = params.get('venue');
-  const venue =
-    venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`)) ??
-    venues.find((v) => v.id === 'venue.the-pit') ??
-    venues.find((v) => content.mode.get(v.mode)!.kind === 'derby') ??
-    venues[0]!;
+  const venue = venues.find((v) => pick !== null && (v.id === pick || v.id === `venue.${pick}`));
   const rocket = [...content.weapon.values()].find((w) => w.kind === 'rocket');
   void launch(
     {
-      venue: venue.id,
+      ...(venue ? { venue: venue.id } : { venue: RANGE, content: withRange(content) }),
       car,
       seed: 1,
       autopilot: false,
@@ -959,7 +958,8 @@ function frame(t: number): void {
       drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (editMode) editor.draw(octx, dt);
     else if (devMode) dev.frame(dt);
-    else hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
+    else if (overview === null)
+      hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
     if (online.racing) $('netDot').textContent = online.status();
     // a device that keeps falling behind gets thinner fire and smoke, by itself, then fewer
@@ -1121,6 +1121,8 @@ function boot(): void {
       dev,
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
+      /** Draw the race at k device px to an art px with no HUD, for pictures (null: as it was). */
+      overview: (k: number | null) => (overview = k),
       editor,
       /** The resolution for scripts: the steps this screen has, and `set(n)` to draw n steps down. */
       res: {

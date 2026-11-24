@@ -15,6 +15,8 @@ export class Relief {
   readonly hills: Float32Array;
   /** The banks: how many terraces up each point of the grid is (a fraction: part way to the next). */
   readonly bank: Float32Array;
+  /** Raised road: how much of each point's height is a platform's (null where a venue has none). */
+  plat: Float32Array | null = null;
   /** How high one terrace stands above the last, how many there are, and how much of one is its face. */
   step = 0;
   steps = 0;
@@ -65,6 +67,25 @@ export class Relief {
     return v + Math.min(this.steps, fl + (up > 0 ? up : 0)) * this.step;
   }
 
+  /** How much of the ground's height at (x, y) is raised road: its platform, ramps and sides. */
+  platAt(x: number, y: number): number {
+    const P = this.plat;
+    if (!P) return 0;
+    const C = Relief.CELL;
+    const fx = Math.min(this.gw - 1, Math.max(0, x / C));
+    const fy = Math.min(this.gh - 1, Math.max(0, y / C));
+    const xi = Math.min(this.gw - 2, Math.floor(fx));
+    const yi = Math.min(this.gh - 2, Math.floor(fy));
+    const tx = fx - xi;
+    const ty = fy - yi;
+    const k = yi * this.gw + xi;
+    const k1 = k + this.gw;
+    const a = P[k]!;
+    return (
+      a + (P[k + 1]! - a) * tx + (P[k1]! - a) * ty + (a - P[k + 1]! - P[k1]! + P[k1 + 1]!) * tx * ty
+    );
+  }
+
   /** How steeply the ground rises to the east at (x, y): height gained per px. */
   dx(x: number, y: number): number {
     return (this.at(x + 6, y) - this.at(x - 6, y)) / 12;
@@ -113,6 +134,34 @@ const FACE = 5;
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 type Spec = NonNullable<VenueManifest['relief']>;
+type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
+
+/** A venue with raised road and no `relief` of its own gets this: flat but for the platforms. */
+export const FLAT_RELIEF: Spec = { hills: 0, wave: 520, banks: 0, from: 60, spread: 150, step: 8 };
+
+/** How far a platform reaches past the road's edge before its side begins, and how far through the side is (px). */
+const SHOULDER = 14;
+const SIDE = 9;
+/** A raised stretch climbs one px in this many unless it says how long its ramps are. */
+const RAMP = 5;
+
+/** How high the road stands at each sample of the track, for its raised stretches. */
+export function liftsOf(track: Track, raised: readonly Raised[]): Float32Array {
+  const N = track.n;
+  const out = new Float32Array(N);
+  for (const r of raised) {
+    const i0 = Math.min(N - 1, Math.floor(r.from * N));
+    const len = ((Math.min(N - 1, Math.floor(r.to * N)) - i0 + N) % N) + 1;
+    // the ramps: as long as asked, but never more than half the stretch between them
+    const ramp = Math.max(1, Math.min(len / 2, (r.ramp ?? r.height * RAMP) / track.step));
+    for (let k = 0; k < len; k++) {
+      const t = clamp01(Math.min(k + 1, len - k) / ramp);
+      const i = (i0 + k) % N;
+      out[i] = Math.max(out[i]!, r.height * t * t * (3 - 2 * t));
+    }
+  }
+  return out;
+}
 
 /**
  * Work out a venue's relief. `flat(i)` says where the road must lie level (a flyover, a bridge):
@@ -126,6 +175,7 @@ export function buildRelief(
   track: Track | null,
   road: number,
   oval: { cx: number; cy: number; rx: number; ry: number } | null,
+  raised: readonly Raised[] = [],
 ): Relief {
   const R = new Relief(w, h);
   const C = Relief.CELL;
@@ -133,6 +183,10 @@ export function buildRelief(
   // how far each point of the grid is from the road, out to where the banks stop rising
   const reach = half + spec.from + spec.spread + 40;
   const dist = new Float32Array(R.gw * R.gh).fill(reach);
+  // raised stretches: how high the road stands at each of its samples, and which sample each
+  // point of the grid is nearest to
+  const lift = track && raised.length ? liftsOf(track, raised) : null;
+  const near = lift ? new Int32Array(R.gw * R.gh).fill(-1) : null;
   if (track) {
     const rc = Math.ceil(reach / C);
     for (let i = 0; i < track.n; i += 2) {
@@ -142,7 +196,10 @@ export function buildRelief(
         for (let gx = Math.max(0, cx - rc); gx <= Math.min(R.gw - 1, cx + rc); gx++) {
           const d = Math.hypot(gx * C - track.x[i]!, gy * C - track.y[i]!);
           const k = gy * R.gw + gx;
-          if (d < dist[k]!) dist[k] = d;
+          if (d < dist[k]!) {
+            dist[k] = d;
+            if (near) near[k] = i;
+          }
         }
     }
   }
@@ -164,6 +221,14 @@ export function buildRelief(
           noise((x / spec.wave) * 2.3, (y / spec.wave) * 2.3, seed + 102) * 0.3;
         const v = spec.hills * clamp01((n - 0.25) * 1.6);
         R.hills[k] = v;
+        if (v > max) max = v;
+      }
+      if (lift && near![k]! >= 0) {
+        // the platform: the road's own height out to its shoulder, then down a steep side
+        const side = clamp01((half + SHOULDER + SIDE - dist[k]!) / SIDE);
+        const up = lift[near![k]!]! * side;
+        (R.plat ??= new Float32Array(R.gw * R.gh))[k] = up;
+        const v = (R.hills[k]! += up);
         if (v > max) max = v;
       }
       if (steps > 0) {

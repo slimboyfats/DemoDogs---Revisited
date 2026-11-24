@@ -1,12 +1,40 @@
-import { NO_CONTROLS, type Controls, type SimEvent } from '@demodogs/shared';
-import { World, putProp, stand, type Critter, type WorldOptions } from '@demodogs/sim';
+import { NO_CONTROLS, VenueSchema, type Controls, type SimEvent } from '@demodogs/shared';
+import {
+  World,
+  putProp,
+  stand,
+  type Content,
+  type Critter,
+  type WorldOptions,
+} from '@demodogs/sim';
+import benchPit from './fixtures/bench-pit.json';
+import benchVenue from './fixtures/bench.json';
 import { loadContent } from './index';
 
-/** A world on the shipped content, for tests. */
+/**
+ * The venues tests stand on, which are not in the game: a race track (`venue.bench`) and a derby
+ * bowl (`venue.bench-pit`) that never change, so the game's own tracks can be rebuilt without a
+ * test that leans on where a bend or a tree is having to be put right.
+ */
+export const BENCH = 'venue.bench';
+export const BENCH_PIT = 'venue.bench-pit';
+
+let withBench: Content | null = null;
+
+/** The shipped content, with the tests' two venues beside the game's own. */
+export function testContent(): Content {
+  if (withBench) return withBench;
+  const C = loadContent();
+  const venue = new Map(C.venue);
+  for (const v of [benchVenue, benchPit]) venue.set(v.id, VenueSchema.parse(v));
+  return (withBench = { ...C, venue });
+}
+
+/** A world on the shipped content, for tests: on the bench track unless a venue is named. */
 export function makeWorld(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   return new World({
-    content: loadContent(),
-    venue: 'venue.kennel-loop',
+    content: testContent(),
+    venue: BENCH,
     car: 'car.mutt',
     seed: 1,
     ...opts,
@@ -121,7 +149,7 @@ export function propTest(id: string, speed: number, clearance = 30) {
 /** The derby bowl emptied of everything: open flat ground with no road to leave. */
 export function flatBench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   // one parked rival out of the way, or the derby would be won on the spot
-  const w = bench({ venue: 'venue.the-pit', rivals: 1, ...opts });
+  const w = bench({ venue: BENCH_PIT, rivals: 1, ...opts });
   w.statics.length = 0;
   const r = w.cars.find((c) => !c.isPlayer)!;
   r.ai = null;
@@ -175,6 +203,32 @@ export function padTest(id: string | null, speed: number, rot = 0, throttle = 1)
     top = Math.max(top, c.vx);
   }
   return { world: w, car: c, events, maxZ, top };
+}
+
+/**
+ * Drive the player along +x over road shape `id` (null: over bare ground, to compare) lying
+ * across its way `side` art px to its right, starting at `speed` with the throttle at `throttle`,
+ * for two seconds. Reports how high it flew and how far it tipped.
+ */
+export function moundTest(id: string | null, speed: number, throttle = 1, side = 0) {
+  const w = flatBench();
+  const c = w.player;
+  const x = w.oval!.cx - 80;
+  const y = w.oval!.cy;
+  if (id) stand(w, loadContent().prop.get(id)!, x, y + side, 0, 0);
+  put(c, x - 40, y, 0, speed);
+  const events: string[] = [];
+  let maxZ = 0;
+  let maxPitch = 0;
+  let minPitch = 0;
+  for (let i = 0; i < 120; i++) {
+    w.step({ steer: 0, throttle, brake: false, boost: false, fire: false });
+    for (const e of w.takeEvents()) events.push(e.t);
+    maxZ = Math.max(maxZ, c.z);
+    maxPitch = Math.max(maxPitch, c.pitch);
+    minPitch = Math.min(minPitch, c.pitch);
+  }
+  return { world: w, car: c, events, maxZ, maxPitch, minPitch };
 }
 
 /**

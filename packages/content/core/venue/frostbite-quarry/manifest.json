@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Frostbite Quarry",
-    "description": "Race. A frozen quarry: sheet ice across the road, powder kegs by the verge, and stacks and pylons to bring down.",
+    "description": "Race. Round the rim of the quarry and back through it, on snow and sheet ice.",
     "since": "core@0.4.0"
   },
   "mode": "mode.race",
@@ -15,20 +15,47 @@
   "track": {
     "road": 76,
     "points": [
-      [300, 700],
-      [280, 360],
-      [520, 200],
-      [860, 260],
-      [1040, 480],
-      [1300, 300],
-      [1640, 240],
-      [1760, 520],
-      [1600, 820],
-      [1700, 1080],
-      [1340, 1160],
-      [1040, 900],
-      [760, 1100],
-      [440, 1060]
+      [240, 700],
+      [300, 360],
+      [520, 220],
+      [1000, 190],
+      [1480, 220],
+      [1720, 380],
+      [1770, 700],
+      [1740, 960],
+      [1620, 1120],
+      [1440, 1110],
+      [1400, 940],
+      [1470, 700],
+      [1380, 540],
+      [1140, 480],
+      [820, 490],
+      [640, 600],
+      [570, 780],
+      [600, 980],
+      [500, 1130],
+      [340, 1100],
+      [250, 900]
+    ],
+    "surfaces": [
+      {
+        "from": 0.14,
+        "to": 0.21,
+        "material": "material.ice"
+      },
+      {
+        "from": 0.66,
+        "to": 0.73,
+        "material": "material.ice"
+      }
+    ],
+    "raised": [
+      {
+        "from": 0.05,
+        "to": 0.36,
+        "height": 30,
+        "ramp": 180
+      }
     ]
   },
   "colors": {
@@ -38,12 +65,21 @@
     "outside": "#59626b"
   },
   "relief": {
-    "hills": 14,
+    "hills": 26,
+    "wave": 260,
     "banks": 90,
     "step": 30,
     "from": 46,
     "spread": 120
   },
+  "weather": [
+    {
+      "x": 1500,
+      "y": 300,
+      "r": 520,
+      "sky": "snow"
+    }
+  ],
   "scenery": [
     {
       "rule": "gantry",
@@ -200,76 +236,6 @@
     {
       "rule": "along",
       "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.12
-      },
-      "items": [
-        {
-          "prop": "prop.ramp"
-        },
-        {
-          "prop": "prop.hay-wall",
-          "ahead": 50,
-          "row": 9,
-          "step": 8
-        },
-        {
-          "prop": "prop.hay-bale",
-          "ahead": 120,
-          "row": 3,
-          "step": 13
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "lane": 0.5,
-          "n": 2,
-          "gap": 44
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
         "where": "bend",
         "count": 7,
         "apart": 0.05
@@ -332,21 +298,148 @@
       "items": [
         {
           "prop": "prop.radar-tower",
-          "x": -671,
-          "y": -165,
+          "x": -716,
+          "y": -462,
           "rot": 0
         },
         {
           "prop": "prop.radar-tower",
-          "x": 635,
-          "y": -353,
+          "x": 747,
+          "y": -432,
           "rot": 0
         },
         {
           "prop": "prop.radar-tower",
-          "x": 707,
-          "y": 75,
+          "x": 53,
+          "y": -85,
           "rot": 0
+        },
+        {
+          "prop": "prop.radar-tower",
+          "x": -538,
+          "y": 350,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.1],
+      "items": [
+        {
+          "prop": "prop.turbo-pad"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.26],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.37],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.44],
+      "items": [
+        {
+          "prop": "prop.dip"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.47],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.55, 0.62, 0.86],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.55,
+          "ahead": 84
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.78],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "n": 4,
+          "gap": 34
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.93],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
         }
       ]
     }

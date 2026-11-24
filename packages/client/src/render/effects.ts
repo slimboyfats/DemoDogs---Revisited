@@ -3,7 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
-import { markGround, type Ground } from './ground';
+import { markGround, paintHollow, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import { tall, type Strip } from './stack';
 import {
@@ -689,6 +689,9 @@ export class Effects {
     this.debris.push({ strip, x, y, z, vx, vy, vz, rot, spin: rand(-14, 14), life });
   }
 
+  /** How many of the world's shapes in the road have been looked at for painting. */
+  private hollows = 0;
+
   paintGround(x: number, y: number, r: number, fn: (g: CanvasRenderingContext2D) => void): void {
     fn(this.ground.g);
     markGround(this.ground, x, y, r);
@@ -1074,6 +1077,16 @@ export class Effects {
         case 'land':
           if (e.impact > 90 && this.near(w.cars[e.car]!.x, w.cars[e.car]!.y, 300)) S.crash(10);
           break;
+        case 'jolt': {
+          // a wheel in a pothole kicks up grit and sparks; a car thrown off a crest leaves dust
+          const v = this.vol(e.x, e.y);
+          const hole = e.kind === 'hole';
+          for (let i = 0; i < (hole ? 5 : 2); i++) this.puff(e.x, e.y, 1, 'dust');
+          if (hole) for (let i = 0; i < 8; i++) this.spark(e.x, e.y, 1, 70);
+          if (v > 0) S.crash((hole ? 9 : 4) * v);
+          if (hole && this.near(e.x, e.y, 60)) this.shake = Math.max(this.shake, 3.5);
+          break;
+        }
         case 'explode': {
           const { x, y, power } = e;
           const z = e.z ?? 0;
@@ -2042,6 +2055,11 @@ export class Effects {
     guardTick(this, w, this.sound);
     this.catchup.step(this, w);
     this.life.step(this, w);
+    // hollows in the road are light and shade on the ground: each painted once, as it is laid
+    for (; this.hollows < w.mounds.length; this.hollows++) {
+      const s = w.mounds[this.hollows]!;
+      if (s.def.mound!.high < 0 && s.def.mound!.shape === 'bar') paintHollow(this.ground, s);
+    }
     this.leafFall();
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {

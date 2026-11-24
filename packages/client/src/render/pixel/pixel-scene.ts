@@ -19,7 +19,7 @@ import { drawParticle, overSmoke, type Put } from './particles';
 import { fineGrid } from '../strips';
 import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
-import { StackBatch, type StackSky, type StackView } from './stack-batch';
+import { StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { DuskPass } from './dusk';
@@ -192,6 +192,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
   zoom(k: number): void {
     this.stacks.zoom(k);
+  }
+  tilt(lie: Lie | null): void {
+    this.stacks.tilt(lie);
   }
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void {
     this.stacks.limb(s, a, b, n);

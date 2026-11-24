@@ -246,6 +246,20 @@ export type SimEvent =
       power: number;
     }
   /**
+   * A car's wheel dropped into a pothole (world.statics[prop]) at (x, y) at speed `power`, or
+   * (`kind` hop) the road fell away under it over a crest and it left the ground going up at
+   * `power`.
+   */
+  | {
+      t: 'jolt';
+      kind: 'hole' | 'hop';
+      car: number;
+      prop: number;
+      x: number;
+      y: number;
+      power: number;
+    }
+  /**
    * An animal (world.critters[critter]) at (x, y): a car (or a blast, car -1) knocked it flying
    * (`flung`), a car ran into one too heavy to move (`bump`, with the closing speed as `power`),
    * or a bird took off (`up`) or came down (`down`). One that attacks has picked out `car` and

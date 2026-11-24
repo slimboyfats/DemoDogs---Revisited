@@ -1,0 +1,492 @@
+{
+  "id": "venue.bench",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bench",
+    "description": "A venue for tests only: kennel-loop as it was before the tracks were rebuilt.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.race",
+  "seed": 465,
+  "size": {
+    "w": 1640,
+    "h": 1120
+  },
+  "track": {
+    "road": 72,
+    "points": [
+      [220, 560],
+      [240, 320],
+      [370, 190],
+      [600, 180],
+      [790, 270],
+      [990, 190],
+      [1240, 190],
+      [1410, 330],
+      [1420, 560],
+      [1320, 790],
+      [1110, 900],
+      [910, 810],
+      [700, 910],
+      [450, 930],
+      [270, 810]
+    ]
+  },
+  "colors": {
+    "ground": "#4f7a37",
+    "ground2": "#5c8a3f",
+    "dirt": "#8a6d45",
+    "outside": "#2d3a24"
+  },
+  "relief": {
+    "hills": 24,
+    "banks": 36,
+    "step": 18,
+    "from": 44,
+    "spread": 90
+  },
+  "scenery": [
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "trackside",
+      "offset": 24,
+      "run": [110, 380],
+      "gap": [50, 170],
+      "items": [
+        {
+          "prop": "prop.barrier",
+          "weight": 3
+        },
+        {
+          "prop": "prop.armco",
+          "weight": 2
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 17,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "patches",
+      "material": "material.mud",
+      "count": 10,
+      "r": [16, 28],
+      "on": "off"
+    },
+    {
+      "rule": "build",
+      "count": 14,
+      "clear": 14,
+      "along": 90,
+      "kinds": [
+        {
+          "shape": "house",
+          "weight": 2,
+          "wall": "prop.brick-wall",
+          "window": "prop.window-wall",
+          "post": "prop.brick-post",
+          "roof": "prop.roof-tile",
+          "long": [4, 6],
+          "deep": [3, 4]
+        },
+        {
+          "shape": "wall",
+          "weight": 2,
+          "wall": "prop.plank-fence",
+          "long": [4, 8]
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.000307,
+      "clear": 34,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.pine",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.1
+        },
+        {
+          "prop": "prop.husk",
+          "weight": 0.02
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "rule": "roadside",
+      "every": 23,
+      "pair": "prop.cone",
+      "stack": "prop.crate",
+      "drum": "prop.barrel",
+      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.turbo-pad"
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.12
+      },
+      "items": [
+        {
+          "prop": "prop.ramp"
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 9,
+          "step": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 3,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 2,
+        "apart": 0.1
+      },
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 2,
+        "apart": 0.1
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 2,
+          "gap": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 7,
+        "apart": 0.05
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12, 0.47, 0.71],
+      "items": [
+        {
+          "prop": "prop.chickens",
+          "lane": 1.0,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.22, 0.58, 0.86],
+      "items": [
+        {
+          "prop": "prop.sheep",
+          "lane": 1.9,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.33, 0.66],
+      "items": [
+        {
+          "prop": "prop.cow",
+          "lane": 2.1,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.41, 0.93],
+      "items": [
+        {
+          "prop": "prop.rabbits",
+          "lane": 1.7,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18, 0.52, 0.79],
+      "items": [
+        {
+          "prop": "prop.crows",
+          "lane": 0.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.09, 0.28, 0.44, 0.63, 0.9],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.scarecrow",
+          "lane": 2.0
+        },
+        {
+          "prop": "prop.pumpkin",
+          "lane": 1.6,
+          "row": 3,
+          "step": 7,
+          "ahead": 8
+        },
+        {
+          "prop": "prop.hay-bale",
+          "lane": -1.55,
+          "n": 2,
+          "gap": 11
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.55],
+      "items": [
+        {
+          "prop": "prop.bull",
+          "lane": 2.3,
+          "ahead": 0
+        }
+      ]
+    },
+    {
+      "rule": "field",
+      "count": 5,
+      "prop": "prop.corn",
+      "long": [54, 96],
+      "deep": [30, 54],
+      "step": 5.5,
+      "clear": 10
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00075,
+      "clear": 7,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 1
+        },
+        {
+          "prop": "prop.tall-grass",
+          "weight": 1.3
+        },
+        {
+          "prop": "prop.mushrooms",
+          "weight": 0.12
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.windmill",
+          "x": 52,
+          "y": -247,
+          "rot": 0
+        },
+        {
+          "prop": "prop.windmill",
+          "x": 644,
+          "y": 82,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "straight",
+        "count": 1,
+        "apart": 0.2
+      },
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 2,
+        "apart": 0.2
+      },
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 16
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Sunbake Canyon",
-    "description": "Race. A red rock canyon: stone arches over the road that come down in rockfalls, crumbling cliffs, drifts of sand, and a mining camp full of dynamite.",
+    "description": "Race. Through the canyon under the arches: sand drifts, a big jump, rock on the road.",
     "since": "core@0.4.0"
   },
   "mode": "mode.race",
@@ -15,23 +15,43 @@
   "track": {
     "road": 72,
     "points": [
-      [320, 760],
-      [300, 420],
-      [520, 220],
-      [820, 300],
-      [960, 560],
-      [1180, 640],
-      [1380, 420],
-      [1640, 240],
-      [1900, 380],
-      [1920, 700],
-      [1700, 880],
-      [1820, 1120],
-      [1500, 1200],
-      [1220, 1020],
-      [960, 1160],
-      [660, 1180],
-      [480, 1020]
+      [260, 760],
+      [250, 480],
+      [360, 290],
+      [600, 220],
+      [860, 300],
+      [1000, 480],
+      [1180, 580],
+      [1400, 520],
+      [1520, 340],
+      [1720, 230],
+      [1920, 320],
+      [1980, 560],
+      [1960, 860],
+      [1860, 1100],
+      [1640, 1200],
+      [1380, 1160],
+      [1240, 1000],
+      [1080, 900],
+      [880, 960],
+      [760, 1120],
+      [560, 1200],
+      [360, 1120],
+      [270, 940]
+    ],
+    "surfaces": [
+      {
+        "from": 0.27,
+        "to": 0.32,
+        "material": "material.sand"
+      }
+    ],
+    "raised": [
+      {
+        "from": 0.44,
+        "to": 0.57,
+        "height": 28
+      }
     ]
   },
   "colors": {
@@ -42,7 +62,8 @@
     "road": "dirt"
   },
   "relief": {
-    "hills": 16,
+    "hills": 22,
+    "wave": 280,
     "banks": 108,
     "step": 36,
     "from": 50,
@@ -218,76 +239,6 @@
     {
       "rule": "along",
       "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 1,
-        "apart": 0.12
-      },
-      "items": [
-        {
-          "prop": "prop.big-ramp"
-        },
-        {
-          "prop": "prop.barrel",
-          "ahead": 62,
-          "row": 7,
-          "step": 10
-        },
-        {
-          "prop": "prop.barrel",
-          "ahead": 74,
-          "row": 6,
-          "step": 10
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
-        "where": "straight",
-        "count": 2,
-        "apart": 0.1
-      },
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "lane": 0.5,
-          "n": 2,
-          "gap": 44
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "pick": {
         "where": "bend",
         "count": 7,
         "apart": 0.05
@@ -348,6 +299,149 @@
         {
           "prop": "prop.tumbleweed",
           "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.2],
+      "items": [
+        {
+          "prop": "prop.dip",
+          "n": 2,
+          "gap": 84
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.25, 0.36, 0.62, 0.8],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.pothole",
+          "lane": 0.35
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.3,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": 0.1,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.pothole",
+          "lane": -0.55,
+          "ahead": 84
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.42],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 46
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.53],
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "ahead": -120
+        },
+        {
+          "prop": "prop.big-ramp",
+          "row": 2,
+          "step": 30
+        },
+        {
+          "prop": "prop.barrel",
+          "ahead": 64,
+          "row": 7,
+          "step": 9
+        },
+        {
+          "prop": "prop.barrel",
+          "ahead": 78,
+          "row": 6,
+          "step": 9
+        },
+        {
+          "prop": "prop.oil-drum",
+          "ahead": 130,
+          "row": 3,
+          "step": 16
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.68],
+      "items": [
+        {
+          "prop": "prop.dip"
+        },
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "ahead": 58
+        },
+        {
+          "prop": "prop.dip",
+          "ahead": 116
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.75],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.9],
+      "items": [
+        {
+          "prop": "prop.speed-bump",
+          "row": 3,
+          "step": 24,
+          "n": 4,
+          "gap": 34
         }
       ]
     }

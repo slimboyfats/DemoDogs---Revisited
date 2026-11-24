@@ -14,9 +14,9 @@ import {
 } from '@demodogs/sim';
 import { describe, expect, it } from 'vitest';
 import { loadContent } from './index';
-import { makeWorld } from './testing';
+import { BENCH_PIT, makeWorld } from './testing';
 
-const range = () => makeWorld({ venue: 'venue.the-pit', sandbox: true, rivals: 2 });
+const range = () => makeWorld({ venue: BENCH_PIT, sandbox: true, rivals: 2 });
 
 describe('the test range', () => {
   it('starts live, never ends, and nobody drives the parked cars', () => {

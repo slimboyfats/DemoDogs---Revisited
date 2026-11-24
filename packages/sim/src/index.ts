@@ -14,6 +14,7 @@ export { World, ahead, type Oval, type Phase, type WorldOptions } from './world'
 export * from './range';
 export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt } from './pads';
+export { groundAt, moundAt, moundHeight } from './mounds';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';

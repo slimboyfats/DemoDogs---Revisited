@@ -15,5 +15,11 @@
     "wide": 24,
     "lift": 140,
     "min": 60
+  },
+  "mound": {
+    "shape": "wedge",
+    "long": 20,
+    "wide": 24,
+    "high": 6
   }
 }

@@ -413,6 +413,34 @@ const iced = await page.evaluate(() => {
 check((await track()).surfaces.length === 1 && iced > 5, `no ice road was laid (${iced} samples)`);
 await shot('21-ice-road');
 
+// ---- the elevate tool: drag along the road and that stretch rises into a platform
+await bar('ELEVATE').tap();
+const lifted = await page.evaluate(() => {
+  const T = window.__dd.session.world.track;
+  const p = (f) => [T.x[Math.floor(f * T.n)], T.y[Math.floor(f * T.n)]];
+  return [p(0.32), p(0.4), p(0.48)];
+});
+await bar('FIT').tap();
+await dragMap(...lifted[0], ...lifted[2], () => shot('21b-picking-a-stretch'));
+await page.waitForTimeout(600);
+await bar('HIGHER').tap();
+await bar('HIGHER').tap();
+await page.waitForTimeout(600);
+const stands = await page.evaluate(
+  ([x, y]) => window.__dd.session.world.relief?.at(x, y) ?? 0,
+  lifted[1],
+);
+const up = (await track()).raised;
+check(
+  up.length === 1 && up[0].height === 28 && Math.abs(stands - 28) < 1,
+  `no stretch of road was raised: ${JSON.stringify(up)}, the ground stands ${stands}`,
+);
+await shot('21c-raised-road');
+await bar('LOWER').tap();
+await page.waitForTimeout(400);
+check((await track()).raised[0].height === 24, 'LOWER did not bring the raised road down');
+await bar('HIGHER').tap();
+
 // ---- the pencil: a whole new road drawn with a finger
 await bar('ROAD').tap();
 await bar('FIT').tap();

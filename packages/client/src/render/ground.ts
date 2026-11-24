@@ -1,4 +1,4 @@
-import type { World } from '@demodogs/sim';
+import { moundHeight, type StaticProp, type World } from '@demodogs/sim';
 import {
   type Fields,
   makeFields,
@@ -694,4 +694,36 @@ function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number, F: F
       g.fillRect(x, y, 1, 1);
     }
   }
+}
+
+/** Where the light on a hollow comes from: the north-west, as the sun stands by day. */
+const LIGHT = [-0.6, -0.8] as const;
+
+/**
+ * Paint a hollow in the road (a dip: a prop whose `mound` goes down) onto the ground as light and
+ * shade over whatever is there: the slope turned from the light darkens, the one turned to it
+ * brightens, and the floor is a little dimmer than the road round it. So it reads as a hollow in
+ * dirt, tarmac or snow alike.
+ */
+export function paintHollow(G: Ground, s: StaticProp): void {
+  const M = s.def.mound!;
+  const reach = Math.ceil((M.long + M.wide) / 2);
+  const g = G.g;
+  g.save();
+  for (let y = Math.floor(s.y - reach); y <= s.y + reach; y++)
+    for (let x = Math.floor(s.x - reach); x <= s.x + reach; x++) {
+      const h = moundHeight(s, x + 0.5, y + 0.5);
+      if (h === 0) continue;
+      const dx = (moundHeight(s, x + 1.5, y + 0.5) - moundHeight(s, x - 0.5, y + 0.5)) / 2;
+      const dy = (moundHeight(s, x + 0.5, y + 1.5) - moundHeight(s, x + 0.5, y - 0.5)) / 2;
+      // lit as the slope faces the light, in a few hard steps like everything else here
+      const lit = -(dx * LIGHT[0] + dy * LIGHT[1]) * 2.6 - (h / M.high) * 0.16;
+      const a = Math.min(0.62, Math.round(Math.abs(lit) * 6) / 6);
+      if (a <= 0) continue;
+      g.globalAlpha = lit > 0 ? a * 0.6 : a;
+      g.fillStyle = lit > 0 ? '#fff2d0' : '#0c0a10';
+      g.fillRect(x, y, 1, 1);
+    }
+  g.restore();
+  markGround(G, s.x, s.y, reach + 1);
 }

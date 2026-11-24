@@ -1,0 +1,18 @@
+{
+  "id": "prop.speed-bump",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Speed bump",
+    "description": "A striped hump across the road. A car rocks over it nose up, then tail up; one that hits it fast leaves the ground.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "solid": false,
+  "mound": {
+    "shape": "bar",
+    "long": 10,
+    "wide": 24,
+    "high": 2.8
+  }
+}

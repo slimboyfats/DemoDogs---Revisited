@@ -34,6 +34,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { updatePads } from './pads';
+import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
@@ -57,7 +58,7 @@ import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
-import { buildRelief, type Relief } from './relief';
+import { FLAT_RELIEF, buildRelief, type Relief } from './relief';
 import { updateRivers } from './river';
 import { updatePresses } from './hazards';
 import { updateGuards, type Decoy } from './guards';
@@ -173,6 +174,8 @@ export class World {
   readonly statics: StaticProp[] = [];
   /** The statics that are track tiles (boost tiles, ramps): see pads.ts. */
   readonly pads: StaticProp[] = [];
+  /** The statics that are shapes in the road (speed bumps, dips, potholes): see mounds.ts. */
+  readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
   readonly critters: Critter[] = [];
   readonly props: LooseProp[] = [];
@@ -280,15 +283,17 @@ export class World {
       }
     }
     if (venue.oval) this.oval = { ...venue.oval };
-    if (venue.relief && (venue.relief.hills > 0 || venue.relief.banks > 0))
+    const raised = venue.track?.raised ?? [];
+    if ((venue.relief && (venue.relief.hills > 0 || venue.relief.banks > 0)) || raised.length)
       this.relief = buildRelief(
-        venue.relief,
+        venue.relief ?? FLAT_RELIEF,
         venue.seed,
         this.w,
         this.h,
         this.track,
         this.road,
         this.oval,
+        raised,
       );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
@@ -591,6 +596,7 @@ export class World {
       }
       updateMovers(this, c);
       updatePads(this, c);
+      updateRide(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }

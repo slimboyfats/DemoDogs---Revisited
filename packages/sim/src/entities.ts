@@ -104,6 +104,17 @@ export interface Car {
   /** Body lean across (roll) and along (lurch) the car, for the stack's slices. */
   roll: number;
   lurch: number;
+  /**
+   * How the car lies on the ground under its wheels (see mounds.ts): nose up (`pitch`) and right
+   * side up (`bank`), as height gained per art px, each with the speed it is swinging at. `climb`
+   * is how fast the ground under it was rising a tick ago, and `hole` the pothole it is in.
+   */
+  pitch: number;
+  pitchV: number;
+  bank: number;
+  bankV: number;
+  climb: number;
+  hole: number;
   bounce: number;
   wheelDist: number;
   wrecked: boolean;
