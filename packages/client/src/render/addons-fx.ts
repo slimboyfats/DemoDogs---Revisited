@@ -184,8 +184,9 @@ export class AddonFx {
     const q = H.quality;
     for (const c of H.w.cars) {
       if (c.wrecked) continue;
-      const cs = Math.cos(c.h);
-      const sn = Math.sin(c.h);
+      // (laid out at the size the car is just now)
+      const cs = Math.cos(c.h) * c.size;
+      const sn = Math.sin(c.h) * c.size;
       const body = H.freshBody(c);
       if (c.fit.jet) {
         // fire out of the nozzle, and a tail of smoke left behind
