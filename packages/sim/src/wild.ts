@@ -180,8 +180,8 @@ export function fireWild(w: World, c: Car, d: WeaponManifest, at?: [number, numb
     }
     case 'fissure':
       W.cracks.push({
-        x: c.x + cs * (c.def.body.halfLength + 4),
-        y: c.y + sn * (c.def.body.halfLength + 4),
+        x: c.x + cs * (c.def.body.halfLength + 4) * c.size,
+        y: c.y + sn * (c.def.body.halfLength + 4) * c.size,
         h: c.h,
         left: d.range ?? 240,
         next: 0,
@@ -192,7 +192,7 @@ export function fireWild(w: World, c: Car, d: WeaponManifest, at?: [number, numb
       break;
     case 'pit': {
       const r = d.radius ?? 15;
-      const back = c.def.body.halfLength + r + 5;
+      const back = c.def.body.halfLength * c.size + r + 5;
       const [x, y] = at ?? w.keepInside(c.x - cs * back, c.y - sn * back, r);
       const life = d.life ?? 14;
       W.holes.push({ x, y, r, t: life, age: 0, owner: c.index, def: d, cd: [] });

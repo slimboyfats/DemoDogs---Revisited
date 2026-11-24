@@ -457,13 +457,13 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
         gun,
         c.x + cs * lx - sn * ly,
         c.y + sn * lx + cs * ly,
-        z + 0.5 + c.bounce + gz,
+        z + (0.5 + c.bounce + gz) * up,
         c.h,
         alpha,
       );
     }
   }
-  queueGuards(R, art, w, fx, c, alpha);
+  queueGuards(R, art, w, fx, c, alpha, k, up, z);
   if (c.springs && c.hop >= 0 && c.hop < 0.4) {
     const coil = art.prop(c.springs.def.id);
     const cz = Math.max(0, z - 4 * k);

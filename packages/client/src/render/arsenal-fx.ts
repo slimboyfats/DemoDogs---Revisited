@@ -383,8 +383,8 @@ export function arsenalTick(fx: Effects, w: World, S: Sound): void {
     // both back wheels are alight
     const cs = Math.cos(c.h);
     const sn = Math.sin(c.h);
-    const hl = c.def.body.halfLength;
-    const hw = c.def.body.halfWidth;
+    const hl = c.def.body.halfLength * c.size;
+    const hw = c.def.body.halfWidth * c.size;
     for (const side of [-1, 1])
       fx.flame(
         c.x - cs * hl * 0.8 - sn * side * hw,

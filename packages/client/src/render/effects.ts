@@ -1495,7 +1495,7 @@ export class Effects {
             const last = this.gunShots.get(c.index);
             const side = last ? -last.side : 1;
             this.gunShots.set(c.index, { side, at: w.time });
-            const off = side * this.art.gunMount(c.def.id, c.def.body)[1];
+            const off = side * this.art.gunMount(c.def.id, c.def.body)[1] * c.size;
             x -= Math.sin(c.h) * off;
             y += Math.cos(c.h) * off;
           }

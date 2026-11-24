@@ -152,8 +152,8 @@ export function throwOrb(w: World, c: Car, d: WeaponManifest, at?: [number, numb
     vy = (at[1] - c.y) / drift;
   }
   w.arms.orbs.push({
-    x: c.x + cs * (c.def.body.halfLength + 4),
-    y: c.y + sn * (c.def.body.halfLength + 4),
+    x: c.x + cs * (c.def.body.halfLength + 4) * c.size,
+    y: c.y + sn * (c.def.body.halfLength + 4) * c.size,
     vx,
     vy,
     drift,

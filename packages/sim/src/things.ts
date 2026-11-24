@@ -381,8 +381,9 @@ export function shoot(w: World, c: Car): void {
   c.gunCd = g.cooldown;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const x = c.x + cs * (c.def.body.halfLength + 1);
-  const y = c.y + sn * (c.def.body.halfLength + 1);
+  const nose = (c.def.body.halfLength + 1) * c.size;
+  const x = c.x + cs * nose;
+  const y = c.y + sn * nose;
   const hit = w.rng.next() < 0.8;
   // a hit lands on the near side of the target, a miss flies on past it
   const off = w.rng.range(-3, 3);

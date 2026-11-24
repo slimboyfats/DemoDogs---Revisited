@@ -106,8 +106,8 @@ export class ShockFx {
         // a lick of charge crawling over the body
         const a = rand(0, TAU);
         const b = a + rand(1, 2.5);
-        const L = c.def.body.halfLength;
-        const W = c.def.body.halfWidth;
+        const L = c.def.body.halfLength * c.size;
+        const W = c.def.body.halfWidth * c.size;
         const z = c.z + rand(3, 7);
         const cs = Math.cos(c.h);
         const sn = Math.sin(c.h);

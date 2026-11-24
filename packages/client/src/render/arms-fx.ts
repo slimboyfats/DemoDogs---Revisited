@@ -385,7 +385,7 @@ export function queueArms(R: StackSink, art: Art, w: World): void {
       on ? art.prop(s.def.id) : art.prop(s.def.id, { minelit: 'black' }),
       x,
       y,
-      c ? c.z + c.def.top.z + 1 : s.flying ? 4 : 0,
+      c ? c.z + (c.def.top.z + 1) * c.size : s.flying ? 4 : 0,
       c ? c.h : Math.atan2(s.vy, s.vx),
     );
   }

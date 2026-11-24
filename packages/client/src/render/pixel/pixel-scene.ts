@@ -239,7 +239,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
       if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
-      const a = c.def.body.halfLength - 1;
+      const a = (c.def.body.halfLength - 1) * c.size;
       L.cone(c.x + Math.cos(c.h) * a, c.y + Math.sin(c.h) * a, c.h);
     };
     lamp(w.player);
