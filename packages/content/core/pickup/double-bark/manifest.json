@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Double bark",
-    "description": "A second barrel for the nose gun: twice the rate of fire, a longer reach and more rounds.",
+    "description": "A second barrel over each of the nose guns: twice the rate of fire, a longer reach and more rounds.",
     "since": "core@0.4.0"
   },
   "kind": "barrel",
