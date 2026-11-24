@@ -319,17 +319,13 @@ export const MOWN = 30;
  * daisy here and there and nothing else. No ledges, no bare earth, no shade.
  */
 export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
-  // stripes run up the map, leaning a little, every other one the lighter green
-  const stripe = Math.floor((x + y * 0.35) / MOWN) & 1;
-  const C = stripe ? G2 : G;
-  let k = 1;
+  // broad soft patches of lighter and deeper green, in three flat steps, and over them the
+  // mower's stripes, only just there
+  const a = F.big.at(x, y) * 0.6 + F.mid.at(x, y) * 0.4;
+  const C = a > 0.6 ? G2 : G;
+  let k = a < 0.36 ? 0.94 : 1;
+  if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.025;
   const h = hash2(x, y, F.seed);
-  // a blade two pixels tall, dark or light, in loose clumps
-  const blade = hash2(x, y >> 1, F.seed + 5);
-  if (F.small.at(x, y) > 0.62) {
-    if (blade < 0.07) k = 0.9;
-    else if (blade > 0.95) k = 1.08;
-  }
   if (h > 0.9988) {
     // a daisy
     out[0] = 250;
@@ -431,7 +427,7 @@ export function measure(
  * so a bend's kerbs begin a little before it and run a little past: 0 where there is no kerb
  * (a straight, a gentle curve), about 1 through a hairpin.
  */
-export function bends(T: Line): Float32Array {
+export function bends(T: Line, from = KERB_FROM): Float32Array {
   const TAU = Math.PI * 2;
   const span = Math.max(2, Math.round(28 / T.step));
   const raw = new Float32Array(T.n);
@@ -450,7 +446,7 @@ export function bends(T: Line): Float32Array {
       const v = raw[(i + d + T.n) % T.n]!;
       if (Math.abs(v) > Math.abs(best)) best = v;
     }
-    out[i] = Math.abs(best) >= KERB_FROM ? best : 0;
+    out[i] = Math.abs(best) >= from ? best : 0;
   }
   // kerbs come in whole runs: a gap too short to notice is closed, a run too short to be a bend
   // is taken up
@@ -495,6 +491,7 @@ export interface RoadPaint {
 /** A toy road's tarmac, and how wide its kerbs are. */
 const TOY_TAR: Rgb = [0x62, 0x66, 0x72];
 const TOY_KERB = 8;
+const TOY_KERB_FROM = 0.08;
 
 /** How far past the road's edge the verge can reach. */
 export const VERGE = 36;
@@ -513,7 +510,8 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
   const G = rgbOf(colors.ground);
   const D = rgbOf(colors.dirt);
   const N = measure(T, w, h, half + VERGE, o.use);
-  const B = bends(T);
+  // (a toy road is kerbed round every corner, however gentle)
+  const B = bends(T, toy ? TOY_KERB_FROM : KERB_FROM);
   const seed = F.seed;
   // tarmac takes a little of the country's colour, so every venue's road is its own grey
   const TAR: Rgb = [

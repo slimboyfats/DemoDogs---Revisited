@@ -354,6 +354,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.viewport(0, 0, W, H);
     // a toy venue has a warm afternoon sun of its own
     this.sky.warm = coloursOf(w.venue.colors).style === 'toy' ? 1 : 0;
+    this.groundLayer!.calm = this.sky.warm;
     const bg = hex(w.venue.colors.outside);
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
     gl.clearDepth(1);

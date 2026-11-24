@@ -3,11 +3,20 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Ball launcher",
-    "description": "A great yellow machine for throwing tennis balls, on a slab beside the road. It takes a lot to bring down.",
+    "description": "A great yellow machine on a slab beside the road. Every few seconds it lobs a giant tennis ball down the road; you can see where each one will land. It takes a lot to bring down.",
     "since": "core@0.9.0"
   },
   "body": "static",
-  "radius": 9,
+  "radius": 7,
   "made": "material.steel",
-  "integrity": 220
+  "integrity": 220,
+  "thrower": {
+    "ball": "prop.tennis-ball",
+    "every": 2.6,
+    "reach": [90, 270],
+    "spread": 0.16,
+    "apex": 36,
+    "mouth": [12.5, 14],
+    "pool": 6
+  }
 }

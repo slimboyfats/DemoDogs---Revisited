@@ -1675,6 +1675,17 @@ export class Effects {
             this.text(e.x, e.y, e.label, big ? '#ff6a3d' : '#ffd24a', big);
           }
           break;
+        case 'throw':
+          // a thump of smoke out of the mouth
+          for (let n = 0; n < 5; n++)
+            this.puff(
+              e.x + (Math.random() - 0.5) * 4,
+              e.y + (Math.random() - 0.5) * 4,
+              e.z,
+              'smoke',
+            );
+          if (Math.hypot(e.x - w.player.x, e.y - w.player.y) < 420) S.boing(0.7);
+          break;
         case 'pad':
         case 'critter':
         case 'trample':

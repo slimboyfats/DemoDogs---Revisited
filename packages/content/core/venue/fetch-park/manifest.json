@@ -30,10 +30,10 @@
     ]
   },
   "colors": {
-    "ground": "#58b03c",
-    "ground2": "#66bf46",
+    "ground": "#6aa83a",
+    "ground2": "#7cb944",
     "dirt": "#9a7a4c",
-    "outside": "#2f6a2a",
+    "outside": "#3f7a2c",
     "terrain": "grass",
     "style": "toy"
   },
@@ -51,6 +51,18 @@
       "items": [
         {
           "prop": "prop.hedge",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "trackside",
+      "offset": 40,
+      "run": [200, 420],
+      "gap": [40, 110],
+      "items": [
+        {
+          "prop": "prop.plank-fence",
           "weight": 1
         }
       ]
@@ -89,32 +101,12 @@
     },
     {
       "rule": "along",
-      "at": [0.13],
+      "at": [0.12],
       "items": [
         {
           "prop": "prop.ball-launcher",
-          "lane": -1.75,
-          "rot": 1.2
-        },
-        {
-          "prop": "prop.tennis-ball",
-          "lane": -0.5,
-          "ahead": 60
-        },
-        {
-          "prop": "prop.tennis-ball",
-          "lane": 0.3,
-          "ahead": 120
-        },
-        {
-          "prop": "prop.tennis-ball",
-          "lane": -0.15,
-          "ahead": 190
-        },
-        {
-          "prop": "prop.tennis-ball",
-          "lane": 0.6,
-          "ahead": 250
+          "lane": -1.55,
+          "rot": 0.34
         }
       ]
     },
@@ -147,20 +139,16 @@
     },
     {
       "rule": "scatter",
-      "perArea": 6e-5,
+      "perArea": 9e-5,
       "clear": 40,
       "items": [
         {
-          "prop": "prop.tree",
+          "prop": "prop.toy-tree",
           "weight": 1
         },
         {
-          "prop": "prop.maple",
-          "weight": 0.3
-        },
-        {
           "prop": "prop.bush",
-          "weight": 0.8
+          "weight": 0.35
         }
       ]
     },
@@ -172,6 +160,41 @@
         {
           "prop": "prop.flowers",
           "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.toy-oak",
+          "x": -170,
+          "y": -40,
+          "rot": 0
+        },
+        {
+          "prop": "prop.pond",
+          "x": 190,
+          "y": 10,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 330,
+          "y": -90,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -330,
+          "y": 60,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 60,
+          "y": 120,
+          "rot": 0
         }
       ]
     }
