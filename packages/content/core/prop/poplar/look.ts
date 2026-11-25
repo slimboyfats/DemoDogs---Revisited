@@ -1,7 +1,9 @@
 import type { LookModule } from '@demodogs/shared';
-import { noise3 } from '../../../src/shapes';
+import { band } from '../../../src/shapes';
 
-/** A poplar: a thin trunk inside a tall, tight column of leaves that tapers to a point. */
+const TONES = ['leaf', 'leaf2', 'leaf3'] as const;
+
+/** A poplar, plain and bold: a short trunk under a tall smooth column of leaves, round at the top. */
 const look: LookModule = {
   id: 'prop.poplar',
   look: {
@@ -13,16 +15,11 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         const r = Math.hypot(x, y);
-        if (z < 24 && r < 1.05 - z * 0.03) return 'bark';
+        if (z < 5 && r < 1.2) return x + y > 0.5 ? 'bark2' : 'bark';
         if (z < 4) return null;
         const k = (z - 4) / 25.5;
-        const reach = 4.3 * Math.min(1, k * 5) * (1 - k * k * 0.92);
-        const a = Math.atan2(y, x);
-        const rag =
-          (noise3(x * 1.6, y * 1.6, z * 0.9 + 3) - 0.5) * 1.6 + Math.sin(a * 6 + z * 0.9) * 0.4;
-        if (r > reach + rag) return null;
-        const tone = noise3(x * 1.1, y * 1.1 + 8, z * 0.6) + k * 0.2;
-        return tone > 0.72 ? 'leaf3' : tone > 0.48 ? 'leaf2' : 'leaf';
+        if (r > 4.6 * Math.min(1, k * 6) ** 0.5 * Math.sqrt(Math.max(0, 1 - k ** 2.6))) return null;
+        return TONES[band(x, y, z, 4, 28)];
       },
     },
   },

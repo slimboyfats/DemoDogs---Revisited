@@ -1,7 +1,14 @@
 import type { LookModule } from '@demodogs/shared';
-import { noise3 } from '../../../src/shapes';
+import { band, hash3, puffs, type Puff } from '../../../src/shapes';
 
-/** A low round bush of three leafy mounds on a few twigs. */
+const MOUNDS: readonly Puff[] = [
+  [0.4, 0.2, 2.6, 3.6],
+  [-2.4, 1.2, 2.2, 2.7],
+  [1.8, -2.2, 2.2, 2.6],
+];
+const TONES = ['leaf', 'leaf2', 'leaf3'] as const;
+
+/** A low round bush: three smooth mounds of leaves with a few red berries. */
 const look: LookModule = {
   id: 'prop.bush',
   look: {
@@ -12,19 +19,11 @@ const look: LookModule = {
       layers: 7,
       smooth: true,
       fn: (x, y, z) => {
-        if (z < 1.6) return Math.hypot(x, y) < 0.8 ? 'bark2' : null;
-        const rag = (noise3(x * 1.7, y * 1.7, z * 1.7) - 0.5) * 2;
-        let inside = -9;
-        for (const [cx, cy, cz, cr] of [
-          [0.6, 0.4, 3.4, 3.4],
-          [-2.2, 1.2, 2.9, 2.6],
-          [1.4, -2.2, 2.8, 2.5],
-        ] as const)
-          inside = Math.max(inside, cr + rag - Math.hypot(x - cx, y - cy, (z - cz) * 1.3));
+        const inside = puffs(x, y, z, MOUNDS, 1.15);
         if (inside < 0) return null;
-        if (inside < 1 && noise3(x * 2.4 + 2, y * 2.4, z * 2.4) > 0.72) return null;
-        const tone = noise3(x * 1.0, y * 1.0 + 5, z * 1.0) + (z - 3) * 0.06;
-        return tone > 0.62 ? 'leaf3' : tone > 0.42 ? 'leaf2' : 'leaf';
+        if (inside < 0.9 && z > 2 && hash3(Math.floor(x), Math.floor(y), Math.floor(z)) > 0.93)
+          return 'tail';
+        return TONES[band(x, y, z, 0.5, 5.5)];
       },
     },
   },
