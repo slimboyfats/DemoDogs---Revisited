@@ -643,6 +643,31 @@ function dressVerge(g: CanvasRenderingContext2D, w: World, r: () => number, F: F
       y += Math.sin(a) * flat;
     }
   };
+  if (groundMode.bright) {
+    // the bright look keeps the country plain: a few rocks, and flowers in drifts on a lawn
+    const few = (w.w * w.h) / 16000;
+    for (let i = 0; i < few; i++) {
+      const x = Math.floor(r() * w.w);
+      const y = Math.floor(r() * w.h);
+      if (off(x, y, 8))
+        rock(x, y, 3 + Math.floor(r() * 3), terrain === 'snow' ? '#f4f7fb' : undefined);
+    }
+    if (terrain !== 'grass') return;
+    const BOLD = ['#ffffff', '#ffd426', '#ff5f8a', '#c48cff', '#ffffff', '#ffd426'];
+    const drifts = (w.w * w.h) / 420;
+    for (let i = 0; i < drifts; i++) {
+      const x = Math.floor(r() * w.w);
+      const y = Math.floor(r() * w.h);
+      if (!off(x, y, 3)) continue;
+      const m = F.mid.at(x, y);
+      if (m < 0.56) continue;
+      const kind = Math.floor(F.big.at(x, y) * 2.99 + Math.floor(m * 40)) % BOLD.length;
+      g.fillStyle = BOLD[r() < 0.85 ? kind : Math.floor(r() * BOLD.length)]!;
+      for (let q = 0; q < 2 + r() * 4; q++)
+        g.fillRect(x + Math.round((r() - 0.5) * 12), y + Math.round((r() - 0.5) * 9), 1, 1);
+    }
+    return;
+  }
   // the big things, a few to a screen
   const big = (w.w * w.h) / 5200;
   for (let i = 0; i < big; i++) {

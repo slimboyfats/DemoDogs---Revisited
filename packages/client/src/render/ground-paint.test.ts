@@ -106,4 +106,18 @@ describe('bakePaint', () => {
     expect(bowl).not.toContain('#define ROAD');
     expect(paintGlsl({ ...P, terrain: 'snow' })).toContain('#define TERRAIN 3');
   });
+
+  it('paints the bright look when asked, and says a lighter colour for it', () => {
+    expect(paintGlsl(P)).not.toContain('#define BRIGHT\n');
+    expect(paintGlsl({ ...P, bright: true })).toContain('#define BRIGHT\n');
+    const sum = (c: readonly number[]) => c[0]! + c[1]! + c[2]!;
+    for (const [x, y] of [
+      [3, 3],
+      [w.w / 2, w.h / 2],
+    ] as const) {
+      const lit = toneAt(w, { ...P, bright: true }, F, x, y);
+      expect(sum(lit)).toBeGreaterThan(sum(toneAt(w, P, F, x, y)));
+      expect(lit.every((v) => v >= 0 && v <= 255)).toBe(true);
+    }
+  });
 });

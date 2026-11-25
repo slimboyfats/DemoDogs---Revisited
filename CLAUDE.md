@@ -122,6 +122,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it, so a change to how the ground looks is made in both. A venue's `colors.terrain` (grass, dirt, sand, snow,
   gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are optional and looks only, so the sim never
   reads them. Light is smooth and shadows soft-edged; `?light=bands` is the older dithered look.
+- **The look is bright and plain** (`groundMode.bright`, `#define BRIGHT` in the painter): sunny colours, a mown
+  lawn, one flat pale tarmac with whole white lines, bold kerbs, no grit or specks, lighter shadows. The worn, gritty
+  look it replaced is `?look=classic`; a change to the ground is made for both.
 - **The ground has height** where a venue has `relief` (hills under the road, sheer terraces beyond it): `Relief`
   (sim/relief.ts) is the one height map. The sim uses it for slopes, faces a car cannot climb and edges it drives off;
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map

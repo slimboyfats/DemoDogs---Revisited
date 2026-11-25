@@ -490,17 +490,30 @@ vec3 groundPaint(vec2 wp, ivec2 gc) {
   float boff = (q - 1.0) * lean;
   float bh = hash2(gc.x, gc.y, u_seed + 31);
   if (boff > 6.0) c = u_cOut * (0.86 + F.g * 0.28 + (bh < 0.08 ? 0.12 : 0.0));
+#ifdef BRIGHT
+  else if (boff > -3.0) c = sunny(u_cD) * (boff > 3.0 ? 0.8 : 0.94);
+#else
   else if (boff > -3.0) c = u_cD * (boff > 3.0 ? 0.7 : 1.0) * (bh < 0.1 ? 0.8 : bh > 0.9 ? 1.15 : 1.0);
+#endif
   else {
     float ang = atan(ev.y, ev.x);
     float ring = floor(q * lean * 0.5);
     float streak = hash2(int(ring), int(floor(ang * (6.0 + ring * 0.35))), u_seed + 32);
     float band = max(0.0, 1.0 - abs(q - 0.66) / 0.3);
     float bm = 1.0;
+#ifdef BRIGHT
+    // (the bright look: one broad worn ring, no churn)
+    bm -= 0.05 * step(0.5, band);
+#else
     if (streak < 0.3) bm -= 0.13 * band;
     else if (streak > 0.86) bm += 0.08 * band;
+#endif
     float blit = (-ev.x - ev.y) / (q * 1.4142 + 0.0001);
+#ifdef BRIGHT
+    if (boff > -(5.0 + 16.0 * max(0.0, blit))) bm *= 0.82;
+#else
     if (boff > -(5.0 + 16.0 * max(0.0, blit))) bm *= 0.64;
+#endif
     c *= bm;
   }
 #endif

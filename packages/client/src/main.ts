@@ -116,7 +116,7 @@ const rendererName = useCanvas ? 'canvas' : 'pixel';
 // has it read them from a map painted one texel to the art pixel, as the canvas renderer does
 groundMode.shader = !useCanvas && params.get('ground') !== 'map';
 // ?look=bright: sunny colours, plain clean roads, a mown lawn
-groundMode.bright = params.get('look') === 'bright';
+groundMode.bright = groundMode.shader && params.get('look') !== 'classic';
 const hud = new Hud(octx);
 const speedo = new Speedo(safeStore());
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);
