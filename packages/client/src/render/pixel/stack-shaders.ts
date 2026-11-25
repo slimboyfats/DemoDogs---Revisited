@@ -152,6 +152,14 @@ float puddle(vec2 wp) {
 // A headlamp's beam on the ground at wp: 0 outside it, brightest near the lamp.
 uniform vec4 u_cone[${MAX_CONES}];  // x, y, unit direction
 uniform int u_ccount;
+uniform vec2 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, and that ground's
+uniform float u_lgz[${MAX_LIGHTS}]; // how high the ground stands under each point light
+// How much of a light that stands \`from\` high reaches a spot \`at\` high and \`d\` away: all of
+// it along a slope or a ramp, none of it over a sheer edge either way (the side of a raised
+// road, the ground under a car in the air or up on a deck).
+float level(float from, float at, float d) {
+  return 1.0 - clamp((abs(from - at) - 4.0 - min(d * 0.3, 9.0)) / 4.0, 0.0, 1.0);
+}
 float beam(vec2 wp, vec4 c) {
   vec2 d = wp - c.xy;
   float along = dot(d, c.zw);
@@ -338,6 +346,7 @@ void main() {
     // (and none of it reaches what something stands in front of)
     float open = lightOpen(v_world.xy, v_world.z, p.xy, 3.0, clamp(p.z * 0.35, 4.0, 12.0), b);
     if (open <= 0.0) continue;
+    f *= level(u_lgz[i], v_gz, length(to.xy));
     float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
     // (and metal throws a fire's or a blast's light back in a hard glint)
@@ -348,6 +357,9 @@ void main() {
     if (i >= u_ccount) break;
     vec4 p = u_cone[i];
     float f = beam(v_world.xy, p);
+    if (f <= 0.0) continue;
+    // (what is as high as the lamp or higher is level with it: a deck under a car on it)
+    f *= level(u_coneh[i].y + u_coneh[i].x, v_gz + min(v_world.z, u_coneh[i].x), distance(v_world.xy, p.xy));
     if (f <= 0.0) continue;
     if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
@@ -592,6 +604,11 @@ void main() {
   }
   // Fire and lamps light the ground, in the same hard dithered bands as they light the stacks.
   vec3 l = vec3(0.0);
+  // (how high this ground stands: a light does not reach over a sheer edge)
+  float gh = 0.0;
+#ifdef RELIEF
+  gh = shift * u_hk;
+#endif
   float b = bayer(ci);
   for (int n = 0; n < ${MAX_LIGHTS}; n++) {
     if (n >= u_lcount) break;
@@ -599,6 +616,7 @@ void main() {
     float dist = length(wp - lp.xy);
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
+    e *= level(u_lgz[n], gh, dist);
     l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, lp.xy, 3.0, clamp(lp.z * 0.35, 4.0, 12.0), b);
   }
@@ -606,6 +624,7 @@ void main() {
     if (n >= u_ccount) break;
     float f = beam(wp, u_cone[n]);
     if (f <= 0.0) continue;
+    f *= level(u_coneh[n].y + u_coneh[n].x, gh, distance(wp, u_cone[n].xy));
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }

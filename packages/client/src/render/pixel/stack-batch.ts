@@ -61,6 +61,8 @@ const NAMES = [
   'u_lmbox',
   'u_lmk',
   'u_ccount',
+  'u_coneh',
+  'u_lgz',
   'u_grow',
   'u_relief',
   'u_rgrid',
@@ -621,6 +623,8 @@ export class StackBatch {
     gl.uniform3f(u.u_grow, g?.[0] ?? 0, g?.[1] ?? 0, g?.[2] ?? -1);
     gl.uniform4fv(u.u_cone, lights.cones);
     gl.uniform1i(u.u_ccount, lights.coneCount);
+    gl.uniform2fv(u.u_coneh, lights.coneh);
+    gl.uniform1fv(u.u_lgz, lights.gz);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, lit ? this.atlas.auxTex : tex);
     gl.uniform1i(u.u_aux, 1);

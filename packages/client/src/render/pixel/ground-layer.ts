@@ -46,6 +46,8 @@ export class GroundLayer {
       'u_wet',
       'u_cone',
       'u_ccount',
+      'u_coneh',
+      'u_lgz',
       'u_map',
       'u_depth',
       'u_hk',
@@ -101,6 +103,8 @@ export class GroundLayer {
     gl.uniform3fv(u.u_lcol, lights.col);
     gl.uniform4fv(u.u_cone, lights.cones);
     gl.uniform1i(u.u_ccount, lights.coneCount);
+    gl.uniform2fv(u.u_coneh, lights.coneh);
+    gl.uniform1fv(u.u_lgz, lights.gz);
     if (sky) gl.uniform3fv(u.u_amb, sky.ground);
     else gl.uniform3f(u.u_amb, 1, 1, 1);
     gl.uniform1f(u.u_snow, sky?.snow ?? 0);

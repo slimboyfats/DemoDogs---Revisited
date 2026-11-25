@@ -97,6 +97,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
    * is round them, and shade where the sky is shut out. Off: the sun's one bounce, as before.
    */
   traced = true;
+  /** Lights keep to their own level: none over a raised road's edge or under a car in the air. */
+  lightLevels = true;
   /** Flames are light of their own in the traced light (FLAME LIGHT when paused, `?flames=0`). */
   flames = true;
   /** Show the traced light's field itself in place of the ground (to look at it). */
@@ -279,6 +281,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side,
         c.h,
+        c.z,
       );
     };
     lamp(w.player);
@@ -444,6 +447,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
 
     this.gatherLights(w, fx);
+    // (how high the ground stands under each light: none of it goes over a raised road's edge)
+    {
+      const L = this.lights;
+      if (!this.lightLevels) {
+        L.gz.fill(0);
+        L.coneh.fill(0);
+      } else {
+        for (let i = 0; i < L.count; i++) L.gz[i] = this.rise(L.pos[i * 4]!, L.pos[i * 4 + 1]!);
+        for (let i = 0; i < L.coneCount; i++)
+          L.coneh[i * 2 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
+      }
+    }
     const lit = this.lights.count + this.lights.coneCount > 0;
     // (by day it is wanted for the light things throw back on the ground beside them)
     const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;

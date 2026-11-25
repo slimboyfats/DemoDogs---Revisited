@@ -21,15 +21,23 @@ export class Lights {
   /** Headlamp beams: x, y, and the unit direction they shine in. */
   readonly cones = new Float32Array(MAX_CONES * 4);
   coneCount = 0;
+  /** For each beam: how high its lamp is over the ground under it, and how high that ground stands. */
+  readonly coneh = new Float32Array(MAX_CONES * 2);
+  /** How high the ground stands under each point light. */
+  readonly gz = new Float32Array(MAX_LIGHTS);
 
   clear(): void {
     this.count = 0;
     this.coneCount = 0;
   }
 
-  /** Add a headlamp beam from (x, y) along `heading`; past the limit it is left out. */
-  cone(x: number, y: number, heading: number): void {
+  /**
+   * Add a headlamp beam from (x, y) along `heading`, its lamp `z` over the ground there (a car in
+   * the air, or up on a deck); past the limit it is left out.
+   */
+  cone(x: number, y: number, heading: number, z = 0): void {
     if (this.coneCount >= MAX_CONES) return;
+    this.coneh[this.coneCount * 2] = z;
     const o = this.coneCount++ * 4;
     this.cones[o] = x;
     this.cones[o + 1] = y;

@@ -51,6 +51,8 @@ export class BeamHaze {
         'u_map',
         'u_cone',
         'u_ccount',
+        'u_coneh',
+        'u_hk',
         'u_lm',
         'u_lmbox',
         'u_lmk',
@@ -68,6 +70,8 @@ export class BeamHaze {
     gl.uniform1f(u.u_thick!, thick);
     gl.uniform4fv(u.u_cone!, lights.cones);
     gl.uniform1i(u.u_ccount!, lights.coneCount);
+    gl.uniform2fv(u.u_coneh!, lights.coneh);
+    gl.uniform1f(u.u_hk!, v.ys / (v.zk / v.scale));
     gl.uniform1f(u.u_lmk!, block ? 1 : 0);
     if (relief.map) {
       gl.activeTexture(gl.TEXTURE1);
@@ -95,6 +99,7 @@ in vec2 v_uv;
 uniform vec2 u_size;
 uniform float u_fine;
 uniform float u_thick;
+uniform float u_hk;   // height for one row of the map's shift
 #ifdef RELIEF
 uniform sampler2D u_map;
 #endif
@@ -107,10 +112,17 @@ void main() {
 #endif
   float b = bayer(ivec2(cell));
   float haze = 0.0;
+  // (how high this ground stands: a shaft does not carry on over a sheer edge)
+  float gh = 0.0;
+#ifdef RELIEF
+  gh = floor(texelFetch(u_map, ivec2(clamp(floor((cell + 0.5) / u_fine), vec2(0.0), u_size - 1.0)), 0).r * 255.0 + 0.5) * u_hk;
+#endif
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
     float f = beam(at, u_cone[n]);
     if (f <= 0.0) continue;
+    // (a lamp well off the ground, a car in the air, throws no shaft along it)
+    f *= level(u_coneh[n].y + u_coneh[n].x, gh, distance(at, u_cone[n].xy));
     // (the air at a lamp's own height: what stands taller than that cuts the shaft)
     haze += f * lightOpen(at, 4.0, u_cone[n].xy, 5.0, 4.0, b);
   }
