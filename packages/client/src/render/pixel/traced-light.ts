@@ -59,7 +59,8 @@ export const reach = (probe = PROBE, count = LEVELS): number => (probe * (4 ** c
  *
  * - the light thrown back by what stands lit (a red wall in the sun, a car in a headlamp's beam)
  *   on everything round it, in its own colour, and stopped by whatever is in between;
- * - the light of what glows (tail lights, lit windows, lamp heads), with no light made for it;
+ * - the light of what glows (tail lights, lit windows, lamp heads), with no light made for it,
+ *   and of what burns (a blast's ball, a fire, a rocket's flame), carried as far as the rays go;
  * - how much of the sky the spot sees, so the foot of a wall and the gap between two buildings
  *   are in shade of their own.
  *
@@ -311,12 +312,24 @@ void main() {
   vec2 m = texelFetch(u_lm, t, 0).rg;
   vec3 e = texelFetch(u_em, t, 0).rgb * u_glow * 7.0;
   float solid = 0.0;
+  vec2 wp = u_lmbox.xy + gl_FragCoord.xy;
+  // a blast's ball, a fire, a rocket's flame: each of the frame's lights is itself a ball of
+  // light in the scene, so its light is carried as far as the rays go, round corners it can
+  // see round and on to everything that faces it, and stopped by what stands in its way
+  for (int i = 0; i < ${MAX_LIGHTS}; i++) {
+    if (i >= u_lcount) break;
+    vec4 p = u_lpos[i];
+    float ball = clamp(p.z * 0.3, 3.0, 18.0);
+    float d = distance(wp, p.xy);
+    if (d >= ball) continue;
+    float f = 1.0 - d / ball;
+    e += u_lcol[i] * p.w * f * (2.0 - f) * 2.2;
+  }
   if (m.r > 0.0) {
     float top = m.r * 255.0 - 1.0;
     float under = (1.0 - m.g) * 255.0;
     if (top >= 5.0 && under <= 4.0) solid = min(1.0, top / ${TALL.toFixed(1)});
     if (top >= 3.0) {
-      vec2 wp = u_lmbox.xy + gl_FragCoord.xy;
       vec3 lit = vec3(0.0);
       float away = length(u_shear.xy);
       if (u_sunc.r + u_sunc.g + u_sunc.b > 0.0 && away > 0.001)
@@ -389,7 +402,7 @@ void main() {
     }
     float high = s.a * ${TALL.toFixed(1)};
     float far = r * ${CLIMB.toFixed(2)} + 1.0;
-    rad += open * s.rgb * min(1.0, max(high, 4.0) / far);
+    rad += open * s.rgb * min(1.0, max(high, 8.0) / far);
     open *= 1.0 - min(1.0, high / far);
   }
   if (u_m.z > 0.5) {

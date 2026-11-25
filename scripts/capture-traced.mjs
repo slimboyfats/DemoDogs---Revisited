@@ -29,6 +29,7 @@ const base = `http://localhost:${server.address().port}/`;
 const out = process.argv[2] ?? 'captures/traced';
 const venues = process.argv.slice(3);
 if (!venues.length) venues.push('knotwood', 'brickworks');
+if (venues[0] === 'none') venues.length = 0;
 await mkdir(out, { recursive: true });
 
 const browser = await chromium.launch();
@@ -107,6 +108,50 @@ for (const venue of venues) {
     return { off, on };
   });
   console.log(`${venue}: frame ${cost.off.toFixed(1)} ms without, ${cost.on.toFixed(1)} ms with`);
+  await page.close();
+}
+// a blast on the test range, among the parked cars and props, by day and at night
+{
+  const page = await browser.newPage({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+    deviceScaleFactor: 2,
+  });
+  page.on('pageerror', (e) => errors.push(String(e)));
+  await page.goto(`${base}?dev&car=mutt`);
+  await page.waitForTimeout(3000);
+  for (const sky of ['day', 'night']) {
+    await page.evaluate((name) => {
+      const dd = window.__dd;
+      const s = dd.session;
+      dd.dev.setRate(3);
+      document.getElementById('devPanel').style.visibility = 'hidden';
+      Object.defineProperty(s.fx, 'quality', { get: () => 1, set() {}, configurable: true });
+      dd.sky.set(name, true);
+      dd.sky.state.snap();
+      const P = s.world.player;
+      dd.dev.use(P.x + 34, P.y - 8, 'blast');
+      for (let i = 0; i < 7; i++) s.step();
+      s.advance = () => false;
+    }, sky);
+    for (const mode of ['on', 'off', 'field']) {
+      await page.evaluate((m) => {
+        const sc = window.__dd.sky.scene;
+        sc.traced = m !== 'off';
+        sc.showTraced = m === 'field';
+      }, mode);
+      await page.waitForTimeout(1500);
+      await page.screenshot({ path: `${out}/blast-${sky}-${mode}.png` });
+      console.log(`${out}/blast-${sky}-${mode}.png`);
+    }
+    // let the race run on, and the smoke clear, before the next sky
+    await page.evaluate(() => {
+      const s = window.__dd.session;
+      delete s.advance;
+      for (let i = 0; i < 400; i++) s.step();
+    });
+  }
   await page.close();
 }
 if (errors.length) {
