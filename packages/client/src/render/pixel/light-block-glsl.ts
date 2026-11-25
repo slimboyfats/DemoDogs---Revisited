@@ -1,5 +1,5 @@
 /** The steps a light's ray is walked in, at most. */
-export const RAY_STEPS = 14;
+export const RAY_STEPS = 22;
 
 /**
  * GLSL: is the way open from the point `p` (ground x, y) standing `z` above the ground to a
@@ -28,7 +28,12 @@ float lightOpen(vec2 p, float z, vec2 l, float lz, float near, float jit) {
     if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) continue;
     vec2 m = textureLod(u_lm, uv, 0.0).rg;
     float h = mix(z, lz, t);
-    if (m.r > 0.0 && h <= m.r * 255.0 + 0.5 && h >= (1.0 - m.g) * 255.0 - 0.5) return 0.0;
+    // (what hovers a little off the ground, a pickup, shades it as if it stood there: only a
+    // deck or a bough well overhead lets a low light pass under it)
+    float under = (1.0 - m.g) * 255.0;
+    float top = m.r * 255.0;
+    // (a thing with some body to it, that is: a bit of wreckage in the air throws no streak)
+    if (m.r > 0.0 && h <= top + 0.5 && ((under < 8.0 && top - under >= 4.0) || h >= under - 0.5)) return 0.0;
   }
   return 1.0;
 }`;
