@@ -3,10 +3,10 @@ import { hash3 } from '../../../src/shapes';
 
 /** The greens of a toy tree's crown, from deep in its shade to its sunlit top. */
 export const TOY_LEAVES: Record<string, Tones> = {
-  toyleaf: ['#356f22', '#4a8a2a', '#62a434'],
-  toyleaf2: ['#648f28', '#82ae34', '#a6cc46'],
-  toyleaf3: ['#22521c', '#2f6822', '#3f7e2a'],
-  toyleaf4: ['#143a16', '#1c4a1a', '#285c20'],
+  toyleaf: ['#23803a', '#2c9a46', '#44b85a'],
+  toyleaf2: ['#2c9446', '#38ac52', '#58c868'],
+  toyleaf3: ['#1c6c32', '#24843c', '#38a04e'],
+  toyleaf4: ['#165a2a', '#1c6c32', '#2c8a42'],
   toybark: ['#4e3018', '#6e4622', '#8a5a2c'],
   toybark2: ['#3a220c', '#523216', '#6a4420'],
 };
@@ -66,9 +66,8 @@ export function toyTree(
       }
       if (deep === 1) return null;
       // (each lump sunlit on top and dark underneath, so the crown reads as many of them)
-      // (in clean bands with only a little give: the light does the rest of the shading)
-      const t = lit + (hash3(qx + 40, qy + 40, qz) - 0.5) * 0.14;
-      return t > 0.5 ? 'toyleaf2' : t > -0.05 ? 'toyleaf' : t > -0.6 ? 'toyleaf3' : 'toyleaf4';
+      // (one clean green, a shade deeper under each lump: the light does the rest)
+      return lit > 0.55 ? 'toyleaf2' : lit > -0.45 ? 'toyleaf' : 'toyleaf3';
     },
   };
 }

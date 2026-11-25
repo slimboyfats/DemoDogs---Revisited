@@ -2009,7 +2009,7 @@ export class Effects {
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       // on a toy venue every car at speed trails a little cloud, as toy cars do
-      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.3)
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.1)
         this.puff(
           c.x - cs * 11 * c.size + rand(-3, 3),
           c.y - sn * 11 * c.size + rand(-3, 3),
