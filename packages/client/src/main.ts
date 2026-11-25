@@ -560,6 +560,25 @@ for (const r of document.querySelectorAll<HTMLInputElement>('.sunTurn'))
 for (const r of document.querySelectorAll<HTMLInputElement>('.sunLong'))
   r.oninput = () => setSun(sunHand.turn, Number(r.value) / 2);
 
+// flames as light of their own (the traced light takes its shape from them): on unless turned
+// off here or with ?flames=0, for a phone that is short of breath
+let flameLight = (params.get('flames') ?? safeStore()?.getItem('dd.flames') ?? '1') !== '0';
+function showFlames(): void {
+  if (scene instanceof PixelScene) scene.flames = flameLight;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.flameBtn'))
+    b.textContent = `FLAME LIGHT ${flameLight ? 'ON' : 'OFF'}`;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.flameBtn'))
+  b.onclick = () => {
+    flameLight = !flameLight;
+    try {
+      safeStore()?.setItem('dd.flames', flameLight ? '1' : '0');
+    } catch {
+      // (a full or locked store: it stays as set for this visit)
+    }
+    showFlames();
+  };
+
 /** The SPEEDOMETER buttons and size slider say what is picked; the HUD draws it so. */
 function showSpeedo(): void {
   const S = speedo.setup;
@@ -1113,6 +1132,7 @@ function boot(): void {
     if (params.get('gi') === '0') scene.traced = false;
     if (params.get('gi') === 'show') scene.showTraced = true;
     showSun();
+    showFlames();
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);

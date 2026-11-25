@@ -358,6 +358,59 @@ in vec4 v_color;
 out vec4 o;
 void main() { o = v_color; }`;
 
+/**
+ * The flames into the light map's third target (see LightBlock), for the traced light: each hot
+ * fire cell and each cell of a bang is a spot of its own colour on the ground under it, so the
+ * light a fire throws has the shape of its flames and moves as they twirl. Alpha stays 0: that
+ * is what tells a flame from a lamp's texel there. The other two targets get nothing (the map
+ * is blended by MAX).
+ */
+const EMIT_VS = `#version 300 es
+precision highp float;
+layout(location = 0) in vec4 a0;
+layout(location = 1) in vec4 a1;
+layout(location = 2) in vec4 a2;
+uniform vec4 u_box;
+uniform vec3 u_fire[13];
+uniform vec3 u_bang[9];
+out vec3 v_color;
+float stepT(float t, float th, float n) { return min(1.0, floor(t * n + th) / n); }
+void main() {
+  gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+  gl_PointSize = 0.0;
+  v_color = vec3(0.0);
+  float life = a1.w;
+  float age = a1.z;
+  if (age >= life) return;
+  int k = int(a2.y + 0.5);
+  float t = age / life;
+  float th = a2.x;
+  vec3 c;
+  if (k == ${CKind.Fire}) {
+    float s = stepT(t, th, 12.0);
+    if (s >= 0.42 || th >= (t < 0.45 ? 1.0 : (1.0 - t) / 0.55)) return;
+    c = u_fire[int(floor(s * 12.0 + 0.5))];
+  } else if (k == ${CKind.Bang}) {
+    if (th >= (t < 0.7 ? 1.0 : (1.0 - t) / 0.3)) return;
+    c = u_bang[int(floor(stepT(max(0.0, t - 0.3) / 0.7, th, 8.0) * 8.0 + 0.5))];
+  } else return;
+  gl_Position = vec4((a0.xy - u_box.xy) / u_box.zw * 2.0 - 1.0, 0.0, 1.0);
+  gl_PointSize = 2.0;
+  v_color = c;
+}`;
+
+const EMIT_FS = `#version 300 es
+precision mediump float;
+in vec3 v_color;
+layout(location = 0) out vec4 o;
+layout(location = 1) out vec4 oc;
+layout(location = 2) out vec4 oe;
+void main() {
+  o = vec4(0.0);
+  oc = vec4(0.0);
+  oe = vec4(v_color, 0.0);
+}`;
+
 const UPDATE_U = [
   'u_dt',
   'u_aged',
@@ -423,6 +476,8 @@ export class GasGpu {
   private readonly drw: WebGLProgram;
   private readonly uu;
   private readonly du;
+  private readonly emt: WebGLProgram;
+  private readonly eu;
   /** Which buffer holds the current state. */
   private cur = 0;
   private head = 0;
@@ -468,6 +523,8 @@ export class GasGpu {
     this.drw = compile(gl, DRAW_VS, DRAW_FS);
     this.uu = uniforms(gl, this.upd, UPDATE_U);
     this.du = uniforms(gl, this.drw, DRAW_U);
+    this.emt = compile(gl, EMIT_VS, EMIT_FS);
+    this.eu = uniforms(gl, this.emt, ['u_box', 'u_fire', 'u_bang'] as const);
     const init = this.dead();
     this.bufs = [0, 1].map(() => {
       const b = gl.createBuffer();
@@ -690,6 +747,24 @@ export class GasGpu {
     gl.uniform3fv(u.u_lcol, lights.col);
     if (amb) gl.uniform3fv(u.u_amb, amb);
     else gl.uniform3f(u.u_amb, 1, 1, 1);
+    gl.bindVertexArray(this.vaos[this.cur]!);
+    for (let i = 0; i < runs.length; i += 2) gl.drawArrays(gl.POINTS, runs[i]!, runs[i + 1]!);
+    gl.bindVertexArray(null);
+  }
+
+  /**
+   * The flames as light, into the light map bound to be drawn into (`box`: the ground it
+   * covers, x, y, width, height). Between LightBlock's `begin` and `end`.
+   */
+  emit(box: Float32Array): void {
+    this.upload();
+    const runs = this.runs;
+    if (runs.length === 0) return;
+    const gl = this.gl;
+    gl.useProgram(this.emt);
+    gl.uniform4fv(this.eu.u_box, box);
+    gl.uniform3fv(this.eu.u_fire, this.fireRamp);
+    gl.uniform3fv(this.eu.u_bang, this.bangRamp);
     gl.bindVertexArray(this.vaos[this.cur]!);
     for (let i = 0; i < runs.length; i += 2) gl.drawArrays(gl.POINTS, runs[i]!, runs[i + 1]!);
     gl.bindVertexArray(null);

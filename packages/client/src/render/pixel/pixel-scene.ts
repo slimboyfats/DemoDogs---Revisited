@@ -97,6 +97,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
    * is round them, and shade where the sky is shut out. Off: the sun's one bounce, as before.
    */
   traced = true;
+  /** Flames are light of their own in the traced light (FLAME LIGHT when paused, `?flames=0`). */
+  flames = true;
   /** Show the traced light's field itself in place of the ground (to look at it). */
   showTraced = false;
   private field: TracedLight | null = null;
@@ -455,6 +457,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       const block = (this.block ??= new LightBlock(gl));
       block.begin(view);
       this.stacks.block(block);
+      // (the flames too, as light: the traced light takes its shape from them)
+      if (this.traced && this.flames && fx.quality > 0.6) this.gas?.emit(block.box);
       block.end(null, W, H);
       sky.block = block;
       // (the rays are walked while nothing else is bound: the frame's own target comes after)

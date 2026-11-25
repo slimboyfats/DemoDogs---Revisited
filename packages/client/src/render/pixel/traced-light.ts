@@ -18,6 +18,8 @@ const CLIMB = 0.55;
  * what stands in its way throws a long shadow.
  */
 const LOW = 0.05;
+/** How bright a flame's cell is in the traced scene. */
+const FLAME = 2.4;
 /** Heights are kept in a byte's worth of this many art px. */
 const TALL = 64;
 
@@ -315,7 +317,10 @@ float faces(ivec2 t, float top, vec2 to) {
 void main() {
   ivec2 t = ivec2(gl_FragCoord.xy);
   vec2 m = texelFetch(u_lm, t, 0).rg;
-  vec3 e = texelFetch(u_em, t, 0).rgb * u_glow * 7.0;
+  // (a lamp's texel has its strength as alpha and glows as the sky's dark lets it; a flame has
+  // none, and burns as bright by day)
+  vec4 g = texelFetch(u_em, t, 0);
+  vec3 e = g.rgb * (g.a > 0.0 ? u_glow * 7.0 : ${FLAME.toFixed(1)});
   float solid = 0.0;
   vec2 wp = u_lmbox.xy + gl_FragCoord.xy;
   // a blast's ball, a fire, a rocket's flame: each of the frame's lights is itself a ball of
