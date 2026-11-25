@@ -240,5 +240,6 @@
   "prop.barrier",
   "prop.armco",
   "prop.gantry-leg",
-  "prop.gantry-beam"
+  "prop.gantry-beam",
+  "prop.road-block"
 ]
