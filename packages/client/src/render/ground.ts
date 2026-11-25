@@ -63,16 +63,14 @@ export function markGround(g: Ground, x: number, y: number, r: number): void {
 }
 
 /**
- * The look asked for from outside the venue (`?look=toy`, `?look=classic`, the LOOK switch):
- * `toy` draws any venue tidy, `classic` draws a toy venue the old way, null leaves it to the venue.
+ * The look asked for from outside the venue (`?look=classic`, `?look=toy`): every venue is drawn
+ * the playful way, clean and bright with toy trucks, unless `classic` asks for the old look.
  */
 export const lookChoice: { style: 'toy' | 'classic' | null } = { style: null };
 
-/** A venue's ground colours with the look that was asked for. */
+/** A venue's ground colours with the look it is drawn in. */
 export function coloursOf<T extends GroundColors>(c: T): T {
-  if (lookChoice.style === 'toy') return { ...c, style: 'toy' };
-  if (lookChoice.style === 'classic') return { ...c, style: undefined };
-  return c;
+  return { ...c, style: lookChoice.style === 'classic' ? undefined : 'toy' };
 }
 
 /**
