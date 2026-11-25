@@ -139,6 +139,7 @@ export function makeCar(
     hitCd: 0,
     scrapeCd: 0,
     has: { front: true, rear: true, top: true },
+    lamps: 0,
     aiSpeed: 1,
     smokeT: 0,
     blade: null,

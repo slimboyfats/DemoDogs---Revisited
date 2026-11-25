@@ -28,7 +28,7 @@ layout(location = 1) in float a_rot;
 layout(location = 2) in vec4 a_uv;    // slice texel x, y, width, height
 layout(location = 3) in float a_alpha;
 layout(location = 4) in float a_res;   // texels per art px
-layout(location = 5) in float a_tint;  // 0, or 1 + 0xRRGGBB: drawn in that one colour, a shade behind
+layout(location = 5) in float a_tint;  // 0; 1 + 0xRRGGBB: drawn in that one colour, a shade behind; -1 - bits: a car, and its dark lamps
 layout(location = 6) in vec2 a_tilt;   // the slice lies sloped: height gained per art px east and south
 uniform vec2 u_view;
 uniform vec2 u_origin;   // device px of the world origin on the ground (whole pixels)
@@ -247,6 +247,18 @@ void main() {
     }
     lamp = float(a.y & 7) / 7.0;
     gloss = (a.y >> 3) & 3;
+    if (lamp > 0.0 && v_tint < -1.5) {
+      // a car's lamp that is smashed or blinking: which corner of the slice it is at says which
+      vec2 at = (floor(v_tex) + 0.5) / v_uv.zw - 0.5;
+      if (abs(at.x) > 0.2) {
+        int bit = (at.x > 0.0 ? 1 : 4) * (at.y > 0.0 ? 2 : 1);
+        if (((int(-v_tint - 0.5)) & bit) != 0) {
+          lamp = 0.0;
+          gloss = 0;
+          c.rgb *= 0.3;
+        }
+      }
+    }
     sky = (a.y & 128) != 0;
   }
   // a slice that lies sloped (a ramp's face, a car on a hill) faces the way the slope does
