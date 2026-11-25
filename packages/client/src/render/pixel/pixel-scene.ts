@@ -294,7 +294,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side,
         // (the beam lies as the car does: tipped to a side, it swings towards the low one; nose
         // up, it leaves the ground; nose down, it falls short)
-        c.h - c.bank * 0.9,
+        c.h - c.bank * 0.35,
         c.z,
         c.pitch * 1.5,
         // (two lamps, a beam from each, unless one of them is out)
