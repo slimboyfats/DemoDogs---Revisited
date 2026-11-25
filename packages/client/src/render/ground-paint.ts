@@ -21,6 +21,8 @@ import {
  * runs, and which stretch of it every part of the map is nearest to.
  */
 export interface GroundPaint {
+  /** The bright look: sunny colours, plain clean roads, a mown lawn. */
+  bright: boolean;
   w: number;
   h: number;
   seed: number;
@@ -99,7 +101,7 @@ export function nearest(
 }
 
 /** Gather what the shader paints a world's ground from. */
-export function bakePaint(w: World, F: Fields): GroundPaint {
+export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
   const V = w.venue;
   const C = V.colors;
   const T = w.track;
@@ -199,6 +201,7 @@ export function bakePaint(w: World, F: Fields): GroundPaint {
     };
   }
   return {
+    bright,
     w: w.w,
     h: w.h,
     seed: V.seed,
@@ -217,6 +220,18 @@ export function bakePaint(w: World, F: Fields): GroundPaint {
 
 /** About what colour the ground is at (x, y): the road's own, or the country's. */
 export function toneAt(w: World, P: GroundPaint, F: Fields, x: number, y: number): Rgb {
+  const out = plainTone(w, P, F, x, y);
+  if (P.bright) {
+    // as the painter's `sunny` does: more colour, more light
+    const l = out[0] * 0.3 + out[1] * 0.55 + out[2] * 0.15;
+    for (let c = 0; c < 3; c++)
+      out[c] = Math.min(255, Math.max(0, l + (out[c]! - l) * 1.35) * 1.3 + 14);
+    if (P.style !== 'dirt' && w.track && !w.offroad(x, y)) out.splice(0, 3, 122, 126, 140);
+  }
+  return out;
+}
+
+function plainTone(w: World, P: GroundPaint, F: Fields, x: number, y: number): Rgb {
   const out: Rgb = [0, 0, 0];
   if (w.track && !w.offroad(x, y)) {
     if (P.style === 'dirt')

@@ -115,6 +115,8 @@ const rendererName = useCanvas ? 'canvas' : 'pixel';
 // the pixel engine paints the country and the road itself, as fine as the screen is; ?ground=map
 // has it read them from a map painted one texel to the art pixel, as the canvas renderer does
 groundMode.shader = !useCanvas && params.get('ground') !== 'map';
+// ?look=bright: sunny colours, plain clean roads, a mown lawn
+groundMode.bright = groundMode.shader && params.get('look') !== 'classic';
 const hud = new Hud(octx);
 const speedo = new Speedo(safeStore());
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);

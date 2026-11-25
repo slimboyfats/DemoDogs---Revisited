@@ -604,7 +604,12 @@ void main() {
   float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
   float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
   float m = grass * g + tar * t + dirt * pebble * grit;
+#ifdef BRIGHT
+  // (the bright look is plain: only a breath of grain)
+  c = clamp(c * (1.0 + (k * m - 1.0) * 0.25), 0.0, 1.0);
+#else
   c = clamp(c * k * m, 0.0, 1.0);
+#endif
   vec2 wp = (cell + 0.5) / u_fine;
 #ifdef RELIEF
   wp.y += shift;

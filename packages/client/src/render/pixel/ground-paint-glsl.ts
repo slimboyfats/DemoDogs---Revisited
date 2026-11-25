@@ -39,6 +39,7 @@ export function paintGlsl(P: GroundPaint): string {
   const f = (n: number): string => (Number.isInteger(n) ? n.toFixed(1) : String(n));
   return `
 #define TERRAIN ${TERRAINS.indexOf(P.terrain)}
+${P.bright ? '#define BRIGHT' : ''}
 ${P.style === 'dirt' ? '#define DIRT_ROAD' : ''}
 ${L ? '#define ROAD' : ''}
 ${L?.lanes ? '#define LANES' : ''}
@@ -70,7 +71,29 @@ vec4 fieldsAt(vec2 p) {
   return texture(u_pf, (p / ${f(Field.Q)} + 0.5) / u_pfSize);
 }
 // One cell of open country (terrain.ts terrainPixel). p is the art pixel's corner, as there.
+// A colour made sunnier: lighter, and more itself.
+vec3 sunny(vec3 c) {
+  float l = dot(c, vec3(0.3, 0.55, 0.15));
+  return clamp(l + (c - l) * 1.35, 0.0, 255.0) * 1.3 + 14.0;
+}
 vec3 country(vec2 p, ivec2 gc, vec4 F) {
+#ifdef BRIGHT
+  // The bright look: the country in three plain tones with clean edges, mown in broad stripes
+  // where it is grass, a few bare patches, and no more.
+  vec3 bc = sunny(F.r < 0.38 ? u_cG * 0.93 : F.r < 0.7 ? u_cG : u_cG2);
+#if TERRAIN == 0
+  bc *= mod(floor((p.x + p.y) / 26.0), 2.0) < 0.5 ? 1.0 : 1.06;
+#endif
+#if TERRAIN == 5
+  float bS = 24.0;
+  float bsy = floor(p.y / bS);
+  float box = p.x + (mod(bsy, 2.0) > 0.5 ? bS * 0.5 : 0.0);
+  if (box - floor(box / bS) * bS < 0.7 || p.y - bsy * bS < 0.7) bc *= 0.86;
+#else
+  if (F.b > 0.86) bc = sunny(u_cD);
+#endif
+  return bc * (1.0 + clamp((fieldsAt(p + 3.0).r - fieldsAt(p - 3.0).r) * 2.0, -0.07, 0.07));
+#endif
   float h = hash2(gc.x, gc.y, u_seed);
   float a = F.r + (h - 0.5) * 0.06;
   float b = F.g;
@@ -242,6 +265,40 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
 #endif
   vec3 col;
   float m = 1.0;
+#ifdef BRIGHT
+  // The bright look: one plain surface, broad whole lines, bold kerbs through every bend and a
+  // tidy verge with a clean edge.
+  if (d <= half_) {
+#ifdef DIRT_ROAD
+    col = sunny((u_cD * 0.75 + u_cG * 0.25) * 0.84);
+    if (abs(d - half_ * 0.44) < 5.0) col *= 1.08;
+    if (d > half_ - 3.0) col *= 0.86;
+#else
+    col = vec3(122.0, 126.0, 140.0);
+    if (d > half_ - 5.6 && d < half_ - 2.6) col = vec3(250.0, 248.0, 238.0);
+    else if (d < 1.5 && mod(al, 30.0) < 15.0 && !lane) col = vec3(250.0, 248.0, 238.0);
+#endif
+  } else if (kerbed && d <= half_ + 7.0) {
+    col = mod(floor(al / 9.0), 2.0) < 0.5 ? vec3(232.0, 60.0, 52.0) : vec3(250.0, 248.0, 240.0);
+    if (d > half_ + 5.6) col *= lit < 0.0 ? 0.7 : 0.9;
+  } else {
+    float from = kerbed ? half_ + 7.0 : half_;
+    float e = d - from;
+    if (e >= 6.0 + mid * 5.0) return;
+#if TERRAIN == 3
+    col = vec3(240.0, 244.0, 250.0);
+#elif TERRAIN == 5
+    col = sunny(u_cG * 1.3);
+#else
+    col = sunny(u_cD);
+#endif
+    if (lit < -0.15 && e < 3.0) col *= 0.78;
+  }
+  if (lane && climb < 1.0 && off < 9.0 && mod(al + off, 30.0) < 2.6 && wide >= 30.0)
+    col = vec3(250.0, 248.0, 238.0);
+  c = col;
+  return;
+#endif
 #ifdef DIRT_ROAD
   if (true) {
     float ext = half_ + (mid - 0.5) * 9.0;
@@ -408,7 +465,11 @@ vec3 groundPaint(vec2 wp, ivec2 gc) {
   // the wilds: the further the country is from the road, the more it sinks into the venue's
   // outside colour, so the track stands out lit and the edges of the map fall away dark
   float far = texture(u_pw, (p / ${f(WILD_Q)} + 0.5) / u_pwSize).r;
+#ifdef BRIGHT
+  c = mix(c, sunny(u_cOut), clamp((far - u_wild.x) / (u_wild.y - u_wild.x), 0.0, 1.0) * 0.25);
+#else
   c = mix(c, u_cOut, clamp((far - u_wild.x) / (u_wild.y - u_wild.x), 0.0, 1.0) * 0.42);
+#endif
 #ifdef GULLY
   uint under = texelFetch(u_pn, ivec2(wp / ${f(NEAR_Q)}), 0).g;
   if (under != 65535u) {
@@ -429,17 +490,30 @@ vec3 groundPaint(vec2 wp, ivec2 gc) {
   float boff = (q - 1.0) * lean;
   float bh = hash2(gc.x, gc.y, u_seed + 31);
   if (boff > 6.0) c = u_cOut * (0.86 + F.g * 0.28 + (bh < 0.08 ? 0.12 : 0.0));
+#ifdef BRIGHT
+  else if (boff > -3.0) c = sunny(u_cD) * (boff > 3.0 ? 0.8 : 0.94);
+#else
   else if (boff > -3.0) c = u_cD * (boff > 3.0 ? 0.7 : 1.0) * (bh < 0.1 ? 0.8 : bh > 0.9 ? 1.15 : 1.0);
+#endif
   else {
     float ang = atan(ev.y, ev.x);
     float ring = floor(q * lean * 0.5);
     float streak = hash2(int(ring), int(floor(ang * (6.0 + ring * 0.35))), u_seed + 32);
     float band = max(0.0, 1.0 - abs(q - 0.66) / 0.3);
     float bm = 1.0;
+#ifdef BRIGHT
+    // (the bright look: one broad worn ring, no churn)
+    bm -= 0.05 * step(0.5, band);
+#else
     if (streak < 0.3) bm -= 0.13 * band;
     else if (streak > 0.86) bm += 0.08 * band;
+#endif
     float blit = (-ev.x - ev.y) / (q * 1.4142 + 0.0001);
+#ifdef BRIGHT
+    if (boff > -(5.0 + 16.0 * max(0.0, blit))) bm *= 0.82;
+#else
     if (boff > -(5.0 + 16.0 * max(0.0, blit))) bm *= 0.64;
+#endif
     c *= bm;
   }
 #endif
