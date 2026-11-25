@@ -7,7 +7,7 @@ import { SUN_BIAS, SUN_GLSL, SUN_TOP } from './sun-glsl';
 export { SUN_BIAS, SUN_GLSL, SUN_TOP };
 
 /** How dark a cast shadow is on the ground. */
-const DARK = 0.36;
+const DARK = 0.6;
 /** The tallest thing whose shadow is sure to be whole when it stands at the edge of the view. */
 const REACH = 130;
 

@@ -44,6 +44,7 @@ export class ShadowLayer {
       'u_fine',
       'u_map',
       'u_deep',
+      'u_only',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -75,8 +76,11 @@ export class ShadowLayer {
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
   }
 
-  /** Draw over the ground; blending must be on (premultiplied). */
-  draw(v: StackView, strength = 1): void {
+  /**
+   * Draw over the ground; blending must be on (premultiplied). `deepOnly`: the cast shadows are
+   * someone else's (the sun's map); draw just the deeper shade beyond a deck's far edge.
+   */
+  draw(v: StackView, strength = 1, deepOnly = false): void {
     const gl = this.gl;
     const u = this.u;
     gl.useProgram(this.prog);
@@ -87,6 +91,7 @@ export class ShadowLayer {
     gl.uniform1f(u.u_fine, fineGrid(v.scale));
     gl.uniform2f(u.u_size, this.map.w, this.map.h);
     gl.uniform1f(u.u_alpha, DARK * strength);
+    gl.uniform1f(u.u_only, deepOnly ? 1 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);

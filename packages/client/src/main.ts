@@ -1033,6 +1033,8 @@ function boot(): void {
     // ?relief=0 draws raised ground flat (the cars still feel it): to compare what it costs
     if (params.get('relief') === '0') scene.raised = false;
     if (params.get('reflect') === '0') scene.reflections = false;
+    // ?shadows=old: tall scenery's baked shadows and ovals under what moves, to compare
+    if (params.get('shadows') === 'old') scene.sunCast = false;
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
