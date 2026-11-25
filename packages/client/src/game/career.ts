@@ -1,5 +1,6 @@
 import { TUNE_MAX } from '@demodogs/shared';
 import { Rng, type Content, type Entrant, type Setup, type Tune, type World } from '@demodogs/sim';
+import { parseCup, type CupRun } from './cups';
 
 /**
  * The career: start in the cheapest car with a little cash, enter four-car knockout races for
@@ -9,7 +10,20 @@ import { Rng, type Content, type Entrant, type Setup, type Tune, type World } fr
  */
 export type TierId = 'easy' | 'medium' | 'hard';
 export type RaceId = TierId | 'final';
-export type Part = keyof Tune;
+/** Upgrades beyond the three the sim tunes: they change how the car comes to the grid (`Setup`). */
+export type GearId = 'nitro' | 'guns' | 'ram';
+export type Gear = Record<GearId, number>;
+export type Part = keyof Tune | GearId;
+export const GEAR: Readonly<Record<GearId, { name: string; blurb: string; step: number }>> = {
+  nitro: { name: 'NITRO', blurb: 'Boost pushes harder.', step: 0.05 },
+  guns: { name: 'GUNS', blurb: 'Half as many rounds again in the bonnet gun.', step: 0.5 },
+  ram: { name: 'RAM BAR', blurb: 'Your rams hurt a fifth more.', step: 0.2 },
+};
+const NO_GEAR: Gear = { nitro: 0, guns: 0, ram: 0 };
+const isGear = (p: Part): p is GearId => p in GEAR;
+/** The level of any upgrade on the car. */
+export const levelOf = (k: Career, part: Part): number =>
+  isGear(part) ? k.gear[part] : k.tune[part];
 export type KitId = 'mines' | 'spikes' | 'fuel' | 'sabotage';
 
 export interface Driver {
@@ -26,6 +40,8 @@ export interface Career {
   cash: number;
   car: string;
   tune: Tune;
+  /** Nitro, guns and ram bar levels, 0 to TUNE_MAX: they go with the car like the tune. */
+  gear: Gear;
   /** The car's health between races, 1 to 100. */
   hp: number;
   /** Owed to the loan shark. */
@@ -43,6 +59,10 @@ export interface Career {
   /** The twelve rivals, strongest first: four to a tier. */
   drivers: Driver[];
   champion: boolean;
+  /** The tournament being run, between its rounds (game/cups.ts). */
+  cup: CupRun | null;
+  /** Tournaments placed in, by id: the best finish, 1 to 3. */
+  trophies: Record<string, number>;
 }
 
 export interface Tier {
@@ -140,6 +160,7 @@ export function newCareer(c: Content, seed: number): Career {
     cash: START_CASH,
     car: shop(c)[0]!.id,
     tune: { engine: 0, tyres: 0, armor: 0 },
+    gear: { ...NO_GEAR },
     hp: 100,
     debt: 0,
     kit: { mines: false, spikes: false, fuel: false, sabotage: false },
@@ -150,6 +171,8 @@ export function newCareer(c: Content, seed: number): Career {
     streak: 0,
     drivers: NAMES.map((name, i) => ({ name, paint: PAINTS[i]!, points: 78 - i * 6 })),
     champion: false,
+    cup: null,
+    trophies: {},
   };
 }
 
@@ -157,16 +180,19 @@ const priceOf = (c: Content, car: string): number => c.car.get(car)?.price ?? 0;
 
 /** What the next level of an upgrade costs on this car, or null at the top level. */
 export function upgradeCost(c: Content, k: Career, part: Part): number | null {
-  const lv = k.tune[part];
+  const lv = levelOf(k, part);
   if (lv >= TUNE_MAX) return null;
   return Math.round(((400 + priceOf(c, k.car) * 0.06) * (lv + 1)) / 50) * 50;
 }
 
 function spentOnTune(c: Content, k: Career): number {
   let sum = 0;
-  for (const part of ['engine', 'tyres', 'armor'] as const)
-    for (let lv = 0; lv < k.tune[part]; lv++)
-      sum += upgradeCost(c, { ...k, tune: { ...k.tune, [part]: lv } }, part)!;
+  const at = (part: Part, lv: number): Career =>
+    isGear(part)
+      ? { ...k, gear: { ...k.gear, [part]: lv } }
+      : { ...k, tune: { ...k.tune, [part]: lv } };
+  for (const part of ['engine', 'tyres', 'armor', 'nitro', 'guns', 'ram'] as const)
+    for (let lv = 0; lv < levelOf(k, part); lv++) sum += upgradeCost(c, at(part, lv), part)!;
   return sum;
 }
 
@@ -207,10 +233,16 @@ export function buyUpgrade(c: Content, k: Career, part: Part): Buy {
   const cost = upgradeCost(c, k, part);
   if (cost === null) return no('Already at the top level.');
   if (cost > k.cash) return no('Not enough cash.');
-  return yes({ ...k, cash: k.cash - cost, tune: { ...k.tune, [part]: k.tune[part] + 1 } });
+  const paid = { ...k, cash: k.cash - cost };
+  return yes(
+    isGear(part)
+      ? { ...paid, gear: { ...k.gear, [part]: k.gear[part] + 1 } }
+      : { ...paid, tune: { ...k.tune, [part]: k.tune[part] + 1 } },
+  );
 }
 
 export function repair(c: Content, k: Career): Buy {
+  if (k.cup?.sealed) return no('No repairs until this tournament is over.');
   const cost = repairCost(c, k);
   if (cost === 0) return no('Nothing to fix.');
   if (cost <= k.cash) return yes({ ...k, cash: k.cash - cost, hp: 100 });
@@ -225,6 +257,7 @@ export function repair(c: Content, k: Career): Buy {
 export function buyCar(c: Content, k: Career, car: string): Buy {
   if (car === k.car) return no('You already drive it.');
   if (!c.car.has(car)) return no('No such car.');
+  if (k.cup) return no('Finish the tournament in the car you entered.');
   const cost = priceOf(c, car) - tradeIn(c, k);
   if (cost > k.cash) return no('Not enough cash.');
   return yes({
@@ -232,6 +265,7 @@ export function buyCar(c: Content, k: Career, car: string): Buy {
     cash: k.cash - cost,
     car,
     tune: { engine: 0, tyres: 0, armor: 0 },
+    gear: { ...NO_GEAR },
     addons: [],
     hp: 100,
   });
@@ -305,7 +339,7 @@ function rivalAddons(c: Content, tier: number, seat: number, i: number): string[
 }
 
 /** The car a rival brings: better cars and more upgrades the higher their tier and seat. */
-function rivalEntry(c: Content, d: Driver, i: number): Entrant {
+export function rivalEntry(c: Content, d: Driver, i: number): Entrant {
   const cars = shop(c);
   const tier = 2 - Math.floor(i / 4);
   const seat = 3 - (i % 4);
@@ -351,16 +385,27 @@ export function raceSetup(c: Content, k: Career, race: RaceId): RaceSetup {
     // sabotage: the quickest one on the grid starts half wrecked
     if (k.kit.sabotage) field[0] = { ...field[0]!, hp: 45 };
   }
-  const mine = [...c.weapon.values()].find((w) => w.kind === 'mine');
-  const player: Setup = {
+  return { race, venue, seed: rng.int(2 ** 31), field, player: playerSetup(c, k) };
+}
+
+/** Your car as it comes to the grid: its tune, its dents, its gear and whatever was bought for the race. */
+export function playerSetup(c: Content, k: Career): Setup {
+  const byId = <T extends { id: string }>(a: T, b: T) => (a.id < b.id ? -1 : 1);
+  const mine = [...c.weapon.values()].sort(byId).find((w) => w.kind === 'mine');
+  const gun = [...c.weapon.values()].sort(byId).find((w) => w.kind === 'gun');
+  const ram = (1 + GEAR.ram.step * k.gear.ram) * (k.kit.spikes ? 1.5 : 1);
+  const fuel = (1 + GEAR.nitro.step * k.gear.nitro) * (k.kit.fuel ? 1.12 : 1);
+  return {
     tune: { ...k.tune },
     hp: k.hp,
-    ...(k.kit.spikes ? { ram: 1.5 } : {}),
-    ...(k.kit.fuel ? { fuel: 1.12 } : {}),
+    ...(ram !== 1 ? { ram } : {}),
+    ...(fuel !== 1 ? { fuel } : {}),
+    ...(k.gear.guns && gun?.ammo
+      ? { rounds: Math.round(gun.ammo * (1 + GEAR.guns.step * k.gear.guns)) }
+      : {}),
     ...(k.kit.mines && mine ? { weapon: { id: mine.id, ammo: 3 } } : {}),
     fit: [...k.addons, ...k.extras].filter((id) => c.pickup.has(id)),
   };
-  return { race, venue, seed: rng.int(2 ** 31), field, player };
 }
 
 /** How a race came out, read off the finished world. */
@@ -378,6 +423,10 @@ export interface Outcome {
   cleared: boolean;
   /** Money picked up off the track. It is kept wherever the car finished, unless it was wrecked. */
   cash?: number;
+  /** The player's time at the flag, if the car got there (s). */
+  time?: number;
+  /** Wrecks by each rival, by name. */
+  wrecksOf?: Record<string, number>;
 }
 
 export interface Payout {
@@ -462,7 +511,23 @@ export function parseCareer(c: Content, json: string | null): Career | null {
       Array.isArray(v)
         ? v.filter((id): id is string => typeof id === 'string' && c.pickup.has(id))
         : [];
-    return { ...k, addons: ids(k.addons), extras: ids(k.extras) };
+    const lv = (n: unknown): number =>
+      typeof n === 'number' && Number.isFinite(n)
+        ? Math.max(0, Math.min(TUNE_MAX, Math.floor(n)))
+        : 0;
+    const g = (k.gear ?? {}) as Partial<Gear>;
+    const trophies: Record<string, number> = {};
+    for (const [id, place] of Object.entries(k.trophies ?? {}))
+      if (place === 1 || place === 2 || place === 3) trophies[id] = place;
+    return {
+      ...k,
+      addons: ids(k.addons),
+      extras: ids(k.extras),
+      gear: { nitro: lv(g.nitro), guns: lv(g.guns), ram: lv(g.ram) },
+      // a tournament saved half run is kept only if it still makes sense (cups.ts checks it)
+      cup: parseCup(k, k.cup),
+      trophies,
+    };
   } catch {
     return null;
   }
@@ -480,6 +545,8 @@ export function readOutcome(w: World): Outcome {
     wrecks: P.wrecks,
     cleared: rivals.length > 0 && rivals.every((c) => c.wrecked),
     cash: P.cash,
+    ...(P.finished && !P.wrecked ? { time: P.finishTime } : {}),
+    wrecksOf: Object.fromEntries(rivals.map((c) => [c.name, c.wrecks])),
   };
 }
 
