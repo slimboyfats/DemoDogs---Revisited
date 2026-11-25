@@ -577,9 +577,9 @@ export class Cells {
           const s = stepT(t, th, 6);
           const c = this.rgb[i]!;
           // fresh smoke is thick: two cells across until it starts to thin
-          // (a toy venue's dust is soft balls that swell as they drift)
+          // (a toy venue's dust is fat cubes that swell as they drift)
           if (FX_CELL > 0) {
-            normal(x, y, z, t < 0.4 ? 2 : 3, shade(c, s < 0.34 ? 0.94 : 1), 1, Shape.Disc);
+            normal(x, y, z, t < 0.4 ? 2 : 3, shade(c, s < 0.34 ? 0.94 : 1), 1, Shape.Rect);
             continue;
           }
           normal(

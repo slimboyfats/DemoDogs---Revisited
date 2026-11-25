@@ -46,6 +46,7 @@ export class Art {
   wheels: Strip[];
   /** Texels to the art pixel that cars are built at (see `chunky`). */
   private carDetail = CAR_DETAIL;
+  private toyCars = false;
   readonly pickup: Strip;
   readonly plank: Strip;
   /** A decoy thrown out for rockets to chase. */
@@ -93,7 +94,7 @@ export class Art {
     const key = `${id}|${x.toFixed(1)}|${y.toFixed(1)}`;
     let h = this.heights.get(key);
     if (h === undefined) {
-      const B = this.look(id, 'car').body;
+      const B = this.carBody(id);
       h = 0;
       for (let z = B.layers; z > 0; z -= 0.25)
         if (B.fn(x, y, B.smooth ? z - 0.125 : Math.floor(z - 0.125))) {
@@ -111,7 +112,7 @@ export class Art {
   carRoof(id: string): number {
     let x = this.roofs.get(id);
     if (x === undefined) {
-      const B = this.look(id, 'car').body;
+      const B = this.carBody(id);
       let top = 0;
       let from = 0;
       let to = 0;
@@ -218,15 +219,22 @@ export class Art {
   }
 
   /**
-   * Cars built of big cubes, half as fine as usual (a toy venue), or as fine as ever. Cars built
-   * the other way are forgotten, so call it before a race's cars are drawn.
+   * Cars drawn as their toy trucks (a toy venue), or as themselves. Cars built the other way are
+   * forgotten, so call it before a race's cars are drawn.
    */
   chunky(on: boolean): void {
-    const d = on ? CAR_DETAIL / 2 : CAR_DETAIL;
-    if (d === this.carDetail) return;
-    this.carDetail = d;
+    if (on === this.toyCars) return;
+    this.toyCars = on;
     this.cars.clear();
-    this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, d));
+    this.heights.clear();
+    this.roofs.clear();
+    this.gunMounts.clear();
+  }
+
+  /** The shape a car is drawn in: its toy truck on a toy venue, if it has one. */
+  private carBody(id: string): Part {
+    const L = this.look(id, 'car');
+    return (this.toyCars && L.toy) || L.body;
   }
 
   car(id: string, paint: string): CarArt {
@@ -244,7 +252,7 @@ export class Art {
         paint2: tones(scale(paint, 0.68)),
       };
       a = {
-        body: this.make(L.body, m, this.carDetail),
+        body: this.make(this.carBody(id), m, this.carDetail),
         top: this.make(L.top, m, this.carDetail),
         bumper: this.make(kit.BUMPER, m, this.carDetail),
         chunk: this.make(kit.CHUNK, m),

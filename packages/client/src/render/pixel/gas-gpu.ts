@@ -278,13 +278,13 @@ uniform int u_pass;
 uniform vec3 u_fire[13];
 uniform vec3 u_bang[9];
 uniform vec3 u_hot;
-uniform float u_toy; // 1 on a toy venue: fat round lumps, and no glow
+uniform float u_toy; // 1 on a toy venue: fat cubes, and no glow
 uniform int u_lcount;
 uniform vec4 u_lpos[${MAX_LIGHTS}];
 uniform vec3 u_lcol[${MAX_LIGHTS}];
 uniform vec3 u_amb; // the sky's light on smoke and fog (1 by day)
 out vec4 v_color;
-out float v_round; // 0 a square cell, 1 a ball of dust lit from above, 2 a lump of fire
+out float v_round; // 0 a flat cell, 1 a cube of dust lit from above, 2 a cube of fire
 float stepT(float t, float th, float n) { return min(1.0, floor(t * n + th) / n); }
 vec3 rgbOf(float c) {
   float r = floor(c / 65536.0);
@@ -315,7 +315,7 @@ void main() {
     vec3 own = rgbOf(a2.z);
     c = min(vec3(1.0), own * (s < 0.34 ? (own.r > 0.815 ? 0.9 : 0.55) : s < 0.67 ? 1.0 : 1.45));
     if (u_toy > 0.5) {
-      // a toy venue's dust is a heap of soft balls that swell as they drift
+      // a toy venue's dust is a heap of fat cubes that swell as they drift
       c = min(vec3(1.0), own * (s < 0.34 ? 0.94 : s < 0.67 ? 1.0 : 1.07));
       n = 2.0 + floor(min(1.0, t * 2.5) * 2.0 + th);
       v_round = 1.0;
@@ -393,14 +393,13 @@ in vec4 v_color;
 in float v_round;
 out vec4 o;
 void main() {
-  if (v_round < 0.5) { o = v_color; return; }
+  if (v_round < 0.5) {
+    o = v_color;
+    return;
+  }
+  // a cube seen from a little above: a light top face over a darker front; fire's is fainter
   vec2 q = gl_PointCoord - 0.5;
-  float d = dot(q, q);
-  if (d > 0.25) discard;
-  // a ball in hard bands: dust is lit from above with shade beneath, fire is darker at its rim
-  float k = v_round < 1.5
-    ? (q.y < -0.14 ? 1.1 : q.y > 0.2 ? 0.84 : 1.0)
-    : (d > 0.13 ? 0.86 : 1.0);
+  float k = v_round < 1.5 ? (q.y < -0.12 ? 1.08 : 0.88) : (q.y < -0.12 ? 1.06 : 0.94);
   o = vec4(min(vec3(1.0), v_color.rgb * k), v_color.a);
 }`;
 

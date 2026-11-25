@@ -26,6 +26,8 @@ export type Tones = readonly [string, string, string];
 export interface CarLook {
   kind: 'car';
   body: Part;
+  /** The same car as a toy truck, drawn in its place on a toy venue (render/art.ts `chunky`). */
+  toy?: Part;
   /** The roof piece (light bar, rack, spoiler) that can be knocked off. */
   top: Part;
 }

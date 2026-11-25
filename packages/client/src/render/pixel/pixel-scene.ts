@@ -361,7 +361,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
-    if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
+    // (a toy venue is seen like a miniature: soft focus towards the top and bottom of the screen)
+    const blur = FX_CELL > 0 ? H * 0.0075 : 0;
+    const post = lenses.length > 0 || blur > 0;
+    if (post) (this.lens ??= new LensPass(gl)).begin(W, H);
 
     gl.viewport(0, 0, W, H);
     // a toy venue has a warm afternoon sun of its own
@@ -448,7 +451,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
+    if (post) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys, blur);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {

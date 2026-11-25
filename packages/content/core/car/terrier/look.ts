@@ -1,5 +1,6 @@
 import type { LookModule } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
+import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** A small hatchback: a stubby bonnet and a tall glasshouse that runs right to the tail. */
@@ -41,6 +42,19 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: body },
+    toy: {
+      ...CAR_CELL,
+      smooth: true,
+      fn: toyTruck({
+        a: 10,
+        b: 5.3,
+        well: 2.9,
+        axles: [6.2, -6.2],
+        hood: 4.6,
+        nose: 3.8,
+        cab: { x0: -9.3, x1: 4, roof: 7.4, rake: 1.6, rakeR: 1.2 },
+      }),
+    },
     // a roof rack: two rails and four bars
     top: {
       w: 9,

@@ -369,8 +369,8 @@ function over(s: StaticProp, strip: Strip, lift: number, P: Car): boolean {
 }
 
 /** Toy wheels: the same wheel drawn this much bigger, set this far further out (art px). */
-const TOY_WHEEL = 1.55;
-const TOY_TRACK = 1.1;
+const TOY_WHEEL = 1.45;
+const TOY_TRACK = 1.3;
 /** How far a toy car's body rides up on its big wheels (art px). */
 const TOY_RIDE = 1.7;
 const bigWheels = new WeakMap<Strip, Strip>();

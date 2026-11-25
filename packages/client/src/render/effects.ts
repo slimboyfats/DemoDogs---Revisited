@@ -440,7 +440,7 @@ export class Effects {
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
-    // (a toy venue has no black smoke: a wreck smokes warm grey, in the same soft balls as dust)
+    // (a toy venue has no black smoke: a wreck smokes warm grey, in the same fat cubes as dust)
     if (coloursOf(this.w.venue.colors).style === 'toy')
       rgb = rgb === SOOT ? 0x8c8076 : rgb === HAZE ? 0xb9b0a4 : rgb;
     const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
