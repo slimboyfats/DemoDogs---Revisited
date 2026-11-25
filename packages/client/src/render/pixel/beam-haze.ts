@@ -125,7 +125,7 @@ void main() {
     float far = distance(at, u_cone[n].xy);
     f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
     // (the air at a lamp's own height: what stands taller than that cuts the shaft)
-    haze += f * lightOpen(at, 4.0, u_cone[n].xy, 5.0, 4.0, b);
+    haze += f * lightOpen(at, 4.0, u_cone[n].xy + vec2(0.0, coneLift(u_coneh[n].w)), 5.0, 4.0 + coneLift(u_coneh[n].w), b);
   }
   float e = lround(min(1.0, haze) * u_thick, 5.0, b);
   if (e <= 0.0) discard;

@@ -47,9 +47,11 @@ layout(location = 3) in float a_alpha;
 layout(location = 4) in float a_res;
 layout(location = 5) in float a_tint;
 layout(location = 6) in vec2 a_tilt;
+layout(location = 7) in float a_air;
 uniform vec4 u_lmbox;
 out vec2 v_tex;
 out float v_high;
+flat out float v_air;
 flat out vec4 v_uv;
 void main() {
   int id = gl_VertexID % 6;
@@ -58,6 +60,7 @@ void main() {
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   v_high = max(0.0, a_pos.z + dot(r, a_tilt));
+  v_air = a_air;
   vec2 g = (a_pos.xy + r - u_lmbox.xy) / u_lmbox.zw;
   gl_Position = vec4(g * 2.0 - 1.0, 0.0, 1.0);
   // an outline copy blocks nothing, nor does what has all but faded away
@@ -77,6 +80,7 @@ precision highp float;
 precision highp int;
 in vec2 v_tex;
 in float v_high;
+flat in float v_air;
 flat in vec4 v_uv;
 uniform highp sampler2D u_atlas;
 uniform highp sampler2D u_aux;
@@ -98,7 +102,9 @@ void main() {
     c = vec3(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255)) / 255.0;
   }
   float h = min(255.0, v_high + 1.0) / 255.0;
-  o = vec4(h, 1.0 - min(255.0, v_high) / 255.0, 0.0, 1.0);
+  // (a thing in a jump is as if it stood on the ground under it: a light does not pass under a
+  // car in the air, it falls on it, and the car throws its shadow)
+  o = vec4(h, 1.0 - clamp(v_high - v_air, 0.0, 255.0) / 255.0, 0.0, 1.0);
   oc = vec4(c, h);
   oe = vec4(c * lamp, lamp);
 }`;
