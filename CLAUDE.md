@@ -103,6 +103,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Moving parts are bones in the look** (`rig` in shared/looks.ts; `rigLook` in content/src/rigs.ts builds the whole
   look from the bare part and its bones). They are for show only: the client moves them (render/bones.ts) from the
   clock, the wind and where the cars are, and the sim never knows. A hurt thing is drawn whole and stops.
+- **A piece of a stack can have a finish of its own** (`Finish` in shared/looks.ts: matte, paint, metal, chrome,
+  glass, glow). A shape function returns `finished('paintr', 'metal')`, or a part is wrapped in `withFinish` /
+  `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
+  `GLOSS` and `GLOWS` lists say. Looks only: the client reads it when it builds the strip (`shineOf`).
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

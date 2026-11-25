@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { assembled, restFrames, rolled, type Bone, type Part } from './looks';
+import {
+  assembled,
+  finishBox,
+  finished,
+  finishOf,
+  restFrames,
+  rolled,
+  withFinish,
+  type Bone,
+  type Part,
+} from './looks';
 
 /** A bar along y, one art pixel thick, in the middle of a 2 x 9 x 9 box. */
 const bar: Part = {
@@ -59,5 +69,35 @@ describe('restFrames and assembled', () => {
     expect(whole.fn(0, 5, 11.5)).toBe('vane');
     expect(whole.fn(5, 0, 11.5)).toBeNull();
     expect(whole.fn(2.9, 0, 11)).toBeNull();
+  });
+});
+
+describe('finishes', () => {
+  const slab: Part = { w: 4, h: 4, layers: 2, fn: (x) => (x < 0 ? 'paint' : 'wood') };
+
+  it('names a material with a finish and takes it apart again', () => {
+    expect(finished('paintr', 'metal')).toBe('paintr@metal');
+    expect(finishOf('paintr@metal')).toEqual({ material: 'paintr', finish: 'metal' });
+    expect(finishOf('paintr')).toEqual({ material: 'paintr' });
+    // a new finish takes the old one's place; one nobody knows is left off
+    expect(finished('paintr@metal', 'glow')).toBe('paintr@glow');
+    expect(finishOf('paintr@velvet')).toEqual({ material: 'paintr' });
+  });
+
+  it('lays a finish on the voxels picked, by where they are or what they are', () => {
+    const p = withFinish(slab, (_x, _y, _z, m) => (m === 'paint' ? 'metal' : null));
+    expect(p.fn(-1, 0, 0)).toBe('paint@metal');
+    expect(p.fn(1, 0, 0)).toBe('wood');
+    expect(p.w).toBe(4);
+  });
+
+  it('makes one piece of a stack metal: everything inside a box', () => {
+    const p = finishBox(slab, [0, -1, 0, 2, 1, 1], 'chrome');
+    expect(p.fn(1, 0, 0)).toBe('wood@chrome');
+    expect(p.fn(1, 1.5, 0)).toBe('wood');
+    expect(p.fn(-1, 0, 0)).toBe('paint');
+    // nothing is made where there was nothing
+    const hollow = finishBox({ ...slab, fn: () => null }, [-2, -2, 0, 2, 2, 2], 'metal');
+    expect(hollow.fn(0, 0, 0)).toBeNull();
   });
 });

@@ -20,6 +20,74 @@ export interface Part {
   smooth?: boolean;
 }
 
+/**
+ * How a piece takes the light, whatever colour it is painted:
+ *  - matte: dull, no shine at all (cloth, rubber, raw wood);
+ *  - paint: a soft gleam (car paint, enamel);
+ *  - metal: a hard glint, and a fire's or a blast's light thrown back;
+ *  - chrome: a sharp glint and the sky in it;
+ *  - glass: as chrome;
+ *  - glow: it is a lamp, lit from inside, and throws its light on what is round it.
+ * Looks only: the sim never reads it.
+ */
+export type Finish = 'matte' | 'paint' | 'metal' | 'chrome' | 'glass' | 'glow';
+export const FINISHES: readonly Finish[] = ['matte', 'paint', 'metal', 'chrome', 'glass', 'glow'];
+
+/**
+ * A material with a finish of its own: `finished('paintr', 'metal')` is the red paint's colour
+ * that shines like metal. A shape function can return it for any voxel, so one piece of a stack
+ * is metal and the piece beside it is not. Without one a material shines the way its name does
+ * in the palette's list.
+ */
+export function finished(material: string, finish: Finish): string {
+  return `${finishOf(material).material}@${finish}`;
+}
+
+/** A material's name taken apart: the colour it is painted in, and its own finish if it has one. */
+export function finishOf(name: string): { material: string; finish?: Finish } {
+  const i = name.indexOf('@');
+  if (i < 0) return { material: name };
+  const f = name.slice(i + 1) as Finish;
+  return FINISHES.includes(f)
+    ? { material: name.slice(0, i), finish: f }
+    : { material: name.slice(0, i) };
+}
+
+/**
+ * A part with finishes laid on it: `pick` is asked for every voxel (where it is, as the part's
+ * own shape function is, and the material there) and names its finish, or nothing to leave it.
+ */
+export function withFinish(
+  part: Part,
+  pick: (x: number, y: number, z: number, material: string) => Finish | null | undefined,
+): Part {
+  return {
+    ...part,
+    fn: (x, y, z) => {
+      const m = part.fn(x, y, z);
+      if (!m) return m;
+      const f = pick(x, y, z, finishOf(m).material);
+      return f ? finished(m, f) : m;
+    },
+  };
+}
+
+/**
+ * A part with one finish on everything inside a box: from (x0, y0, z0) to (x1, y1, z1) in the
+ * part's own art px (x forward and y sideways from its middle, z up from its foot).
+ */
+export function finishBox(
+  part: Part,
+  box: readonly [number, number, number, number, number, number],
+  finish: Finish,
+): Part {
+  return withFinish(part, (x, y, z) =>
+    x >= box[0] && y >= box[1] && z >= box[2] && x <= box[3] && y <= box[4] && z <= box[5]
+      ? finish
+      : null,
+  );
+}
+
 /** Three tones per material: side in shade, side, top. */
 export type Tones = readonly [string, string, string];
 

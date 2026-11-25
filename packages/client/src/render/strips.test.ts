@@ -8,6 +8,7 @@ import {
   hexRgb,
   lightOf,
   shatterVoxels,
+  shineOf,
   tones,
   type Voxels,
 } from './strips';
@@ -165,5 +166,29 @@ describe('breaking off near a blow', () => {
     for (let y = 0; y < 6; y++) for (let x = 0; x < 12; x++) v.px[at(v, x, y, 4) + 3] = 0;
     expect(detachNear(v, 0, 0, 11, 5, 1, 1, 50).length).toBe(0);
     expect(detachNear(v, 0, 0, 11, 5, 1, 1).length).toBe(12 * 6 * 5);
+  });
+});
+
+describe('a material with a finish of its own', () => {
+  const glows = { light: 7 };
+  const glosses = { paint: 1, chrome: 3 };
+
+  it('shines the way the palette says its colour does when it has none', () => {
+    expect(shineOf('paint', glows, glosses)).toEqual([0, 1]);
+    expect(shineOf('light', glows, glosses)).toEqual([7, 0]);
+    expect(shineOf('wood', glows, glosses)).toEqual([0, 0]);
+  });
+
+  it('takes its own finish over its colour: red paint that is metal, chrome that is dull', () => {
+    expect(shineOf('paint@metal', glows, glosses)).toEqual([0, 2]);
+    expect(shineOf('wood@chrome', glows, glosses)).toEqual([0, 3]);
+    expect(shineOf('chrome@matte', glows, glosses)).toEqual([0, 0]);
+    // a lamp made dull is a lamp no more
+    expect(shineOf('light@paint', glows, glosses)).toEqual([0, 1]);
+  });
+
+  it("glows when told to, and keeps its colour's shine", () => {
+    expect(shineOf('paint@glow', glows, glosses)).toEqual([7, 1]);
+    expect(shineOf('wood@glow', glows, glosses)).toEqual([7, 0]);
   });
 });

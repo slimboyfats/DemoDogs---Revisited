@@ -1,8 +1,8 @@
-import type { LookModule } from '@demodogs/shared';
+import { withFinish, type LookModule } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
 import { CAR_CELL } from '../../../src/shapes';
 
-/** A muscle car: low and long, twin stripes nose to tail, a fastback cabin set well back. */
+/** A muscle car: low and long, twin stripes nose to tail, a fastback cabin set well back, in metallic paint. */
 const body = carBody({
   a: 12,
   b: 5.6,
@@ -42,7 +42,10 @@ const look: LookModule = {
   id: 'car.whippet',
   look: {
     kind: 'car',
-    body: { ...CAR_CELL, smooth: true, fn: body },
+    // metallic paint: the bodywork glints hard and throws a fire's light back, whatever its colour
+    body: withFinish({ ...CAR_CELL, smooth: true, fn: body }, (_x, _y, _z, m) =>
+      m === 'paint' ? 'metal' : null,
+    ),
     // a rear wing on two posts
     top: {
       w: 3,
