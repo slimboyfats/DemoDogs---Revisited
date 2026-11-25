@@ -11,7 +11,8 @@
  *
  * Byte 0: 0 for "not known" (lit flat), else 1 + azimuth * ELS + elevation: the azimuth in `AZS`
  * steps round the strip's own axes, the elevation in `ELS` steps from a wall (0) to a flat top.
- * Byte 1: bit 7 set when nothing of the strip is above the texel; bits 0 to 2 how much it glows.
+ * Byte 1: bit 7 set when nothing of the strip is above the texel; bits 0 to 2 how much it glows;
+ * bits 3 and 4 how it shines (0 dull, 1 painted, 2 metal, 3 polished).
  */
 
 /** Steps of azimuth and of elevation a facing is kept in. */
@@ -73,6 +74,7 @@ export class AuxBake {
     H: number,
     private readonly lay: AuxLayout,
     private readonly glow?: Uint8Array,
+    private readonly gloss?: Uint8Array,
   ) {
     const { cw, ch, n, cols, res } = lay;
     this.out = new Uint8Array(W * H * 2);
@@ -106,7 +108,7 @@ export class AuxBake {
   /** Bake slices until `enough()` says stop (it is asked after each one). True when all are done. */
   step(enough?: () => boolean): boolean {
     const { cw, ch, n, cols } = this.lay;
-    const { occ, top, out, W, glow, st, sx, sy } = this;
+    const { occ, top, out, W, glow, gloss, st, sx, sy } = this;
     const p = this.pad;
     const layer = sx * sy;
     while (this.z < n) {
@@ -121,6 +123,7 @@ export class AuxBake {
           const j = (oy + y) * W + ox + x;
           let b1 = top[y * cw + x] === z ? SKY : 0;
           if (glow) b1 |= Math.min(GLOW_MAX, glow[j]!);
+          if (gloss) b1 |= (gloss[j]! & 3) << 3;
           out[j * 2 + 1] = b1;
           // only the surface is ever seen; what is inside stays "not known" until a dent bares it
           if (occ[i + layer] && occ[i + 1] && occ[i - 1] && occ[i + sx] && occ[i - sx]) continue;
@@ -156,8 +159,9 @@ export function bakeAux(
   H: number,
   lay: AuxLayout,
   glow?: Uint8Array,
+  gloss?: Uint8Array,
 ): Uint8Array {
-  const b = new AuxBake(px, W, H, lay, glow);
+  const b = new AuxBake(px, W, H, lay, glow, gloss);
   b.step();
   return b.out;
 }

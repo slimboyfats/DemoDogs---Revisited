@@ -16,6 +16,7 @@ import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
 import { FAR_DARK, FAR_SHADE } from '../relief-map';
 import { RELIEF_GLSL } from './relief-layer';
+import { SUN_GLSL } from './sun-glsl';
 
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
 const MIRROR_TALL = 14;
@@ -44,6 +45,7 @@ flat out float v_alpha;
 flat out vec2 v_cs;
 flat out float v_tint;
 flat out float v_shade;
+flat out float v_gz;
 // What stands in the shade of higher ground is in it too, the way the ground itself is painted
 // (relief-map.ts): under a cliff to its upper left, and in the dark beyond the far edge of a drop.
 float shadeAt(vec2 p, float g) {
@@ -70,6 +72,7 @@ void main() {
   // whatever it is stands on the ground, however high the ground is there
   float gz = groundAt(a_pos.xy);
   v_shade = shadeAt(a_pos.xy, gz);
+  v_gz = gz;
   anchor.y -= floor(gz * u_scale * u_dir.x + 0.5);
   float lift = a_pos.w;
   float zz = a_pos.z;
@@ -157,6 +160,7 @@ flat in float v_alpha;
 flat in vec2 v_cs;
 flat in float v_tint;
 flat in float v_shade;
+flat in float v_gz;
 uniform highp sampler2D u_atlas;
 uniform highp sampler2D u_aux;
 uniform vec4 u_lpos[${MAX_LIGHTS}];  // x, y, radius, strength
@@ -174,7 +178,9 @@ uniform float u_glow;    // how far lamps stand out, 0 to 1
 uniform float u_snow;    // how much snow lies, 0 to 1
 uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
-out vec4 o;${SKY_GLSL}
+uniform float u_shk;     // how strong the sun's cast shadows are (0: none are read)
+uniform vec2 u_dir;      // cos and sin of the camera's pitch
+out vec4 o;${SKY_GLSL}${SUN_GLSL}
 void main() {
   if (u_mirror > 0.5) {
     // the reflection in wet ground shows through a screen door, most where water stands: the
@@ -213,6 +219,8 @@ void main() {
   float known = 0.0;
   float lamp = 0.0;
   bool sky = false;
+  // which material it is: 0 dull, then painted, metal, and polished (chrome, glass)
+  int gloss = 0;
   if (stack && u_lit > 0.5) {
     ivec2 a = ivec2(texelFetch(u_aux, t, 0).rg * 255.0 + 0.5);
     if (a.x > 0) {
@@ -225,6 +233,7 @@ void main() {
       known = 1.0;
     }
     lamp = float(a.y & 7) / 7.0;
+    gloss = (a.y >> 3) & 3;
     sky = (a.y & 128) != 0;
   }
   if (u_mirror > 0.5) {
@@ -242,15 +251,40 @@ void main() {
       lamp = 0.0;
     }
   }
+  // is something between it and the sun? (the sun's map: every slice of the frame, see sun-shadow.ts)
+  float sh = 0.0;
+  if (u_shk > 0.0) sh = sunShade(vec3(v_world.xy, v_gz + v_world.z)) * u_shk;
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
   float ndl = dot(n, u_sdir);
-  float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0);
-  vec3 base = u_amb + u_sun * q;
+  float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0) * (1.0 - sh);
+  vec3 base = u_amb * (1.0 - 0.1 * sh) + u_sun * q;
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
   if (known > 0.5) {
-    if (ndl > 0.9) base += u_sun * 0.22;
+    if (ndl > 0.9) base += u_sun * 0.22 * (1.0 - sh);
     else if (ndl < 0.0) base += vec3(-0.03, 0.0, 0.05) * dot(u_sun, vec3(0.6));
+  }
+  if (sh > 0.0) base += vec3(-0.02, 0.0, 0.04) * dot(u_sun, vec3(0.6)) * sh;
+  // shine: metal and glass throw the sun back where they are turned half way between it and
+  // the eye, in steps, so a car glints as it turns; polished things show the sky as well
+  vec3 view = vec3(0.0, u_dir.x, u_dir.y);
+  vec3 gleam = vec3(0.0);
+  if (gloss > 0 && known > 0.5) {
+    float tight = gloss == 1 ? 10.0 : gloss == 2 ? 18.0 : 34.0;
+    float much = gloss == 1 ? 0.3 : gloss == 2 ? 0.62 : 1.0;
+    float nh = max(0.0, dot(n, normalize(u_sdir + view)));
+    float sp = pow(nh, tight);
+    gleam = u_sun * (floor(sp * 4.0 + b) / 4.0) * much * 1.5 * (1.0 - sh);
+    // flakes in the paint and scratches in the steel: a texel here and there flashes white
+    // as the thing turns through the light
+    float fl = hash(vec2(t) * 0.37 + 3.0);
+    if (fl > 0.95 && sp * (1.0 - sh) > 0.25 + (fl - 0.95) * 8.0) gleam += u_sun * 0.9 * much;
+    if (gloss == 3) {
+      // the sky in it: pale towards the horizon, deep overhead, a dark ground below
+      vec3 r = reflect(-view, n);
+      vec3 skyc = r.z > 0.0 ? mix(vec3(0.95, 0.97, 1.0), vec3(0.42, 0.62, 0.95), r.z) : vec3(0.25, 0.22, 0.2);
+      base = mix(base, (u_amb + u_sun * 0.6) * skyc * 1.25, 0.4);
+    }
   }
   vec3 l = vec3(0.0);
   for (int i = 0; i < ${MAX_LIGHTS}; i++) {
@@ -264,6 +298,9 @@ void main() {
     float face = mix(1.0, 0.55 + 0.7 * max(0.0, dot(n, normalize(to))), known);
     float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
+    // (and metal throws a fire's or a blast's light back in a hard glint)
+    if (gloss > 1 && known > 0.5)
+      gleam += u_lcol[i] * floor(pow(max(0.0, dot(n, normalize(normalize(to) + view))), 14.0) * f * p.w * 3.0 + b) / 3.0;
   }
   for (int i = 0; i < ${MAX_CONES}; i++) {
     if (i >= u_ccount) break;
@@ -276,9 +313,54 @@ void main() {
   }
   vec3 k = min(vec3(0.7), l);
   vec3 rgb = min(vec3(1.0), c.rgb * (base * v_shade + k * 1.1) + k * (30.0 / 255.0));
+  // the gleam is the light's own colour laid over the paint, most on what is pale already
+  rgb = min(vec3(1.0), rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
   // a lamp shows its own colour however dark it is round it
   rgb = mix(rgb, min(vec3(1.0), c.rgb * 1.25 + 0.1), lamp * u_glow);
   o = vec4(rgb, 1.0);
+}`;
+
+/**
+ * The sun's shadow map (sun-shadow.ts): the same instances as the frame's, each slice laid on
+ * the ground where the sun would throw it from its height, the height kept as depth.
+ */
+export const CAST_VS = `#version 300 es
+layout(location = 0) in vec4 a_pos;
+layout(location = 1) in float a_rot;
+layout(location = 2) in vec4 a_uv;
+layout(location = 3) in float a_alpha;
+layout(location = 4) in float a_res;
+layout(location = 5) in float a_tint;
+layout(location = 6) in vec2 a_tilt;
+uniform vec4 u_shbox;
+uniform vec3 u_shear;${RELIEF_GLSL}
+out vec2 v_tex;
+flat out vec4 v_uv;
+void main() {
+  int id = gl_VertexID % 6;
+  vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
+  vec2 local = (corner - 0.5) * a_uv.zw / a_res;
+  float c = cos(a_rot), s = sin(a_rot);
+  vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
+  float high = max(0.0, groundAt(a_pos.xy) + a_pos.z + dot(r, a_tilt));
+  vec2 g = (a_pos.xy + r + high * u_shear.xy - u_shbox.xy) / u_shbox.zw;
+  gl_Position = vec4(g * 2.0 - 1.0, 1.0 - 2.0 * min(1.0, high / u_shear.z), 1.0);
+  // an outline copy throws nothing, nor does what has all but faded away
+  if (a_tint > 0.5 || a_alpha < 0.15) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+  v_tex = corner * a_uv.zw;
+  v_uv = a_uv;
+}`;
+
+export const CAST_FS = `#version 300 es
+precision highp float;
+in vec2 v_tex;
+flat in vec4 v_uv;
+uniform highp sampler2D u_atlas;
+void main() {
+  if (v_uv.y >= 0.0) {
+    ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
+    if (texelFetch(u_atlas, t, 0).a < 0.5) discard;
+  }
 }`;
 
 /** The ground: one textured quad over the world rectangle, squashed by the pitch. */
@@ -404,11 +486,7 @@ void main() {
 #ifdef RELIEF
   wp.y += shift;
   // the face of a drop is bare earth or rock in beds; all of it takes the light as it lies
-  if (rl.b > 0.25 && rl.b < 0.75) {
-    // the lane of an on-ramp: packed earth, with a pale bar every few px of its climb
-    float lum = dot(c, vec3(0.3, 0.5, 0.2));
-    c = mix(c, vec3(0.6, 0.47, 0.3) * (0.75 + 0.5 * lum), 0.85) * (rl.b > 0.48 && mod(shift, 5.0) < 1.5 ? 1.3 : 1.0);
-  } else if (rl.b > 0.75) {
+  if (rl.b > 0.75) {
     float bed = mod(shift, 4.0) < 1.0 ? 0.72 : 1.0;
     float lum = dot(c, vec3(0.3, 0.5, 0.2));
     c = mix(c, mix(vec3(0.38, 0.29, 0.21), vec3(0.34, 0.35, 0.38), tar) * (0.75 + 0.5 * lum), 0.85) * bed;

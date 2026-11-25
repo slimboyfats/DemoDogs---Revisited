@@ -24,6 +24,10 @@ const KEYS: readonly { at: number; amb: Rgb; sun: Rgb; high: number; glow: numbe
   { at: 1, amb: [0.2, 0.25, 0.4], sun: [0.16, 0.2, 0.32], high: 0.6, glow: 1 },
 ];
 
+/** How much longer than `SUN` says shadows are thrown: by day, and with the sun low at dusk. */
+const REACH_DAY = 1.8;
+const REACH_DUSK = 3.4;
+
 /** How dark it must be before cars put their headlamps on. */
 export const LAMPS_AT = 0.42;
 
@@ -50,6 +54,8 @@ export class Atmosphere {
   glow = 0;
   /** How strong cast shadows are, 0 to 1 (they go as the sun does). */
   shade = 1;
+  /** Ground px a cast shadow reaches per px of height, east and south: longer as the sun sinks. */
+  readonly reach = new Float32Array([SUN[0] * REACH_DAY, SUN[1] * REACH_DAY]);
   /** Seconds, for ripples. */
   time = 0;
 
@@ -108,6 +114,10 @@ export class Atmosphere {
     this.dir[2] = high;
     for (let i = 0; i < 3; i++) this.ground[i] = this.amb[i]! + this.sun[i]! * high;
     this.glow = mix(a.glow, b.glow);
+    // (the moon stands as high as the day's sun; between them the sun is low and shadows long)
+    const long = REACH_DAY + (REACH_DUSK - REACH_DAY) * (1 - Math.abs(n.dark - 0.5) * 2);
+    this.reach[0] = SUN[0] * long;
+    this.reach[1] = SUN[1] * long;
     this.shade = cast * (n.dark <= 0.5 ? 1 - n.dark * 0.4 : 0.8 - (n.dark - 0.5) * 0.9);
   }
 }

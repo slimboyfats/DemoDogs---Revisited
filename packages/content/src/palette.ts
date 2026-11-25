@@ -104,3 +104,35 @@ export const GLOWS: Readonly<Record<string, number>> = {
   turbowarm: 3,
   turbohot: 7,
 };
+
+/**
+ * The materials that shine, and how (looks only): 1 painted (a soft gleam), 2 metal (a hard
+ * glint), 3 polished (chrome and glass: a sharp glint and the sky in it). The rest are dull.
+ */
+export const GLOSS: Readonly<Record<string, number>> = {
+  paint: 1,
+  paint2: 1,
+  trim: 1,
+  paintw: 1,
+  paintr: 1,
+  paintr2: 1,
+  barrel: 1,
+  crate: 1,
+  hazard: 1,
+  plate: 1,
+  bumper: 2,
+  hub: 2,
+  engine: 2,
+  cage: 2,
+  band: 2,
+  mine: 2,
+  rocket: 2,
+  botdark: 2,
+  padrim: 2,
+  chrome: 3,
+  glass: 3,
+  glasshi: 3,
+  light: 3,
+  tail: 3,
+  amber: 3,
+};

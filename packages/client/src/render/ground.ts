@@ -1,4 +1,12 @@
-import { moundHeight, type StaticProp, type World } from '@demodogs/sim';
+import {
+  SHOULDER,
+  laneWide,
+  lanesOf,
+  liftsOf,
+  moundHeight,
+  type StaticProp,
+  type World,
+} from '@demodogs/sim';
 import {
   type Fields,
   makeFields,
@@ -62,6 +70,55 @@ export function markGround(g: Ground, x: number, y: number, r: number): void {
 }
 
 /**
+ * The on-ramps beside raised road, and the shoulder between each and the road, laid in the
+ * road's own surface: every px of them is taken from the road beside it (so tarmac, dirt, wear
+ * and the line along the edge are the venue's own), with arrows up the lane the way it runs.
+ */
+function paintLanes(px: Uint8ClampedArray, w: World): void {
+  const T = w.track;
+  const raised = w.venue.track?.raised;
+  if (!T || !raised?.length) return;
+  const L = lanesOf(T, liftsOf(T, raised), w.road, w.tuning);
+  const half = w.road / 2;
+  const from = px.slice();
+  const W = w.w;
+  const H = w.h;
+  for (const side of [-1, 1])
+    for (let i = 0; i < T.n; i++) {
+      const wide = laneWide(L, i, side);
+      if (wide <= 0) continue;
+      // (a lane begins as a point against the platform and widens over its first few px)
+      let q = 0;
+      while (q < 12 && laneWide(L, (i - q - 1 + T.n) % T.n, side) > 0) q++;
+      const out = half + SHOULDER + wide * Math.min(1, (q + 1) / 8) + 3;
+      const a = T.a[i]!;
+      const cs = Math.cos(a);
+      const sn = Math.sin(a);
+      const mid = half + SHOULDER + wide / 2;
+      for (let u = -T.step * 0.75; u <= T.step * 0.75; u += 0.4)
+        for (let d = half - 1; d <= out; d += 0.4) {
+          const x = Math.floor(T.x[i]! + cs * u - sn * side * d);
+          const y = Math.floor(T.y[i]! + sn * u + cs * side * d);
+          if (x < 0 || y < 0 || x >= W || y >= H) continue;
+          // the road's own surface, from its middle out to the line along its edge
+          const k = (d - (half - 1)) / (out - (half - 1));
+          const sd = half * 0.12 + k * (half * 0.88 - 2.2);
+          const sx = Math.floor(T.x[i]! + cs * u - sn * side * sd);
+          const sy = Math.floor(T.y[i]! + sn * u + cs * side * sd);
+          if (sx < 0 || sy < 0 || sx >= W || sy >= H) continue;
+          const o = (y * W + x) * 4;
+          const s = (sy * W + sx) * 4;
+          // arrows up the middle of the lane while it climbs: pale chevrons, pointing on
+          const off = Math.abs(d - mid);
+          const al = i * T.step + u;
+          const arrow =
+            L.rise[i]! < 1 && off < 9 && (((al + off) % 30) + 30) % 30 < 2.6 && wide >= 30;
+          for (let c = 0; c < 3; c++) px[o + c] = arrow ? 232 - c * 6 : from[s + c]!;
+        }
+    }
+}
+
+/**
  * The ground as one canvas at art resolution: grass, the road with kerbs and the start line, or the
  * derby bowl. Skid marks, scorches and splats are painted onto it as the race goes.
  */
@@ -85,6 +142,7 @@ export function makeGround(w: World): Ground {
     paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
     if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
     paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
+    paintLanes(img.data, w);
   }
   if (w.oval) paintBowl(img.data, w.w, w.h, w.oval, C, F);
   g.putImageData(img, 0, 0);

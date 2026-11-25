@@ -158,6 +158,7 @@ export function build(
   mats: Record<string, Tones>,
   res = DETAIL,
   glows?: Readonly<Record<string, number>>,
+  glosses?: Readonly<Record<string, number>>,
 ): Strip {
   const { cw, ch, n, names, grid, lit } = sample(part, res);
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
@@ -174,6 +175,9 @@ export function build(
   // which of its materials glow (lamps, lenses), and so which texels: kept beside the pixels
   const shine = names.map((m) => (m && glows?.[m]) || 0);
   const glow = shine.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
+  // and which shine in the light (paint, metal, chrome and glass)
+  const sheen = names.map((m) => (m && glosses?.[m]) || 0);
+  const gloss = sheen.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
   const c = [0, 0, 0];
   for (let z = 0; z < n; z++)
     for (let y = 0; y < ch; y++)
@@ -189,8 +193,9 @@ export function build(
         px[j + 2] = c[2]!;
         px[j + 3] = 255;
         if (glow) glow[t] = shine[m]!;
+        if (gloss) gloss[t] = sheen[m]!;
       }
-  return { img: cv, cw, ch, n, res, cols, px, stale: true, glow };
+  return { img: cv, cw, ch, n, res, cols, px, stale: true, glow, gloss };
 }
 
 /**
