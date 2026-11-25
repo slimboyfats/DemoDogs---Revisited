@@ -1,6 +1,7 @@
 import { ADDON_KINDS, BASE_SPEED, GUARD_KINDS, HELD } from '@demodogs/shared';
 import { rescueIn, type Car, type World } from '@demodogs/sim';
 import type { Effects } from './effects';
+import { DIAL_DEFAULT, dialSpot, type DialSetup } from '../game/speedo';
 
 const TAU = Math.PI * 2;
 
@@ -257,23 +258,26 @@ export class Hud {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
       text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), '#ffd24a', 'center');
     }
-    this.speedo(P, W, H, u, text);
+    if (this.dial.on) this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
   }
+
+  /** The speedometer's settings: shown or not, where, how big (game/speedo.ts). */
+  dial: DialSetup = { ...DIAL_DEFAULT };
 
   /** How long each reason has been showing, so a passing bump does not flash a word. */
   private heldT = new Map<number, number>();
   private lastT = 0;
 
   /**
-   * The speedometer, bottom middle: a fat arc that fills with speed (blue on boost), the number
+   * The speedometer (bottom middle unless moved): a fat arc that fills with speed (blue on boost), the number
    * big in it, and under it, in red, whatever is holding the car back.
    */
   private speedo(
     P: Car,
     W: number,
     H: number,
-    u: number,
+    ui: number,
     text: (
       t: string,
       x: number,
@@ -287,10 +291,12 @@ export class Hud {
     const now = performance.now() / 1000;
     const dt = Math.min(0.1, Math.max(0, now - this.lastT));
     this.lastT = now;
+    // everything on the dial is drawn at its own size
+    const u = ui * this.dial.size;
     const r = 40 * u;
-    const cx = W / 2;
-    // (the plate reaches r + 9 below the middle too, at the sides)
-    const cy = H - r * 0.6 - 26 * u;
+    const spot = dialSpot(this.dial.place, W, H, r, ui);
+    const cx = spot.x;
+    const cy = spot.y;
     const top = BASE_SPEED * P.stats.speed;
     // the dial runs to a boost and a bit over the car's own top speed
     const full = top * 1.45;
@@ -360,13 +366,15 @@ export class Hud {
       const say = shown.map(([, s]) => s).join(' · ');
       ctx.font = `900 ${Math.round(12 * u)}px system-ui, sans-serif`;
       const bw = ctx.measureText(say).width + 16 * u;
-      const by = cy - r - 32 * u;
+      const by = spot.below ? cy + r * 0.75 + 4 * u : cy - r - 32 * u;
       const pulse = 0.75 + 0.25 * Math.sin(now * 8);
       ctx.fillStyle = `rgba(200,34,20,${(0.85 * pulse).toFixed(3)})`;
-      ctx.fillRect(cx - bw / 2, by, bw, 19 * u);
+      // (kept on the screen when the dial is in a corner)
+      const bx = Math.min(W - bw / 2 - 4 * ui, Math.max(bw / 2 + 4 * ui, cx));
+      ctx.fillRect(bx - bw / 2, by, bw, 19 * u);
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
-      ctx.fillText(say, cx, by + 10 * u);
+      ctx.fillText(say, bx, by + 10 * u);
     }
     ctx.textBaseline = 'top';
   }
