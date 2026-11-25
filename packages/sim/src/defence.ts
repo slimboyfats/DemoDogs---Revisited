@@ -101,6 +101,9 @@ export function updateDefence(w: World): void {
       for (const [part, need] of REFIT)
         if (!c.has[part] && c.hp >= need) {
           c.has[part] = true;
+          // (a new bumper comes with new lamps)
+          if (part === 'front') c.lamps &= ~3;
+          if (part === 'rear') c.lamps &= ~12;
           w.emit({ t: 'weld', car: c.index, what: 'part', part });
         }
       if (c.weldT <= 1e-9 || c.hp >= 100) {

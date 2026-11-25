@@ -52,6 +52,8 @@ export interface StackSink {
    * times as big (a swollen car, a shrunk one). 1 puts it back.
    */
   zoom(k: number): void;
+  /** The car that follows has these lamps dark (bits of `LAMP`; the pixel engine): 0 puts it back. */
+  lamps?(out: number): void;
   /** What follows lies tilted as one thing (see `Lie`); null puts it back. */
   tilt?(lie: Lie | null): void;
   limb(s: Strip, a: readonly number[], b: readonly number[], n: number): void;
@@ -165,7 +167,11 @@ export function queueStacks(
       R.stack(d.strip, d.x, d.y, d.z, d.rot, d.life < 1.5 ? d.life / 1.5 : 1);
     }
   R.warm?.(true);
-  for (const c of w.cars) queueCar(built(R, fx, c, 16 * c.size), art, w, fx, c);
+  for (const c of w.cars) {
+    R.lamps?.(lampsOut(c, w.time));
+    queueCar(built(R, fx, c, 16 * c.size), art, w, fx, c);
+  }
+  R.lamps?.(0);
   R.warm?.(false);
 }
 
@@ -681,3 +687,24 @@ export function queueShadows(
       shadow(p.x, p.y, p.def.radius * 1.3 * k, p.def.radius * 0.9 * k, p.rot, 0.34 / k);
     }
 }
+
+/**
+ * Which of a car's lamps are dark this instant: the ones smashed (the sim's), and, on a car that
+ * is half way to scrap, each of the others for the blinks of a loose wire, more and longer the
+ * worse it is hurt. A wreck's are all out.
+ */
+export function lampsOut(c: Car, time: number): number {
+  if (c.wrecked) return 15;
+  let out = c.lamps;
+  if (c.hp >= FLICKER_AT) return out;
+  const bad = 1 - Math.max(0, c.hp) / FLICKER_AT;
+  for (let i = 0; i < 4; i++) {
+    // two beats that drift past each other, so the blinks come in bursts and never in step
+    const a = Math.sin(time * (17 + i * 3.1) + c.index * 5.3 + i * 1.7);
+    const b = Math.sin(time * (2.3 + i * 0.4) + c.index * 1.9 + i);
+    if (a * 0.5 + b * 0.5 > 0.62 - bad * 0.55) out |= 1 << i;
+  }
+  return out;
+}
+/** A car with less armour than this has lamps that flicker. */
+const FLICKER_AT = 55;

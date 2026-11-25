@@ -158,6 +158,11 @@ export interface Car {
   hitCd: number;
   scrapeCd: number;
   has: { front: boolean; rear: boolean; top: boolean };
+  /**
+   * Its lamps that are smashed, a bit each (see `LAMP`): a blow breaks the lamp at the corner
+   * it lands on, and a bumper torn off takes both of its end's with it.
+   */
+  lamps: number;
   aiSpeed: number;
   smokeT: number;
   /** Seconds left on a flat tyre (spikes). */
@@ -364,3 +369,6 @@ export interface Pickup {
   on: boolean;
   t: number;
 }
+
+/** The bits of `Car.lamps`: head lamps left and right, tail lamps left and right. */
+export const LAMP = { headLeft: 1, headRight: 2, tailLeft: 4, tailRight: 8 } as const;

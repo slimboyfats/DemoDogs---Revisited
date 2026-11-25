@@ -8,7 +8,10 @@ import { texture } from './gl';
  * ground map (see relief-map.ts) the ground's own shader reads. A flat venue has a single zero.
  */
 export class ReliefLayer {
-  /** Heights: the hills (art px) and how many terraces up, two channels of floats, filtered. */
+  /**
+   * Heights, filtered floats, as `Relief` keeps them: the hills (art px), how many terraces up,
+   * and the raised road's four values (two in the grid's upper half, two in a second grid under it).
+   */
   readonly heights: WebGLTexture;
   /** The picture-to-ground map, or null on flat ground. */
   readonly map: WebGLTexture | null = null;
@@ -27,19 +30,28 @@ export class ReliefLayer {
   ) {
     this.heights = texture(gl, gl.LINEAR);
     if (!relief) {
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG16F, 1, 1, 0, gl.RG, gl.FLOAT, new Float32Array(2));
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, 1, 2, 0, gl.RGBA, gl.FLOAT, new Float32Array(8));
       return;
     }
     this.gw = relief.gw;
     this.gh = relief.gh;
     this.top = relief.max;
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    const both = new Float32Array(this.gw * this.gh * 2);
-    for (let i = 0; i < this.gw * this.gh; i++) {
-      both[i * 2] = relief.hills[i]!;
-      both[i * 2 + 1] = relief.bank[i]!;
+    // two grids, one above the other: hills, terraces and the raised road's side and height;
+    // then the on-ramps' height and width
+    const n = this.gw * this.gh;
+    const all = new Float32Array(n * 8);
+    const P = relief.plat;
+    for (let i = 0; i < n; i++) {
+      all[i * 4] = relief.hills[i]!;
+      all[i * 4 + 1] = relief.bank[i]!;
+      if (!P) continue;
+      all[i * 4 + 2] = P[i * 4]!;
+      all[i * 4 + 3] = P[i * 4 + 1]!;
+      all[(n + i) * 4] = P[i * 4 + 2]!;
+      all[(n + i) * 4 + 1] = P[i * 4 + 3]!;
     }
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG16F, this.gw, this.gh, 0, gl.RG, gl.FLOAT, both);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.gw, this.gh * 2, 0, gl.RGBA, gl.FLOAT, all);
     this.map = texture(gl, gl.NEAREST);
     const px = bakeRelief(relief, w, h, rise);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
@@ -83,8 +95,17 @@ uniform highp sampler2D u_relief;
 uniform vec4 u_rgrid;   // the height grid's reach in art px; a terrace's height, how many
 uniform float u_rface;  // how much of a terrace is its face
 float groundAt(vec2 p) {
-  vec2 t = textureLod(u_relief, (p + ${(Relief.CELL / 2).toFixed(1)}) / u_rgrid.xy, 0.0).rg;
+  vec2 uv = (p + ${(Relief.CELL / 2).toFixed(1)}) / u_rgrid.xy;
+  float edge = ${(Relief.CELL / 2).toFixed(1)} / u_rgrid.y;
+  uv.y = clamp(uv.y, edge, 1.0 - edge) * 0.5;
+  vec4 t = textureLod(u_relief, uv, 0.0);
+  float h = t.r;
+  if (t.a > 0.0) {
+    // raised road: a wall shaped after its smooth values are read (see Relief.plat)
+    vec2 l = textureLod(u_relief, uv + vec2(0.0, 0.5), 0.0).rg;
+    h += l.r * clamp(t.b + l.g, 0.0, 1.0) + (t.a - l.r) * clamp(t.b, 0.0, 1.0);
+  }
   float q = t.g + 0.5;
   float fl = floor(q);
-  return t.r + min(u_rgrid.w, fl + max(0.0, (q - fl - (1.0 - u_rface)) / u_rface)) * u_rgrid.z;
+  return h + min(u_rgrid.w, fl + max(0.0, (q - fl - (1.0 - u_rface)) / u_rface)) * u_rgrid.z;
 }`;
