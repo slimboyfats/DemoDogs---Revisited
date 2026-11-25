@@ -138,6 +138,8 @@ const RIVAL_PAINTS = [
 ];
 const RIVAL_NAMES = ['REX', 'BISCUIT', 'FANG', 'DOZER', 'GNASHER', 'SCRAPS', 'BONES', 'TANK'];
 const COUNTDOWN = 3.6;
+/** Past the road's edge, how far it takes for the rough ground to cost all it does, px. */
+const OFF_SOFT = 18;
 
 /**
  * A whole race or derby. The world is a pure function of its options and the player's controls:
@@ -475,6 +477,15 @@ export class World {
   /** Is (x, y) off the road? Always false in an arena. */
   offroad(x: number, y: number): boolean {
     return this.grid !== null && this.grid.at(x, y) > this.road / 2 + 3;
+  }
+
+  /**
+   * How far off the road (x, y) is, 0 to 1: nothing on the road, rising over the first
+   * `OFF_SOFT` px past its edge to all of it. Always 0 in an arena.
+   */
+  offness(x: number, y: number): number {
+    if (!this.grid) return 0;
+    return Math.min(1, Math.max(0, (this.grid.at(x, y) - this.road / 2) / OFF_SOFT));
   }
 
   /** Clamp a point of radius r inside the world (the rectangle, or the derby oval). */

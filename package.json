@@ -23,6 +23,7 @@
     "play:editor": "pnpm build && node scripts/play-editor.mjs",
     "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "look": "pnpm build && node scripts/capture-look.mjs",
+    "speed": "pnpm build && node scripts/capture-speed.mjs",
     "audio": "pnpm build && node scripts/capture-audio.mjs",
     "sky": "pnpm build && node scripts/capture-sky.mjs",
     "ground": "pnpm build && node scripts/capture-ground.mjs",

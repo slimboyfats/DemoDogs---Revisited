@@ -5,6 +5,7 @@ import {
   CAR_RADIUS,
   DT,
   GRAVITY,
+  HELD,
   TUNE_MAX,
   TUNE_STEP,
   type AiManifest,
@@ -21,8 +22,6 @@ import { crest, groundAt, moundAt } from './mounds';
 import type { World } from './world';
 import { pace } from './modifiers';
 
-/** How hard a slope pulls a car down it (px/s² for a slope of one in one). */
-const SLOPE = 300;
 /** Ground steeper than this (height per px) is a face: a car on the ground cannot drive up it. */
 const CLIFF = 1.1;
 /** Ground that falls away faster than this in a tick leaves the car in the air. */
@@ -94,6 +93,7 @@ export function makeCar(
     handbrake: false,
     sliding: false,
     offroad: false,
+    held: 0,
     nitro: 1,
     hp,
     hp0: hp,
@@ -197,11 +197,15 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
 export function drive(w: World, c: Car, ctl: Controls): void {
   const S = c.stats;
   const off = w.offroad(c.x, c.y);
+  const T = w.tuning;
   // a lit rocket bottle drives the car: flat out, no brakes, and it turns like a barge
   const jet = jetOf(c);
   if (jet > 1) ctl = { ...ctl, throttle: 1, brake: false, steer: ctl.steer * 0.6 };
   // knobbly tyres pay only part of what rough ground and slicks cost
   const rough = roughOf(c);
+  // how far onto the rough it is: the road's edge is not a wall of mud, the cost comes in over
+  // the first few px past it, and only as much as the tyres pay for it
+  const harsh = w.offness(c.x, c.y) * rough;
   const wake = draft(w, c);
   const floor = (c.deck = w.support(c));
   // climbing a ramp: the deck lifts the car with it
@@ -224,7 +228,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const surface = w.roadSurface && !off && !airborne && floor <= 0 ? w.roadSurface[c.idx] : null;
   if (surface) {
     dry = Math.min(dry, 1 - (1 - surface.grip) * rough);
-    bog = Math.max(bog, surface.drag * rough);
+    bog = Math.max(bog, surface.drag * T.softRoad * rough);
   }
   // rain takes grip everywhere, the deck included
   const hold = dry * w.grip;
@@ -257,7 +261,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     BASE_SPEED *
     S.speed *
     weak *
-    (off ? 1 - 0.44 * rough : 1) *
+    (1 - (1 - T.offroadPace) * harsh) *
     (boost ? 1.33 * c.fuel : 1) *
     c.aiSpeed *
     c.pace *
@@ -280,23 +284,34 @@ export function drive(w: World, c: Car, ctl: Controls): void {
         (wake > 1 ? 1.3 : 1);
       vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
-    vf -= vf * ((off ? 0.42 + 0.98 * rough : 0.42) + bog) * DT;
+    vf -= vf * (0.42 + T.offroadDrag * harsh + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
-    vl *= Math.exp(
-      -8 * S.grip * hold * (off ? 1 - 0.45 * rough : 1) * (c.handbrake ? 0.22 : 1) * DT,
-    );
+    vl *= Math.exp(-8 * S.grip * hold * (1 - 0.45 * harsh) * (c.handbrake ? 0.22 : 1) * DT);
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
   // the lie of the land: a car on a slope is pulled down it (uphill is slower, downhill faster,
   // and a steep bank throws it back)
   const land = floor <= 0 ? w.relief : null;
+  let uphill = 0;
   if (land && !airborne) {
     // (a terrace's face is not a slope to roll down: only the hills pull)
-    c.vx -= clamp(land.dx(c.x, c.y), -0.5, 0.5) * SLOPE * DT;
-    c.vy -= clamp(land.dy(c.x, c.y), -0.5, 0.5) * SLOPE * DT;
+    const gx = clamp(land.dx(c.x, c.y), -0.5, 0.5);
+    const gy = clamp(land.dy(c.x, c.y), -0.5, 0.5);
+    c.vx -= gx * T.hillPull * DT;
+    c.vy -= gy * T.hillPull * DT;
     vf = c.vx * cs + c.vy * sn;
+    uphill = (gx * cs + gy * sn) * Math.sign(vf || 1);
   }
+  // what is holding it back, for the HUD to say
+  c.held = airborne
+    ? 0
+    : (harsh > 0.2 && T.offroadPace < 1 ? HELD.rough : 0) |
+      // (a climb is named once it costs something: a pull of 20 px/s² is about a tenth off)
+      (uphill * T.hillPull > 20 ? HELD.hill : 0) |
+      (bog > 0.3 ? HELD.sticky : 0) |
+      (weak < 1 ? HELD.hurt : 0) |
+      (c.pace < 1 ? HELD.weighed : 0);
   c.vf = vf;
   const x0 = c.x;
   const y0 = c.y;
