@@ -71,6 +71,7 @@ const NAMES = [
   'u_shear',
   'u_gi',
   'u_gik',
+  'u_lc',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -657,6 +658,13 @@ export class StackBatch {
       gl.activeTexture(gl.TEXTURE6);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(u.u_gi, 6);
+    }
+    // (the colours of what stands round about, for what is polished enough to show them)
+    if (traced && sky.block) sky.block.bindColour(7, u.u_lc);
+    else {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u.u_lc, 7);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);

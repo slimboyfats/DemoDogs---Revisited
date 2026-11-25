@@ -194,6 +194,7 @@ uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
 uniform float u_shk;     // how strong the sun's cast shadows are (0: none are read)
 uniform vec2 u_dir;      // cos and sin of the camera's pitch
+uniform sampler2D u_lc;  // the light map's colours: what stands where, seen from above
 out vec4 o;${SKY_GLSL}${SUN_GLSL}${TRACED_GLSL}
 void main() {
   if (u_mirror > 0.5) {
@@ -355,6 +356,34 @@ void main() {
   }
   vec3 k = min(vec3(1.1), l);
   vec3 rgb = c.rgb * (base * v_shade + k * 1.1 + back) + k * (30.0 / 255.0) + back * 0.05;
+  // what is polished shows what stands round it, as a bulging mirror does: a texel looks out
+  // from the middle of its slice, further the nearer the edge it is (and the way its own face
+  // leans), at the light map's colours (every thing in the frame, from above). The first thing
+  // tall enough to be seen there is laid over the metal in the light that falls on it; and the
+  // light that comes from that way (a blast, a fire, a lamp) glints in it
+  if (gloss > 1 && u_gik > 0.0) {
+    vec2 loc = (v_tex / v_uv.zw - 0.5) * 2.0;
+    vec2 way = vec2(loc.x * v_cs.x - loc.y * v_cs.y, loc.x * v_cs.y + loc.y * v_cs.x) + n.xy * 0.7 * known;
+    float out_ = length(way);
+    if (out_ > 0.3) {
+      float much = (gloss == 3 ? 0.75 : 0.42) * smoothstep(0.3, 0.7, out_);
+      vec3 seen = vec3(0.0);
+      float hit = 0.0;
+      for (int i = 0; i < 3; i++) {
+        vec2 at = v_world.xy + way * (11.0 + float(i) * 8.0);
+        vec4 m = textureLod(u_lc, (at - u_lmbox.xy) / u_lmbox.zw, 0.0);
+        if (m.a * 255.0 >= 4.0) {
+          seen = m.rgb * (u_amb + u_sun * 0.6 + traced(at - way * 3.0).rgb * 2.2 + k * 0.5);
+          hit = 1.0 - float(i) * 0.2;
+          break;
+        }
+      }
+      seen = floor(min(vec3(1.0), seen) * 6.0 + b) / 6.0;
+      rgb = mix(rgb, seen, much * hit);
+      vec3 far = traced(v_world.xy + way / out_ * 16.0).rgb;
+      gleam += floor(min(vec3(1.0), far * 2.4 * (1.0 - 0.6 * hit)) * 5.0 + b) / 5.0 * much;
+    }
+  }
   // the gleam is the light's own colour laid over the paint, most on what is pale already
   rgb = shoulder(rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
   // a lamp shows its own colour however dark it is round it
