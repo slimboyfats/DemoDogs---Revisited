@@ -176,8 +176,14 @@ const FACE = 5;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-/** A venue's relief; banks rise in the infield too unless `infield` is false. */
-type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield'> & { infield?: boolean };
+/**
+ * A venue's relief; banks rise in the infield too unless `infield` is false, and outside the loop
+ * unless `outfield` is.
+ */
+type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield' | 'outfield'> & {
+  infield?: boolean;
+  outfield?: boolean;
+};
 type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
 
 /** A venue with raised road and no `relief` of its own gets this: flat but for the platforms. */
@@ -392,7 +398,10 @@ export function buildRelief(
   let max = 0;
   for (let gy = 0; gy < R.gh; gy++) {
     // (the loop's edges along this row, when the banks keep out of the infield)
-    const cross = spec.infield === false && track && !oval ? loopCrossings(track, gy * C) : null;
+    const cross =
+      (spec.infield === false || spec.outfield === false) && track && !oval
+        ? loopCrossings(track, gy * C)
+        : null;
     let ci = 0;
     for (let gx = 0; gx < R.gw; gx++) {
       const x = gx * C;
@@ -439,7 +448,7 @@ export function buildRelief(
           const q = Math.hypot((x - oval.cx) / oval.rx, (y - oval.cy) / oval.ry);
           d = (q - 1) * Math.min(oval.rx, oval.ry) - spec.from;
         } else d = dist[k]! - half - spec.from;
-        if (cross && ci % 2 === 1) d = 0;
+        if (cross && (ci % 2 === 1 ? spec.infield === false : spec.outfield === false)) d = 0;
         if (d > 0) {
           const rough = (noise(x / 150, y / 150, seed + 103) - 0.5) * 0.7 * Math.min(1, d / 40);
           R.bank[k] = clamp01(d / spec.spread + rough) * steps;

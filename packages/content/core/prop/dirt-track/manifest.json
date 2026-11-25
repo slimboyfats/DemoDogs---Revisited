@@ -1,0 +1,17 @@
+{
+  "id": "prop.dirt-track",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dirt path",
+    "description": "A length of packed-earth path. Laid end to end off the road it is a shortcut: it drives like the road, and a car on it is not off the course.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 22,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 44,
+    "wide": 60
+  }
+}

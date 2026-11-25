@@ -18,6 +18,10 @@ const unit = z.number().min(0).max(1);
  * - `jump`: a ramp. A car crossing it along the arrow faster than `min` is thrown up at `lift`
  *   (art px a second, at the game's base top speed; slower cars get less) and sails over whatever
  *   is `low` enough.
+ * - `road`: a piece of track laid off the road (a dirt path, a boardwalk): ground under it drives
+ *   like the road itself, and a car on it is not off the course. A row of them is a shortcut.
+ * - `vent`: a spout in the ground (a geyser, a steam vent). Every `period` seconds it blows for
+ *   `open` seconds, and a car over it then is thrown up at `lift`, however fast it is going.
  */
 export const PadSchema = z.discriminatedUnion('kind', [
   z.strictObject({
@@ -34,6 +38,19 @@ export const PadSchema = z.discriminatedUnion('kind', [
     wide: z.number().positive(),
     lift: z.number().positive(),
     min: z.number().min(0).default(60),
+  }),
+  z.strictObject({
+    kind: z.literal('road'),
+    long: z.number().positive(),
+    wide: z.number().positive(),
+  }),
+  z.strictObject({
+    kind: z.literal('vent'),
+    long: z.number().positive(),
+    wide: z.number().positive(),
+    lift: z.number().positive(),
+    period: z.number().positive(),
+    open: z.number().positive(),
   }),
 ]);
 export type PadManifest = z.infer<typeof PadSchema>;
@@ -118,6 +135,11 @@ export const pieceFields = {
    * grass, corn, flowers).
    */
   trample: z.boolean().default(false),
+  /**
+   * Solid static props: it is sprung. A car that touches it is thrown back off it at this many
+   * art px a second, unhurt (a fairground bumper).
+   */
+  bounce: z.number().positive().optional(),
   /**
    * Solid static props: how tall it is, art px. A car in the air higher than this passes over
    * it. Without it nothing gets over.

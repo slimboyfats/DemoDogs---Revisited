@@ -26,7 +26,8 @@ export function stand(
   if (def.crown) s.leaves = 1;
   if (def.storeys) s.storeys = def.storeys;
   w.statics.push(s);
-  if (def.pad) w.pads.push(s);
+  // (a piece of track laid off the road is ground, not a tile that does something)
+  if (def.pad) (def.pad.kind === 'road' ? w.paths : w.pads).push(s);
   if (def.mound) w.mounds.push(s);
   return s;
 }

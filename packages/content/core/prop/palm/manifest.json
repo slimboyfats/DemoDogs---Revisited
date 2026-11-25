@@ -1,0 +1,20 @@
+{
+  "id": "prop.palm",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Palm",
+    "description": "A leaning palm with a crown of fronds and a few coconuts. It sways in the wind; a blast strips it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 2.2,
+  "sway": true,
+  "made": "material.wood",
+  "integrity": 55,
+  "crown": {
+    "trunk": 1.6,
+    "top": 19,
+    "hold": 0.4,
+    "flash": 0.1
+  }
+}

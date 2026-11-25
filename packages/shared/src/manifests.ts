@@ -450,6 +450,7 @@ export const VenueSchema = z.strictObject({
    * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so
    * cars climb and coast; and `banks` that rise in sheer terraces `step` high, beginning `from` past the
    * road's edge (or a derby bowl's wall) and reaching full height `spread` further on. With
+   * `outfield: false` they rise only inside the loop instead: a stepped hill the road runs round. With
    * `infield: false` they rise only outside the loop, so the ground inside it stays one clean
    * level. Left out, the venue is flat.
    */
@@ -462,6 +463,7 @@ export const VenueSchema = z.strictObject({
       spread: z.number().positive().default(150),
       step: z.number().positive().default(8),
       infield: z.boolean().default(true),
+      outfield: z.boolean().default(true),
     })
     .optional(),
   /**

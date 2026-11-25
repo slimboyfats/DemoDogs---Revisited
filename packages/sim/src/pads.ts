@@ -28,6 +28,28 @@ export function padAt(w: World, x: number, y: number): StaticProp | null {
   return null;
 }
 
+/** The piece of track laid off the road under (x, y), if any: there the ground is road. */
+export function pathAt(w: World, x: number, y: number): StaticProp | null {
+  for (const s of w.paths) {
+    if (s.down || Math.abs(s.x - x) > 60 || Math.abs(s.y - y) > 60) continue;
+    const P = s.def.pad!;
+    const [u, v] = onPad(s, x, y);
+    if (Math.abs(u) <= P.long / 2 && Math.abs(v) <= P.wide / 2) return s;
+  }
+  return null;
+}
+
+/**
+ * Is vent `s` blowing at time t (default now)? Each keeps a beat of its own, from the seed it
+ * was stood with. `lead` seconds early says it is about to (the client makes it rumble).
+ */
+export function ventOpen(w: World, s: StaticProp, lead = 0, t = w.time): boolean {
+  const P = s.def.pad;
+  if (P?.kind !== 'vent') return false;
+  const p = (t + lead + (s.seed / 10) * P.period) % P.period;
+  return p < P.open + lead;
+}
+
 /** One tick of a car and the tiles: after it has driven, before it is collided. */
 export function updatePads(w: World, c: Car): void {
   if (c.surge > 0) c.surge = Math.max(0, c.surge - DT);
@@ -42,9 +64,20 @@ export function updatePads(w: World, c: Car): void {
     c.pad = -1;
     return;
   }
+  const P = s.def.pad!;
+  if (P.kind === 'vent') {
+    // a vent throws whatever is over it while it blows, however the car came onto it
+    if (ventOpen(w, s) && c.pad !== s.index) {
+      c.pad = s.index;
+      c.vz = Math.max(c.vz, P.lift);
+      c.z = Math.max(c.z, c.deck + 0.7);
+      w.emit({ t: 'pad', kind: 'vent', car: c.index, prop: s.index, x: c.x, y: c.y, power: P.lift });
+    }
+    return;
+  }
+  if (P.kind === 'road') return;
   if (c.pad === s.index) return;
   c.pad = s.index;
-  const P = s.def.pad!;
   const cs = Math.cos(s.rot);
   const sn = Math.sin(s.rot);
   const along = c.vx * cs + c.vy * sn;

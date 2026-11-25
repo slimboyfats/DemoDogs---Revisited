@@ -1,0 +1,15 @@
+{
+  "id": "prop.crystal-rose",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rose crystal",
+    "description": "A cluster of pink crystal that shines with its own light. Brittle: a hard knock shatters it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "hardness": 0.8,
+  "made": "material.glass",
+  "integrity": 60,
+  "points": 10
+}

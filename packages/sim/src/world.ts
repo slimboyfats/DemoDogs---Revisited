@@ -35,7 +35,7 @@ import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
-import { updatePads } from './pads';
+import { pathAt, updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
@@ -183,6 +183,8 @@ export class World {
   readonly statics: StaticProp[] = [];
   /** The statics that are track tiles (boost tiles, ramps): see pads.ts. */
   readonly pads: StaticProp[] = [];
+  /** The statics that are pieces of track laid off the road (a dirt path, a boardwalk). */
+  readonly paths: StaticProp[] = [];
   /** The statics that are shapes in the road (speed bumps, dips, potholes): see mounds.ts. */
   readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
@@ -476,7 +478,9 @@ export class World {
 
   /** Is (x, y) off the road? Always false in an arena. */
   offroad(x: number, y: number): boolean {
-    return this.grid !== null && this.grid.at(x, y) > this.road / 2 + 3;
+    return (
+      this.grid !== null && this.grid.at(x, y) > this.road / 2 + 3 && pathAt(this, x, y) === null
+    );
   }
 
   /**
@@ -484,7 +488,7 @@ export class World {
    * `OFF_SOFT` px past its edge to all of it. Always 0 in an arena.
    */
   offness(x: number, y: number): number {
-    if (!this.grid) return 0;
+    if (!this.grid || (this.paths.length && pathAt(this, x, y))) return 0;
     return Math.min(1, Math.max(0, (this.grid.at(x, y) - this.road / 2) / OFF_SOFT));
   }
 

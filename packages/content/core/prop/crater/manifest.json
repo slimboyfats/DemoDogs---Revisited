@@ -1,0 +1,11 @@
+{
+  "id": "prop.crater",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Volcano vent",
+    "description": "The mouth of a volcano: a cone of black rock with a lake of lava in its top and lava running down its sides. Nothing moves it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 18
+}

@@ -1,0 +1,14 @@
+{
+  "id": "prop.lantern",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lantern",
+    "description": "A lantern on a short post, burning warm. A car knocks it flat.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 1.4,
+  "hardness": 0.3,
+  "made": "material.wood",
+  "integrity": 6
+}

@@ -68,6 +68,7 @@ export function bench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World 
   w.spills.length = 0;
   w.critters.length = 0;
   w.pads.length = 0;
+  w.paths.length = 0;
   // and no walls beside the road or gantry over it: the bench is open ground
   for (const s of w.statics) if (TRACKSIDE.has(s.def.id)) s.down = true;
   return w;

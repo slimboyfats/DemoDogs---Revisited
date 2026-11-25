@@ -1,0 +1,15 @@
+{
+  "id": "prop.balloons",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Balloons",
+    "description": "A bunch of balloons tied to a weight, pulling the way the wind blows. A bumper pops the lot.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 1.6,
+  "hardness": 0.1,
+  "made": "material.rubber",
+  "integrity": 3,
+  "points": 5
+}

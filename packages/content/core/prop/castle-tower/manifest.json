@@ -1,0 +1,13 @@
+{
+  "id": "prop.castle-tower",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Castle tower",
+    "description": "A round stone tower with battlements and a red pointed roof. The corner of a castle, or the post of its gate.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 7.5,
+  "made": "material.stone",
+  "integrity": 340
+}

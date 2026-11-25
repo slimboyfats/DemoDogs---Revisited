@@ -1664,6 +1664,7 @@ export class Effects {
           }
           break;
         case 'pad':
+        case 'bounce':
         case 'critter':
         case 'trample':
           this.life.handle(this, w, e, S, this.art);

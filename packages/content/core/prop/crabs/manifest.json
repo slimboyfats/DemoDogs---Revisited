@@ -1,0 +1,24 @@
+{
+  "id": "prop.crabs",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Crabs",
+    "description": "A few red crabs out on the sand. They scuttle off sideways from a car, and one that is hit goes spinning and lands on its feet.",
+    "since": "core@0.10.0"
+  },
+  "body": "loose",
+  "radius": 1.8,
+  "critter": {
+    "kind": "ground",
+    "group": [3, 6],
+    "roam": 34,
+    "walk": 7,
+    "run": 52,
+    "scare": 44,
+    "cry": "squeak",
+    "mass": 0.04,
+    "shy": 25,
+    "step": 0.3,
+    "points": 10
+  }
+}

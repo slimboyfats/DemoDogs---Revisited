@@ -1,0 +1,16 @@
+{
+  "id": "prop.sandcastle",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sandcastle",
+    "description": "Four towers, a keep and a paper flag, all of sand. A car goes through it without noticing.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 6.5,
+  "hardness": 0.2,
+  "made": "material.sand",
+  "integrity": 8,
+  "low": 9,
+  "points": 10
+}

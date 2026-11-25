@@ -1,0 +1,13 @@
+{
+  "id": "prop.carousel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Carousel",
+    "description": "A merry-go-round: painted horses under a striped canopy, going round and round. Hurt, it stops.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 9.5,
+  "made": "material.steel",
+  "integrity": 220
+}

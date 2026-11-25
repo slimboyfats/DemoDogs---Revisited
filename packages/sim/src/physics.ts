@@ -19,6 +19,7 @@ import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
 import { crest, groundAt, moundAt } from './mounds';
+import { pathAt } from './pads';
 import type { World } from './world';
 import { pace } from './modifiers';
 
@@ -221,7 +222,11 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
   // the deck is clean: pools and pits are on the ground below it
-  const foot = airborne || floor > 0 ? ([1, 0, false] as const) : footing(w, c.x, c.y);
+  // (and so is a boardwalk: what it crosses is under its planks)
+  const foot =
+    airborne || floor > 0 || (!off && w.paths.length && pathAt(w, c.x, c.y))
+      ? ([1, 0, false] as const)
+      : footing(w, c.x, c.y);
   let dry: number = 1 - (1 - foot[0]) * rough;
   let bog: number = foot[1] * rough;
   const pit = foot[2];
@@ -511,6 +516,18 @@ export function collideWorld(w: World, c: Car): void {
         break;
       }
       bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
+      // a sprung thing throws the car back off itself
+      const kick = s.def.bounce;
+      if (kick) {
+        const out = (c.vx * dx + c.vy * dy) / d;
+        if (out < kick) {
+          c.vx += (dx / d) * (kick - out);
+          c.vy += (dy / d) * (kick - out);
+          if (kick - out > 30)
+            w.emit({ t: 'bounce', car: c.index, prop: s.index, x: px, y: py, power: kick });
+        }
+        break;
+      }
     }
   }
 }

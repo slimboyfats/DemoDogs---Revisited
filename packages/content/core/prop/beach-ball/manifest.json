@@ -1,0 +1,14 @@
+{
+  "id": "prop.beach-ball",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Beach ball",
+    "description": "A big striped ball. Lighter than air, nearly: a car sends it sailing, and it bounces off down the road.",
+    "since": "core@0.10.0"
+  },
+  "body": "loose",
+  "radius": 4.6,
+  "mass": 0.05,
+  "launch": 0.9,
+  "points": 5
+}

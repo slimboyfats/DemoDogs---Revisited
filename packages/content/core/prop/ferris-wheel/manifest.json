@@ -1,0 +1,13 @@
+{
+  "id": "prop.ferris-wheel",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big wheel",
+    "description": "A fairground big wheel on a steel frame, eight cars turning slowly. Hurt, it stops; it takes a lot to bring down.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 10,
+  "made": "material.steel",
+  "integrity": 420
+}
