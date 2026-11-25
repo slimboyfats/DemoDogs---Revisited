@@ -288,19 +288,6 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
     // a pavement stands above the road and shades its edge on the side towards the light
     if (lit > 0.15 && d > half_ - 3.0) m *= 0.68;
 #endif
-    // the painted lines: one down each edge, dashes down the middle, whole but for a rare scuff
-    bool worn = hash2(int(floor(al / 4.0)), d < 3.0 ? 0 : int(side), u_seed + 14) < 0.015;
-    if (d > half_ - 4.4 && d < half_ - 2.4 && !worn) {
-#if TERRAIN == 5
-      col = col * 0.2 + vec3(214.0, 178.0, 40.0) * 0.8;
-#else
-      col = col * 0.2 + vec3(236.0, 232.0, 214.0) * 0.8;
-#endif
-      m = 1.0;
-    } else if (d < 1.1 && mod(al, 30.0) < 14.0 && !worn && !lane) {
-      col = col * 0.2 + vec3(230.0, 224.0, 200.0) * 0.8;
-      m = 1.0;
-    }
     // the country creeps onto the edge of the road: dust, sand, snow
     float creep = d - (half_ - 10.0 - mid * 6.0);
     if (creep > 0.0 && !kerbed && !lane) {
@@ -318,6 +305,19 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
         m = 0.9 + hsh * 0.4;
 #endif
       }
+    }
+    // the painted lines: one down each edge, dashes down the middle, whole but for a rare scuff
+    bool worn = hash2(int(floor(al / 4.0)), d < 3.0 ? 0 : int(side), u_seed + 14) < 0.015;
+    if (d > half_ - 4.4 && d < half_ - 2.4 && !worn) {
+#if TERRAIN == 5
+      col = col * 0.2 + vec3(214.0, 178.0, 40.0) * 0.8;
+#else
+      col = col * 0.2 + vec3(236.0, 232.0, 214.0) * 0.8;
+#endif
+      m = 1.0;
+    } else if (d < 1.1 && mod(al, 30.0) < 14.0 && !worn && !lane) {
+      col = col * 0.2 + vec3(230.0, 224.0, 200.0) * 0.8;
+      m = 1.0;
     }
   }
 #endif
