@@ -1090,6 +1090,12 @@ function frame(t: number): void {
         fx.quality = Math.max(0.3, fx.quality * 0.65);
         perf?.note(t, 'quality', `effects thinned to ${fx.quality.toFixed(2)}`);
       }
+    } else if (!paused && session.fx.quality < 1 && slow.eased(t)) {
+      // (and gets them back when it has run easily for a while: a burst at the start of a race
+      // does not cost the whole race its light)
+      const fx = session.fx;
+      fx.quality = Math.min(1, fx.quality / 0.65);
+      perf?.note(t, 'quality', `effects back to ${fx.quality.toFixed(2)}`);
     }
     if (perf && !paused) {
       if (glWatch) perf.drew(glWatch.take());

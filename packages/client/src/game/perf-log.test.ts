@@ -144,6 +144,49 @@ describe('SlowWatch', () => {
   });
 });
 
+describe('SlowWatch eased', () => {
+  it('gives a step back once every frame has been quick for a while', () => {
+    const w = new SlowWatch();
+    let now = 0;
+    let down = 0;
+    let up = 0;
+    // a burst at the start
+    for (let i = 0; i < 60; i++) if (w.frame((now += 40), 40)) down++;
+    expect(down).toBe(1);
+    expect(w.eased(now)).toBe(false);
+    // then twenty quick seconds
+    for (let i = 0; i < 2400; i++) {
+      w.frame((now += 8.3), 8.3);
+      if (w.eased(now)) up++;
+    }
+    expect(up).toBe(2);
+  });
+
+  it('never gives back while frames keep stumbling, and waits longer after a relapse', () => {
+    const w = new SlowWatch();
+    let now = 0;
+    let up = 0;
+    for (let i = 0; i < 2000; i++) {
+      w.frame((now += 16), i % 100 === 0 ? 22 : 16);
+      if (w.eased(now)) up++;
+    }
+    expect(up).toBe(0);
+    // quick, given back, slow again at once: the next wait is twice as long
+    const v = new SlowWatch();
+    now = 0;
+    const firstUp = (): number => {
+      const from = now;
+      for (;;) {
+        v.frame((now += 10), 10);
+        if (v.eased(now)) return now - from;
+      }
+    };
+    const first = firstUp();
+    for (let i = 0; i < 200; i++) v.frame((now += 40), 40);
+    expect(firstUp()).toBeGreaterThan(first * 1.8);
+  });
+});
+
 describe('watchGl', () => {
   it('counts draw calls and times links, then puts the context back', () => {
     const calls: string[] = [];

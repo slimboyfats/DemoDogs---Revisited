@@ -489,6 +489,11 @@ export function perfFileName(date: Date): string {
 
 /** A frame slower than this counts as slow for {@link SlowWatch} (a 60 Hz frame is 16.7 ms). */
 const SLOW_FRAME_MS = 24;
+/** A frame quicker than this is no trouble at all (a 60 Hz frame fits). */
+const CALM_FRAME_MS = 20;
+/** Every frame that quick for this long, and a step is given back; at most this long, after a relapse. */
+const CALM_MS = 8000;
+const CALM_MOST_MS = 64000;
 /** At least this long between two steps down. */
 const WATCH_GAP_MS = 6000;
 /** Frames this soon after a step down are not counted: let it take effect first. */
@@ -501,14 +506,34 @@ const WATCH_BLIND_MS = 2000;
 export class SlowWatch {
   private score = 0;
   private last = -Infinity;
+  /** Since when every frame has been quick, how long that must last, and when it last paid off. */
+  private calm = Infinity;
+  private wait = CALM_MS;
+  private rose = -Infinity;
 
   /** Feed every frame; true when the device is falling behind and something should give. */
   frame(now: number, wallMs: number): boolean {
+    if (wallMs > CALM_FRAME_MS || this.calm > now) this.calm = now;
     if (now - this.last < WATCH_BLIND_MS) return false;
     this.score = this.score * 0.9 + (wallMs > SLOW_FRAME_MS ? 1 : 0);
     if (this.score < 2.5 || now - this.last < WATCH_GAP_MS) return false;
+    // (given back too soon: the next time it has to stay quick for twice as long)
+    if (now - this.rose < CALM_MS * 2) this.wait = Math.min(CALM_MOST_MS, this.wait * 2);
     this.last = now;
+    this.calm = now;
     this.score = 0;
+    return true;
+  }
+
+  /**
+   * After `frame`, each frame: true when every frame has been quick for long enough that what
+   * was taken away can be given back, a step at a time. A burst at the start of a race should
+   * not cost the whole race its effects.
+   */
+  eased(now: number): boolean {
+    if (now - this.calm < this.wait) return false;
+    this.calm = now;
+    this.rose = now;
     return true;
   }
 }

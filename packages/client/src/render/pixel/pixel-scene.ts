@@ -287,7 +287,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       // (a beam from whichever head lamps are lit this instant: both, one to its side, or none)
       const out = lampsOut(c, w.time) & 3;
       if (out === 3) return;
-      const a = (c.def.body.halfLength - 1) * c.size;
+      // a car in the air: its beams come down on the ground further on, not under its nose (and
+      // however its nose points up there, they are not lost in the sky)
+      const air = Math.max(0, c.z - c.deck);
+      const a = (c.def.body.halfLength - 1) * c.size + Math.min(40, air * 1.2);
       const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * c.def.body.halfWidth * 0.55 * c.size;
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
@@ -295,8 +298,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         // (the beam lies as the car does: tipped to a side, it swings towards the low one; nose
         // up, it leaves the ground; nose down, it falls short)
         c.h - c.bank * 0.35,
-        c.z,
-        c.pitch * 1.5,
+        // (up on a deck it is the deck's light, and none of the ground's under it)
+        c.deck,
+        air > 1 ? 0 : c.pitch * 1.5,
         // (two lamps, a beam from each, unless one of them is out)
         out === 0 ? c.def.body.halfWidth * 0.6 * c.size : 0,
       );
