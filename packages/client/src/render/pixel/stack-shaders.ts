@@ -117,7 +117,16 @@ void main() {
 }`;
 
 /** Helpers the ground and the stacks share, so the two agree to the cell. */
-const SKY_GLSL = `
+export const SKY_GLSL = `
+// The film's shoulder (after the ACES curve's): what is brighter than paint can be is not cut off
+// at white a channel at a time, it rolls off keeping its colour, and only the very brightest
+// burns towards white. Under the knee nothing changes: painted colours stay as painted.
+vec3 shoulder(vec3 x) {
+  float m = max(x.r, max(x.g, x.b));
+  if (m <= 0.78) return x;
+  float to = 0.78 + 0.22 * (1.0 - exp(-(m - 0.78) / 0.3));
+  return min(vec3(1.0), mix(x * (to / m), vec3(to), clamp((m - 1.05) * 0.45, 0.0, 0.7)));
+}
 float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
   int t[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
@@ -324,10 +333,10 @@ void main() {
     float face = mix(1.0, 0.25 + 1.0 * max(0.0, dot(n, normalize(to))), known);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
   }
-  vec3 k = min(vec3(0.7), l);
-  vec3 rgb = min(vec3(1.0), c.rgb * (base * v_shade + k * 1.1) + k * (30.0 / 255.0));
+  vec3 k = min(vec3(1.1), l);
+  vec3 rgb = c.rgb * (base * v_shade + k * 1.1) + k * (30.0 / 255.0);
   // the gleam is the light's own colour laid over the paint, most on what is pale already
-  rgb = min(vec3(1.0), rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
+  rgb = shoulder(rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
   // a lamp shows its own colour however dark it is round it
   rgb = mix(rgb, min(vec3(1.0), c.rgb * 1.25 + 0.1), lamp * u_glow);
   o = vec4(rgb, 1.0);
@@ -551,10 +560,10 @@ void main() {
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }
-  vec3 q = min(vec3(0.7), l);
+  vec3 q = min(vec3(1.1), l);
   // (and what stands in the sun beside it throws some of its own colour back on it, in steps)
   vec3 back = floor(min(vec3(0.6), bounced(wp)) * 6.0 + b) / 6.0;
-  c = min(vec3(1.0), c * (u_amb + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
+  c = shoulder(c * (u_amb + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
   o = vec4(c, 1.0);
 }`;
 

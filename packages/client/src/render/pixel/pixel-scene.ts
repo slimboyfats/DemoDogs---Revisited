@@ -12,6 +12,7 @@ import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { SunShadow } from './sun-shadow';
 import { LightBlock } from './light-block';
+import { BeamHaze } from './beam-haze';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
 import { ShadowMap, casts } from '../cast';
@@ -90,6 +91,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   /** Lights throw shadows too: what stands in their way is mapped each frame there is a light. */
   lightCast = true;
   private block: LightBlock | null = null;
+  private haze: BeamHaze | null = null;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -509,6 +511,17 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.darken(fx, W, H);
     this.gas?.draw(gas, this.lights, 1, tint, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE);
+    // the beams in the air: thin on a clear night, thick in rain and snow
+    if (this.lightCast && this.lights.coneCount && fx.quality > 0.5)
+      (this.haze ??= new BeamHaze(gl)).draw(
+        view,
+        this.lights,
+        blocked ? this.block : null,
+        this.relief!,
+        [w.w, w.h],
+        fineGrid(S),
+        0.3 + 0.5 * Math.max(sky.wet, sky.snow),
+      );
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
