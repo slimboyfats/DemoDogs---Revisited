@@ -3,33 +3,39 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Fetch Park",
-    "description": "Race. A broad loop round the dog park: a great oak and a pond in the middle, hedges all round, and a launcher lobbing giant tennis balls down the straight.",
+    "description": "Race. A broad winding lap round the dog park: a great oak and a pond in the middle, hedges all round, and a launcher lobbing giant tennis balls down the straight.",
     "since": "core@0.9.0"
   },
   "mode": "mode.race",
   "seed": 912,
   "size": {
-    "w": 1500,
-    "h": 1160
+    "w": 1960,
+    "h": 1460
   },
   "track": {
     "road": 92,
     "points": [
-      [973, 303],
-      [699, 247],
-      [496, 236],
-      [399, 317],
-      [403, 433],
-      [309, 523],
-      [234, 643],
-      [266, 764],
-      [419, 827],
-      [712, 879],
-      [988, 924],
-      [1153, 894],
-      [1252, 689],
-      [1266, 479],
-      [1168, 355]
+      [1324, 365],
+      [998, 298],
+      [762, 328],
+      [600, 237],
+      [420, 250],
+      [343, 387],
+      [425, 526],
+      [366, 658],
+      [238, 777],
+      [243, 956],
+      [401, 1064],
+      [744, 1133],
+      [1124, 1197],
+      [1404, 1223],
+      [1579, 1138],
+      [1644, 972],
+      [1541, 847],
+      [1583, 712],
+      [1722, 630],
+      [1711, 486],
+      [1567, 399]
     ]
   },
   "colors": {
@@ -42,35 +48,35 @@
     "paths": [
       {
         "points": [
-          [733, 962],
-          [711, 1024],
-          [655, 1082],
-          [598, 1178],
-          [503, 1357],
-          [481, 1584]
+          [937, 1247],
+          [916, 1309],
+          [860, 1367],
+          [803, 1464],
+          [708, 1642],
+          [674, 1938]
         ],
         "width": 18
       },
       {
         "points": [
-          [1044, 205],
-          [1208, 181],
-          [1377, 232],
-          [1561, 193],
-          [1832, 170],
-          [2064, 264]
+          [1291, 252],
+          [1455, 228],
+          [1624, 276],
+          [1809, 237],
+          [2079, 214],
+          [2415, 326]
         ],
         "width": 13
       },
       {
         "points": [
-          [-501, 700],
-          [-269, 794],
-          [-5, 912],
-          [122, 997],
-          [223, 1130],
-          [279, 1318],
-          [222, 1539]
+          [-480, 1024],
+          [-211, 1107],
+          [-13, 1195],
+          [149, 1286],
+          [270, 1405],
+          [343, 1596],
+          [277, 1868]
         ],
         "width": 13
       }
@@ -82,110 +88,110 @@
       "items": [
         {
           "prop": "prop.ball-launcher",
-          "x": -591,
-          "y": 229,
-          "rot": 0.055
+          "x": -821,
+          "y": 339,
+          "rot": 0.075
         },
         {
           "prop": "prop.plank-bridge",
-          "x": -17,
-          "y": 379,
+          "x": -42,
+          "y": 515,
           "rot": 1.745
         },
         {
           "prop": "prop.toy-oak",
-          "x": -111,
-          "y": -43,
+          "x": -211,
+          "y": -37,
           "rot": 0.475
         },
         {
           "prop": "prop.pond",
-          "x": 251,
-          "y": 21,
+          "x": 229,
+          "y": 85,
           "rot": 0.175
         },
         {
           "prop": "prop.park-bench",
-          "x": 148,
-          "y": 198,
+          "x": 141,
+          "y": 230,
           "rot": 0.175
         },
         {
           "prop": "prop.rock",
-          "x": 21,
-          "y": 167,
+          "x": 14,
+          "y": 198,
           "rot": 0.575
         },
         {
           "prop": "prop.rock",
-          "x": -239,
-          "y": -226,
+          "x": -246,
+          "y": -194,
           "rot": 1.375
         },
         {
           "prop": "prop.toy-bush",
-          "x": -271,
-          "y": 106,
+          "x": -278,
+          "y": 138,
           "rot": 0.175
         },
         {
           "prop": "prop.toy-bush",
-          "x": 361,
-          "y": 200,
+          "x": 354,
+          "y": 232,
           "rot": 0.175
         },
         {
           "prop": "prop.toy-bush",
-          "x": -125,
-          "y": 185,
+          "x": -132,
+          "y": 217,
           "rot": 0.175
         },
         {
           "prop": "prop.toy-bush",
-          "x": 120,
-          "y": -198,
+          "x": 114,
+          "y": -166,
           "rot": 0.175
         },
         {
           "prop": "prop.toy-bush",
-          "x": 416,
-          "y": -110,
+          "x": 409,
+          "y": -78,
           "rot": 0.175
         },
         {
           "prop": "prop.toy-bush",
-          "x": -333,
-          "y": 7,
+          "x": -340,
+          "y": 38,
           "rot": 0.175
         },
         {
           "prop": "prop.agility-frame",
-          "x": -412,
-          "y": -452,
+          "x": -712,
+          "y": -623,
           "rot": 0.675
         },
         {
           "prop": "prop.agility-tunnel",
-          "x": -510,
-          "y": -353,
+          "x": -791,
+          "y": -477,
           "rot": -0.125
         },
         {
           "prop": "prop.park-bench",
-          "x": -313,
-          "y": -511,
+          "x": -617,
+          "y": -659,
           "rot": 0.375
         },
         {
           "prop": "prop.park-dog",
-          "x": 59,
-          "y": 502,
+          "x": 34,
+          "y": 637,
           "rot": 0.375
         },
         {
           "prop": "prop.park-dog",
-          "x": -236,
-          "y": -92,
+          "x": -243,
+          "y": -60,
           "rot": 2.775
         }
       ]
@@ -218,7 +224,7 @@
     },
     {
       "rule": "along",
-      "at": [0.486, 0.549, 0.609, 0.668],
+      "at": [0.479, 0.545, 0.593, 0.648],
       "items": [
         {
           "prop": "prop.paw-pad"
@@ -227,7 +233,7 @@
     },
     {
       "rule": "along",
-      "at": [0.124],
+      "at": [0.034],
       "items": [
         {
           "prop": "prop.ramp"
@@ -260,663 +266,783 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.toy-tree",
-          "x": 616,
-          "y": -38,
-          "rot": 0
-        },
-        {
           "prop": "prop.toy-tree-big",
-          "x": 644,
-          "y": -20,
+          "x": -776,
+          "y": -278,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 683,
-          "y": -28,
+          "x": -737,
+          "y": -286,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 703,
-          "y": -60,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 665,
-          "y": 0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 680,
-          "y": 39,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 689,
-          "y": 103,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 626,
-          "y": 0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 716,
-          "y": -89,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 718,
-          "y": 77,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 626,
-          "y": 29,
+          "x": -815,
+          "y": -282,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 645,
-          "y": -52,
+          "x": -955,
+          "y": -410,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 632,
-          "y": -86,
+          "x": -789,
+          "y": -236,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -531,
-          "y": -166,
+          "x": -804,
+          "y": -195,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -633,
-          "y": 534,
+          "x": -837,
+          "y": -263,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 706,
-          "y": 52,
+          "x": -833,
+          "y": -223,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": -673,
-          "y": -304,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 713,
-          "y": -17,
+          "x": -841,
+          "y": -193,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -261,
-          "y": 456,
+          "x": -746,
+          "y": -243,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 688,
-          "y": -87,
+          "x": -780,
+          "y": -311,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 765,
+          "y": 335,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -239,
-          "y": 476,
+          "x": -719,
+          "y": -230,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 753,
+          "y": 301,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 654,
-          "y": 51,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 174,
-          "y": -439,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 724,
-          "y": 21,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -566,
-          "y": -169,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 644,
-          "y": 102,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -351,
-          "y": 457,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -634,
-          "y": -304,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 673,
-          "y": 70,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 645,
-          "y": -474,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 595,
-          "y": -395,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 620,
-          "y": 71,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 168,
-          "y": -401,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 697,
-          "y": 462,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 574,
-          "y": -368,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -250,
-          "y": 517,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 666,
-          "y": -495,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -498,
-          "y": -187,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 726,
-          "y": 116,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 697,
-          "y": 497,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 630,
-          "y": -121,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 592,
-          "y": -340,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 695,
-          "y": -116,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 613,
-          "y": -145,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -566,
-          "y": 471,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 635,
-          "y": 141,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 616,
-          "y": 436,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -516,
-          "y": 454,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 281,
-          "y": -464,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 658,
-          "y": -101,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 631,
-          "y": -500,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 651,
-          "y": -517,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -592,
-          "y": 493,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -704,
-          "y": -110,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -209,
-          "y": 534,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 663,
-          "y": 143,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 654,
-          "y": -548,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -612,
-          "y": -284,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -475,
-          "y": -209,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -374,
-          "y": 415,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -627,
-          "y": 457,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -578,
-          "y": -268,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -254,
-          "y": -486,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 620,
-          "y": 476,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 203,
-          "y": -456,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 123,
-          "y": -553,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 667,
-          "y": 179,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -296,
-          "y": -498,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -650,
-          "y": -57,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 574,
-          "y": -416,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 139,
-          "y": -524,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 655,
-          "y": -160,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -245,
-          "y": -453,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -638,
-          "y": -270,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 611,
-          "y": -371,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -225,
-          "y": -479,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 561,
-          "y": -451,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -332,
-          "y": 425,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -540,
-          "y": -133,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -203,
-          "y": -450,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 233,
-          "y": -482,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 653,
-          "y": 412,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 723,
-          "y": 156,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 385,
-          "y": -468,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -689,
-          "y": -57,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 548,
-          "y": 544,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -540,
+          "x": -718,
           "y": -258,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 144,
-          "y": -427,
+          "x": -938,
+          "y": -440,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 710,
-          "y": -502,
+          "x": 804,
+          "y": 324,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -652,
+          "y": 492,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 817,
+          "y": 281,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -548,
+          "y": 565,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -24,
+          "y": -666,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 766,
+          "y": 26,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 726,
+          "y": 111,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -653,
+          "y": 533,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 839,
+          "y": 325,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -723,
+          "y": -193,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -516,
+          "y": 571,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 812,
+          "y": 361,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -35,
+          "y": -692,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 725,
+          "y": 36,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -576,
+          "y": 593,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 739,
+          "y": 352,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 24,
+          "y": -684,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -752,
+          "y": -207,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -840,
+          "y": -296,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -218,
+          "y": 664,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 779,
+          "y": 275,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 796,
+          "y": 246,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -515,
+          "y": 536,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 475,
+          "y": -635,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -576,
+          "y": 635,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 781,
+          "y": 214,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -839,
+          "y": -163,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -926,
+          "y": -410,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -625,
+          "y": 505,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -870,
+          "y": -255,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -539,
+          "y": 604,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -683,
+          "y": -202,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 892,
+          "y": 214,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -808,
+          "y": -165,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 698,
+          "y": 57,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -504,
+          "y": 621,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -770,
+          "y": -185,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -745,
+          "y": -313,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -186,
+          "y": 580,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 845,
+          "y": 71,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -186,
+          "y": 643,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 811,
+          "y": 554,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 862,
+          "y": 97,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -867,
+          "y": -141,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -900,
+          "y": -149,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -597,
+          "y": 672,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -547,
+          "y": 530,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -71,
+          "y": -531,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 862,
+          "y": 187,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -782,
+          "y": -142,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -920,
+          "y": -467,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -614,
+          "y": 582,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 726,
+          "y": 705,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 773,
+          "y": 67,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 771,
+          "y": -567,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -641,
+          "y": 603,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -868,
+          "y": -662,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -630,
+          "y": 640,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 691,
+          "y": -536,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -490,
+          "y": 517,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 162,
+          "y": -702,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 665,
+          "y": -555,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -671,
+          "y": 567,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 692,
+          "y": 96,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 891,
+          "y": 244,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 193,
+          "y": -705,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -224,
+          "y": -603,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -227,
+          "y": 585,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 909,
+          "y": -285,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 888,
+          "y": 287,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -491,
+          "y": 661,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -695,
+          "y": 604,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 438,
+          "y": -634,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -46,
+          "y": -565,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 762,
+          "y": 91,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 935,
+          "y": 449,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -566,
+          "y": 683,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 122,
+          "y": -523,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 1,
+          "y": -641,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 806,
+          "y": 192,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 461,
+          "y": -660,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
           "x": -664,
-          "y": -238,
+          "y": 620,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 593,
-          "y": -440,
+          "x": 826,
+          "y": 211,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 717,
-          "y": -469,
+          "x": -935,
+          "y": 38,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 580,
-          "y": 424,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 690,
-          "y": -147,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -299,
-          "y": -466,
+          "x": -685,
+          "y": 637,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 553,
-          "y": 498,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -616,
-          "y": -244,
+          "x": 429,
+          "y": -680,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -589,
-          "y": -184,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -555,
-          "y": 497,
+          "x": -943,
+          "y": 8,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 663,
-          "y": -433,
+          "x": 79,
+          "y": -646,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 197,
-          "y": -402,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 645,
-          "y": 443,
+          "x": 944,
+          "y": -614,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 689,
-          "y": -474,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 500,
+          "x": -594,
           "y": 496,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 625,
-          "y": 167,
+          "x": -728,
+          "y": 575,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 159,
+          "y": -531,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 536,
-          "y": -349,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 633,
-          "y": -351,
+          "x": 659,
+          "y": 630,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -578,
-          "y": 423,
+          "x": 662,
+          "y": -529,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 945,
+          "y": -259,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 655,
-          "y": -323,
+          "x": 395,
+          "y": -654,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": -193,
-          "y": -493,
+          "x": -891,
+          "y": -176,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 835,
+          "y": 176,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -865,
+          "y": -287,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 854,
+          "y": 274,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 807,
+          "y": 165,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -842,
+          "y": -328,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 830,
+          "y": 97,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -793,
+          "y": 684,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 272,
+          "y": -626,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 265,
+          "y": -674,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 797,
+          "y": -600,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 856,
+          "y": 37,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 292,
+          "y": -545,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -896,
+          "y": -272,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 819,
+          "y": -9,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 533,
+          "y": -557,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 761,
+          "y": 186,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 806,
+          "y": 127,
           "rot": 0
         }
       ]
