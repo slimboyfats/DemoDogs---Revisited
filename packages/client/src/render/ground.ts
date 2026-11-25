@@ -115,6 +115,18 @@ export function makeGround(w: World): Ground {
       g.fillStyle = sh;
       g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);
     }
+    // and a boost tile shines on the road round it: a soft blue halo
+    g.globalCompositeOperation = 'lighter';
+    for (const s of w.statics) {
+      if (s.def.pad?.kind !== 'boost') continue;
+      const rad = s.def.radius * 2.1;
+      const sh = g.createRadialGradient(s.x, s.y, s.def.radius * 0.3, s.x, s.y, rad);
+      sh.addColorStop(0, 'rgba(70,150,255,0.5)');
+      sh.addColorStop(1, 'rgba(70,150,255,0)');
+      g.fillStyle = sh;
+      g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);
+    }
+    g.globalCompositeOperation = 'source-over';
   }
   if (T) {
     const road = w.road;

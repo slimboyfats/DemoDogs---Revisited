@@ -9,27 +9,27 @@
   "mode": "mode.race",
   "seed": 912,
   "size": {
-    "w": 840,
-    "h": 640
+    "w": 1000,
+    "h": 800
   },
   "track": {
     "road": 60,
     "points": [
-      [548, 162],
-      [391, 130],
-      [275, 124],
-      [219, 170],
-      [222, 236],
-      [168, 288],
-      [125, 356],
-      [144, 425],
-      [231, 461],
-      [398, 491],
-      [556, 516],
-      [650, 500],
-      [707, 382],
-      [715, 262],
-      [659, 191]
+      [628, 242],
+      [471, 210],
+      [355, 204],
+      [299, 250],
+      [302, 316],
+      [248, 368],
+      [205, 436],
+      [224, 505],
+      [311, 541],
+      [478, 571],
+      [636, 596],
+      [730, 580],
+      [787, 462],
+      [795, 342],
+      [739, 271]
     ]
   },
   "colors": {
@@ -42,27 +42,35 @@
     "paths": [
       {
         "points": [
-          [414, 519],
-          [398, 574],
-          [366, 607],
-          [333, 662]
+          [494, 599],
+          [478, 654],
+          [446, 687],
+          [413, 742],
+          [359, 844],
+          [346, 974]
         ],
         "width": 18
       },
       {
         "points": [
-          [588, 106],
-          [682, 92],
-          [778, 121],
-          [884, 99]
+          [668, 186],
+          [762, 172],
+          [858, 201],
+          [964, 179],
+          [1118, 166],
+          [1251, 219]
         ],
         "width": 13
       },
       {
         "points": [
-          [-11, 510],
-          [61, 558],
-          [119, 634]
+          [-215, 469],
+          [-82, 523],
+          [69, 590],
+          [141, 638],
+          [199, 714],
+          [231, 821],
+          [198, 948]
         ],
         "width": 13
       }
@@ -76,7 +84,7 @@
           "prop": "prop.ball-launcher",
           "x": -372,
           "y": 129,
-          "rot": 0.145
+          "rot": 0.085
         },
         {
           "prop": "prop.plank-bridge",
@@ -184,7 +192,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 17,
+      "offset": 13,
       "run": [240, 520],
       "gap": [26, 50],
       "side": 1,
@@ -197,7 +205,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 38,
+      "offset": 26,
       "run": [300, 620],
       "gap": [20, 40],
       "side": 1,
@@ -207,11 +215,6 @@
           "weight": 1
         }
       ]
-    },
-    {
-      "rule": "border",
-      "prop": "prop.rail-fence",
-      "spacing": 9
     },
     {
       "rule": "along",
@@ -257,243 +260,483 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.toy-tree-big",
-          "x": -321,
-          "y": -116,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": -348,
-          "y": -133,
-          "rot": 0
-        },
-        {
           "prop": "prop.toy-tree",
-          "x": -380,
-          "y": -112,
+          "x": 404,
+          "y": -26,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -356,
-          "y": -91,
+          "x": 432,
+          "y": -7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 470,
+          "y": -16,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -322,
-          "y": -146,
+          "x": 472,
+          "y": 256,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -342,
-          "y": -166,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -313,
-          "y": -177,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -371,
-          "y": -161,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 322,
-          "y": -244,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 298,
-          "y": -273,
+          "x": -108,
+          "y": 344,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -382,
-          "y": -75,
+          "x": 438,
+          "y": 274,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": -357,
-          "y": -190,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 80,
-          "y": -288,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 331,
-          "y": -277,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 355,
-          "y": -227,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 272,
-          "y": -258,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 380,
-          "y": 246,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 251,
-          "y": -231,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -392,
+          "x": 444,
           "y": -35,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 376,
-          "y": -248,
+          "x": -219,
+          "y": 354,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -130,
+          "y": 364,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 276,
+          "x": 458,
+          "y": 14,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 462,
+          "y": -70,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 472,
+          "y": 227,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -157,
+          "y": 350,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 372,
+          "y": 361,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 391,
+          "y": -3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 226,
+          "y": -279,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 399,
+          "y": 351,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 381,
+          "y": -44,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 470,
+          "y": 286,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -190,
+          "y": 346,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 386,
+          "y": 322,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 421,
+          "y": -51,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 425,
+          "y": 31,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -43,
+          "y": -357,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 443,
+          "y": -96,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -273,
+          "y": 301,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 429,
+          "y": 330,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 452,
+          "y": 48,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 36,
+          "y": -343,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 339,
+          "y": 331,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 222,
+          "y": -309,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -268,
+          "y": 375,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 96,
+          "y": -366,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -395,
+          "y": 257,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 392,
+          "y": 184,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -429,
+          "y": -171,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 224,
+          "y": -243,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 265,
+          "y": -317,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -229,
+          "y": 315,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -433,
+          "y": -302,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 250,
+          "y": -348,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 419,
+          "y": 70,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 457,
+          "y": 313,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -402,
+          "y": -294,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 333,
+          "y": 376,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 311,
+          "y": -238,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -404,
           "y": -216,
           "rot": 0
         },
         {
-          "prop": "prop.toy-tree-big",
-          "x": 361,
-          "y": 277,
-          "rot": 0
-        },
-        {
           "prop": "prop.toy-tree",
-          "x": 232,
-          "y": -267,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 50,
-          "y": -273,
+          "x": -371,
+          "y": -313,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 13,
-          "y": -295,
+          "x": -378,
+          "y": -236,
           "rot": 0
         },
         {
-          "prop": "prop.toy-tree",
-          "x": 110,
-          "y": -273,
+          "prop": "prop.toy-tree-big",
+          "x": 455,
+          "y": -135,
           "rot": 0
         },
         {
-          "prop": "prop.toy-tree",
-          "x": -295,
-          "y": -150,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 257,
-          "y": -287,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 216,
-          "y": -231,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 334,
-          "y": -203,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -385,
-          "y": -194,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
+          "prop": "prop.toy-tree-big",
           "x": -366,
-          "y": -49,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": -22,
-          "y": -296,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree",
-          "x": 153,
-          "y": -258,
+          "y": 268,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
-          "x": 205,
-          "y": -289,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 392,
-          "y": 113,
+          "x": -414,
+          "y": 288,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 370,
-          "y": -191,
+          "x": -308,
+          "y": 365,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 395,
+          "y": -67,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree-big",
+          "x": -371,
+          "y": 319,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -385,
+          "y": 295,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -244,
+          "y": 283,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 284,
+          "y": 358,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
           "x": 373,
-          "y": -284,
-          "rot": 0
-        },
-        {
-          "prop": "prop.toy-tree-big",
-          "x": 146,
-          "y": -289,
+          "y": 281,
           "rot": 0
         },
         {
           "prop": "prop.toy-tree",
-          "x": 390,
-          "y": -170,
+          "x": 399,
+          "y": 254,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -196,
+          "y": 373,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -440,
+          "y": 259,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 325,
+          "y": 306,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 71,
+          "y": -340,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -450,
+          "y": -326,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 106,
+          "y": -257,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 413,
+          "y": 375,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 384,
+          "y": -99,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 475,
+          "y": -272,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -116,
+          "y": 303,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -308,
+          "y": 329,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -89,
+          "y": 363,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -199,
+          "y": 320,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 443,
+          "y": 233,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": 190,
+          "y": -252,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -444,
+          "y": -29,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": -82,
+          "y": 320,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree-big",
+          "x": 164,
+          "y": -271,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -61,
+          "y": -323,
+          "rot": 0
+        },
+        {
+          "prop": "prop.toy-tree",
+          "x": -469,
+          "y": -284,
           "rot": 0
         }
       ]

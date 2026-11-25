@@ -33,12 +33,12 @@ const look: LookModule = {
   id: 'prop.paw-pad',
   look: {
     kind: 'prop',
-    scale: 1.5,
-    // (brighter than the game's other boost tiles: sky blue all over, the lit part paler)
+    scale: 1.8,
+    // (brighter than the game's other boost tiles: pale blue all over, the lit part near white)
     materials: {
-      turbodim: ['#1a7cf0', '#2a96ff', '#4cb0ff'],
-      turbowarm: ['#2a9cff', '#48b6ff', '#7ad0ff'],
-      turbohot: ['#6fd0ff', '#96e2ff', '#c4f2ff'],
+      turbodim: ['#2f92ff', '#4aaaff', '#74c2ff'],
+      turbowarm: ['#5cbcff', '#84d2ff', '#b0e6ff'],
+      turbohot: ['#b4eaff', '#d8f6ff', '#fcfcf4'],
     },
     part: tile(0),
     alts: [tile(1), tile(2)],

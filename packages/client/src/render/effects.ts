@@ -1971,7 +1971,9 @@ export class Effects {
           this.ground.g.fillRect(mx - 1, my - 1, 2, 2);
           markGround(this.ground, mx, my, 1);
         }
-      if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
+      // (tyre smoke is pale on a toy road, so it never reads as grit)
+      if (c.sliding && Math.random() < 0.3)
+        this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke', 0, 0, toy ? 0xe8e4da : undefined);
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       // on a toy venue every car at speed trails a little cloud, as toy cars do

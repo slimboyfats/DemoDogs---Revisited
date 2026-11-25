@@ -33,7 +33,7 @@ export function arcDots(w: World, out: ArcDot[] = []): ArcDot[] {
       if (Math.abs(t) < 0.06) continue;
       const z = p.z + p.vz * t - (g * t * t) / 2;
       if (z < 1) continue;
-      out.push({ x: p.x + p.vx * t, y: p.y + p.vy * t, z, s: 2.2, rgb: WHITE });
+      out.push({ x: p.x + p.vx * t, y: p.y + p.vy * t, z, s: 3, rgb: WHITE });
     }
     const lx = p.x + p.vx * left;
     const ly = p.y + p.vy * left;
@@ -42,7 +42,7 @@ export function arcDots(w: World, out: ArcDot[] = []): ArcDot[] {
       // dashes: two dots on, two off
       if (k % 4 > 1) continue;
       const a = (k / 24) * Math.PI * 2;
-      out.push({ x: lx + Math.cos(a) * r, y: ly + Math.sin(a) * r, z: 0.4, s: 2.2, rgb: WHITE });
+      out.push({ x: lx + Math.cos(a) * r, y: ly + Math.sin(a) * r, z: 0.4, s: 3, rgb: WHITE });
     }
   }
   return out;

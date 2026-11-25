@@ -50,7 +50,10 @@ export function toyTree(
           Math.min(ax, ay) < trunk * 0.6 &&
           Math.max(ax, ay) < flare + cube * (cz < cube ? 1.7 : 0.6);
         if ((ax < flare && ay < flare) || root)
-          return hash3(qx + 9, qy + 9, qz) > 0.6 ? 'toybark2' : 'toybark';
+          // (grooves run up the bark)
+          return hash3(qx + 9, qy + 9, 1) > 0.55 || hash3(qx + 9, qy + 9, qz) > 0.8
+            ? 'toybark2'
+            : 'toybark';
       }
       // the crown: a cube belongs to the lump it is deepest inside, if its middle is in one
       let deep = 1;
