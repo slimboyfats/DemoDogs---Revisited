@@ -15,7 +15,15 @@ export class Relief {
   readonly hills: Float32Array;
   /** The banks: how many terraces up each point of the grid is (a fraction: part way to the next). */
   readonly bank: Float32Array;
-  /** Raised road: how much of each point's height is a platform's (null where a venue has none). */
+  /**
+   * Raised road (null where a venue has none), four values to each point of the grid: how far
+   * inside the platform's side the point is (in side widths: 1 and more on the top, 0 and less
+   * past the foot), how high the road stands there, how high the on-ramp's lane beside it has
+   * climbed, and how wide that lane is (in side widths). They are kept apart and not as one
+   * height because each runs smoothly across the grid, where the height they add up to has a
+   * sharp lip and foot: read between the grid's points and shaped after (`raisedOf`), a side is
+   * a clean wall whichever way it runs, not a row of steps the size of the grid.
+   */
   plat: Float32Array | null = null;
   /**
    * Where an on-ramp beside raised road lies, a byte to each point of the grid (null: none): 2 on
@@ -56,7 +64,8 @@ export class Relief {
       a +
       (H[k + 1]! - a) * tx +
       (H[k1]! - a) * ty +
-      (a - H[k + 1]! - H[k1]! + H[k1 + 1]!) * tx * ty;
+      (a - H[k + 1]! - H[k1]! + H[k1 + 1]!) * tx * ty +
+      (this.plat ? this.raisedOf(k, tx, ty) : 0);
     if (this.steps === 0) return v;
     const B = this.bank;
     const e = B[k]!;
@@ -92,21 +101,32 @@ export class Relief {
 
   /** How much of the ground's height at (x, y) is raised road: its platform, ramps and sides. */
   platAt(x: number, y: number): number {
-    const P = this.plat;
-    if (!P) return 0;
+    if (!this.plat) return 0;
     const C = Relief.CELL;
     const fx = Math.min(this.gw - 1, Math.max(0, x / C));
     const fy = Math.min(this.gh - 1, Math.max(0, y / C));
     const xi = Math.min(this.gw - 2, Math.floor(fx));
     const yi = Math.min(this.gh - 2, Math.floor(fy));
-    const tx = fx - xi;
-    const ty = fy - yi;
-    const k = yi * this.gw + xi;
-    const k1 = k + this.gw;
-    const a = P[k]!;
-    return (
-      a + (P[k + 1]! - a) * tx + (P[k1]! - a) * ty + (a - P[k + 1]! - P[k1]! + P[k1 + 1]!) * tx * ty
-    );
+    return this.raisedOf(yi * this.gw + xi, fx - xi, fy - yi);
+  }
+
+  /** The raised road's height in the cell whose first point is `k`, `tx`, `ty` of the way across. */
+  private raisedOf(k: number, tx: number, ty: number): number {
+    const P = this.plat!;
+    const a = k * 4;
+    const b = a + 4;
+    const c = a + this.gw * 4;
+    const d = c + 4;
+    const w0 = (1 - tx) * (1 - ty);
+    const w1 = tx * (1 - ty);
+    const w2 = (1 - tx) * ty;
+    const w3 = tx * ty;
+    const top = P[a + 1]! * w0 + P[b + 1]! * w1 + P[c + 1]! * w2 + P[d + 1]! * w3;
+    if (top <= 0) return 0;
+    const s = P[a]! * w0 + P[b]! * w1 + P[c]! * w2 + P[d]! * w3;
+    const lane = P[a + 2]! * w0 + P[b + 2]! * w1 + P[c + 2]! * w2 + P[d + 2]! * w3;
+    const wide = P[a + 3]! * w0 + P[b + 3]! * w1 + P[c + 3]! * w2 + P[d + 3]! * w3;
+    return lane * clamp01(s + wide) + (top - lane) * clamp01(s);
   }
 
   /** How steeply the ground rises to the east at (x, y): height gained per px. */
@@ -295,6 +315,13 @@ export function lanesOf(
   return L;
 }
 
+/** A grid of raised road with none on it yet: every point `far` outside a side, nothing high. */
+function platOf(R: Relief, far: number): Float32Array {
+  const P = new Float32Array(R.gw * R.gh * 4);
+  for (let k = 0; k < P.length; k += 4) P[k] = far;
+  return P;
+}
+
 /** How high the road stands at each sample of the track, for its raised stretches. */
 export function liftsOf(track: Track, raised: readonly Raised[]): Float32Array {
   const N = track.n;
@@ -387,20 +414,22 @@ export function buildRelief(
         const i = near![k]!;
         const top = lift[i]!;
         const edge = half + SHOULDER;
-        let up = top * clamp01((edge + SIDE - dist[k]!) / SIDE);
+        const s = (edge + SIDE - dist[k]!) / SIDE;
         // (which side of the road this point is on says which lane it may be part of)
         const a = track!.a[i]!;
         const side =
           (y - track!.y[i]!) * Math.cos(a) - (x - track!.x[i]!) * Math.sin(a) < 0 ? -1 : 1;
         const wide = laneWide(lane!, i, side);
-        if (wide > 0) {
-          up = Math.max(up, top * lane!.rise[i]! * clamp01((edge + wide + SIDE - dist[k]!) / SIDE));
-          if (dist[k]! > half - 6 && dist[k]! < edge + wide + SIDE + 12)
-            (R.slip ??= new Uint8Array(R.gw * R.gh))[k] =
-              dist[k]! > edge - 4 && dist[k]! < edge + wide + 2 ? 2 : 1;
-        }
-        (R.plat ??= new Float32Array(R.gw * R.gh))[k] = up;
-        const v = (R.hills[k]! += up);
+        const low = wide > 0 ? top * lane!.rise[i]! : 0;
+        if (wide > 0 && dist[k]! > half - 6 && dist[k]! < edge + wide + SIDE + 12)
+          (R.slip ??= new Uint8Array(R.gw * R.gh))[k] =
+            dist[k]! > edge - 4 && dist[k]! < edge + wide + 2 ? 2 : 1;
+        const P = (R.plat ??= platOf(R, (edge + SIDE - reach) / SIDE));
+        P[k * 4] = s;
+        P[k * 4 + 1] = top;
+        P[k * 4 + 2] = low;
+        P[k * 4 + 3] = wide / SIDE;
+        const v = R.hills[k]! + low * clamp01(s + wide / SIDE) + (top - low) * clamp01(s);
         if (v > max) max = v;
       }
       if (steps > 0) {
