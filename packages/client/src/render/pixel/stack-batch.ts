@@ -349,7 +349,23 @@ export class StackBatch {
     const v = a.y + sliceY(s, i);
     if (!tint && this.warm) tint = -1 - this.lampsOut;
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint, T?.tx, T?.ty, T?.air);
+      this.push(
+        x,
+        y,
+        z + k / zk,
+        up + k,
+        rot,
+        u,
+        v,
+        s.cw,
+        s.ch,
+        alpha,
+        res,
+        tint,
+        T?.tx,
+        T?.ty,
+        T?.air,
+      );
   }
 
   private lie: Lie | null = null;
