@@ -1,5 +1,6 @@
 import type { LookModule, ShapeFn } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
+import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** A van: a short sloping bonnet and a tall box, glass up front and panels behind. */
@@ -47,6 +48,20 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: bruiserBody },
+    toy: {
+      ...CAR_CELL,
+      smooth: true,
+      fn: toyTruck({
+        a: 11.5,
+        b: 5.9,
+        well: 3.5,
+        axles: [7, -7.4],
+        hood: 4.6,
+        nose: 4.2,
+        cab: { x0: -11, x1: 6.6, roof: 8.6, rake: 1.4 },
+        box: 2.5,
+      }),
+    },
     // a roof rack
     top: {
       w: 10,

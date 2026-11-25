@@ -28,7 +28,7 @@ const KEYS: readonly { at: number; amb: Rgb; sun: Rgb; high: number; glow: numbe
  * A toy venue's day: the shade a little cool, the sun strong and golden, so tops are a touch
  * brighter and warmer than painted and the sides away from the sun stand out.
  */
-const WARM: { amb: Rgb; sun: Rgb } = { amb: [0.44, 0.45, 0.54], sun: [1.14, 0.92, 0.5] };
+const WARM: { amb: Rgb; sun: Rgb } = { amb: [0.46, 0.48, 0.54], sun: [1.04, 0.94, 0.7] };
 
 /** How dark it must be before cars put their headlamps on. */
 export const LAMPS_AT = 0.42;

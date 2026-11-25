@@ -12,11 +12,11 @@
   "integrity": 220,
   "thrower": {
     "ball": "prop.tennis-ball",
-    "every": 1.2,
-    "reach": [120, 300],
+    "every": 2.6,
+    "reach": [160, 420],
     "spread": 0.06,
     "apex": 60,
     "mouth": [54, 70],
-    "pool": 5
+    "pool": 3
   }
 }

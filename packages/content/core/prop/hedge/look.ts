@@ -11,10 +11,9 @@ const look: LookModule = {
     kind: 'prop',
     scale: 1.5,
     materials: {
-      hedge: ['#2f6a22', '#42842a', '#5a9e34'],
-      hedge2: ['#5f8e2a', '#7eae36', '#a2cc48'],
-      hedge3: ['#1f4f1c', '#2b6422', '#3b7a2a'],
-      hedge4: ['#133a16', '#1a481a', '#265a20'],
+      hedge: ['#23803a', '#2c9a46', '#44b85a'],
+      hedge2: ['#2c9446', '#38ac52', '#58c868'],
+      hedge3: ['#1c6c32', '#24843c', '#38a04e'],
     },
     part: {
       w: 12,
@@ -23,19 +22,17 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         if (Math.abs(x) > 6 || Math.abs(y) > 3.9) return null;
-        const qx = Math.floor((x + 20) / 1.5);
-        const qy = Math.floor((y + 20) / 1.3);
-        // every column of cubes its own height, the outer ones a cube lower
-        const edge = Math.abs(y) > 2.6 ? 1.3 : 0;
-        // (and the hedge swells and dips along its length, in lumps)
-        const lump = Math.floor(hash3(Math.floor((x + 20) / 3), 5, 2) * 2) * 1.3;
-        const top = 11.7 + lump - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * 1.3;
+        // a clipped hedge of clean blocks: flat on top, a block here and there a step lower, and
+        // the outer edge a step down all the way along
+        const C = 2 / 3;
+        const qx = Math.floor((x + 20) / 2);
+        const qy = Math.floor((y + 20) / 2);
+        const edge = Math.abs(y) > 3.2 ? C : 0;
+        const top = 12.4 - edge - (hash3(qx, qy, 1) < 0.28 ? C : 0);
         if (z > top) return null;
-        const qz = Math.floor(z / 1.3);
-        const t = hash3(qx, qy, qz + 3);
-        if (z > top - 1.3) return t > 0.25 ? 'hedge2' : 'hedge';
-        if (z < 2.6) return t > 0.5 ? 'hedge4' : 'hedge3';
-        return t > 0.86 ? 'hedge2' : t > 0.5 ? 'hedge' : 'hedge3';
+        // clean bands: a sunlit top, plain green sides, a darker foot
+        if (z > top - C) return 'hedge2';
+        return z < 2.6 ? 'hedge3' : 'hedge';
       },
     },
   },

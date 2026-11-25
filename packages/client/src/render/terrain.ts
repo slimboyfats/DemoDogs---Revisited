@@ -313,22 +313,38 @@ export function terrainPixel(
   out[2] = clamp255(pb * k);
 }
 
-/** How wide a mown stripe of a toy lawn is. */
-export const MOWN = 30;
+/**
+ * A venue's ground colour as a toy venue wears it: lifted until it is bright, and a little further
+ * from grey, so a dark field or a dull yard comes out clean. A colour already bright is left.
+ */
+export function toyGround(c: Rgb): Rgb {
+  const mx = Math.max(c[0], c[1], c[2]);
+  const k = Math.min(1.6, Math.max(1, 196 / Math.max(1, mx)));
+  if (k === 1) return c;
+  const grey = ((c[0] + c[1] + c[2]) / 3) * k;
+  const f = (v: number): number => clamp255(grey + (v * k - grey) * 1.12);
+  return [f(c[0]), f(c[1]), f(c[2])];
+}
+
+/** How wide one square of a toy lawn's turf is. */
+export const TURF = 14;
 
 /**
- * One pixel of a toy venue's ground: one flat colour mown in broad stripes, with a tuft or a
- * daisy here and there and nothing else. No ledges, no bare earth, no shade.
+ * One pixel of a toy venue's ground: clean even green, laid as turf in squares, a few of them and
+ * their neighbours a shade lighter or deeper. No ledges, no bare earth, no grain.
  */
 export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
-  // the lawn runs from one green to the other in broad soft patches, sunnier here and deeper
-  // there right across the park, the mower's stripes only just showing
+  // the lawn drifts a little from one green to the other in broad soft patches
   const a = F.big.at(x, y) * 0.6 + F.mid.at(x, y) * 0.4;
-  const t = Math.max(0, Math.min(1, (a - 0.36) / 0.3));
-  let k = 0.93 + 0.14 * F.big.at(x * 0.45 + 300, y * 0.45 + 170);
-  if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.02;
-  // it is laid in squares three art px across, each a touch lighter or deeper
-  k *= 0.975 + 0.05 * hash2(Math.floor(x / 3), Math.floor(y / 3), F.seed + 3);
+  const t = Math.max(0, Math.min(1, (a - 0.36) / 0.3)) * 0.6;
+  // squares of turf: here and there a clutch of them stands out, lighter or deeper
+  const cx = Math.floor(x / TURF);
+  const cy = Math.floor(y / TURF);
+  const clutch = hash2(cx >> 1, cy >> 1, F.seed + 3);
+  const own = hash2(cx, cy, F.seed + 5);
+  let k = 1;
+  if (clutch > 0.9 ? own > 0.4 : own > 0.975) k = 1.07;
+  else if (clutch < 0.07 && own > 0.5) k = 0.95;
   out[0] = clamp255((G[0] + (G2[0] - G[0]) * t) * k);
   out[1] = clamp255((G[1] + (G2[1] - G[1]) * t) * k);
   out[2] = clamp255((G[2] + (G2[2] - G[2]) * t) * k);
@@ -385,10 +401,12 @@ export function paintTerrain(
   const out: Rgb = [0, 0, 0];
   let k = 0;
   const toy = colors.style === 'toy';
+  const T = toyGround(G);
+  const T2 = toyGround(G2);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       if (toy) {
-        toyPixel(out, x, y, G, G2, F);
+        toyPixel(out, x, y, T, T2, F);
         if (colors.paths) pathPixel(out, x, y, colors.paths, D, F);
       } else terrainPixel(out, x, y, terrain, G, G2, D, F);
       px[k] = out[0];

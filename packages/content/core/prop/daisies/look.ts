@@ -1,11 +1,11 @@
 import type { LookModule } from '@demodogs/shared';
 
-/** A few daisies: white heads with a yellow eye on short stems, and a leaf or two. */
+/** Two daisies: square white heads with a yellow eye on short stems. */
 const look: LookModule = {
   id: 'prop.daisies',
   look: {
     kind: 'prop',
-    scale: 1.5,
+    scale: 2,
     materials: {
       daisy: ['#e6e6dc', '#f8f8f0', '#fcfcf4'],
       daisyeye: ['#d8a410', '#f6c820', '#ffe060'],
@@ -17,17 +17,14 @@ const look: LookModule = {
       layers: 3,
       smooth: true,
       fn: (x, y, z) => {
-        // three or four flowers a little apart, each a white head two cubes across round a yellow
-        // eye, on a leafy foot
+        // two flowers, each a square white head round a yellow eye, on a leafy foot
         for (const [fx, fy, fh] of [
-          [-2, -1.5, 1.6],
-          [1.5, -2.2, 1.2],
-          [2.2, 1.6, 1.8],
-          [-1.2, 2.2, 1.4],
+          [-1.6, -1, 2.4],
+          [1.8, 1.4, 1.8],
         ] as const) {
           const d = Math.max(Math.abs(x - fx), Math.abs(y - fy));
-          if (z > fh - 0.8 && z < fh) return d < 0.35 ? 'daisyeye' : d < 0.95 ? 'daisy' : null;
-          if (z <= fh - 0.8 && d < 0.4) return 'daisyleaf';
+          if (z > fh - 0.8 && z < fh) return d < 0.5 ? 'daisyeye' : d < 1.5 ? 'daisy' : null;
+          if (z <= fh - 0.8 && d < 0.5) return 'daisyleaf';
         }
         return null;
       },

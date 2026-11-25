@@ -26,6 +26,8 @@ export type Tones = readonly [string, string, string];
 export interface CarLook {
   kind: 'car';
   body: Part;
+  /** The same car as a toy truck, drawn in its place on a toy venue (render/art.ts `chunky`). */
+  toy?: Part;
   /** The roof piece (light bar, rack, spoiler) that can be knocked off. */
   top: Part;
 }
@@ -51,6 +53,11 @@ export interface PropLook {
    * drawn bigger, so a great chunky thing costs no more room than a small fine one.
    */
   scale?: number;
+  /**
+   * How many times finer than other props the client builds it (absent: 1), for a big thing with
+   * slopes in it, whose steps would show. It takes that many times cubed the room.
+   */
+  fine?: number;
 }
 
 /**
