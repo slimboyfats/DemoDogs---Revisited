@@ -22,8 +22,8 @@ describe('arcDots', () => {
     expect(dots.length).toBeGreaterThan(12);
     // the ring lies on the ground round the landing spot
     const ring = dots.filter((d) => d.z < 1);
-    expect(ring.length).toBe(10);
-    for (const d of ring) expect(Math.abs(d.x - tx)).toBeLessThan(20);
+    expect(ring.length).toBe(12);
+    for (const d of ring) expect(Math.abs(d.x - tx)).toBeLessThan(26);
     // and the rest hang in the air
     expect(dots.some((d) => d.z > 20)).toBe(true);
   });

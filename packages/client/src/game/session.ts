@@ -109,12 +109,12 @@ export class Session {
     made?: { world: World; ground: Ground },
   ) {
     this.world = made?.world ?? makeWorld(o);
-    // a toy venue is seen from lower down, so things stand up, under a high sun that keeps shadows
-    // short; whoever made the session sets the view next, which takes the pitch up
+    // a toy venue is seen from lower down, so things stand up, under a low golden sun that throws long deep
+    // shadows; whoever made the session sets the view next, which takes the pitch up
     const toy = coloursOf(this.world.venue.colors).style === 'toy';
     setPitch(toy ? PITCH_TOY : PITCH_PLAIN);
-    sunReach.k = toy ? 0.8 : 1;
-    shadeDepth.k = toy ? 1.4 : 1;
+    sunReach.k = toy ? 1.25 : 1;
+    shadeDepth.k = toy ? 1.35 : 1;
     o.art.chunky(toy);
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);

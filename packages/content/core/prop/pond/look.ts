@@ -21,7 +21,7 @@ const look: LookModule = {
   id: 'prop.pond',
   look: {
     kind: 'prop',
-    scale: 2,
+    scale: 2.6,
     materials: {
       pond: ['#1d59a8', '#2a72cc', '#3a8ae0'],
       pond2: ['#2a74c4', '#3a8fe0', '#58a9ee'],

@@ -1968,8 +1968,13 @@ export class Effects {
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       // on a toy venue every car at speed trails a little cloud, as toy cars do
-      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 80 && Math.random() < 0.3)
-        this.puff(c.x - cs * 10 + rand(-2, 2), c.y - sn * 10 + rand(-2, 2), 1.5, 'smoke');
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.3)
+        this.puff(
+          c.x - cs * 11 * c.size + rand(-3, 3),
+          c.y - sn * 11 * c.size + rand(-3, 3),
+          1.5,
+          'dust',
+        );
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;

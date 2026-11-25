@@ -103,6 +103,19 @@ export function makeGround(w: World): Ground {
   }
   if (w.oval) paintBowl(img.data, w.w, w.h, w.oval, C, F);
   g.putImageData(img, 0, 0);
+  if (toy) {
+    // the ground is darker right under whatever stands on it: a soft pool of shade at the foot of
+    // every hedge, tree and post, which is most of what makes them sit on the lawn
+    for (const s of w.statics) {
+      if (s.def.solid === false || (s.lift ?? 0) > 0 || s.def.pad) continue;
+      const rad = s.def.radius * 1.7 + 5;
+      const sh = g.createRadialGradient(s.x, s.y + 1, s.def.radius * 0.5, s.x, s.y + 1, rad);
+      sh.addColorStop(0, 'rgba(22,52,14,0.42)');
+      sh.addColorStop(1, 'rgba(22,52,14,0)');
+      g.fillStyle = sh;
+      g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);
+    }
+  }
   if (T) {
     const road = w.road;
     g.lineJoin = 'round';

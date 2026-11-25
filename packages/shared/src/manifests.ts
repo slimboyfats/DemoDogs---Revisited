@@ -393,6 +393,8 @@ export const VenueSchema = z.strictObject({
   mode: id('mode'),
   /** Fixed seed for the venue's scenery, so a venue looks the same every time. */
   seed: z.number().int(),
+  /** How many times their usual size cars are here (absent: 1): a toy track has big cars. */
+  cars: z.number().min(0.5).max(2).optional(),
   size: z.strictObject({
     w: z.number().int().min(400).max(4000),
     h: z.number().int().min(400).max(4000),

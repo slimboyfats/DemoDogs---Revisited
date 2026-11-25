@@ -17,7 +17,7 @@ const look: LookModule = {
   id: 'prop.ball-launcher',
   look: {
     kind: 'prop',
-    scale: 2,
+    scale: 2.6,
     materials: {
       launch: ['#b98a08', '#f2bc10', '#ffdc4e'],
       launch2: ['#8a6406', '#c28f0a', '#e6b62a'],
@@ -78,7 +78,7 @@ const look: LookModule = {
             Math.abs(((x + 30) % 2.9) - 1.45) > 1.05 ||
             Math.abs(((y + 30) % 2.9) - 1.45) > 1.05 ||
             Math.abs((z % 2.9) - 1.45) > 1.05;
-          if (wall && bar) return 'steel';
+          if (wall && bar) return 'launch';
         }
         return null;
       },
