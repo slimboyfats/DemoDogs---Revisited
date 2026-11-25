@@ -395,8 +395,11 @@ export class Effects {
     kind: 'smoke' | 'dust',
     vx = 0,
     vy = 0,
-    rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460,
+    tint?: number,
   ): void {
+    // (on a toy venue every puff is pale: a little cloud, never grit on the clean road)
+    const toy = coloursOf(this.w.venue.colors).style === 'toy';
+    const rgb = tint ?? (toy ? 0xe8e2d2 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
     const dust = kind === 'dust';
     const n = Math.max(1, Math.round(4 * this.quality));
     for (let i = 0; i < n; i++)

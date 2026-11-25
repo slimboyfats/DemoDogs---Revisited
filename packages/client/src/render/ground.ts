@@ -174,13 +174,13 @@ export function makeGround(w: World): Ground {
     const fx = Math.cos(a);
     const fy = Math.sin(a);
     // (three rows of chequer between two white bars)
-    // (a toy road has one plain white line across it and no grid)
+    // (a toy road has one faint line across it and no grid)
     if (toy) {
       g.save();
       g.translate(T.x[0]!, T.y[0]!);
       g.rotate(a);
-      g.fillStyle = 'rgba(244,244,236,0.95)';
-      g.fillRect(-1.5, -road / 2 + 5, 3, road - 10);
+      g.fillStyle = 'rgba(244,244,236,0.3)';
+      g.fillRect(-1, -road / 2 + 5, 2, road - 10);
       g.restore();
     }
     for (const bar of toy ? [] : [-9, 7]) {

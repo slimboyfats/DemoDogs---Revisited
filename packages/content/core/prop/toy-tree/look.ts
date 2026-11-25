@@ -40,7 +40,7 @@ export function toyTree(
       const cy = (qy + 0.5) * cube;
       const cz = (qz + 0.5) * cube;
       // the trunk: square, stepping out into roots at the foot, grooved bark
-      const flare = trunk + Math.max(0, 2 * cube - cz) * 0.7;
+      const flare = trunk + Math.max(0, 3.5 * cube - cz) * 0.55;
       if (cz < bole + cube) {
         const ax = Math.abs(cx);
         const ay = Math.abs(cy);
@@ -48,7 +48,7 @@ export function toyTree(
         const root =
           cz < cube * 2 &&
           Math.min(ax, ay) < trunk * 0.6 &&
-          Math.max(ax, ay) < flare + cube * (cz < cube ? 1.7 : 0.6);
+          Math.max(ax, ay) < flare + cube * (cz < cube ? 2.6 : 1.2);
         if ((ax < flare && ay < flare) || root)
           // (grooves run up the bark)
           return hash3(qx + 9, qy + 9, 1) > 0.55 || hash3(qx + 9, qy + 9, qz) > 0.8
