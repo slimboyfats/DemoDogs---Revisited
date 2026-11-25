@@ -1,6 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
-import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** A muscle car: low and long, twin stripes nose to tail, a fastback cabin set well back. */
@@ -44,19 +43,6 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: body },
-    toy: {
-      ...CAR_CELL,
-      smooth: true,
-      fn: toyTruck({
-        a: 12,
-        b: 5.6,
-        well: 3.2,
-        axles: [7.6, -7.4],
-        hood: 4.5,
-        nose: 4,
-        cab: { x0: -7, x1: 2.2, roof: 6.6, rake: 2.2, rakeR: 2.6 },
-      }),
-    },
     // a rear wing on two posts
     top: {
       w: 3,

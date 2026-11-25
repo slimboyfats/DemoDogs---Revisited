@@ -15,15 +15,14 @@ const tile = (pose: number): Part => ({
     const lit = (n: number): string => LIT[(((n - pose) % 3) + 3) % 3]!;
     // the paw at the back, pointing along +x: a big pad and four toes, always lit, each with a
     // rim of deep blue so it stands out crisp on the road
-    // (all of it squares: a square pad, four square toes)
-    let paw = Math.max(Math.abs(x + 9.3) / 2.7, Math.abs(y) / 3.6) - 1;
+    let paw = Math.hypot((x + 9.3) / 2.9, y / 3.9) - 1;
     for (const [tx, ty] of [
       [-5, -5.9],
       [-2.6, -2.2],
       [-2.6, 2.2],
       [-5, 5.9],
     ] as const)
-      paw = Math.min(paw, (Math.max(Math.abs(x - tx) / 1.5, Math.abs(y - ty) / 1.3) - 1) * 0.55);
+      paw = Math.min(paw, (Math.hypot((x - tx) / 1.7, (y - ty) / 1.45) - 1) * 0.55);
     if (paw < 0) return 'turbohot';
     if (paw < 0.2) return 'pawrim';
     // two arrows ahead of it: the tip leads, the arms sweep back

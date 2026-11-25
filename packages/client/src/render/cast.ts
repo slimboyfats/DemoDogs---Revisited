@@ -112,7 +112,7 @@ export class ShadowMap {
     // one sample per art px: a layer at a time, its texels at the middle of each art px. (A look
     // drawn bigger than it is built has less than a texel to the art px: every texel is sampled,
     // and each one shades the square of ground it stands over.)
-    const step = Math.max(1, Math.floor(R));
+    const step = Math.max(1, Math.round(R));
     const span = Math.max(1, Math.ceil(1 / R));
     for (let i = Math.floor(step / 2); i < st.n; i += step) {
       const z = lift + i / R;

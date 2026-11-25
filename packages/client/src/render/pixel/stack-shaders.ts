@@ -174,7 +174,6 @@ uniform float u_glow;    // how far lamps stand out, 0 to 1
 uniform float u_snow;    // how much snow lies, 0 to 1
 uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
-uniform float u_smooth;  // 1: light falls in smooth tones, no dither (a toy venue)
 out vec4 o;${SKY_GLSL}
 void main() {
   if (u_mirror > 0.5) {
@@ -193,35 +192,8 @@ void main() {
     c = vec4(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255), 255.0) / 255.0;
   } else {
     t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
-    if (u_smooth > 0.5) {
-      // smooth edges: how much of the four texels round this point is solid, each by how near it
-      // is, and the point is drawn where that is half or more. A row of steps comes out as one
-      // straight slanted edge, and it takes the colour of the nearest solid texel
-      vec2 p = v_tex - 0.5;
-      vec2 i0 = floor(p);
-      vec2 f = p - i0;
-      float cover = 0.0;
-      float best = -1.0;
-      ivec2 size = ivec2(v_uv.zw);
-      for (int k = 0; k < 4; k++) {
-        ivec2 d = ivec2(k & 1, k >> 1);
-        ivec2 q = ivec2(i0) + d;
-        if (q.x < 0 || q.y < 0 || q.x >= size.x || q.y >= size.y) continue;
-        float w = (d.x == 1 ? f.x : 1.0 - f.x) * (d.y == 1 ? f.y : 1.0 - f.y);
-        vec4 s = texelFetch(u_atlas, ivec2(v_uv.xy) + q, 0);
-        if (s.a < 0.5) continue;
-        cover += w;
-        if (w > best) {
-          best = w;
-          c = s;
-          t = ivec2(v_uv.xy) + q;
-        }
-      }
-      if (cover < 0.5) discard;
-    } else {
-      c = texelFetch(u_atlas, t, 0);
-      if (c.a < 0.5) discard;
-    }
+    c = texelFetch(u_atlas, t, 0);
+    if (c.a < 0.5) discard;
   }
   if (v_tint > 0.5) {
     // an outline copy: one flat colour, unlit
@@ -232,8 +204,6 @@ void main() {
   // the dither and the light bands step on a grid three to the art pixel, as fine as the art
   ivec2 cell = ivec2(floor(v_world.xy * 3.0)) + ivec2(0, int(floor(v_world.z * 3.0)));
   float b = bayer(cell);
-  bool smooth_ = u_smooth > 0.5;
-  if (smooth_) b = 0.5;
   // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
   // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
   if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
@@ -275,11 +245,7 @@ void main() {
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
   float ndl = dot(n, u_sdir);
   float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0);
-  // (smooth: every face takes its own even tone, and what stands on the ground is a little
-  // darker at its foot, as if the ground shaded it)
-  if (smooth_) q = clamp(ndl * 1.05, 0.0, 1.0);
   vec3 base = u_amb + u_sun * q;
-  if (smooth_ && stack) base *= 0.84 + 0.16 * clamp(v_world.z / 5.0, 0.0, 1.0);
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
   if (known > 0.5) {
@@ -296,8 +262,7 @@ void main() {
     float f = 1.0 - d / p.z;
     // a light falls hardest on what is turned towards it
     float face = mix(1.0, 0.55 + 0.7 * max(0.0, dot(n, normalize(to))), known);
-    float e0 = f * (0.4 + 0.6 * f) * p.w * face;
-    float e = clamp(smooth_ ? e0 : floor(e0 * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
   }
   for (int i = 0; i < ${MAX_CONES}; i++) {
@@ -409,19 +374,6 @@ void main() {
   vec2 pk = step(d, f);
   vec3 dth = pk.y < 0.5 ? (pk.x < 0.5 ? c00 : c10) : (pk.x < 0.5 ? c01 : c11);
   if (like(dth, c) > 0.5) c = dth;
-  if (u_calm > 0.5) {
-    // a toy's ground has no steps in it: the four texels run into each other over the middle
-    // half of the gap between them, at the screen's own fineness, so a painted edge on a slant
-    // is a smooth line and a flat colour stays flat
-    vec2 sp = v_uv * u_size - 0.5;
-#ifdef RELIEF
-    sp.y += shift;
-#endif
-    vec2 si = floor(sp);
-    vec2 sf = smoothstep(0.25, 0.75, sp - si);
-    c = mix(mix(tex(si), tex(si + vec2(1.0, 0.0)), sf.x),
-            mix(tex(si + vec2(0.0, 1.0)), tex(si + vec2(1.0, 1.0)), sf.x), sf.y);
-  }
   // The material under the cell, from its colour: grass is green, tarmac is grey, the rest dirt.
   float mx = max(c.r, max(c.g, c.b));
   float sat = mx - min(c.r, min(c.g, c.b));
@@ -499,9 +451,7 @@ void main() {
     float dist = length(wp - lp.xy);
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
-    float e0 = e * (0.4 + 0.6 * e) * lp.w;
-    // (a toy venue's light fades evenly, with no dither)
-    l += u_lcol[n] * clamp(u_calm > 0.5 ? e0 : floor(e0 * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
@@ -526,7 +476,6 @@ uniform vec2 u_size;
 uniform float u_alpha;
 uniform float u_fine;
 uniform sampler2D u_deep;
-uniform float u_smooth;  // 1: a soft edge instead of a dithered one (a toy venue)
 #ifdef RELIEF
 uniform sampler2D u_map;
 #endif
@@ -544,21 +493,6 @@ void main() {
   at.y += floor(texelFetch(u_map, ivec2(clamp(floor(at), vec2(0.0), u_size - 1.0)), 0).r * 255.0 + 0.5);
 #endif
   float a = texture(u_tex, at / u_size).r;
-  if (u_smooth > 0.5) {
-    // read between the fine cells too, so the edge fades instead of stepping
-    vec2 sm = v_uv * u_size;
-    sm.y += at.y - (cell.y + 0.5) / u_fine;
-    // and round about, so a shadow has a wide soft edge, as under a hazy sun
-    a = texture(u_tex, sm / u_size).r * 0.2;
-    for (int k = 0; k < 8; k++) {
-      float an = float(k) * 0.7853982;
-      float r = (k & 1) == 0 ? 3.2 : 1.7;
-      a += texture(u_tex, (sm + vec2(cos(an), sin(an)) * r) / u_size).r * 0.1;
-    }
-    if (a < 0.02) discard;
-    o = vec4(0.0, 0.0, 0.0, u_alpha * smoothstep(0.08, 0.92, a) * (1.0 + 1.2 * texture(u_deep, at / u_size).r));
-    return;
-  }
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
   // the far side of a deck is in deeper shade than a thrown shadow, deepest at its foot
   o = vec4(0.0, 0.0, 0.0, u_alpha * (1.0 + 1.2 * texture(u_deep, at / u_size).r));

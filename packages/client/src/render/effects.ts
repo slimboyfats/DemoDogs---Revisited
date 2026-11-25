@@ -112,8 +112,6 @@ const BIG_STRIP = 120_000;
 const big = (s: Strip): boolean => s.cw * s.ch * s.n >= BIG_STRIP;
 /** mudders' soot tones: what a blast's smoke is made of. */
 const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
-/** What a toy venue's blast leaves in the air: warm tan dust. */
-const TOY_DUST_TONES = [0xb89f78, 0xcbb48c, 0xdccba6, 0xe6d8b8] as const;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -401,7 +399,7 @@ export class Effects {
   ): void {
     // (on a toy venue every puff is pale: a little cloud, never grit on the clean road)
     const toy = coloursOf(this.w.venue.colors).style === 'toy';
-    const rgb = tint ?? (toy ? 0xdccba6 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
+    const rgb = tint ?? (toy ? 0xe8e2d2 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
     const dust = kind === 'dust';
     const n = Math.max(1, Math.round(4 * this.quality));
     for (let i = 0; i < n; i++)
@@ -440,9 +438,6 @@ export class Effects {
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
-    // (a toy venue has no black smoke: a wreck smokes warm grey, in the same fat cubes as dust)
-    if (coloursOf(this.w.venue.colors).style === 'toy')
-      rgb = rgb === SOOT ? 0x8c8076 : rgb === HAZE ? 0xb9b0a4 : rgb;
     const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
     const r = size * 0.5;
     for (let i = 0; i < n; i++)
@@ -536,13 +531,7 @@ export class Effects {
       ticks: FIRE_FEED,
       high,
       age: 0,
-      // (a toy blast leaves tan dust, never soot)
-      tones:
-        coloursOf(this.w.venue.colors).style === 'toy'
-          ? TOY_DUST_TONES
-          : high
-            ? SMOKE_TONES
-            : this.dustTones(x, y),
+      tones: high ? SMOKE_TONES : this.dustTones(x, y),
     });
     // the shock front: a ring of sparks racing out along the ground
     if (!high)
@@ -1289,25 +1278,7 @@ export class Effects {
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
           const own = this.scarred.delete(s) || strip !== this.art.prop(s.def.id);
-          if (strip.res < 2.5) {
-            // a toy thing, built of big cubes: it bursts into them, and they tumble away and are
-            // gone (no slabs left lying about a tidy park)
-            const from = {
-              x: s.x,
-              y: s.y,
-              h: s.rot,
-              z: s.lift ?? 0,
-              ox: e.x,
-              oy: e.y,
-              vx: 0,
-              vy: 0,
-            };
-            this.burst(this.chipsOf(strip, !own, 1), 70, { ...from, speed: 95 });
-            this.burst(this.chipsOf(strip, !own, 2), 16, { ...from, speed: 60 });
-            for (let i = 0; i < 5; i++)
-              this.puff(s.x + rand(-6, 6), s.y + rand(-6, 6), rand(2, 10), 'dust');
-            if (own) this.dropped.push(strip);
-          } else if (Wreckage.cracks(strip)) {
+          if (Wreckage.cracks(strip)) {
             // it cracks into pieces that keep their own pixels, and grit from the cracks
             pixels(strip);
             this.wreck.fall({
@@ -2009,7 +1980,7 @@ export class Effects {
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       // on a toy venue every car at speed trails a little cloud, as toy cars do
-      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.1)
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.3)
         this.puff(
           c.x - cs * 11 * c.size + rand(-3, 3),
           c.y - sn * 11 * c.size + rand(-3, 3),

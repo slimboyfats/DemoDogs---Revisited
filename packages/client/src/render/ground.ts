@@ -115,21 +115,16 @@ export function makeGround(w: World): Ground {
       g.fillStyle = sh;
       g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);
     }
-    // and a boost tile shines on the road round it: a blue glow
+    // and a boost tile shines on the road round it: a soft blue halo
     g.globalCompositeOperation = 'lighter';
     for (const s of w.statics) {
       if (s.def.pad?.kind !== 'boost') continue;
-      // (in squares, one inside the other, turned the way the tile lies)
-      g.save();
-      g.translate(s.x, s.y);
-      g.rotate(s.rot);
-      g.fillStyle = 'rgba(60,140,255,0.2)';
-      for (const k of [1.5, 1.25, 1.02]) {
-        const rx = s.def.radius * 1.35 * k;
-        const ry = s.def.radius * 0.95 * k;
-        g.fillRect(-rx, -ry, rx * 2, ry * 2);
-      }
-      g.restore();
+      const rad = s.def.radius * 2.1;
+      const sh = g.createRadialGradient(s.x, s.y, s.def.radius * 0.3, s.x, s.y, rad);
+      sh.addColorStop(0, 'rgba(60,140,255,0.75)');
+      sh.addColorStop(1, 'rgba(70,150,255,0)');
+      g.fillStyle = sh;
+      g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);
     }
     g.globalCompositeOperation = 'source-over';
   }

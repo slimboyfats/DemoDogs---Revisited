@@ -1,15 +1,5 @@
 import { compile, uniforms } from './gl';
-import { FX_CELL } from '../scene';
-import {
-  BANG_RAMP,
-  CKind,
-  FIRE_RAMP,
-  fireStyle,
-  HOT,
-  ringStrength,
-  type Gust,
-  type Ring,
-} from './cells';
+import { BANG_RAMP, CKind, FIRE_RAMP, HOT, ringStrength, type Gust, type Ring } from './cells';
 import { LIGHT_BANDS, MAX_LIGHTS, type Lights } from './lighting';
 import { WIND } from './particles';
 import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
@@ -278,13 +268,11 @@ uniform int u_pass;
 uniform vec3 u_fire[13];
 uniform vec3 u_bang[9];
 uniform vec3 u_hot;
-uniform float u_toy; // 1 on a toy venue: fat cubes, and no glow
 uniform int u_lcount;
 uniform vec4 u_lpos[${MAX_LIGHTS}];
 uniform vec3 u_lcol[${MAX_LIGHTS}];
 uniform vec3 u_amb; // the sky's light on smoke and fog (1 by day)
 out vec4 v_color;
-out float v_round; // 0 a flat cell, 1 a cube of dust lit from above, 2 a cube of fire
 float stepT(float t, float th, float n) { return min(1.0, floor(t * n + th) / n); }
 vec3 rgbOf(float c) {
   float r = floor(c / 65536.0);
@@ -296,7 +284,6 @@ void main() {
   gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // off screen unless drawn
   gl_PointSize = 0.0;
   v_color = vec4(0.0);
-  v_round = 0.0;
   float life = a1.w;
   float age = a1.z;
   if (age >= life) return;
@@ -311,15 +298,7 @@ void main() {
     if (u_pass != 0) return;
     if (th >= min(1.0, t * 8.0 + 0.4) * (t < 0.5 ? 1.0 : (1.0 - t) / 0.5)) return;
     float s = stepT(t, th, 6.0);
-    // (a pale puff stays pale: its deep cells would read as grit on a clean road)
-    vec3 own = rgbOf(a2.z);
-    c = min(vec3(1.0), own * (s < 0.34 ? (own.r > 0.815 ? 0.9 : 0.55) : s < 0.67 ? 1.0 : 1.45));
-    if (u_toy > 0.5) {
-      // a toy venue's dust is a heap of fat cubes that swell as they drift
-      c = min(vec3(1.0), own * (s < 0.34 ? 0.94 : s < 0.67 ? 1.0 : 1.07));
-      n = 2.0 + floor(min(1.0, t * 2.5) * 2.0 + th);
-      v_round = 1.0;
-    }
+    c = min(vec3(1.0), rgbOf(a2.z) * (s < 0.34 ? 0.55 : s < 0.67 ? 1.0 : 1.45));
     lit = true;
   } else if (k == ${CKind.Fog}) {
     if (u_pass != 0) return;
@@ -333,36 +312,22 @@ void main() {
     bool hot = s < 0.42;
     if (th >= (t < 0.45 ? 1.0 : (1.0 - t) / 0.55)) return;
     if (u_pass == 2) {
-      if (s >= 0.2 || u_toy > 0.5) return;
+      if (s >= 0.2) return;
       c = u_hot;
       a = 0.4;
     } else {
       if (hot != (u_pass == 1)) return;
       c = u_fire[int(floor(s * 12.0 + 0.5))];
-      if (u_toy > 0.5) {
-        n = hot ? 2.0 : 2.0 + floor(th * 2.0);
-        v_round = hot ? 2.0 : 1.0;
-      }
     }
   } else if (k == ${CKind.Bang}) {
     if (u_pass == 0) return;
     if (th >= (t < 0.7 ? 1.0 : (1.0 - t) / 0.3)) return;
     float f = stepT(max(0.0, t - 0.3) / 0.7, th, 8.0);
     if (u_pass == 2) {
-      if (f >= 0.5 || u_toy > 0.5) return;
+      if (f >= 0.5) return;
       c = u_hot;
       a = 0.4;
-    } else {
-      c = u_bang[int(floor(f * 8.0 + 0.5))];
-      if (u_toy > 0.5) {
-        // every lump its own heat, so the ball is yellow, orange and red at once
-        float fv = clamp(f + (fract(th * 7.31) - 0.3) * 0.75, 0.0, 1.0);
-        c = u_bang[int(floor(fv * 8.0 + 0.5))];
-        // fat lumps, the hot ones in the middle the fattest
-        n = f < 0.4 ? 3.0 : 2.0;
-        v_round = 2.0;
-      }
-    }
+    } else c = u_bang[int(floor(f * 8.0 + 0.5))];
   } else return;
   if (lit) c *= u_amb;
   if (lit && u_lcount > 0) {
@@ -390,18 +355,8 @@ void main() {
 const DRAW_FS = `#version 300 es
 precision mediump float;
 in vec4 v_color;
-in float v_round;
 out vec4 o;
-void main() {
-  if (v_round < 0.5) {
-    o = v_color;
-    return;
-  }
-  // a cube seen from a little above: a light top face over a darker front; fire's is fainter
-  vec2 q = gl_PointCoord - 0.5;
-  float k = v_round < 1.5 ? (q.y < -0.12 ? 1.08 : 0.88) : (q.y < -0.12 ? 1.06 : 0.94);
-  o = vec4(min(vec3(1.0), v_color.rgb * k), v_color.a);
-}`;
+void main() { o = v_color; }`;
 
 const UPDATE_U = [
   'u_dt',
@@ -434,7 +389,6 @@ const DRAW_U = [
   'u_fire',
   'u_bang',
   'u_hot',
-  'u_toy',
   'u_lcount',
   'u_lpos',
   'u_lcol',
@@ -503,9 +457,8 @@ export class GasGpu {
   private readonly ma = new Float32Array(MAX_MOVERS * 4);
   private readonly mb = new Float32Array(MAX_MOVERS * 4);
   private readonly sw = new Float32Array(MAX_SWIRLS * 4);
-  private fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
-  private bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
-  private ramps = fireStyle.version;
+  private readonly fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
+  private readonly bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -729,18 +682,9 @@ export class GasGpu {
     gl.uniform1f(u.u_cosP, v.cosP);
     relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
     gl.uniform1i(u.u_pass, pass);
-    if (this.ramps !== fireStyle.version) {
-      this.ramps = fireStyle.version;
-      this.fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
-      this.bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
-    }
     gl.uniform3fv(u.u_fire, this.fireRamp);
     gl.uniform3fv(u.u_bang, this.bangRamp);
-    // (fat cells cover several times the ground, so each adds less light or a blast goes white)
-    const hot = rgb3(HOT);
-    const dim = FX_CELL > 0 ? 0.25 : 1;
-    gl.uniform3f(u.u_hot, hot[0]! * dim, hot[1]! * dim, hot[2]! * dim);
-    gl.uniform1f(u.u_toy, FX_CELL > 0 ? 1 : 0);
+    gl.uniform3fv(u.u_hot, rgb3(HOT));
     gl.uniform1i(u.u_lcount, lights.count);
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);

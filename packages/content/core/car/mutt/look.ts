@@ -1,6 +1,5 @@
 import type { LookModule, ShapeFn } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
-import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** A pickup: a square bonnet, a two-door cab and an open bed with a tailgate. */
@@ -39,20 +38,6 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: muttBody },
-    toy: {
-      ...CAR_CELL,
-      smooth: true,
-      fn: toyTruck({
-        a: 11.5,
-        b: 5.6,
-        well: 3.2,
-        axles: [7.2, -7.2],
-        hood: 4.6,
-        nose: 4.2,
-        cab: { x0: -2.6, x1: 4.2, roof: 7.6, rake: 1.2 },
-        bed: true,
-      }),
-    },
     // a light bar: amber ends, white middle
     top: {
       w: 3,

@@ -49,11 +49,9 @@ const look: LookModule = {
           )
             return 'rush';
         }
-        // a square pond, its edge stepping in and out in blocks
-        const bx = (Math.floor(x / 3) + 0.5) * 3;
-        const by = (Math.floor(y / 3) + 0.5) * 3;
-        const wob = (hash3(Math.floor(bx / 6) + 40, Math.floor(by / 6) + 40, 5) - 0.5) * 0.2;
-        const r = Math.max(Math.abs(bx) / 26, Math.abs(by) / 16) + wob;
+        // a rounded shape, wobbling in and out round its edge
+        const wob = (noise3(x * 0.14 + 3, y * 0.14, 0.5) - 0.5) * 0.36;
+        const r = Math.hypot(x / 27, y / 17) + wob;
         if (r > 1) return null;
         if (r > 0.8) {
           // a narrow bank, and reeds standing in clumps along it, the tall ones with a brown head
@@ -67,7 +65,7 @@ const look: LookModule = {
         }
         if (z >= 0.7) return null;
         for (const [px, py, pr, flower] of PADS) {
-          const d = Math.max(Math.abs(x - px), Math.abs(y - py));
+          const d = Math.hypot(x - px, y - py);
           if (d < pr) {
             if (flower && d < 0.7) return 'lilyflower';
             return Math.abs(y - py) < 0.35 && x > px ? 'pond2' : 'lily';

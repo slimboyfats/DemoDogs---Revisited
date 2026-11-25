@@ -74,112 +74,6 @@ interface Sampled {
   names: string[];
   grid: Uint8Array;
   lit: Uint8Array;
-  /** The same for a thing made as a toy (`calmLight`); worked out when first wanted. */
-  calm?: Uint8Array;
-}
-
-/** Ways up into the sky that `calmLight` looks along: sideways steps per step up. */
-const RAYS: readonly (readonly [number, number])[] = [
-  [0, 0],
-  [0.6, 0],
-  [-0.6, 0],
-  [0, 0.6],
-  [0, -0.6],
-];
-
-const SIDES: readonly (readonly [number, number])[] = [
-  [1, 0],
-  [-1, 0],
-  [0, 1],
-  [0, -1],
-];
-
-/**
- * How lit each voxel of a toy is: every face one even tone (a top light, a side darker), a little
- * darker in the corners where it meets another face, a little lighter along its outer edges.
- * Nothing in steps and no two neighbours on a face apart, so a face reads as one smooth panel.
- * What is inside takes the tone of what is over it.
- */
-function calmLight(S: Sampled, st: number): Uint8Array {
-  const { cw, ch, n, grid } = S;
-  const out = new Uint8Array(cw * ch * n);
-  const solid = (x: number, y: number, z: number): boolean =>
-    x >= 0 && y >= 0 && z >= 0 && x < cw && y < ch && z < n && grid[(z * ch + y) * cw + x] !== 0;
-  for (let z = n - 1; z >= 0; z--)
-    for (let y = 0; y < ch; y++)
-      for (let x = 0; x < cw; x++) {
-        const i = (z * ch + y) * cw + x;
-        if (!grid[i]) continue;
-        const top = !solid(x, y, z + 1);
-        if (
-          !top &&
-          solid(x + 1, y, z) &&
-          solid(x - 1, y, z) &&
-          solid(x, y + 1, z) &&
-          solid(x, y - 1, z)
-        ) {
-          out[i] = out[i + cw * ch]!;
-          continue;
-        }
-        // a short step in a slope is part of the slope: where the thing ends a layer or two over
-        // this voxel and goes on a layer or two under it, it is lit as the top is, so a slope is
-        // one face and not a stair of light and dark
-        let flat = top;
-        let steep = false;
-        if (!flat) {
-          let ends = false;
-          for (let k = 2; k <= 2 * st + 1 && !ends; k++) ends = !solid(x, y, z + k);
-          if (ends)
-            for (const [dx, dy] of SIDES) {
-              if (solid(x + dx, y + dy, z)) continue;
-              // (a slope that lies back: the step under it is two voxels deep or more)
-              for (let k = 1; k <= 2 * st && !flat; k++)
-                flat = solid(x + dx, y + dy, z - k) && solid(x + 2 * dx, y + 2 * dy, z - k);
-            }
-        } else {
-          // and on a steep slope it is the other way about: a ledge one voxel deep under a rise
-          // of two or more is part of the wall, and is lit as the wall is
-          for (const [dx, dy] of SIDES)
-            if (
-              !solid(x + dx, y + dy, z) &&
-              solid(x - dx, y - dy, z + 1) &&
-              solid(x - dx, y - dy, z + 2)
-            )
-              steep = true;
-          if (steep) flat = false;
-        }
-        // how much of what is beside and above it is open air: a top looks a little way up, over
-        // any such step, a side from its own height
-        let open = 0;
-        let level = 0;
-        for (let dz = flat ? 2 : 0; dz <= (flat ? 3 : 2); dz++)
-          for (let dy = -2; dy <= 2; dy++)
-            for (let dx = -2; dx <= 2; dx++)
-              if (!solid(x + dx * st, y + dy * st, z + dz * st)) open++;
-        if (flat)
-          for (let dy = -2; dy <= 2; dy++)
-            for (let dx = -2; dx <= 2; dx++) if (!solid(x + dx * st, y + dy * st, z)) level++;
-        // (a flat top in the open sees all 50, the middle of a wall 30 of its 75)
-        // (a ledge in a steep slope sees more air than the wall round it: it is given the wall's)
-        const air = steep ? 1 : open / (flat ? 50 : 30);
-        const shade = 0.62 + 0.38 * Math.min(1, air);
-        // an outer edge catches the light
-        const edge = flat
-          ? Math.max(0, Math.min(1, (level / 25 - 0.2) * 4)) * 0.07
-          : Math.max(0, Math.min(1, (air - 1.3) * 4)) * 0.09;
-        // and how much of the sky further up is hidden by the thing itself: under a barrel, a
-        // roof or a crown it lies in soft shade (straight up and leaning each way, far first)
-        let hid = 0;
-        for (const [rx, ry] of RAYS)
-          for (let k = 3; k <= 14; k++)
-            if (solid(x + Math.round(rx * k * st), y + Math.round(ry * k * st), z + k * st)) {
-              hid += 1 - (k - 3) / 16;
-              break;
-            }
-        const under = 1 - 0.34 * (hid / RAYS.length);
-        out[i] = Math.round(Math.min(1, ((flat ? 0.86 : 0.6) * shade + edge) * under) * 255);
-      }
-  return out;
 }
 
 const sampled = new WeakMap<Part, Map<number, Sampled>>();
@@ -258,69 +152,14 @@ function sample(part: Part, res: number): Sampled {
   return out;
 }
 
-/** A colour made cleaner and brighter, as a toy is painted; what is dark or grey stays so. */
-export function toyTone(c: readonly number[]): number[] {
-  const mx = Math.max(c[0]!, c[1]!, c[2]!);
-  const mn = Math.min(c[0]!, c[1]!, c[2]!);
-  const sat = mx ? (mx - mn) / mx : 0;
-  if (mx < 60 || sat < 0.12) return [c[0]!, c[1]!, c[2]!];
-  // further from grey, and a little lighter
-  const grey = (c[0]! + c[1]! + c[2]!) / 3;
-  return c.map((v) => {
-    const s = grey + (v - grey) * 1.22;
-    return Math.max(0, Math.min(255, s + (255 - s) * 0.1));
-  });
-}
-
-/**
- * The same voxels with the speckle taken out: a voxel that stands alone in its material among
- * neighbours that agree with each other takes theirs, so a surface is clean panels of one colour.
- * Lines and anything two voxels across are left, and so is whatever glows.
- */
-function despeckle(
-  grid: Uint8Array,
-  cw: number,
-  ch: number,
-  n: number,
-  keep: readonly boolean[],
-): Uint8Array {
-  const out = grid.slice();
-  const count = new Uint8Array(256);
-  const near = [1, -1, cw, -cw, cw * ch, -cw * ch];
-  for (let z = 1; z < n - 1; z++)
-    for (let y = 1; y < ch - 1; y++)
-      for (let x = 1; x < cw - 1; x++) {
-        const i = (z * ch + y) * cw + x;
-        const m = grid[i]!;
-        if (!m || keep[m]) continue;
-        let same = 0;
-        let best = 0;
-        for (const d of near) {
-          const o = grid[i + d]!;
-          if (!o) continue;
-          if (o === m) same++;
-          else if (++count[o]! > count[best]! || !best) best = o;
-        }
-        if (same <= 1 && best && count[best]! >= 3 && !keep[best]) out[i] = best;
-        for (const d of near) count[grid[i + d]!] = 0;
-      }
-  return out;
-}
-
-/**
- * A part as a strip in the given materials, `res` texels to the art pixel. `clean`: as a toy is
- * made, in clean panels of brighter colour (`despeckle`, `toyTone`).
- */
+/** A part as a strip in the given materials, `res` texels to the art pixel. */
 export function build(
   part: Part,
   mats: Record<string, Tones>,
   res = DETAIL,
   glows?: Readonly<Record<string, number>>,
-  clean = false,
 ): Strip {
-  const S = sample(part, res);
-  const { cw, ch, n, names } = S;
-  const lit = clean ? (S.calm ??= calmLight(S, Math.max(1, Math.round(res / DETAIL)))) : S.lit;
+  const { cw, ch, n, names, grid, lit } = sample(part, res);
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
   const W = cw * cols;
   const H = ch * Math.ceil(n / cols);
@@ -330,20 +169,11 @@ export function build(
   const px = new Uint8ClampedArray(W * H * 4);
   const rgb = names.map((m) => {
     if (m && !mats[m]) throw new Error(`no material ${m}`);
-    return m ? mats[m]!.map((h) => (clean ? toyTone(hexRgb(h)) : hexRgb(h))) : [];
+    return m ? mats[m]!.map(hexRgb) : [];
   });
   // which of its materials glow (lamps, lenses), and so which texels: kept beside the pixels
   const shine = names.map((m) => (m && glows?.[m]) || 0);
   const glow = shine.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
-  const grid = clean
-    ? despeckle(
-        S.grid,
-        cw,
-        ch,
-        n,
-        shine.map((g) => g > 0),
-      )
-    : S.grid;
   const c = [0, 0, 0];
   for (let z = 0; z < n; z++)
     for (let y = 0; y < ch; y++)

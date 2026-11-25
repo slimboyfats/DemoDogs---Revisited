@@ -1,6 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
-import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** A wedge: a nose that starts at the road and climbs to a glass canopy, wide haunches behind. */
@@ -42,20 +41,6 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: body },
-    toy: {
-      ...CAR_CELL,
-      smooth: true,
-      fn: toyTruck({
-        a: 12.5,
-        b: 6,
-        well: 3.6,
-        axles: [7.8, -7.6],
-        hood: 4.2,
-        nose: 2.4,
-        rear: 4.8,
-        cab: { x0: -5, x1: 3.8, roof: 6.1, rake: 3, rakeR: 1.6 },
-      }),
-    },
     // an engine cover with an intake scoop
     top: {
       w: 7,

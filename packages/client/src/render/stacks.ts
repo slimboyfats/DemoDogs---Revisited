@@ -11,7 +11,6 @@ import {
   type World,
 } from '@demodogs/sim';
 import type { Art } from './art';
-import { FX_CELL } from './scene';
 import { queueToppling } from './collapse';
 import type { Effects } from './effects';
 import { queueRig, rigTall, tickBones } from './bones';
@@ -368,18 +367,6 @@ function over(s: StaticProp, strip: Strip, lift: number, P: Car): boolean {
   );
 }
 
-/** Toy wheels: the same wheel drawn this much bigger, set this far further out (art px). */
-const TOY_WHEEL = 1.45;
-const TOY_TRACK = 1.3;
-/** How far a toy car's body rides up on its big wheels (art px). */
-const TOY_RIDE = 1.7;
-const bigWheels = new WeakMap<Strip, Strip>();
-function bigWheel(s: Strip): Strip {
-  let b = bigWheels.get(s);
-  if (!b) bigWheels.set(s, (b = { ...s, res: s.res / TOY_WHEEL }));
-  return b;
-}
-
 function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   // a swollen or shrunk car is the same car drawn with bigger or smaller pixels: everything about
   // it is laid out `k` times as far from its middle. One flattened by a bigger car is a little
@@ -410,27 +397,21 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 3.5;
   const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
   const lurch = c.lurch + (c.sunkTip?.[0] ?? 0) * tip;
-  // on a toy venue every car is a toy truck: fat wheels that stand out from its sides, and the
-  // body (with all that is fixed to it) riding high on them
-  const toy = FX_CELL > 0;
-  const turned = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
-  const wheel = toy ? bigWheel(turned) : turned;
-  const out = toy ? TOY_TRACK : 0;
-  const zw = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
-  const z = zw + (toy ? TOY_RIDE * k * flat : 0);
+  const wheel = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
+  const z = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
   // the wheels go some of the way with a body that is tipping in
   const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.3;
   const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.3;
   for (const wh of D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];
-      const wy = (wh[1] + out) * sg;
+      const wy = wh[1] * sg;
       const steer = wx > 0 && !c.wrecked ? c.steer * 0.45 : 0;
       R.stack(
         wheel,
         c.x + cs * wx - sn * wy + wtx,
         c.y + sn * wx + cs * wy + wty,
-        zw,
+        z,
         c.h + steer,
         alpha,
       );
@@ -672,14 +653,13 @@ export function queueShadows(
     if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
       // (off the ground its shadow falls away from it, down and to the right, and thins: it is
       // how you see a car has left an edge and is in the air)
-      // (under a toy venue's low sun it lies well out to one side even with the car on the ground)
       shadow(
-        c.x + (FX_CELL > 0 ? 3.4 * c.size : 1.5) + c.z * 0.45,
-        c.y + (FX_CELL > 0 ? 2.4 * c.size : 1.5) + c.z * 0.3,
+        c.x + 1.5 + c.z * 0.45,
+        c.y + 1.5 + c.z * 0.3,
         (c.def.body.halfLength + 2) * (1 - Math.min(0.4, c.z / 80)) * c.size,
         (c.def.body.halfWidth + 1.9) * (1 - Math.min(0.3, c.z / 100)) * c.size,
         c.h,
-        (FX_CELL > 0 ? 0.4 : 0.3) + Math.min(0.12, c.z / 150),
+        0.3 + Math.min(0.12, c.z / 150),
       );
   for (const b of w.bots) if (b.alive && R.visible(b.x, b.y, 8)) shadow(b.x, b.y, 4, 3, 0, 0.25);
   // an animal's shadow stays on the ground under it: it is how you see a bird is up in the air

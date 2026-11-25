@@ -1,4 +1,3 @@
-import { FX_CELL } from '../scene';
 import { Shape } from './batch';
 import { shade, WIND, type Put } from './particles';
 import type { GasGpu } from './gas-gpu';
@@ -90,56 +89,22 @@ const PALE: V3 = [0.64, 0.61, 0.64];
 /** The glow a hot cell adds over itself. */
 export const HOT = rgbOf(1, 0.816, 0.376);
 
-// a toy venue's fire: no white heat and no soot, and its smoke is soft tan dust
-const TOY_HOT: V3 = [1, 0.86, 0.2];
-const TOY_AMBER: V3 = [1, 0.64, 0.1];
-const TOY_DEEP: V3 = [0.58, 0.14, 0.06];
-const TOY_RED: V3 = [0.92, 0.3, 0.1];
-const TOY_TAN: V3 = [0.62, 0.52, 0.4];
-const TOY_DUST: V3 = [0.76, 0.68, 0.55];
-const TOY_PALE: V3 = [0.9, 0.84, 0.74];
-
-const bangAt = (f: number, toy: boolean): number =>
-  rgbOf(
-    ...(toy
-      ? f < 0.5
-        ? ramp3(TOY_HOT, TOY_AMBER, ORANGE, f * 2)
-        : ramp3(ORANGE, TOY_RED, TOY_DEEP, f * 2 - 1)
-      : f < 0.5
-        ? ramp3(WHITE, YELLOW, ORANGE, f * 2)
-        : ramp3(ORANGE, RED, DEEP, f * 2 - 1)),
+/** A bang's colour in 8 hard steps: white-hot, yellow, orange, red, deep red. */
+export const BANG_RAMP: readonly number[] = Array.from({ length: 9 }, (_, i) => {
+  const f = i / 8;
+  return rgbOf(
+    ...(f < 0.5 ? ramp3(WHITE, YELLOW, ORANGE, f * 2) : ramp3(ORANGE, RED, DEEP, f * 2 - 1)),
   );
-const fireAt = (x: number, toy: boolean): number => {
-  if (x >= 0.42)
-    return rgbOf(
-      ...(toy
-        ? ramp3(TOY_TAN, TOY_DUST, TOY_PALE, (x - 0.42) / 0.58)
-        : ramp3(SOOT, GREY, PALE, (x - 0.42) / 0.58)),
-    );
+});
+/** A fire cell's colour in 12 hard steps: the fire ramp in the first third, then soot paling. */
+export const FIRE_RAMP: readonly number[] = Array.from({ length: 13 }, (_, i) => {
+  const x = i / 12;
+  if (x >= 0.42) return rgbOf(...ramp3(SOOT, GREY, PALE, (x - 0.42) / 0.58));
   const f = x / 0.42;
   return rgbOf(
-    ...(toy
-      ? f < 0.5
-        ? ramp3(TOY_HOT, TOY_AMBER, ORANGE, f * 2)
-        : ramp3(ORANGE, TOY_RED, TOY_TAN, f * 2 - 1)
-      : f < 0.5
-        ? ramp3(WHITE, YELLOW, ORANGE, f * 2)
-        : ramp3(ORANGE, RED, SOOT, f * 2 - 1)),
+    ...(f < 0.5 ? ramp3(WHITE, YELLOW, ORANGE, f * 2) : ramp3(ORANGE, RED, SOOT, f * 2 - 1)),
   );
-};
-
-/** A bang's colour in 8 hard steps: white-hot, yellow, orange, red, deep red. */
-export const BANG_RAMP: number[] = Array.from({ length: 9 }, (_, i) => bangAt(i / 8, false));
-/** A fire cell's colour in 12 hard steps: the fire ramp in the first third, then soot paling. */
-export const FIRE_RAMP: number[] = Array.from({ length: 13 }, (_, i) => fireAt(i / 12, false));
-/** Counts the times the ramps were repainted, so what copied them knows to copy them again. */
-export const fireStyle = { version: 0 };
-/** Paint the ramps for a toy venue (bright fire, tan dust for smoke) or the game's own. */
-export function setFireStyle(toy: boolean): void {
-  for (let i = 0; i < 9; i++) BANG_RAMP[i] = bangAt(i / 8, toy);
-  for (let i = 0; i < 13; i++) FIRE_RAMP[i] = fireAt(i / 12, toy);
-  fireStyle.version++;
-}
+});
 
 /** A cheap e^-x for x >= 0, close enough for the shape of a gust. */
 const fall = (x: number): number => 1 / (1 + x + 0.5 * x * x);
@@ -577,11 +542,6 @@ export class Cells {
           const s = stepT(t, th, 6);
           const c = this.rgb[i]!;
           // fresh smoke is thick: two cells across until it starts to thin
-          // (a toy venue's dust is fat cubes that swell as they drift)
-          if (FX_CELL > 0) {
-            normal(x, y, z, t < 0.4 ? 2 : 3, shade(c, s < 0.34 ? 0.94 : 1), 1, Shape.Rect);
-            continue;
-          }
           normal(
             x,
             y,
