@@ -80,7 +80,7 @@
       "gap": [50, 170],
       "items": [
         {
-          "prop": "prop.block",
+          "prop": "prop.road-block",
           "weight": 2
         },
         {
@@ -91,7 +91,7 @@
     },
     {
       "rule": "bend-wall",
-      "props": ["prop.block", "prop.tyres"],
+      "props": ["prop.road-block", "prop.tyres"],
       "offset": 44,
       "minCurve": 0.2
     },
@@ -141,7 +141,7 @@
           "weight": 0.6
         },
         {
-          "prop": "prop.block",
+          "prop": "prop.road-block",
           "weight": 0.15
         },
         {

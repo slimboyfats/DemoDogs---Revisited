@@ -1,13 +1,16 @@
 import { DECK_SURFACE, type LookModule } from '@demodogs/shared';
 import { noise3 } from '../../../src/shapes';
 
-/** Half the road a deck carries (the flyover venues use a 72 wide road), and its edges. */
-const ROAD = 36;
-const EDGE = 39;
+/**
+ * Half the road a deck carries (the flyover venues use a 112 wide road, and the cars up on it
+ * are held within that: a narrower deck leaves them hanging over its rail), and its edges.
+ */
+const ROAD = 56;
+const EDGE = 59;
 const S = DECK_SURFACE;
 
 /**
- * A piece of flyover, nine art px along the road: two pairs of steel girders under a cast slab,
+ * A piece of flyover, nine art px along the road: three pairs of steel girders under a cast slab,
  * a tarmac top with a dashed middle line, hazard-striped kerbs and a steel rail along each edge.
  * The road surface is DECK_SURFACE up, where the cars ride.
  */
@@ -31,13 +34,14 @@ export const deckLook = (id: string, rails: boolean): LookModule => ({
         // girders under the slab, with a cross beam at the joint
         if (z < S - 1.6) {
           const g = ay % 17;
-          if ((ay > 6 && ay < 9.5) || (ay > 26 && ay < 29.5))
-            return z < 0.5 || z > S - 2.2 || Math.abs(ay - 7.75) < 0.6 || Math.abs(ay - 27.75) < 0.6
+          const r = (ay + 14) % 20;
+          if (r > 0 && r < 3.5)
+            return z < 0.5 || z > S - 2.2 || Math.abs(r - 1.75) < 0.6
               ? 'rust'
               : g > 7.8 && g < 8.2
                 ? 'rust2'
                 : 'cage';
-          if (Math.abs(x) > 4 && ay < 33 && z > S - 2.6) return 'rust';
+          if (Math.abs(x) > 4 && ay < EDGE - 6 && z > S - 2.6) return 'rust';
           return null;
         }
         if (z < S - 0.5) return noise3(x * 2, y * 0.7, z) > 0.78 ? 'stone2' : 'concrete';
