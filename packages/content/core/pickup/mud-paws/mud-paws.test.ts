@@ -31,7 +31,8 @@ describe('pickup.mud-paws', () => {
       }
       return v;
     };
-    expect(run(true)).toBeGreaterThan(run(false) * 1.3);
+    // (rough ground costs less than it did, so the tyres win back less of it)
+    expect(run(true)).toBeGreaterThan(run(false) * 1.15);
   });
 
   it('is slowed far less by a slick', () => {

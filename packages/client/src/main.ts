@@ -25,6 +25,7 @@ import {
 } from './game/career';
 import { Session, type SessionOptions } from './game/session';
 import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
+import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
 import { TuningStore } from './game/tuning';
 import { devSettings } from './ui/dev-settings';
 import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
@@ -111,6 +112,7 @@ const scene: WorldRenderer = useCanvas
   : new PixelScene(canvas, art);
 const rendererName = useCanvas ? 'canvas' : 'pixel';
 const hud = new Hud(octx);
+const speedo = new Speedo(safeStore());
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);
 
 const cars: CarManifest[] = [...content.car.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
@@ -520,6 +522,41 @@ for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
     camZoom.setStop(Number(r.value), Math.min(W, H), Math.max(W, H));
     resize();
   };
+
+/** The SPEEDOMETER buttons and size slider say what is picked; the HUD draws it so. */
+function showSpeedo(): void {
+  const S = speedo.setup;
+  hud.dial = { ...S };
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.speedoBtn'))
+    b.textContent = `SPEEDOMETER ${S.on ? 'ON' : 'OFF'}`;
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.speedoPlaceBtn')) {
+    b.textContent = `SPEEDOMETER ${DIAL_PLACE_NAMES[S.place]}`;
+    b.disabled = !S.on;
+  }
+  for (const r of document.querySelectorAll<HTMLInputElement>('.speedoSize')) {
+    r.value = String(S.size);
+    r.disabled = !S.on;
+  }
+  for (const o of document.querySelectorAll<HTMLElement>('.speedoSizeName'))
+    o.textContent = `${Math.round(S.size * 100)}%`;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.speedoBtn'))
+  b.onclick = () => {
+    speedo.toggle();
+    showSpeedo();
+  };
+for (const b of document.querySelectorAll<HTMLButtonElement>('.speedoPlaceBtn'))
+  b.onclick = () => {
+    speedo.nextPlace();
+    showSpeedo();
+  };
+// the slider: the dial behind the pause menu grows and shrinks as it is dragged
+for (const r of document.querySelectorAll<HTMLInputElement>('.speedoSize'))
+  r.oninput = () => {
+    speedo.set({ size: Number(r.value) });
+    showSpeedo();
+  };
+showSpeedo();
 
 function show(id: string | null): void {
   for (const k of [
