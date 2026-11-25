@@ -35,6 +35,7 @@ import { Art } from './render/art';
 import { Hud, placeName } from './render/hud';
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
+import { groundMode } from './render/ground';
 import { SKIES } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { PITCH, Scene } from './render/scene';
@@ -111,6 +112,11 @@ const scene: WorldRenderer = useCanvas
   ? new Scene(canvas.getContext('2d')!, art)
   : new PixelScene(canvas, art);
 const rendererName = useCanvas ? 'canvas' : 'pixel';
+// the pixel engine paints the country and the road itself, as fine as the screen is; ?ground=map
+// has it read them from a map painted one texel to the art pixel, as the canvas renderer does
+groundMode.shader = !useCanvas && params.get('ground') !== 'map';
+// ?look=bright: sunny colours, plain clean roads, a mown lawn
+groundMode.bright = groundMode.shader && params.get('look') !== 'classic';
 const hud = new Hud(octx);
 const speedo = new Speedo(safeStore());
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);

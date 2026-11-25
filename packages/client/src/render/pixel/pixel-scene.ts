@@ -3,7 +3,7 @@ import { armsLights } from '../arms-fx';
 import { arsenalLights } from '../arsenal-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
-import type { Ground } from '../ground';
+import { groundMode, type Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
 import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
@@ -443,7 +443,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     this.stacks.ready();
-    this.shade = A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1);
+    // the bright look casts lighter shadows
+    this.shade =
+      A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1) * (groundMode.bright ? 0.6 : 1);
     const cast = this.sunCast && sky.lit && this.shade > 0.03 && fx.quality > 0.3;
     if (cast) {
       const sun = (this.sun ??= new SunShadow(gl));
