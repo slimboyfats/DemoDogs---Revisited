@@ -245,6 +245,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
       if (p.on && this.visible(p.x, p.y, 30)) L.add(p.x, p.y, 20, 0.45, 0x60f0ff);
+    this.glances(w, fx);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
@@ -262,6 +263,42 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (s.down || !this.visible(s.x, s.y, 50)) continue;
       if (!this.art.prop(s.def.id).glow) continue;
       L.add(s.x, s.y, 44, 0.75 * k, 0xffd890);
+    }
+  }
+
+  /**
+   * Sunlight thrown off bodywork: a car with a side turned to the sun lays a patch of the sun's
+   * own light on the ground beside it, that flares and dies as the car turns and shimmers as
+   * it goes. Weak lights, so they are the first to make way for a blast's.
+   */
+  private glances(w: World, fx: Effects): void {
+    const A = this.sky;
+    if (!this.sunCast || this.shade < 0.2 || fx.quality <= 0.5) return;
+    const rx = A.reach[0]!;
+    const ry = A.reach[1]!;
+    const len = Math.hypot(rx, ry);
+    if (len < 0.01) return;
+    const sx = -rx / len;
+    const sy = -ry / len;
+    const rgb =
+      (Math.min(255, Math.round(A.sun[0]! * 400)) << 16) |
+      (Math.min(255, Math.round(A.sun[1]! * 400)) << 8) |
+      Math.min(255, Math.round(A.sun[2]! * 400));
+    for (const c of w.cars) {
+      if (c.wrecked || !this.visible(c.x, c.y, 40)) continue;
+      // how square a side of it is to the sun
+      const side = Math.abs(-Math.sin(c.h) * sx + Math.cos(c.h) * sy);
+      const flare = side * side * side;
+      if (flare < 0.15) continue;
+      const out = (c.def.body.halfWidth + 5) * c.size;
+      const shimmer = 0.85 + 0.15 * Math.sin(w.time * 19 + c.index * 2.4 + (c.x + c.y) * 0.21);
+      this.lights.add(
+        c.x + sx * out,
+        c.y + sy * out,
+        15 * c.size,
+        0.4 * flare * shimmer * this.shade,
+        rgb,
+      );
     }
   }
 
