@@ -14,7 +14,7 @@
 
 import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
-import { BLOCK_GLSL } from './light-block-glsl';
+import { BLOCK_GLSL, BOUNCE_GLSL } from './light-block-glsl';
 import { FAR_DARK, FAR_SHADE } from '../relief-map';
 import { RELIEF_GLSL } from './relief-layer';
 import { SUN_GLSL } from './sun-glsl';
@@ -411,7 +411,7 @@ uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
 uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
 uniform float u_hk;        // height for one row of the map's shift
 #endif
-out vec4 o;${SKY_GLSL}
+out vec4 o;${SKY_GLSL}${BOUNCE_GLSL}
 const float EDGE = 0.07;
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
@@ -552,7 +552,9 @@ void main() {
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }
   vec3 q = min(vec3(0.7), l);
-  c = min(vec3(1.0), c * (u_amb + q * 1.1) + q * (30.0 / 255.0));
+  // (and what stands in the sun beside it throws some of its own colour back on it, in steps)
+  vec3 back = floor(min(vec3(0.6), bounced(wp)) * 6.0 + b) / 6.0;
+  c = min(vec3(1.0), c * (u_amb + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
   o = vec4(c, 1.0);
 }`;
 

@@ -51,6 +51,8 @@ export class GroundLayer {
       'u_lm',
       'u_lmbox',
       'u_lmk',
+      'u_lc',
+      'u_bounce',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -78,6 +80,7 @@ export class GroundLayer {
     lights: Lights,
     sky?: { ground: Float32Array; snow: number; wet: number },
     block?: LightBlock | null,
+    bounce?: readonly [number, number, number],
   ): void {
     const gl = this.gl;
     const u = this.u;
@@ -99,11 +102,17 @@ export class GroundLayer {
     gl.uniform2f(u.u_size, this.ground.cv.width, this.ground.cv.height);
     // what stands in the lights' way (a sampler must have a texture behind it either way)
     gl.uniform1f(u.u_lmk, block ? 1 : 0);
-    if (block) block.bind(4, u.u_lm, u.u_lmbox);
-    else {
+    gl.uniform3f(u.u_bounce, bounce?.[0] ?? 0, bounce?.[1] ?? 0, block ? (bounce?.[2] ?? 0) : 0);
+    if (block) {
+      block.bind(4, u.u_lm, u.u_lmbox);
+      block.bindColour(5, u.u_lc);
+    } else {
       gl.activeTexture(gl.TEXTURE4);
       gl.bindTexture(gl.TEXTURE_2D, this.tex);
       gl.uniform1i(u.u_lm, 4);
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex);
+      gl.uniform1i(u.u_lc, 5);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);

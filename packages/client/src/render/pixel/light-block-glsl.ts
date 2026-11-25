@@ -61,19 +61,56 @@ void main() {
   v_uv = a_uv;
 }`;
 
-/** Red: the slice's height; green: that height from the top. Blended by MAX: the top and the underside. */
+/**
+ * Red: the slice's height; green: that height from the top. Blended by MAX: the top and the
+ * underside. The second target takes the slice's colour (and its height as alpha), for the light
+ * that things throw back on the ground beside them.
+ */
 export const BLOCK_FS = `#version 300 es
 precision highp float;
+precision highp int;
 in vec2 v_tex;
 in float v_high;
 flat in vec4 v_uv;
 uniform highp sampler2D u_atlas;
-out vec4 o;
+layout(location = 0) out vec4 o;
+layout(location = 1) out vec4 oc;
 void main() {
+  vec3 c;
   if (v_uv.y >= 0.0) {
     ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
-    if (texelFetch(u_atlas, t, 0).a < 0.5) discard;
+    vec4 x = texelFetch(u_atlas, t, 0);
+    if (x.a < 0.5) discard;
+    c = x.rgb;
+  } else {
+    int p = int(v_uv.x + 0.5);
+    c = vec3(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255)) / 255.0;
   }
   float h = min(255.0, v_high + 1.0) / 255.0;
   o = vec4(h, 1.0 - min(255.0, v_high) / 255.0, 0.0, 1.0);
+  oc = vec4(c, h);
+}`;
+
+/**
+ * GLSL (the ground): the light thrown back at the ground point `wp` by what stands beside it
+ * on the side away from the sun, so a wall or a car in the sun spills its colour on the ground
+ * in front of it. `u_bounce`: the way shadows fall (unit x, y) and how strong the sun is.
+ */
+export const BOUNCE_GLSL = `
+uniform sampler2D u_lc;
+uniform vec3 u_bounce;
+vec3 bounced(vec2 wp) {
+  if (u_bounce.z <= 0.0 || u_lmk <= 0.0) return vec3(0.0);
+  // (nothing bounces on to ground that something stands on)
+  vec4 own = textureLod(u_lc, (wp - u_lmbox.xy) / u_lmbox.zw, 0.0);
+  if (own.a * 255.0 > 3.0) return vec3(0.0);
+  vec3 sum = vec3(0.0);
+  for (int i = 0; i < 4; i++) {
+    float d = 2.0 + float(i) * 3.0;
+    vec4 m = textureLod(u_lc, (wp + u_bounce.xy * d - u_lmbox.xy) / u_lmbox.zw, 0.0);
+    // a thing throws light about as far as it is tall
+    float tall = m.a * 255.0;
+    sum += m.rgb * clamp((tall * 1.6 - d) / 6.0, 0.0, 1.0) * (1.0 - float(i) * 0.22);
+  }
+  return sum * u_bounce.z;
 }`;

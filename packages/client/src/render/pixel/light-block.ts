@@ -10,6 +10,8 @@ import type { StackView } from './stack-batch';
  */
 export class LightBlock {
   readonly tex: WebGLTexture;
+  /** The colour of what stands there (alpha: how high), for light thrown back on the ground. */
+  readonly col: WebGLTexture;
   private readonly fbo: WebGLFramebuffer;
   private tw = 0;
   private th = 0;
@@ -18,6 +20,7 @@ export class LightBlock {
 
   constructor(private readonly gl: WebGL2RenderingContext) {
     this.tex = texture(gl, gl.NEAREST);
+    this.col = texture(gl, gl.LINEAR);
     this.fbo = gl.createFramebuffer();
   }
 
@@ -42,6 +45,20 @@ export class LightBlock {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RG8, this.tw, this.th, 0, gl.RG, gl.UNSIGNED_BYTE, null);
       gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo);
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this.tex, 0);
+      gl.bindTexture(gl.TEXTURE_2D, this.col);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA8,
+        this.tw,
+        this.th,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null,
+      );
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.col, 0);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
     }
     this.box[0] = x0;
     this.box[1] = y0;
@@ -76,7 +93,17 @@ export class LightBlock {
     gl.activeTexture(gl.TEXTURE0);
   }
 
+  /** Bind the colours to texture unit `unit`. */
+  bindColour(unit: number, sampler: WebGLUniformLocation | null): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, this.col);
+    gl.uniform1i(sampler, unit);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
   dispose(): void {
+    this.gl.deleteTexture(this.col);
     this.gl.deleteTexture(this.tex);
     this.gl.deleteFramebuffer(this.fbo);
   }

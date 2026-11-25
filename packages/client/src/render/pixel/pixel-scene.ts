@@ -421,7 +421,14 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     this.gatherLights(w, fx);
     const lit = this.lights.count + this.lights.coneCount > 0;
-    const blocked = this.lightCast && sky.lit && lit && fx.quality > 0.5;
+    // (by day it is wanted for the light things throw back on the ground beside them)
+    const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;
+    const rl = Math.hypot(A.reach[0]!, A.reach[1]!) || 1;
+    const bounce: [number, number, number] = [
+      A.reach[0]! / rl,
+      A.reach[1]! / rl,
+      cast ? this.shade * (A.sun[0]! + A.sun[1]! + A.sun[2]!) * 0.24 : 0,
+    ];
     if (blocked) {
       const block = (this.block ??= new LightBlock(gl));
       block.begin(view);
@@ -448,7 +455,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       gl.depthMask(true);
     } else gl.disable(gl.DEPTH_TEST);
     const groundSky = { ground: A.ground, snow: sky.snow, wet: sky.wet };
-    this.groundLayer!.draw(view, this.lights, groundSky, blocked ? this.block : null);
+    this.groundLayer!.draw(view, this.lights, groundSky, blocked ? this.block : null, bounce);
     gl.disable(gl.DEPTH_TEST);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
