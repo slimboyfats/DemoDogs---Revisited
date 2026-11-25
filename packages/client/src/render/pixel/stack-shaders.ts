@@ -323,7 +323,7 @@ void main() {
     // a light falls hardest on what is turned towards it
     float face = mix(1.0, 0.55 + 0.7 * max(0.0, dot(n, normalize(to))), known);
     // (and none of it reaches what something stands in front of)
-    float open = lightOpen(v_world.xy, v_world.z, p.xy, 8.0, clamp(p.z * 0.35, 4.0, 12.0), b);
+    float open = lightOpen(v_world.xy, v_world.z, p.xy, 3.0, clamp(p.z * 0.35, 4.0, 12.0), b);
     if (open <= 0.0) continue;
     float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
@@ -559,7 +559,7 @@ void main() {
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
     l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
-      * lightOpen(wp, 0.0, lp.xy, 8.0, clamp(lp.z * 0.35, 4.0, 12.0), b);
+      * lightOpen(wp, 0.0, lp.xy, 3.0, clamp(lp.z * 0.35, 4.0, 12.0), b);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;

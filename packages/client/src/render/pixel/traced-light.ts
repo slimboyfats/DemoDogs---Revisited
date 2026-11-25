@@ -17,7 +17,7 @@ const CLIMB = 0.55;
  * The same for light from things on the ground (a blast, a lamp, a lit wall), which comes in low:
  * what stands in its way throws a long shadow.
  */
-const LOW = 0.2;
+const LOW = 0.05;
 /** Heights are kept in a byte's worth of this many art px. */
 const TALL = 64;
 
@@ -328,12 +328,12 @@ void main() {
     float d = distance(wp, p.xy);
     if (d >= ball) continue;
     float f = 1.0 - d / ball;
-    e += u_lcol[i] * p.w * f * (2.0 - f) * 2.2;
+    e += u_lcol[i] * p.w * f * (2.0 - f) * 0.9;
   }
   if (m.r > 0.0) {
     float top = m.r * 255.0 - 1.0;
     float under = (1.0 - m.g) * 255.0;
-    if (top >= 5.0 && under <= 4.0) solid = min(1.0, top / ${TALL.toFixed(1)});
+    if (top >= 3.0 && under <= 4.0) solid = min(1.0, top / ${TALL.toFixed(1)});
     if (top >= 3.0) {
       vec3 lit = vec3(0.0);
       float away = length(u_shear.xy);
