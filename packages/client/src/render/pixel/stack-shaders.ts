@@ -152,7 +152,7 @@ float puddle(vec2 wp) {
 // A headlamp's beam on the ground at wp: 0 outside it, brightest near the lamp.
 uniform vec4 u_cone[${MAX_CONES}];  // x, y, unit direction
 uniform int u_ccount;
-uniform vec2 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, and that ground's
+uniform vec3 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, that ground's, the beam's climb a px
 uniform float u_lgz[${MAX_LIGHTS}]; // how high the ground stands under each point light
 // How much of a light that stands \`from\` high reaches a spot \`at\` high and \`d\` away: all of
 // it along a slope or a ramp, none of it over a sheer edge either way (the side of a raised
@@ -359,7 +359,9 @@ void main() {
     float f = beam(v_world.xy, p);
     if (f <= 0.0) continue;
     // (what is as high as the lamp or higher is level with it: a deck under a car on it)
-    f *= level(u_coneh[i].y + u_coneh[i].x, v_gz + min(v_world.z, u_coneh[i].x), distance(v_world.xy, p.xy));
+    float far = distance(v_world.xy, p.xy);
+    float up = u_coneh[i].x + u_coneh[i].z * far;
+    f *= level(u_coneh[i].y + up, v_gz + min(v_world.z, max(up, 0.0)), far);
     if (f <= 0.0) continue;
     if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
@@ -624,7 +626,8 @@ void main() {
     if (n >= u_ccount) break;
     float f = beam(wp, u_cone[n]);
     if (f <= 0.0) continue;
-    f *= level(u_coneh[n].y + u_coneh[n].x, gh, distance(wp, u_cone[n].xy));
+    float far = distance(wp, u_cone[n].xy);
+    f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }

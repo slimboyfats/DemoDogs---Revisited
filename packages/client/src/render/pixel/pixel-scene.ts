@@ -280,8 +280,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side,
-        c.h,
+        // (the beam lies as the car does: tipped to a side, it swings towards the low one; nose
+        // up, it leaves the ground; nose down, it falls short)
+        c.h - c.bank * 0.9,
         c.z,
+        c.pitch * 1.5,
       );
     };
     lamp(w.player);
@@ -456,7 +459,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       } else {
         for (let i = 0; i < L.count; i++) L.gz[i] = this.rise(L.pos[i * 4]!, L.pos[i * 4 + 1]!);
         for (let i = 0; i < L.coneCount; i++)
-          L.coneh[i * 2 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
+          L.coneh[i * 3 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
       }
     }
     const lit = this.lights.count + this.lights.coneCount > 0;

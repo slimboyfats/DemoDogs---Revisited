@@ -623,7 +623,7 @@ export class StackBatch {
     gl.uniform3f(u.u_grow, g?.[0] ?? 0, g?.[1] ?? 0, g?.[2] ?? -1);
     gl.uniform4fv(u.u_cone, lights.cones);
     gl.uniform1i(u.u_ccount, lights.coneCount);
-    gl.uniform2fv(u.u_coneh, lights.coneh);
+    gl.uniform3fv(u.u_coneh, lights.coneh);
     gl.uniform1fv(u.u_lgz, lights.gz);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, lit ? this.atlas.auxTex : tex);

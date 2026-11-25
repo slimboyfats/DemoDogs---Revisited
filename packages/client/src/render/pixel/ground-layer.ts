@@ -103,7 +103,7 @@ export class GroundLayer {
     gl.uniform3fv(u.u_lcol, lights.col);
     gl.uniform4fv(u.u_cone, lights.cones);
     gl.uniform1i(u.u_ccount, lights.coneCount);
-    gl.uniform2fv(u.u_coneh, lights.coneh);
+    gl.uniform3fv(u.u_coneh, lights.coneh);
     gl.uniform1fv(u.u_lgz, lights.gz);
     if (sky) gl.uniform3fv(u.u_amb, sky.ground);
     else gl.uniform3f(u.u_amb, 1, 1, 1);

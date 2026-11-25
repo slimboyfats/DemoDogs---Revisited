@@ -70,7 +70,7 @@ export class BeamHaze {
     gl.uniform1f(u.u_thick!, thick);
     gl.uniform4fv(u.u_cone!, lights.cones);
     gl.uniform1i(u.u_ccount!, lights.coneCount);
-    gl.uniform2fv(u.u_coneh!, lights.coneh);
+    gl.uniform3fv(u.u_coneh!, lights.coneh);
     gl.uniform1f(u.u_hk!, v.ys / (v.zk / v.scale));
     gl.uniform1f(u.u_lmk!, block ? 1 : 0);
     if (relief.map) {
@@ -122,7 +122,8 @@ void main() {
     float f = beam(at, u_cone[n]);
     if (f <= 0.0) continue;
     // (a lamp well off the ground, a car in the air, throws no shaft along it)
-    f *= level(u_coneh[n].y + u_coneh[n].x, gh, distance(at, u_cone[n].xy));
+    float far = distance(at, u_cone[n].xy);
+    f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
     // (the air at a lamp's own height: what stands taller than that cuts the shaft)
     haze += f * lightOpen(at, 4.0, u_cone[n].xy, 5.0, 4.0, b);
   }
