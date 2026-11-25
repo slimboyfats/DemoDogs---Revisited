@@ -235,6 +235,20 @@ export type SimEvent =
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
   /**
+   * A thrower lobbed a ball (world.props[prop]) from (x, y) at height z: it comes down at
+   * (tx, ty) `time` seconds from now.
+   */
+  | {
+      t: 'throw';
+      prop: number;
+      x: number;
+      y: number;
+      z: number;
+      tx: number;
+      ty: number;
+      time: number;
+    }
+  /**
    * A car drove onto a track tile (world.statics[prop]) at (x, y): a boost tile kicked it on, or
    * a ramp threw it up. `power` is the push, or the speed it left the ramp at.
    */

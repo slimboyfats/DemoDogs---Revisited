@@ -366,6 +366,8 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
     run: z.tuple([z.number().positive(), z.number().positive()]),
     gap: z.tuple([z.number().nonnegative(), z.number().nonnegative()]),
     items: z.array(ScatterItem).min(1),
+    /** Along one side of the road only: -1 its left going round, 1 its right (absent: both). */
+    side: z.union([z.literal(-1), z.literal(1)]).optional(),
   }),
   /**
    * The start gantry: a `leg` either side of the road at fraction `at` of the way round (0 is
@@ -391,6 +393,10 @@ export const VenueSchema = z.strictObject({
   mode: id('mode'),
   /** Fixed seed for the venue's scenery, so a venue looks the same every time. */
   seed: z.number().int(),
+  /** How many times their usual size cars are here (absent: 1): a toy track has big cars. */
+  cars: z.number().min(0.5).max(2).optional(),
+  /** The rivals' paint here, in grid order (absent: the game's own, shuffled). */
+  paints: z.array(hex).min(1).optional(),
   size: z.strictObject({
     w: z.number().int().min(400).max(4000),
     h: z.number().int().min(400).max(4000),
@@ -431,7 +437,8 @@ export const VenueSchema = z.strictObject({
     .optional(),
   /**
    * The ground's colours. `terrain` says what country it is (else the client reads it off the
-   * ground colour) and `road` what the road is made of (tarmac unless said): looks only.
+   * ground colour), `road` what the road is made of (tarmac unless said) and `style` how tidy
+   * it all is: looks only.
    */
   colors: z.strictObject({
     ground: hex,
@@ -440,6 +447,20 @@ export const VenueSchema = z.strictObject({
     outside: hex,
     terrain: z.enum(['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved']).optional(),
     road: z.enum(['tarmac', 'dirt']).optional(),
+    /** How the ground is drawn: `toy` is clean, bright and tidy (mown lawn, a spotless road). */
+    style: z.enum(['toy']).optional(),
+    /**
+     * Footpaths worn into a toy venue's lawn: each a line of points (art px from the top left)
+     * and how wide it is. Painted only; nothing drives differently on one.
+     */
+    paths: z
+      .array(
+        z.strictObject({
+          points: z.array(z.tuple([z.number(), z.number()])).min(2),
+          width: z.number().positive(),
+        }),
+      )
+      .optional(),
   }),
   /**
    * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so

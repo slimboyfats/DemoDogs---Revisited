@@ -38,6 +38,7 @@ import { updateMovers } from './movers';
 import { updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
+import { updateThrowers, type Thrower } from './throwers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
 import { updateSagging } from './spans';
@@ -185,6 +186,9 @@ export class World {
   readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
   readonly critters: Critter[] = [];
+  /** Standing things that throw balls (props with `thrower`), found as they are stood. */
+  readonly throwers: Thrower[] = [];
+  throwersSeen = -1;
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
@@ -313,7 +317,8 @@ export class World {
     // the field: the player and rivals in other cars and paint
     const types = [...C.car.keys()].sort();
     const aiDef = C.ai.get(mode.ai)!;
-    const paints = this.rng.shuffle(RIVAL_PAINTS);
+    const shuffled = this.rng.shuffle(RIVAL_PAINTS);
+    const paints = venue.paints ?? shuffled;
     const names = this.rng.shuffle(RIVAL_NAMES);
     const player = makeCar(
       this,
@@ -628,6 +633,7 @@ export class World {
     }
     for (const b of this.bots) updateBot(this, b);
     if (this.critters.length) updateCritters(this);
+    updateThrowers(this);
     updateProps(this);
     updatePresses(this);
     updatePickups(this);

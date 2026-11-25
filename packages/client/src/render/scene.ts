@@ -8,7 +8,18 @@ import { queueShadows, queueStacks } from './stacks';
 import { StackRenderer, tall, type Strip } from './stack';
 
 const TAU = Math.PI * 2;
-export const PITCH = (56 * Math.PI) / 180;
+/** How steeply the camera looks down, as the game was drawn for, and lower for a toy venue. */
+export const PITCH_PLAIN = (56 * Math.PI) / 180;
+export const PITCH_TOY = (33 * Math.PI) / 180;
+/**
+ * The camera's pitch (radians up from the ground): the ground is drawn sin(PITCH) as deep as it
+ * is wide and heights stand cos(PITCH) tall. It is set when a race is made (`setPitch`), so
+ * read it when you need it and do not keep what you worked out from it.
+ */
+export let PITCH = PITCH_PLAIN;
+export function setPitch(p: number): void {
+  PITCH = p;
+}
 
 interface Baked {
   img: HTMLCanvasElement;

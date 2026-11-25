@@ -1,0 +1,15 @@
+{
+  "id": "prop.park-bench",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Park bench",
+    "description": "A slatted bench to sit and watch the race from. A car goes straight through it.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "hardness": 0.4,
+  "made": "material.wood",
+  "integrity": 16,
+  "low": 8
+}

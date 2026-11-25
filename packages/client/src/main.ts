@@ -37,6 +37,7 @@ import { PixelScene } from './render/pixel/pixel-scene';
 import { SKIES } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { PITCH, Scene } from './render/scene';
+import { lookChoice } from './render/ground';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
@@ -1037,6 +1038,9 @@ function boot(): void {
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
   }
+  // ?look=toy draws any venue clean and bright; ?look=classic draws a toy venue the old way
+  const look = params.get('look');
+  if (look === 'toy' || look === 'classic') lookChoice.style = look;
   // ?slices=0: nothing is built slice by slice or seen through
   if (params.get('slices') === '0') SliceFx.enabled = false;
   resize();

@@ -1,3 +1,4 @@
+import { GRAVITY } from '@demodogs/shared';
 import { fitted, mounts, place } from './addon-mounts';
 import {
   moundAt,
@@ -672,5 +673,13 @@ export function queueShadows(
     if (p.alive && p.z > 6 && R.visible(p.x, p.y, 12)) {
       const k = 1 + Math.min(1, p.z / 150);
       shadow(p.x, p.y, p.def.radius * 1.3 * k, p.def.radius * 0.9 * k, p.rot, 0.34 / k);
+      // and what was thrown shows where it will come down: a dark spot waiting on the ground
+      const pace = Math.hypot(p.vx, p.vy);
+      if (pace > 30) {
+        const g = GRAVITY * w.gravity * 0.95;
+        const left = (p.vz + Math.sqrt(p.vz * p.vz + 2 * g * p.z)) / g;
+        const r = p.def.radius * 1.5;
+        shadow(p.x + p.vx * left, p.y + p.vy * left, r, r * 0.8, 0, 0.3);
+      }
     }
 }

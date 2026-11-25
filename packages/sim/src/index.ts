@@ -43,5 +43,6 @@ export * from './wild';
 export { breached, riversOf, type River } from './river';
 export { inWater } from './docks';
 export * from './dmath';
+export type { Thrower } from './throwers';
 export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';
 export * from './addons';
