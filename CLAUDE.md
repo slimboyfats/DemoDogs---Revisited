@@ -106,7 +106,8 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **A piece of a stack can have a finish of its own** (`Finish` in shared/looks.ts: matte, paint, metal, chrome,
   glass, glow). A shape function returns `finished('paintr', 'metal')`, or a part is wrapped in `withFinish` /
   `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
-  `GLOSS` and `GLOWS` lists say. Looks only: the client reads it when it builds the strip (`shineOf`).
+  `GLOSS` and `GLOWS` lists say. A material named for fire or light (fire, flame, ember, lava, lamp, light, glow,
+  neon, torch in its name) gives light off without being listed, so do not name a dull colour that way. Looks only: the client reads it when it builds the strip (`shineOf`).
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

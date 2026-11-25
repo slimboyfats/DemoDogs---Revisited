@@ -161,9 +161,13 @@ export const FINISH_GLOSS: Readonly<Record<Exclude<Finish, 'glow'>, number>> = {
   glass: 3,
 };
 
+/** A material named for fire or light gives light off, whether or not the palette lists it. */
+const BURNS = /fire|flame|ember|lava|lamp|light|glow|neon|torch/;
+
 /**
  * How a named material glows (0 to 7) and shines (0 to 3): by its own finish if its name carries
- * one (`paintr@metal`), or else the way the palette's lists say its colour does.
+ * one (`paintr@metal`), or else the way the palette's lists say its colour does (and anything named for fire or
+ * light glows, listed or not).
  */
 export function shineOf(
   name: string,
@@ -174,7 +178,7 @@ export function shineOf(
   const { material: m, finish } = finishOf(name);
   if (finish === 'glow') return [7, glosses?.[m] ?? 0];
   if (finish) return [0, FINISH_GLOSS[finish]];
-  return [glows?.[m] ?? 0, glosses?.[m] ?? 0];
+  return [glows?.[m] ?? (BURNS.test(m) ? 6 : 0), glosses?.[m] ?? 0];
 }
 
 /** A part as a strip in the given materials, `res` texels to the art pixel. */
