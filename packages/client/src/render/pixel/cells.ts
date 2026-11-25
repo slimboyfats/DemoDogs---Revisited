@@ -547,7 +547,8 @@ export class Cells {
             y,
             z,
             t < 0.35 ? 2 : 1,
-            shade(c, s < 0.34 ? 0.55 : s < 0.67 ? 1 : 1.45),
+            // (a pale puff stays pale: its deep cells would read as grit on a clean road)
+            shade(c, s < 0.34 ? (c >> 16 > 0xd0 ? 0.9 : 0.55) : s < 0.67 ? 1 : 1.45),
             1,
             Shape.Rect,
           );

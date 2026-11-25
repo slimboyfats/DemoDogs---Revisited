@@ -1,0 +1,13 @@
+{
+  "id": "prop.toy-tree",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Toy tree",
+    "description": "A small round tree built of leafy cubes on a square trunk. It stops a car; enough knocks bring it down.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 3.6,
+  "made": "material.wood",
+  "integrity": 60
+}

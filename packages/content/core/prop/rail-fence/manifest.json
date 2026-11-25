@@ -1,0 +1,15 @@
+{
+  "id": "prop.rail-fence",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rail fence",
+    "description": "A length of park fence, posts and two pale rails. A fast car goes through it in a shower of splinters.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "hardness": 0.5,
+  "made": "material.wood",
+  "integrity": 22,
+  "low": 9
+}

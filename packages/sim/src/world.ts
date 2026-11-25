@@ -2,11 +2,13 @@ import { updateAddons } from './addons';
 import { updateDefence } from './defence';
 import {
   DT,
+  DEFAULT_TUNING,
   FIELD_SIZE,
   ADDON_KINDS,
   NO_CONTROLS,
   type Controls,
   type ModeManifest,
+  type Tuning,
   type SimEvent,
   type VenueManifest,
   type MaterialManifest,
@@ -36,6 +38,7 @@ import { updateMovers } from './movers';
 import { updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
+import { updateThrowers, type Thrower } from './throwers';
 import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
 import { updateSagging } from './spans';
@@ -92,6 +95,8 @@ export interface WorldOptions {
    * only: no rule reads `player`, so every peer simulates the same race whatever its `you`.
    */
   you?: number;
+  /** Rule numbers tuned by hand (shared/tuning.ts); what is left out is the game's own. Never online. */
+  tuning?: Partial<Tuning>;
   /** A wrecked car is out for good, and the race ends when the player is. */
   knockout?: boolean;
   /**
@@ -181,6 +186,9 @@ export class World {
   readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
   readonly critters: Critter[] = [];
+  /** Standing things that throw balls (props with `thrower`), found as they are stood. */
+  readonly throwers: Thrower[] = [];
+  throwersSeen = -1;
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   readonly mines: Mine[] = [];
@@ -245,7 +253,11 @@ export class World {
   private events: SimEvent[] = [];
   private lastBeep = 4;
 
+  /** The rule numbers this world runs on (shared/tuning.ts): the game's own unless tuned by hand. */
+  tuning: Tuning;
+
   constructor(opts: WorldOptions) {
+    this.tuning = { ...DEFAULT_TUNING, ...opts.tuning };
     const C = opts.content;
     const venue = C.venue.get(opts.venue);
     if (!venue) throw new Error(`no venue ${opts.venue}`);
@@ -297,6 +309,7 @@ export class World {
         this.road,
         this.oval,
         raised,
+        this.tuning,
       );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
@@ -304,7 +317,8 @@ export class World {
     // the field: the player and rivals in other cars and paint
     const types = [...C.car.keys()].sort();
     const aiDef = C.ai.get(mode.ai)!;
-    const paints = this.rng.shuffle(RIVAL_PAINTS);
+    const shuffled = this.rng.shuffle(RIVAL_PAINTS);
+    const paints = venue.paints ?? shuffled;
     const names = this.rng.shuffle(RIVAL_NAMES);
     const player = makeCar(
       this,
@@ -619,6 +633,7 @@ export class World {
     }
     for (const b of this.bots) updateBot(this, b);
     if (this.critters.length) updateCritters(this);
+    updateThrowers(this);
     updateProps(this);
     updatePresses(this);
     updatePickups(this);

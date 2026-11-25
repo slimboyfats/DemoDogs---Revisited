@@ -233,7 +233,7 @@ export class Hud {
     }
     if (fx.msgT > 0 && fx.msg) text(fx.msg, W / 2, H * 0.3, font(34), '#ffd24a', 'center');
     // off the course in a race: how long there is to get back before the car is put back
-    const back = rescueIn(w.player);
+    const back = rescueIn(w, w.player);
     if (back > 0 && !w.player.wrecked) {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
       text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), '#ffd24a', 'center');

@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NO_CONTROLS, parseTrackFile, type TrackFile } from '@demodogs/shared';
+import { DEFAULT_TUNING, NO_CONTROLS, parseTrackFile, type TrackFile } from '@demodogs/shared';
 import {
-  RESCUE_COUNT,
-  RESCUE_GRACE,
   World,
   groundAt,
   installTrack,
@@ -162,7 +160,8 @@ describe('raised road', () => {
       for (const e of w.takeEvents()) seen.push(e.t);
     };
     // not at once: there is time to drive off for the ramp
-    for (let n = 0; n < (RESCUE_GRACE + RESCUE_COUNT) * 60 - 10; n++) tick();
+    for (let n = 0; n < (DEFAULT_TUNING.rescueGrace + DEFAULT_TUNING.rescueCount) * 60 - 10; n++)
+      tick();
     expect(seen).not.toContain('rescue');
     expect(groundAt(w, c.x, c.y)).toBe(0);
     for (let n = 0; n < 30; n++) tick();
@@ -203,6 +202,32 @@ describe('raised road', () => {
     // nothing a rule scatters stands on one
     expect(w.statics.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
     expect(w.props.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
+  });
+
+  it('its ways up are as far apart, as wide and as long as the tuning says', () => {
+    const { t } = raisedTrack(24);
+    const made = installTrack(C, t);
+    const build = (tuning: Partial<typeof DEFAULT_TUNING>): World =>
+      new World({
+        content: made.content,
+        venue: made.venue,
+        car: 'car.mutt',
+        seed: 1,
+        rivals: 0,
+        tuning,
+      });
+    const ways = (w: World): number => {
+      const S = slipsOf(w.track!, liftsOf(w.track!, w.venue.track!.raised!), w.tuning);
+      let n = 0;
+      for (let k = 1; k < S.length; k++) if (S[k] && !S[k - 1]) n++;
+      return n;
+    };
+    const marked = (w: World): number => w.relief!.slip!.reduce((a, b) => a + b, 0);
+    const plain = build({});
+    expect(ways(plain)).toBe(1);
+    expect(ways(build({ slipGap: 120 }))).toBeGreaterThan(1);
+    expect(marked(build({ slipWide: 100 }))).toBeGreaterThan(marked(plain));
+    expect(marked(build({ slipRun: 6 }))).toBeGreaterThan(marked(plain));
   });
 
   it('no scenery stands on its sides', () => {

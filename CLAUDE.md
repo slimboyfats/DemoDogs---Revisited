@@ -110,7 +110,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   loading when ids go: unknown ones are left out, never an error. Every prop is placeable; nothing is added per prop.
 - **The ground is painted once, per pixel** (client `render/terrain.ts`, then decals in `render/ground.ts`). A venue's
   `colors.terrain` (grass, dirt, sand, snow, gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are
-  optional and looks only, so the sim never reads them.
+  optional and looks only, so the sim never reads them. `colors.style: "toy"` draws a venue clean and bright (mown
+  lawn, a spotless road, fat kerbs, a warm sun; Fetch Park); `?look=toy` draws any venue that way and `?look=classic`
+  draws a toy venue the old way.
 - **The ground has height** where a venue has `relief` (hills under the road, sheer terraces beyond it): `Relief`
   (sim/relief.ts) is the one height map. The sim uses it for slopes, faces a car cannot climb and edges it drives off;
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map
@@ -119,6 +121,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   A venue's `track.raised` (`from`, `to`, `height`; the track creator's ELEVATE tool writes it as `raised` in the
   `TrackFile`) lifts a stretch of road into a platform in that same height map, with a ramp at each end and steep
   sides, so nothing else needs to know about it.
+- **Rule numbers tuned by hand are in one list** (`TUNABLES` in shared/tuning.ts): the DEV SETTINGS pane (menu and
+  pause menu) draws a slider for each, a `World` takes them as `tuning`, and a rule reads `world.tuning`. A new one is
+  an entry in that list and a read in its rule. They are saved on the device and never used in an online race, so
+  every screen runs the same one. Defaults are the game's own values: tests and golden hashes run on those.
 - **Cars lie with the ground.** The sim works out how each car lies (`pitch`, `bank` in sim/mounds.ts) from the
   ground under its nose, tail and sides: the relief, the shapes in the road (props with a `mound`: speed bump, dip,
   pothole, the ramps' wedges) and the climb of a deck. The client tips the whole car as one thing (`lying` in

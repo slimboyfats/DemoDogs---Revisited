@@ -3,7 +3,7 @@ import type { Car, StaticProp, World } from '@demodogs/sim';
 import { SliceFx } from './slice-fx';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
-import { markGround, paintHollow, type Ground } from './ground';
+import { coloursOf, markGround, paintHollow, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import { tall, type Strip } from './stack';
 import {
@@ -388,8 +388,18 @@ export class Effects {
    * A thin puff of single cells: tyre smoke, or dust off the dirt. The air carries each cell on
    * its own, so a puff frays out cell by cell instead of fading as one blob.
    */
-  puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
-    const rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460;
+  puff(
+    x: number,
+    y: number,
+    z: number,
+    kind: 'smoke' | 'dust',
+    vx = 0,
+    vy = 0,
+    tint?: number,
+  ): void {
+    // (on a toy venue every puff is pale: a little cloud, never grit on the clean road)
+    const toy = coloursOf(this.w.venue.colors).style === 'toy';
+    const rgb = tint ?? (toy ? 0xe8e2d2 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
     const dust = kind === 'dust';
     const n = Math.max(1, Math.round(4 * this.quality));
     for (let i = 0; i < n; i++)
@@ -774,6 +784,11 @@ export class Effects {
   private litter(): void {
     const L = this.cells.landed;
     if (!L.length) return;
+    // (a toy venue's ground stays spotless)
+    if (coloursOf(this.w.venue.colors).style === 'toy') {
+      L.length = 0;
+      return;
+    }
     const g = this.ground.g;
     for (let i = 0; i < L.length; i += 3) {
       g.fillStyle = hex(L[i + 2]!);
@@ -1675,6 +1690,17 @@ export class Effects {
             this.text(e.x, e.y, e.label, big ? '#ff6a3d' : '#ffd24a', big);
           }
           break;
+        case 'throw':
+          // a thump of smoke out of the mouth
+          for (let n = 0; n < 5; n++)
+            this.puff(
+              e.x + (Math.random() - 0.5) * 4,
+              e.y + (Math.random() - 0.5) * 4,
+              e.z,
+              'smoke',
+            );
+          if (Math.hypot(e.x - w.player.x, e.y - w.player.y) < 420) S.boing(0.7);
+          break;
         case 'pad':
         case 'critter':
         case 'trample':
@@ -1771,6 +1797,8 @@ export class Effects {
 
   /** A loose block that has stopped becomes a mark on the ground: a crumb a speck, a block its own size. */
   private soak(vx: number, vy: number, size: number, rgb: number): void {
+    // (a toy venue's ground stays spotless)
+    if (coloursOf(this.w.venue.colors).style === 'toy') return;
     const g = this.ground.g;
     const [x, y] = this.w.keepInside(vx, vy, 1);
     const d = Math.max(1, Math.round(size));
@@ -1930,11 +1958,13 @@ export class Effects {
       this.voxels[i] = this.voxels[this.voxels.length - 1]!;
       this.voxels.pop();
     }
+    const toy = coloursOf(w.venue.colors).style === 'toy';
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
       // up on a deck, the marks would land on the ground below it
-      if (c.sliding && c.deck < 1)
+      // (a toy road stays spotless)
+      if (c.sliding && c.deck < 1 && !toy)
         for (const sgn of [-1, 1]) {
           const wx = -7;
           const wy = 5.4 * sgn;
@@ -1944,9 +1974,23 @@ export class Effects {
           this.ground.g.fillRect(mx - 1, my - 1, 2, 2);
           markGround(this.ground, mx, my, 1);
         }
-      if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
+      // (tyre smoke is pale on a toy road, so it never reads as grit)
+      if (c.sliding && Math.random() < 0.3)
+        this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke', 0, 0, toy ? 0xe8e4da : undefined);
       if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
+      // on a toy venue every car at speed trails a little cloud, as toy cars do
+      else if (toy && !c.wrecked && c.z < 1 && Math.abs(c.vf) > 60 && Math.random() < 0.3)
+        this.puff(
+          c.x - cs * 11 * c.size + rand(-3, 3),
+          c.y - sn * 11 * c.size + rand(-3, 3),
+          1.5,
+          'dust',
+          0,
+          0,
+          // (pale, so it shows as a little cloud on the clean road and not as grit)
+          0xe8dfca,
+        );
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;

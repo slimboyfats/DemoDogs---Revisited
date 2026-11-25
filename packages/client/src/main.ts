@@ -25,6 +25,8 @@ import {
 } from './game/career';
 import { Session, type SessionOptions } from './game/session';
 import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
+import { TuningStore } from './game/tuning';
+import { devSettings } from './ui/dev-settings';
 import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
 import { isKey } from './input/keys';
@@ -35,6 +37,7 @@ import { PixelScene } from './render/pixel/pixel-scene';
 import { SKIES } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { PITCH, Scene } from './render/scene';
+import { lookChoice } from './render/ground';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
@@ -82,6 +85,8 @@ const resolution = new Resolution(
 );
 // how far out the race camera sits (CLOSE, NORMAL, WIDE): ?zoom=wide picks one for a visit
 const camZoom = new CameraZoom(safeStore(), params.get('zoom'));
+/** The DEV SETTINGS pane's rule numbers, as saved on this device. */
+const tune = new TuningStore(safeStore());
 function safeStore(): Storage | undefined {
   try {
     return localStorage;
@@ -229,7 +234,14 @@ const editor = new TrackEditor(
     view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
     rebuild: (made) => {
       const old = session;
-      const s = new Session({ art, sound, input, ...editOptions(made), autopilot: false });
+      const s = new Session({
+        art,
+        sound,
+        input,
+        ...editOptions(made),
+        autopilot: false,
+        tuning: tune.values,
+      });
       if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
       s.setView(W / shown, H / shown);
       session = s;
@@ -511,7 +523,16 @@ for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
   };
 
 function show(id: string | null): void {
-  for (const k of ['menu', 'results', 'pauseMenu', 'career', 'loader', 'online', 'tracks'])
+  for (const k of [
+    'menu',
+    'results',
+    'pauseMenu',
+    'tuneMenu',
+    'career',
+    'loader',
+    'online',
+    'tracks',
+  ])
     $(k).classList.toggle('hidden', k !== id);
 }
 
@@ -587,7 +608,7 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
   const t0 = performance.now();
   const built0 = art.built;
   const made = await Session.load(
-    { content, art, sound, input, autopilot: params.has('autoplay'), ...o },
+    { content, art, sound, input, autopilot: params.has('autoplay'), tuning: tune.values, ...o },
     (text, done, of) => {
       $('loadLine').textContent = `${text}…`;
       $('loadFill').style.width = `${Math.round((done / of) * 100)}%`;
@@ -1017,6 +1038,9 @@ function boot(): void {
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
   }
+  // ?look=toy draws any venue clean and bright; ?look=classic draws a toy venue the old way
+  const look = params.get('look');
+  if (look === 'toy' || look === 'classic') lookChoice.style = look;
   // ?slices=0: nothing is built slice by slice or seen through
   if (params.get('slices') === '0') SliceFx.enabled = false;
   resize();
@@ -1064,6 +1088,29 @@ function boot(): void {
     else if (editing) startEditor(editing);
     else setScreen('menu');
   };
+  // DEV SETTINGS: from the menu or the pause menu, and back to whichever it was
+  const tuneBtns = document.querySelectorAll<HTMLButtonElement>('.tuneBtn');
+  const tuneLabel = (): void =>
+    tuneBtns.forEach(
+      (b) =>
+        (b.textContent = tune.changed ? `DEV SETTINGS (${tune.changed} CHANGED)` : 'DEV SETTINGS'),
+    );
+  const tuneSync = devSettings($('tuneRows'), tune, () => {
+    // a race under way on this device takes the numbers at once (the ground keeps its shape)
+    if (session && !online.room) session.world.tuning = { ...tune.values };
+    tuneLabel();
+  });
+  let tuneFrom: 'menu' | 'pauseMenu' = 'menu';
+  tuneBtns.forEach(
+    (b) =>
+      (b.onclick = () => {
+        tuneFrom = screen === 'game' ? 'pauseMenu' : 'menu';
+        tuneSync();
+        show('tuneMenu');
+      }),
+  );
+  $('tuneBack').onclick = () => show(tuneFrom);
+  tuneLabel();
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () => muteBtns.forEach((b) => (b.textContent = sound.label));
   const sliders = volumeSliders($('volume'), sound, label);

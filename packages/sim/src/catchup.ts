@@ -229,12 +229,15 @@ export function updateCatchup(w: World): void {
   let front = -Infinity;
   if (w.kind === 'race' && w.track && w.mode.chase && w.phase === 'race')
     for (const c of w.cars) if (!c.finished) front = Math.max(front, c.progress);
+  // (a venue can have every car bigger or smaller than usual)
+  const base = w.venue.cars ?? 1;
   for (const c of w.cars) {
     if (c.wrecked) {
       // the tow truck brings back a plain car
       if (c.collar) dropCollar(w, c);
       c.morph = c.wind = null;
-      c.size = c.pace = 1;
+      c.pace = 1;
+      c.size = base;
       c.squashT = 0;
       continue;
     }
@@ -242,7 +245,7 @@ export function updateCatchup(w: World): void {
       say(w, 'back', c, -1, c.morph.def);
       c.morph = null;
     }
-    const to = c.morph?.def.scale ?? 1;
+    const to = (c.morph?.def.scale ?? 1) * base;
     c.size += clamp(to - c.size, -SWELL * DT, SWELL * DT);
     c.squashT = Math.max(0, c.squashT - DT);
     if (c.wind && (c.wind.t -= DT) <= 0) c.wind = null;

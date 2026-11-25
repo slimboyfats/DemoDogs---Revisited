@@ -1,4 +1,4 @@
-import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
+import { BASE_SPEED, DT, type Controls, type Tuning } from '@demodogs/shared';
 import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import { tuneFor, type Tune } from '../audio/tunes';
@@ -6,8 +6,9 @@ import type { Input } from '../input/input';
 import type { Art } from '../render/art';
 import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
-import { makeGround, type Ground } from '../render/ground';
-import { PITCH, type Camera } from '../render/scene';
+import { coloursOf, makeGround, type Ground } from '../render/ground';
+import { PITCH, PITCH_PLAIN, PITCH_TOY, setPitch, type Camera } from '../render/scene';
+import { shadeDepth, sunReach } from '../render/cast';
 import { terrainOf } from '../render/terrain';
 
 /** How far off another car's engine can be heard, in art pixels. */
@@ -40,6 +41,8 @@ export interface SessionOptions {
   paint?: string;
   /** World modifiers on for this race (content ids). */
   modifiers?: string[];
+  /** Rule numbers from the DEV SETTINGS pane (never for an online race). */
+  tuning?: Partial<Tuning>;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -63,6 +66,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.name ? { name: o.name } : {}),
     ...(o.paint ? { paint: o.paint } : {}),
     ...(o.modifiers?.length ? { modifiers: o.modifiers } : {}),
+    ...(o.tuning && !o.humans ? { tuning: o.tuning } : {}),
   });
 }
 
@@ -105,6 +109,13 @@ export class Session {
     made?: { world: World; ground: Ground },
   ) {
     this.world = made?.world ?? makeWorld(o);
+    // a toy venue is seen from lower down, so things stand up, under a low golden sun that throws long deep
+    // shadows; whoever made the session sets the view next, which takes the pitch up
+    const toy = coloursOf(this.world.venue.colors).style === 'toy';
+    setPitch(toy ? PITCH_TOY : PITCH_PLAIN);
+    sunReach.k = toy ? 1.25 : 1;
+    shadeDepth.k = toy ? 1.35 : 1;
+    o.art.chunky(toy);
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;

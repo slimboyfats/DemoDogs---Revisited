@@ -46,6 +46,11 @@ export interface PropLook {
    * bones draws; the rig is the same thing taken apart.
    */
   rig?: Rig;
+  /**
+   * How many times bigger than it is built the client draws it (absent: 1): the same voxels, each
+   * drawn bigger, so a great chunky thing costs no more room than a small fine one.
+   */
+  scale?: number;
 }
 
 /**
