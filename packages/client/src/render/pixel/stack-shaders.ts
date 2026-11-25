@@ -162,7 +162,11 @@ float level(float from, float at, float d) {
 }
 // (\`gap\`: how far to each side of c.xy its two lamps are: a beam from each, that run into one
 // further out; 0 for one lamp)
+// A beam's last number is half the gap between its two lamps, and 32 times how many px up the
+// picture its start is drawn, for a car in the air: its foot is where the car is on the ground.
+float coneLift(float w) { return floor(w / 32.0); }
 float beam(vec2 wp, vec4 c, float gap) {
+  gap -= coneLift(gap) * 32.0;
   vec2 d = wp - c.xy;
   float along = dot(d, c.zw);
   if (along <= 0.0 || along >= ${CONE_REACH.toFixed(1)}) return 0.0;
@@ -370,7 +374,7 @@ void main() {
     float up = u_coneh[i].x + u_coneh[i].z * far;
     f *= level(u_coneh[i].y + up, v_gz + min(v_world.z, max(up, 0.0)), far);
     if (f <= 0.0) continue;
-    if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
+    if (lightOpen(v_world.xy, v_world.z, p.xy + vec2(0.0, coneLift(u_coneh[i].w)), 5.0, 4.0 + coneLift(u_coneh[i].w), b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
     float face = mix(1.0, 0.25 + 1.0 * max(0.0, dot(n, normalize(to))), known);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
@@ -636,7 +640,7 @@ void main() {
     float far = distance(wp, u_cone[n].xy);
     f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
-      * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
+      * lightOpen(wp, 0.0, u_cone[n].xy + vec2(0.0, coneLift(u_coneh[n].w)), 5.0, 4.0 + coneLift(u_coneh[n].w), b);
   }
   vec3 q = min(vec3(1.1), l);
   // (and what stands in the sun beside it throws some of its own colour back on it, in steps)
@@ -648,6 +652,9 @@ void main() {
     vec4 gi = traced(wp);
     // (a little is let go first, so open ground far from anything is clean, not stippled)
     back = floor(min(vec3(0.9), max(vec3(0.0), gi.rgb * 2.0 - 0.05)) * 6.0 + b) / 6.0;
+    // (none of it on the ground a thing stands on, or hangs over in a jump: that ground is in
+    // the thing's own texel of the field, which holds the light the thing itself gives off)
+    if (u_lmk > 0.0 && textureLod(u_lc, (wp - u_lmbox.xy) / u_lmbox.zw, 0.0).a * 255.0 > 3.0) back = vec3(0.0);
     occ = 1.0 - 0.6 * (1.0 - floor(min(1.0, gi.a * 1.1) * 8.0 + b) / 8.0);
     if (u_gik > 1.5) {
       o = vec4(gi.rgb * 2.0 + vec3(0.25 * gi.a), 1.0);

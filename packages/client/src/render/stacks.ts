@@ -530,7 +530,8 @@ const lie: Lie = { tx: 0, ty: 0, ax: 0, ay: 0, px: 0, py: 0, pz: 0, lift: 0 };
  */
 export function lying(w: World, c: Car, k: number): Lie | null {
   const lift = w.mounds.length ? rideLift(w, c, k) : 0;
-  if (!c.pitch && !c.bank && !lift) return null;
+  const air = Math.max(0, c.z - c.deck);
+  if (!c.pitch && !c.bank && !lift && !air) return null;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
   // (never so far over that it is drawn as a sliver: a car hung on a lip lies at the sim's limit)
@@ -546,6 +547,7 @@ export function lying(w: World, c: Car, k: number): Lie | null {
   lie.py = c.y;
   lie.pz = c.z;
   lie.lift = lift;
+  lie.air = air;
   return lie;
 }
 

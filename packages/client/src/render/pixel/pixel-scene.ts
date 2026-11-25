@@ -291,10 +291,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       // they never come loose from the car, and they tip and swing with it as on the ground
       const air = Math.max(0, c.z - c.deck);
       const a = (c.def.body.halfLength - 1) * c.size;
+      const up = Math.round((air * this.cosP) / this.ys);
       const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * c.def.body.halfWidth * 0.55 * c.size;
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
-        c.y + Math.sin(c.h) * a + Math.cos(c.h) * side - (air * this.cosP) / this.ys,
+        c.y + Math.sin(c.h) * a + Math.cos(c.h) * side - up,
         // (the beam lies as the car does: tipped to a side, it swings towards the low one; nose
         // up, it leaves the ground; nose down, it falls short)
         c.h - c.bank * 0.35,
@@ -304,7 +305,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         // thins, nose down it falls short under the car)
         air > 1 ? Math.max(-0.6, Math.min(0.12, c.pitch * 1.5)) : c.pitch * 1.5,
         // (two lamps, a beam from each, unless one of them is out)
-        out === 0 ? c.def.body.halfWidth * 0.6 * c.size : 0,
+        // (with how far up the picture the beam starts: its shadows fall from the car's foot)
+        (out === 0 ? Math.min(31, c.def.body.halfWidth * 0.6 * c.size) : 0) + up * 32,
       );
     };
     lamp(w.player);

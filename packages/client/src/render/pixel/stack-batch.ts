@@ -9,8 +9,8 @@ import type { LightBlock } from './light-block';
 import type { TracedLight } from './traced-light';
 import type { SunShadow } from './sun-shadow';
 
-/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
-const STRIDE = 14;
+/** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint, tilt x, tilt y, air. */
+const STRIDE = 15;
 
 /** The sky's light for a frame of slices (see Atmosphere). */
 export interface StackSky {
@@ -160,6 +160,8 @@ export interface Lie {
   py: number;
   pz: number;
   lift: number;
+  /** How far the whole thing is off the ground, in a jump: to a light it still stands there. */
+  air?: number;
 }
 
 /** The view a frame of slices is drawn with. */
@@ -249,6 +251,7 @@ export class StackBatch {
       [4, 1, 10],
       [5, 1, 11],
       [6, 2, 12],
+      [7, 1, 14],
     ];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
@@ -284,6 +287,7 @@ export class StackBatch {
     tint = 0,
     tx = 0,
     ty = 0,
+    air = 0,
   ): void {
     if ((this.n + 1) * STRIDE > this.data.length) {
       const bigger = new Float32Array(this.data.length * 2);
@@ -306,6 +310,7 @@ export class StackBatch {
     d[o + 11] = tint;
     d[o + 12] = tx;
     d[o + 13] = ty;
+    d[o + 14] = air;
     this.n++;
   }
 
@@ -344,7 +349,7 @@ export class StackBatch {
     const v = a.y + sliceY(s, i);
     if (!tint && this.warm) tint = -1 - this.lampsOut;
     for (let k = 0; k < rows; k++)
-      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint, T?.tx, T?.ty);
+      this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint, T?.tx, T?.ty, T?.air);
   }
 
   private lie: Lie | null = null;
