@@ -13,6 +13,11 @@ export const LEVELS = 4;
 const MAX_STEPS = 32;
 /** How steeply light climbs: a thing `h` high is a whole wall to a ray up to `h / CLIMB` px off. */
 const CLIMB = 0.55;
+/**
+ * The same for light from things on the ground (a blast, a lamp, a lit wall), which comes in low:
+ * what stands in its way throws a long shadow.
+ */
+const LOW = 0.2;
 /** Heights are kept in a byte's worth of this many art px. */
 const TALL = 64;
 
@@ -387,7 +392,10 @@ void main() {
   float n = u_m.x;
   float st = u_c.w / n;
   vec3 rad = vec3(0.0);
+  // how much gets through what the ray has met so far: of the sky's light, which comes from
+  // above, and of light from things on the ground, which comes in low and is stopped sooner
   float open = 1.0;
+  float thru = 1.0;
   // a probe inside something looks out of it: its light is for that thing's own faces
   bool inside = u_c.z < 0.5;
   for (int i = 0; i < ${MAX_STEPS}; i++) {
@@ -401,9 +409,9 @@ void main() {
       inside = false;
     }
     float high = s.a * ${TALL.toFixed(1)};
-    float far = r * ${CLIMB.toFixed(2)} + 1.0;
-    rad += open * s.rgb * min(1.0, max(high, 8.0) / far);
-    open *= 1.0 - min(1.0, high / far);
+    rad += thru * s.rgb * min(1.0, max(high, 8.0) / (r * ${CLIMB.toFixed(2)} + 1.0));
+    open *= 1.0 - min(1.0, high / (r * ${CLIMB.toFixed(2)} + 1.0));
+    thru *= 1.0 - min(1.0, high / (r * ${LOW.toFixed(2)} + 1.0));
   }
   if (u_m.z > 0.5) {
     float s2 = side * 2.0;
@@ -416,7 +424,7 @@ void main() {
       acc += texture(u_up, (t2 * tile2 + up) / u_csize);
     }
     acc *= 0.25;
-    rad += open * acc.rgb;
+    rad += thru * acc.rgb;
     open *= acc.a;
   }
   o = vec4(rad, open);
