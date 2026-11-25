@@ -144,7 +144,9 @@ export class Scene implements WorldRenderer {
 
     // shadows
     ctx.fillStyle = '#000';
-    queueShadows(R, this.art, w, null, (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a));
+    queueShadows(R, this.art, w, null, false, (x, y, rx, ry, rot, a) =>
+      this.shadow(x, y, rx, ry, rot, a),
+    );
     ctx.globalAlpha = 1;
 
     // stacks; still props are drawn as one baked image each

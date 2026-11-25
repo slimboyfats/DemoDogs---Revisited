@@ -18,7 +18,7 @@ import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
-import { crest, groundAt } from './mounds';
+import { crest, groundAt, moundAt } from './mounds';
 import type { World } from './world';
 import { pace } from './modifiers';
 
@@ -26,6 +26,8 @@ import { pace } from './modifiers';
 const CLIFF = 1.1;
 /** Ground that falls away faster than this in a tick leaves the car in the air. */
 const DROP = 2;
+/** A shape in the road that steps up more than this in one tick's travel has a sheer side (px). */
+const LIP = 3;
 
 export function makeCar(
   w: World,
@@ -318,16 +320,23 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   if ((land || w.mounds.length) && floor <= 0) {
     // the ground the car has come to: higher, lower, or a face it cannot climb
     const rise = groundAt(w, c.x, c.y) - groundAt(w, x0, y0);
-    const [ex, ey] = land ? land.edge(c.x, c.y) : [0, 0];
-    const steep = Math.hypot(ex, ey);
-    // (the side of a raised road is a wall to anything not well clear of the ground: there is
-    // no crawling up it, the way up is the ramp)
-    const wall = land?.plat && c.z < 2 && land.platAt(c.x, c.y) > land.platAt(x0, y0);
-    if (rise > 0 && steep > CLIFF && (wall || c.z < rise - 1)) {
+    // (its middle, and the end or side of it that leads: a car stops with its nose at a face,
+    // not half way into it)
+    const v = Math.hypot(c.vx, c.vy);
+    const f = v > 1 ? (c.vx * cs + c.vy * sn) / v : 0;
+    const l = v > 1 ? (-c.vx * sn + c.vy * cs) / v : 0;
+    const L = c.def.body.halfLength * c.size;
+    const W = c.def.body.halfWidth * c.size;
+    const lx = cs * f * L - sn * l * W;
+    const ly = sn * f * L + cs * l * W;
+    const face =
+      faced(w, c, land, x0, y0, c.x, c.y) ??
+      (v > 1 ? faced(w, c, land, x0 + lx, y0 + ly, c.x + lx, c.y + ly) : null);
+    if (face) {
       c.x = x0;
       c.y = y0;
       c.climb = 0;
-      bump(w, c, x0 + (ex / steep) * 6, y0 + (ey / steep) * 6, -ex / steep, -ey / steep, 0, 0.6);
+      bump(w, c, x0 - face[0] * 6, y0 - face[1] * 6, face[0], face[1], 0, 0.6);
     } else if (rise < -DROP) {
       // off the edge of a terrace: the car is in the air as high as the ground fell away
       c.z -= rise;
@@ -369,6 +378,39 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     !airborne &&
     !c.wrecked &&
     (Math.abs(vl) > 38 || c.handbrake || (boost && vf < 70) || (ctl.brake && vf > 60));
+}
+
+/**
+ * Whether a point of car c going from (ax, ay) to (bx, by) has come to a face it cannot climb:
+ * a terrace, the side of a raised road, or the sheer side of a shape in the road (the lip of a
+ * ramp come at from behind). The way back out of it, or null.
+ */
+function faced(
+  w: World,
+  c: Car,
+  land: World['relief'],
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): [number, number] | null {
+  if (land) {
+    const rise = land.at(bx, by) - land.at(ax, ay);
+    if (rise > 0) {
+      const [ex, ey] = land.edge(bx, by);
+      const steep = Math.hypot(ex, ey);
+      // (the side of a raised road is a wall to anything not well clear of the ground: there
+      // is no crawling up it, the way up is the ramp)
+      const wall = land.plat && c.z < 2 && land.platAt(bx, by) > land.platAt(ax, ay);
+      if (steep > CLIFF && (wall || c.z < rise - 1)) return [-ex / steep, -ey / steep];
+    }
+  }
+  if (w.mounds.length) {
+    const step = moundAt(w, bx, by) - moundAt(w, ax, ay);
+    const d = Math.hypot(bx - ax, by - ay);
+    if (step > LIP && c.z < step - 1 && d > 0) return [(ax - bx) / d, (ay - by) / d];
+  }
+  return null;
 }
 
 /** A car against something that does not move, along normal (nx, ny) by depth. */

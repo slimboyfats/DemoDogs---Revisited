@@ -24,6 +24,10 @@ const KEYS: readonly { at: number; amb: Rgb; sun: Rgb; high: number; glow: numbe
   { at: 1, amb: [0.2, 0.25, 0.4], sun: [0.16, 0.2, 0.32], high: 0.6, glow: 1 },
 ];
 
+/** How much longer than `SUN` says shadows are thrown: by day, and with the sun low at dusk. */
+const REACH_DAY = 1.8;
+const REACH_DUSK = 3.4;
+
 /** How dark it must be before cars put their headlamps on. */
 export const LAMPS_AT = 0.42;
 
@@ -35,6 +39,13 @@ export class Atmosphere {
   dark = 0;
   wet = 0;
   snow = 0;
+  /**
+   * The sun moved by hand: turned this far round the compass from where the art's own sun
+   * stands (radians), and shadows this many times as long as things are tall (null: as the
+   * time of day says). Every cast shadow and every lit side follows.
+   */
+  sunTurn = 0;
+  sunLong: number | null = null;
   /** Light everything flat, as before there was a sky (weak phones, and to compare). */
   flat = false;
   /** The least darkness and wet the race itself asks for (world modifiers: night, rain). */
@@ -50,6 +61,8 @@ export class Atmosphere {
   glow = 0;
   /** How strong cast shadows are, 0 to 1 (they go as the sun does). */
   shade = 1;
+  /** Ground px a cast shadow reaches per px of height, east and south: longer as the sun sinks. */
+  readonly reach = new Float32Array([SUN[0] * REACH_DAY, SUN[1] * REACH_DAY]);
   /** Seconds, for ripples. */
   time = 0;
 
@@ -102,12 +115,21 @@ export class Atmosphere {
     // than the shadows' length says, so walls take the light
     const high = mix(a.high, b.high);
     const flatLen = Math.hypot(SUN[0], SUN[1]);
+    const ct = Math.cos(this.sunTurn);
+    const st = Math.sin(this.sunTurn);
+    const sx = SUN[0] * ct - SUN[1] * st;
+    const sy = SUN[0] * st + SUN[1] * ct;
     const h = Math.sqrt(1 - high * high);
-    this.dir[0] = (-SUN[0] / flatLen) * h;
-    this.dir[1] = (-SUN[1] / flatLen) * h;
+    this.dir[0] = (-sx / flatLen) * h;
+    this.dir[1] = (-sy / flatLen) * h;
     this.dir[2] = high;
     for (let i = 0; i < 3; i++) this.ground[i] = this.amb[i]! + this.sun[i]! * high;
     this.glow = mix(a.glow, b.glow);
+    // (the moon stands as high as the day's sun; between them the sun is low and shadows long)
+    const long = REACH_DAY + (REACH_DUSK - REACH_DAY) * (1 - Math.abs(n.dark - 0.5) * 2);
+    const far = this.sunLong === null ? long : this.sunLong / flatLen;
+    this.reach[0] = sx * far;
+    this.reach[1] = sy * far;
     this.shade = cast * (n.dark <= 0.5 ? 1 - n.dark * 0.4 : 0.8 - (n.dark - 0.5) * 0.9);
   }
 }

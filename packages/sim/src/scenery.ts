@@ -10,6 +10,7 @@ import type { Rng } from './prng';
 import type { World } from './world';
 import { layRiver } from './river';
 import { canopy, flyover } from './heights';
+import { SHOULDER, laneWide, lanesOf, liftsOf } from './relief';
 
 export { stand };
 
@@ -27,9 +28,15 @@ export function buildScenery(w: World, rng: Rng): void {
     !!R?.plat &&
     Math.hypot(R.platAt(x + 8, y) - R.platAt(x - 8, y), R.platAt(x, y + 8) - R.platAt(x, y - 8)) >
       6.5;
-  // (nor on a way up one, which must stay clear)
-  const add: Add = (id, x, y, rot) =>
+  // (nor on an on-ramp, which must stay clear)
+  const loose: Add = (id, x, y, rot) =>
     onSide(x, y) || R?.slipAt(x, y) ? null : putProp(w, prop(id), x, y, rot, rng);
+  // (nor, unless it was put there by hand, on the shoulder of raised road: that is the road's room)
+  const half = w.road / 2;
+  const add: Add = (id, x, y, rot) =>
+    R?.plat && w.grid && R.platAt(x, y) > 0.5 && w.grid.at(x, y) > half
+      ? null
+      : loose(id, x, y, rot);
   const weighted = (items: { prop: string; weight: number }[]): string => {
     let r = rng.next() * items.reduce((s, i) => s + i.weight, 0);
     for (const i of items) {
@@ -38,7 +45,56 @@ export function buildScenery(w: World, rng: Rng): void {
     }
     return items[items.length - 1]!.prop;
   };
-  for (const rule of w.venue.scenery) apply(w, rng, rule, add, weighted, prop);
+  layRails(w, rng);
+  for (const rule of w.venue.scenery)
+    apply(w, rng, rule, rule.rule === 'place' ? loose : add, weighted, prop);
+}
+
+/** How high road must stand to be railed, and how far in from the platform's edge the rail runs (px). */
+const RAIL_FROM = 7;
+const RAIL_IN = 7;
+
+/**
+ * Rails along both edges of raised road (the venue's `track.rail`), end to end from part way up
+ * one end ramp to part way down the other. Where an on-ramp comes level with the road the rail
+ * opens to let it in, and runs along the lane's own outer edge instead.
+ */
+function layRails(w: World, rng: Rng): void {
+  const T = w.track;
+  const id = w.venue.track?.rail;
+  const raised = w.venue.track?.raised;
+  const def = id ? w.content.prop.get(id) : undefined;
+  if (!T || !def || !raised?.length) return;
+  const lift = liftsOf(T, raised);
+  const lane = lanesOf(T, lift, w.road, w.tuning);
+  const edge = w.road / 2 + SHOULDER - RAIL_IN;
+  // two lines a side: the road's own edge, and the outer edge of each lane beside it
+  for (const outer of [false, true])
+    for (const side of [-1, 1]) {
+      let lx = -1e9;
+      let ly = -1e9;
+      for (let i = 0; i < T.n; i++) {
+        const top = lift[i]!;
+        if (top < RAIL_FROM || (w.deckH && w.deckH[i]! > 0)) continue;
+        const wide = laneWide(lane, i, side);
+        const up = top * lane.rise[i]!;
+        // the road's edge opens where the lane beside it is nearly up; the lane's is railed
+        // once it is high enough to need one
+        if (outer ? wide <= 0 || up < RAIL_FROM : wide > 0 && top - up < RAIL_FROM) continue;
+        const out = outer ? edge + wide : edge;
+        const a = T.a[i]!;
+        const x = T.x[i]! - Math.sin(a) * side * out;
+        const y = T.y[i]! + Math.cos(a) * side * out;
+        if (Math.hypot(x - lx, y - ly) < def.radius * 1.96) continue;
+        // not across the inside of a tight bend, where it would stand beside another stretch
+        const near = w.grid ? w.grid.nearest(x, y) : -1;
+        if (near >= 0 && Math.min((near - i + T.n) % T.n, (i - near + T.n) % T.n) > 8) continue;
+        if (x < 8 || y < 8 || x > w.w - 8 || y > w.h - 8) continue;
+        putProp(w, def, x, y, a, rng);
+        lx = x;
+        ly = y;
+      }
+    }
 }
 
 function apply(

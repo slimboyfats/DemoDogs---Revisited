@@ -293,6 +293,10 @@ export function installTrack(content: Content, t: TrackFile): Installed {
   const raised = t.raised
     .map((r) => ({ from: near(r.x0, r.y0) / T.n, to: near(r.x1, r.y1) / T.n, height: r.height }))
     .filter((r) => r.from !== r.to);
+  // (their edges are railed with whatever the pack's own raised roads are)
+  const rail = [...content.venue.values()]
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .find((v) => v.track?.rail)?.track?.rail;
   let pickups = (t.pickups ?? []).filter((p) => content.pickup.has(p) || !dropped.add(p));
   if (pickups.length === 0) pickups = [...content.pickup.keys()].sort();
 
@@ -313,6 +317,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       points: t.road.points,
       ...(surfaces.length ? { surfaces } : {}),
       ...(raised.length ? { raised } : {}),
+      ...(raised.length && rail ? { rail } : {}),
     },
     colors: t.colors,
     ...(weather.length ? { weather } : {}),

@@ -61,4 +61,18 @@ describe('Atmosphere', () => {
     expect(a.lamps).toBe(false);
     expect(a.plain).toBe(true);
   });
+  it('moves every shadow and the lit side with a sun moved by hand', () => {
+    const a = sky('day');
+    const len = Math.hypot(a.reach[0]!, a.reach[1]!);
+    a.sunTurn = Math.PI;
+    a.sunLong = 3;
+    a.update(0);
+    // turned half way round: shadows fall the other way, three times as long as things are tall
+    expect(a.reach[0]! * SUN[0] + a.reach[1]! * SUN[1]).toBeLessThan(0);
+    expect(Math.hypot(a.reach[0]!, a.reach[1]!)).toBeCloseTo(3, 5);
+    expect(a.dir[0]! * a.reach[0]! + a.dir[1]! * a.reach[1]!).toBeLessThan(0);
+    a.sunLong = null;
+    a.update(0);
+    expect(Math.hypot(a.reach[0]!, a.reach[1]!)).toBeCloseTo(len, 5);
+  });
 });

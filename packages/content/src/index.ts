@@ -4,7 +4,7 @@ import plainBowl from './fixtures/bench-pit.json';
 import { discoverContent, discoverLooks } from './glob';
 
 export { discoverContent, discoverLooks, itemFolders } from './glob';
-export { GLOWS, PALETTE } from './palette';
+export { GLOSS, GLOWS, PALETTE } from './palette';
 export * as kit from './kit';
 
 let cached: Content | undefined;

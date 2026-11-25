@@ -3,6 +3,7 @@ import type { Ground } from '../ground';
 import { compile, texture, uniforms } from './gl';
 import { groundFs, GROUND_VS } from './stack-shaders';
 import type { ReliefLayer } from './relief-layer';
+import type { LightBlock } from './light-block';
 import type { Lights } from './lighting';
 import { depthRange, type StackView } from './stack-batch';
 
@@ -47,6 +48,11 @@ export class GroundLayer {
       'u_map',
       'u_depth',
       'u_hk',
+      'u_lm',
+      'u_lmbox',
+      'u_lmk',
+      'u_lc',
+      'u_bounce',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -73,6 +79,8 @@ export class GroundLayer {
     v: StackView,
     lights: Lights,
     sky?: { ground: Float32Array; snow: number; wet: number },
+    block?: LightBlock | null,
+    bounce?: readonly [number, number, number],
   ): void {
     const gl = this.gl;
     const u = this.u;
@@ -92,6 +100,20 @@ export class GroundLayer {
     gl.uniform1f(u.u_snow, sky?.snow ?? 0);
     gl.uniform1f(u.u_wet, sky?.wet ?? 0);
     gl.uniform2f(u.u_size, this.ground.cv.width, this.ground.cv.height);
+    // what stands in the lights' way (a sampler must have a texture behind it either way)
+    gl.uniform1f(u.u_lmk, block ? 1 : 0);
+    gl.uniform3f(u.u_bounce, bounce?.[0] ?? 0, bounce?.[1] ?? 0, block ? (bounce?.[2] ?? 0) : 0);
+    if (block) {
+      block.bind(4, u.u_lm, u.u_lmbox);
+      block.bindColour(5, u.u_lc);
+    } else {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex);
+      gl.uniform1i(u.u_lm, 4);
+      gl.activeTexture(gl.TEXTURE5);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex);
+      gl.uniform1i(u.u_lc, 5);
+    }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);

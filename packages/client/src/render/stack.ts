@@ -42,6 +42,8 @@ export interface Strip {
    * from the pixels, and a charred one glows in its charred colour.
    */
   glow?: Uint8Array | undefined;
+  /** How each texel shines (0 dull, 1 painted, 2 metal, 3 polished), laid out and kept as `glow` is. */
+  gloss?: Uint8Array | undefined;
 }
 
 /** How tall a strip stands, in art pixels. */

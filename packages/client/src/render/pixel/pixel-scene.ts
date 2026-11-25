@@ -10,6 +10,9 @@ import type { Strip } from '../stack';
 import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
+import { SunShadow } from './sun-shadow';
+import { LightBlock } from './light-block';
+import { BeamHaze } from './beam-haze';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
 import { ShadowMap, casts } from '../cast';
@@ -79,6 +82,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   readonly sky = new Atmosphere();
   /** A modifier's tint over the picture (made the first time one is needed). */
   private dusk: DuskPass | null = null;
+  /**
+   * Shadows from the sun's own map: everything throws its shape on everything (see SunShadow).
+   * Off: the old way, tall scenery's baked shadows and an oval under what moves.
+   */
+  sunCast = true;
+  private sun: SunShadow | null = null;
+  /** Lights throw shadows too: what stands in their way is mapped each frame there is a light. */
+  lightCast = true;
+  private block: LightBlock | null = null;
+  private haze: BeamHaze | null = null;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -238,6 +251,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
       if (p.on && this.visible(p.x, p.y, 30)) L.add(p.x, p.y, 20, 0.45, 0x60f0ff);
+    this.glances(w, fx);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
@@ -255,6 +269,42 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (s.down || !this.visible(s.x, s.y, 50)) continue;
       if (!this.art.prop(s.def.id).glow) continue;
       L.add(s.x, s.y, 44, 0.75 * k, 0xffd890);
+    }
+  }
+
+  /**
+   * Sunlight thrown off bodywork: a car with a side turned to the sun lays a patch of the sun's
+   * own light on the ground beside it, that flares and dies as the car turns and shimmers as
+   * it goes. Weak lights, so they are the first to make way for a blast's.
+   */
+  private glances(w: World, fx: Effects): void {
+    const A = this.sky;
+    if (!this.sunCast || this.shade < 0.2 || fx.quality <= 0.5) return;
+    const rx = A.reach[0]!;
+    const ry = A.reach[1]!;
+    const len = Math.hypot(rx, ry);
+    if (len < 0.01) return;
+    const sx = -rx / len;
+    const sy = -ry / len;
+    const rgb =
+      (Math.min(255, Math.round(A.sun[0]! * 400)) << 16) |
+      (Math.min(255, Math.round(A.sun[1]! * 400)) << 8) |
+      Math.min(255, Math.round(A.sun[2]! * 400));
+    for (const c of w.cars) {
+      if (c.wrecked || !this.visible(c.x, c.y, 40)) continue;
+      // how square a side of it is to the sun
+      const side = Math.abs(-Math.sin(c.h) * sx + Math.cos(c.h) * sy);
+      const flare = side * side * side;
+      if (flare < 0.15) continue;
+      const out = (c.def.body.halfWidth + 5) * c.size;
+      const shimmer = 0.85 + 0.15 * Math.sin(w.time * 19 + c.index * 2.4 + (c.x + c.y) * 0.21);
+      this.lights.add(
+        c.x + sx * out,
+        c.y + sy * out,
+        15 * c.size,
+        0.4 * flare * shimmer * this.shade,
+        rgb,
+      );
     }
   }
 
@@ -347,6 +397,48 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       top: this.relief!.top,
     };
 
+    // every slice of the frame is queued first: the sun's map is drawn from them before anything
+    // that reads it
+    this.stacks.begin(view);
+    queueStacks(this, this.art, w, fx);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    this.stacks.ready();
+    this.shade = A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1);
+    const cast = this.sunCast && sky.lit && this.shade > 0.03 && fx.quality > 0.3;
+    if (cast) {
+      const sun = (this.sun ??= new SunShadow(gl));
+      sun.density = fx.quality > 0.6 ? 2 : 1;
+      sun.begin(view, A.reach[0]!, A.reach[1]!);
+      sun.castGround(this.relief!);
+      this.stacks.cast(sun);
+      sun.end(null, W, H);
+      sky.cast = sun;
+      sky.shade = this.shade;
+    } else {
+      sky.cast = undefined;
+      sky.shade = 0;
+    }
+
+    this.gatherLights(w, fx);
+    const lit = this.lights.count + this.lights.coneCount > 0;
+    // (by day it is wanted for the light things throw back on the ground beside them)
+    const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;
+    const rl = Math.hypot(A.reach[0]!, A.reach[1]!) || 1;
+    const bounce: [number, number, number] = [
+      A.reach[0]! / rl,
+      A.reach[1]! / rl,
+      cast ? this.shade * (A.sun[0]! + A.sun[1]! + A.sun[2]!) * 0.24 : 0,
+    ];
+    if (blocked) {
+      const block = (this.block ??= new LightBlock(gl));
+      block.begin(view);
+      this.stacks.block(block);
+      block.end(null, W, H);
+      sky.block = block;
+    } else sky.block = undefined;
+
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
     if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
@@ -357,7 +449,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.BLEND);
-    this.gatherLights(w, fx);
     // raised ground writes its depth as it is drawn, so a bank hides what is behind it
     const raised = !!this.relief!.map;
     if (raised) {
@@ -366,7 +457,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       gl.depthMask(true);
     } else gl.disable(gl.DEPTH_TEST);
     const groundSky = { ground: A.ground, snow: sky.snow, wet: sky.wet };
-    this.groundLayer!.draw(view, this.lights, groundSky);
+    this.groundLayer!.draw(view, this.lights, groundSky, blocked ? this.block : null, bounce);
     gl.disable(gl.DEPTH_TEST);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is
@@ -374,9 +465,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const quadOrigin: [number, number] = [this.ox, this.oy];
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    this.shade = A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1);
-    this.shadowLayer!.draw(view, this.shade);
-    this.queueShadows(w, fx);
+    this.shadowLayer!.draw(view, this.shade, cast);
+    if (cast) this.sun!.drawGround(view, this.relief!, [w.w, w.h], fineGrid(S), this.shade);
+    this.queueShadows(w, fx, cast);
     this.quads.flush(quadView, quadOrigin, S);
 
     // stacks: one instanced draw, sorted by the depth buffer
@@ -384,12 +475,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LESS);
     gl.depthMask(true);
-    this.stacks.begin(view);
-    queueStacks(this, this.art, w, fx);
-    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    this.stacks.ready();
     if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
       // wet ground: the stacks upside down under their feet first, then the depth buffer afresh
       this.stacks.mirror(this.lights, sky);
@@ -426,6 +511,17 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.darken(fx, W, H);
     this.gas?.draw(gas, this.lights, 1, tint, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE);
+    // the beams in the air: thin on a clear night, thick in rain and snow
+    if (this.lightCast && this.lights.coneCount && fx.quality > 0.5)
+      (this.haze ??= new BeamHaze(gl)).draw(
+        view,
+        this.lights,
+        blocked ? this.block : null,
+        this.relief!,
+        [w.w, w.h],
+        fineGrid(S),
+        0.3 + 0.5 * Math.max(sky.wet, sky.snow),
+      );
     this.glow.flush(quadView, quadOrigin, S / this.fxGrid);
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -486,10 +582,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     return L;
   }
 
-  private queueShadows(w: World, fx: Effects): void {
+  private queueShadows(w: World, fx: Effects, sun: boolean): void {
     const art = this.art;
     const cast = (s: StaticProp) => casts(s, fx.scarred.get(s) ?? art.prop(s.def.id));
-    queueShadows(this, art, w, cast, (x, y, rx, ry, rot, a, box) =>
+    queueShadows(this, art, w, cast, sun, (x, y, rx, ry, rot, a, box) =>
       this.quads.push(
         x,
         this.my(y, this.rise(x, y)),
@@ -664,7 +760,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     if (!this.frameW || !this.fx) return;
     const q: [number, number] = [this.vw, this.vh];
     const o: [number, number] = [this.ox, this.oy];
-    this.queueShadows(this.frameW, this.fx);
+    this.queueShadows(this.frameW, this.fx, !!this.stackSky.cast);
     this.quads.flush(q, o, this.scale, step);
     this.queueParticles(this.fx);
     this.quads.flush(q, o, this.scale / this.fxGrid, step);

@@ -5,18 +5,19 @@ import {
   groundAt,
   installTrack,
   liftsOf,
-  slipsOf,
+  lanesOf,
+  laneWide,
+  SHOULDER,
   newTrack,
   type Content,
 } from '@demodogs/sim';
-import { loadContent } from './index';
-import { put, runUntil, startRace } from './testing';
+import { BENCH, put, runUntil, startRace, testContent } from './testing';
 
-const C: Content = loadContent();
+const C: Content = testContent();
 
 /** A track with one stretch of its road raised into a platform, a third of the way round. */
 function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => number } {
-  const t = newTrack(C.venue.get('venue.kennel-loop')!, 'raised', 'Raised');
+  const t = newTrack(C.venue.get(BENCH)!, 'raised', 'Raised');
   const flat = installTrack(C, t);
   const T = new World({ content: flat.content, venue: flat.venue, car: 'car.mutt', seed: 1 })
     .track!;
@@ -24,8 +25,8 @@ function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => n
   t.raised.push({
     x0: Math.round(T.x[i(0.3)]!),
     y0: Math.round(T.y[i(0.3)]!),
-    x1: Math.round(T.x[i(0.5)]!),
-    y1: Math.round(T.y[i(0.5)]!),
+    x1: Math.round(T.x[i(0.6)]!),
+    y1: Math.round(T.y[i(0.6)]!),
     height,
   });
   const made = installTrack(C, t);
@@ -39,23 +40,23 @@ function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => n
   return { t, w, i };
 }
 
-/** Samples of the raised stretch beside a wall and beside a way up its side, well inside each. */
-function sides(w: World): { wall: number; slip: number } {
+/** A sample of the raised stretch beside a plain wall, and where its first on-ramp starts and ends. */
+function sides(w: World): { wall: number; from: number; to: number; side: number } {
   const T = w.track!;
   const lift = liftsOf(T, w.venue.track!.raised!);
-  const S = slipsOf(T, lift);
-  const clear = (k: number, v: number, far: number): boolean => {
-    for (let q = -far; q <= far; q++)
-      if (S[k + q] !== v || lift[k + q] !== lift[k] || lift[k]! <= 0) return false;
-    return true;
-  };
+  const L = lanesOf(T, lift, w.road, w.tuning);
+  const wide = (k: number): number => Math.max(L.left[k]!, L.right[k]!);
   let wall = -1;
-  let slip = -1;
+  let from = -1;
+  let to = -1;
   for (let k = 20; k < T.n - 20; k++) {
-    if (wall < 0 && clear(k, 0, 6)) wall = k + 0;
-    if (slip < 0 && clear(k, 1, 4)) slip = k;
+    let plain = lift[k]! > 0;
+    for (let q = -6; q <= 6; q++) if (wide(k + q) > 0 || lift[k + q] !== lift[k]) plain = false;
+    if (wall < 0 && plain) wall = k;
+    if (from < 0 && wide(k) > 0) from = k;
+    if (from >= 0 && to < 0 && wide(k) === 0) to = k;
   }
-  return { wall, slip };
+  return { wall, from, to, side: L.right[from]! > 0 ? 1 : -1 };
 }
 
 describe('raised road', () => {
@@ -71,7 +72,7 @@ describe('raised road', () => {
     const lift = liftsOf(T, w.venue.track!.raised!);
     expect(lift[i(0.3) + 6]).toBeGreaterThan(1);
     expect(lift[i(0.3) + 6]).toBeLessThan(12);
-    expect(lift[i(0.5) - 6]).toBeLessThan(12);
+    expect(lift[i(0.6) - 6]).toBeLessThan(12);
     expect(lift[i(0.4)]).toBe(24);
     // and never steeper than a car can climb
     for (let k = 1; k < T.n; k++)
@@ -87,8 +88,10 @@ describe('raised road', () => {
     const out = (d: number): number => groundAt(w, T.x[k]! + nx * d, T.y[k]! + ny * d);
     expect(out(w.road / 2 - 2)).toBeCloseTo(24, 0);
     expect(out(-(w.road / 2 - 2))).toBeCloseTo(24, 0);
-    expect(out(w.road / 2 + 40)).toBe(0);
-    expect(out(-(w.road / 2 + 40))).toBe(0);
+    // (the road has room: a car that runs wide is still on the top)
+    expect(out(w.road / 2 + SHOULDER - 8)).toBeCloseTo(24, 0);
+    expect(out(w.road / 2 + SHOULDER + 16)).toBe(0);
+    expect(out(-(w.road / 2 + SHOULDER + 16))).toBe(0);
   });
 
   it('a car on the way up lies nose up, and level on top', () => {
@@ -106,7 +109,7 @@ describe('raised road', () => {
       return w.player;
     };
     expect(park(i(0.3) + 12).pitch).toBeGreaterThan(0.08);
-    expect(park(i(0.5) - 12).pitch).toBeLessThan(-0.08);
+    expect(park(i(0.6) - 12).pitch).toBeLessThan(-0.08);
     expect(Math.abs(park(i(0.4)).pitch)).toBeLessThan(0.02);
   });
 
@@ -117,7 +120,7 @@ describe('raised road', () => {
     const k = sides(w).wall;
     const nx = -Math.sin(T.a[k]!);
     const ny = Math.cos(T.a[k]!);
-    const far = w.road / 2 + 60;
+    const far = w.road / 2 + SHOULDER + 50;
     // from the ground beside it, straight at it, and kept at it: the side is a wall, and
     // there is no crawling up it however long the throttle is held
     put(w.player, T.x[k]! + nx * far, T.y[k]! + ny * far, Math.atan2(-ny, -nx), 120);
@@ -151,7 +154,8 @@ describe('raised road', () => {
     const nx = -Math.sin(T.a[k]!);
     const ny = Math.cos(T.a[k]!);
     const c = w.player;
-    put(c, T.x[k]! + nx * (w.road / 2 + 50), T.y[k]! + ny * (w.road / 2 + 50), T.a[k]!, 0);
+    const far = w.road / 2 + SHOULDER + 40;
+    put(c, T.x[k]! + nx * far, T.y[k]! + ny * far, T.a[k]!, 0);
     // (it went over the edge here: this is the last road it was on)
     c.onIdx = k;
     const seen: string[] = [];
@@ -174,37 +178,53 @@ describe('raised road', () => {
     expect(groundAt(w, c.x, c.y)).toBeGreaterThan(20);
   });
 
-  it('has a way up its side that a car on the ground below can drive up, kept clear', () => {
+  it('has an on-ramp beside it, in line with the road, that a car on the ground can drive up', () => {
     const { w } = raisedTrack(24);
     startRace(w);
     const T = w.track!;
-    const { wall, slip } = sides(w);
+    const { wall, from, to, side } = sides(w);
     expect(wall).toBeGreaterThan(0);
-    expect(slip).toBeGreaterThan(0);
+    expect(from).toBeGreaterThan(0);
+    expect(to).toBeGreaterThan(from);
     const R = w.relief!;
-    for (const side of [1, -1]) {
-      const nx = -Math.sin(T.a[slip]!) * side;
-      const ny = Math.cos(T.a[slip]!) * side;
-      const far = w.road / 2 + 140;
-      expect(
-        R.slipAt(T.x[slip]! + nx * (w.road / 2 + 30), T.y[slip]! + ny * (w.road / 2 + 30)),
-      ).toBe(true);
-      put(w.player, T.x[slip]! + nx * far, T.y[slip]! + ny * far, Math.atan2(-ny, -nx), 60);
-      let top = 0;
-      for (let n = 0; n < 280; n++) {
-        const c = w.player;
-        const on = Math.hypot(c.x - T.x[slip]!, c.y - T.y[slip]!) < w.road / 2 - 8;
-        w.step({ ...NO_CONTROLS, throttle: on ? 0 : 1, brake: on });
-        top = Math.max(top, on ? groundAt(w, c.x, c.y) : 0);
+    const L = lanesOf(T, liftsOf(T, w.venue.track!.raised!), w.road, w.tuning);
+    {
+      // where the lane is at sample k: out past the road's shoulder (and, past its end, the road)
+      const lane = (k: number): [number, number] => {
+        const o = k < to ? (w.road / 2 + SHOULDER + laneWide(L, k, side) / 2) * side : 0;
+        return [T.x[k]! - Math.sin(T.a[k]!) * o, T.y[k]! + Math.cos(T.a[k]!) * o];
+      };
+      const mid = from + 8;
+      expect(R.laneAt(...lane(mid))).toBe(true);
+      // it starts on the ground and climbs the way the road runs
+      expect(groundAt(w, ...lane(from))).toBeLessThan(2);
+      expect(groundAt(w, ...lane(to - 4))).toBeCloseTo(24, 0);
+      // a car that drives onto its foot and follows it comes out on the road, on top
+      put(w.player, ...lane(from - 4), T.a[from]!, 60);
+      const c = w.player;
+      for (let n = 0; n < 800; n++) {
+        const on = c.idx >= to + 14 && c.idx < to + 50;
+        const [tx, ty] = lane(Math.min(T.n - 1, c.idx + 5));
+        let turn = Math.atan2(ty - c.y, tx - c.x) - c.h;
+        turn = Math.atan2(Math.sin(turn), Math.cos(turn));
+        w.step({
+          ...NO_CONTROLS,
+          steer: Math.max(-1, Math.min(1, turn * 3)),
+          throttle: on ? 0 : 0.6,
+          brake: on,
+        });
       }
-      expect(top).toBeCloseTo(24, 0);
+      expect(groundAt(w, c.x, c.y)).toBeCloseTo(24, 0);
+      expect(Math.hypot(c.x - T.x[c.idx]!, c.y - T.y[c.idx]!)).toBeLessThan(w.road / 2);
     }
     // nothing a rule scatters stands on one
-    expect(w.statics.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
+    expect(w.statics.filter((o) => R.laneAt(o.x, o.y) && o.def.id !== w.venue.track!.rail)).toEqual(
+      [],
+    );
     expect(w.props.filter((o) => R.slipAt(o.x, o.y))).toEqual([]);
   });
 
-  it('its ways up are as far apart, as wide and as long as the tuning says', () => {
+  it('its on-ramps are as far apart, as wide and as long as the tuning says', () => {
     const { t } = raisedTrack(24);
     const made = installTrack(C, t);
     const build = (tuning: Partial<typeof DEFAULT_TUNING>): World =>
@@ -217,17 +237,45 @@ describe('raised road', () => {
         tuning,
       });
     const ways = (w: World): number => {
-      const S = slipsOf(w.track!, liftsOf(w.track!, w.venue.track!.raised!), w.tuning);
+      const L = lanesOf(w.track!, liftsOf(w.track!, w.venue.track!.raised!), w.road, w.tuning);
       let n = 0;
-      for (let k = 1; k < S.length; k++) if (S[k] && !S[k - 1]) n++;
+      for (let k = 1; k < L.rise.length; k++)
+        if (L.left[k]! + L.right[k]! > 0 && L.left[k - 1]! + L.right[k - 1]! === 0) n++;
       return n;
     };
     const marked = (w: World): number => w.relief!.slip!.reduce((a, b) => a + b, 0);
     const plain = build({});
     expect(ways(plain)).toBe(1);
-    expect(ways(build({ slipGap: 120 }))).toBeGreaterThan(1);
-    expect(marked(build({ slipWide: 100 }))).toBeGreaterThan(marked(plain));
-    expect(marked(build({ slipRun: 6 }))).toBeGreaterThan(marked(plain));
+    expect(ways(build({ laneGap: 240, laneRun: 3 }))).toBeGreaterThan(1);
+    expect(marked(build({ laneWide: 80 }))).toBeGreaterThan(marked(plain));
+    expect(marked(build({ laneRun: 7 }))).toBeGreaterThan(marked(plain));
+  });
+
+  it('its edges are railed end to end, open only where an on-ramp joins', () => {
+    const { w } = raisedTrack(24);
+    const T = w.track!;
+    const id = w.venue.track!.rail!;
+    expect(id).toBeDefined();
+    // (the lengths of it along the raised stretch: a venue may fence its road with the same)
+    const lift = liftsOf(T, w.venue.track!.raised!);
+    const rails = w.statics.filter(
+      (o) => o.def.id === id && lift[Math.max(0, w.grid!.nearest(o.x, o.y))]! >= 7,
+    );
+    expect(rails.length).toBeGreaterThan(40);
+    const { wall, from, to, side: laned } = sides(w);
+    const railed = (k: number, side: number): boolean => {
+      const o = (w.road / 2 + SHOULDER - 7) * side;
+      const x = T.x[k]! - Math.sin(T.a[k]!) * o;
+      const y = T.y[k]! + Math.cos(T.a[k]!) * o;
+      return rails.some((r) => Math.hypot(r.x - x, r.y - y) < 10);
+    };
+    for (const side of [1, -1]) expect(railed(wall, side)).toBe(true);
+    // beside the foot of the on-ramp the road's edge is still a drop, and railed
+    expect(railed(from + 3, laned)).toBe(true);
+    // where the lane has come level the edge is open
+    expect(railed(to - 8, laned)).toBe(false);
+    // every rail stands on the top or on a lane, never on a wall's face or the ground below
+    for (const r of rails) expect(groundAt(w, r.x, r.y)).toBeGreaterThan(5);
   });
 
   it('no scenery stands on its sides', () => {

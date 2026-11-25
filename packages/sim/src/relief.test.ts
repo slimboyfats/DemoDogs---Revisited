@@ -12,7 +12,8 @@ const T = sampleTrack(
   4,
 );
 const spec = { hills: 0, wave: 520, banks: 24, from: 20, spread: 60, step: 12 };
-const make = (s = spec, seed = 5) => buildRelief(s, seed, 800, 800, T, 60, null);
+const make = (s: Parameters<typeof buildRelief>[0] = spec, seed = 5) =>
+  buildRelief(s, seed, 800, 800, T, 60, null);
 
 describe('relief', () => {
   it('leaves the road and its verge level and stands full height far from it', () => {
@@ -24,6 +25,14 @@ describe('relief', () => {
     expect(R.at(400, 400)).toBe(24);
     expect(R.at(10, 10)).toBe(24);
     expect(R.max).toBe(24);
+  });
+
+  it('with infield off, rises only outside the loop and leaves the inside one level', () => {
+    const R = make({ ...spec, infield: false });
+    expect(R.at(400, 400)).toBe(0);
+    expect(R.at(330, 300)).toBe(0);
+    expect(R.at(10, 10)).toBe(24);
+    expect(R.at(790, 400)).toBe(24);
   });
 
   it('rises in level terraces with sheer faces between', () => {

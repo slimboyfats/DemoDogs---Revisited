@@ -119,7 +119,9 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   shadows lift themselves by the same heights in their shaders. The canvas fallback draws the ground flat.
   A venue's `track.raised` (`from`, `to`, `height`; the track creator's ELEVATE tool writes it as `raised` in the
   `TrackFile`) lifts a stretch of road into a platform in that same height map, with a ramp at each end and steep
-  sides, so nothing else needs to know about it.
+  sides, so nothing else needs to know about it. The platform is wider than the road (`SHOULDER`), its edges are
+  railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
+  that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
 - **Rule numbers tuned by hand are in one list** (`TUNABLES` in shared/tuning.ts): the DEV SETTINGS pane (menu and
   pause menu) draws a slider for each, a `World` takes them as `tuning`, and a rule reads `world.tuning`. A new one is
   an entry in that list and a read in its rule. They are saved on the device and never used in an online race, so

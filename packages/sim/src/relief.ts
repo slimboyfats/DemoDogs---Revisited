@@ -17,7 +17,10 @@ export class Relief {
   readonly bank: Float32Array;
   /** Raised road: how much of each point's height is a platform's (null where a venue has none). */
   plat: Float32Array | null = null;
-  /** Where a way up the side of raised road lies, a byte to each point of the grid (null: none). */
+  /**
+   * Where an on-ramp beside raised road lies, a byte to each point of the grid (null: none): 2 on
+   * the lane itself, 1 on the ground hard by it that must stay clear.
+   */
   slip: Uint8Array | null = null;
   /** How high one terrace stands above the last, how many there are, and how much of one is its face. */
   step = 0;
@@ -69,13 +72,22 @@ export class Relief {
     return v + Math.min(this.steps, fl + (up > 0 ? up : 0)) * this.step;
   }
 
-  /** Whether (x, y) is on, or at the head or foot of, a way up the side of raised road. */
+  /** Whether (x, y) is on, or hard by, an on-ramp beside raised road. */
   slipAt(x: number, y: number): boolean {
+    return this.slipOf(x, y) > 0;
+  }
+
+  /** Whether (x, y) is on the lane of an on-ramp itself. */
+  laneAt(x: number, y: number): boolean {
+    return this.slipOf(x, y) === 2;
+  }
+
+  private slipOf(x: number, y: number): number {
     const S = this.slip;
-    if (!S) return false;
+    if (!S) return 0;
     const gx = Math.min(this.gw - 1, Math.max(0, Math.round(x / Relief.CELL)));
     const gy = Math.min(this.gh - 1, Math.max(0, Math.round(y / Relief.CELL)));
-    return S[gy * this.gw + gx] === 1;
+    return S[gy * this.gw + gx]!;
   }
 
   /** How much of the ground's height at (x, y) is raised road: its platform, ramps and sides. */
@@ -144,36 +156,89 @@ const FACE = 5;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-type Spec = NonNullable<VenueManifest['relief']>;
+/** A venue's relief; banks rise in the infield too unless `infield` is false. */
+type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield'> & { infield?: boolean };
 type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
 
 /** A venue with raised road and no `relief` of its own gets this: flat but for the platforms. */
 export const FLAT_RELIEF: Spec = { hills: 0, wave: 520, banks: 0, from: 60, spread: 150, step: 8 };
 
-/** How far a platform reaches past the road's edge before its side begins, and how far through the side is (px). */
-const SHOULDER = 14;
+/** Where each row `y` of a grid crosses the road's loop, west to east: inside it between pairs. */
+function loopCrossings(track: Track, y: number): number[] {
+  const out: number[] = [];
+  const N = track.n;
+  for (let i = 0, j = N - 1; i < N; j = i, i += 1) {
+    const yi = track.y[i]!;
+    const yj = track.y[j]!;
+    if (yi > y !== yj > y)
+      out.push(((track.x[j]! - track.x[i]!) * (y - yi)) / (yj - yi) + track.x[i]!);
+  }
+  return out.sort((p, q) => p - q);
+}
+
+/**
+ * How far a platform reaches past the road's edge before its side begins (the road is given room:
+ * a car that runs wide is still on the top), and how far through the side is (px).
+ */
+export const SHOULDER = 30;
 const SIDE = 9;
 /** A raised stretch climbs one px in this many unless it says how long its ramps are. */
 const RAMP = 5;
+/** How far an on-ramp runs level beside the road at its top, narrowing, for a car to move over (px). */
+const MERGE = 72;
 
 /**
- * Ways back up: a platform's sides are walls, so every so far along one (px) a stretch of each
- * side this wide is a slope instead, for a car that went over the edge (the `slip` numbers of
- * shared/tuning.ts: how far apart, how wide, and how many px along for each px up).
+ * Ways back up: a platform's sides are walls, so every so far along one (px) an on-ramp runs
+ * beside it on each side, the way a slip road joins a highway: a lane that starts on the ground,
+ * climbs in the road's own direction and comes level with the road, where it narrows into it
+ * (the `lane` numbers of shared/tuning.ts: how far apart, how wide, and how many px along for
+ * each px up).
  */
-export type Slips = Pick<Tuning, 'slipGap' | 'slipWide' | 'slipRun'>;
+export type Lanes = Pick<Tuning, 'laneGap' | 'laneWide' | 'laneRun'>;
 
-/** Which samples of the track have a way up the side beside them (1), given `liftsOf`'s heights. */
-export function slipsOf(track: Track, lift: Float32Array, S: Slips = DEFAULT_TUNING): Uint8Array {
+/** The on-ramps beside a track: see `lanesOf`. */
+export interface OnRamps {
+  /** At each sample, how far up to the road the lanes beside it have climbed (0 to 1). */
+  rise: Float32Array;
+  /** How wide the lane on the left of the road (side -1) and on its right (+1) is there (px; 0: none). */
+  left: Float32Array;
+  right: Float32Array;
+}
+
+/** How wide the lane beside sample `i` on `side` (-1 left, 1 right) is. */
+export const laneWide = (L: OnRamps, i: number, side: number): number =>
+  (side < 0 ? L.left : L.right)[i]!;
+
+/**
+ * The on-ramps beside the track, given `liftsOf`'s heights. A lane lies on a side of the road
+ * only where the road (`road` wide) does not bend towards that side too tightly for it.
+ */
+export function lanesOf(
+  track: Track,
+  lift: Float32Array,
+  road: number,
+  S: Lanes = DEFAULT_TUNING,
+): OnRamps {
   const N = track.n;
-  const out = new Uint8Array(N);
-  const wide = Math.max(2, Math.round(S.slipWide / track.step));
+  const out = road / 2 + SHOULDER + S.laneWide + SIDE;
+  const L: OnRamps = {
+    rise: new Float32Array(N),
+    left: new Float32Array(N),
+    right: new Float32Array(N),
+  };
   // each run of road at its full height (level: its end ramps are not part of it)
   const level = (i: number): boolean =>
     lift[i]! > 0 && lift[i] === lift[(i + 1) % N] && lift[i] === lift[(i - 1 + N) % N];
+  // how sharply the road turns at a sample, towards its right (+) or left (-), as 1 / radius
+  const bend = (i: number): number => {
+    let d = track.a[(i + 4) % N]! - track.a[(i - 4 + N) % N]!;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    return d / (8 * track.step);
+  };
   let start = 0;
   while (start < N && level(start)) start++;
   if (start === N) start = 0;
+  const merge = Math.max(2, Math.round(MERGE / track.step));
   for (let k = 0; k < N;) {
     const i0 = (start + k) % N;
     if (!level(i0)) {
@@ -182,16 +247,52 @@ export function slipsOf(track: Track, lift: Float32Array, S: Slips = DEFAULT_TUN
     }
     let len = 0;
     while (len < N && level((i0 + len) % N)) len++;
+    const climb = Math.max(2, Math.round((lift[i0]! * S.laneRun) / track.step));
+    const whole = climb + merge;
     // spread evenly: one in the middle of a short run, more as it gets longer
-    const n = len >= wide + 4 ? Math.max(1, Math.round((len * track.step) / S.slipGap)) : 0;
+    const n =
+      len >= whole + 4
+        ? Math.max(1, Math.min(Math.floor(len / whole), Math.round((len * track.step) / S.laneGap)))
+        : 0;
+    // which sides a lane starting `from` samples into the run has room on
+    const room = (from: number, side: number): boolean => {
+      for (let q = 0; q < whole; q += 2)
+        if (bend((i0 + from + q) % N) * side * out > 0.55) return false;
+      return true;
+    };
     for (let j = 0; j < n; j++) {
-      const mid = Math.floor(((j + 0.5) * len) / n);
-      for (let q = -(wide >> 1); q <= wide >> 1; q++)
-        if (mid + q >= 0 && mid + q < len) out[(i0 + mid + q) % N] = 1;
+      const lo = Math.max(2, Math.floor((j * len) / n));
+      const hi = Math.min(len - whole - 2, Math.floor(((j + 1) * len) / n) - whole);
+      const want = Math.max(lo, Math.min(hi, Math.floor(((j + 0.5) * len) / n - whole / 2)));
+      // as near the middle of its share of the run as there is room on both sides, else on one
+      let from = -1;
+      let both = false;
+      for (let d = 0; d <= hi - lo && !both; d += 2)
+        for (const f of d ? [want - d, want + d] : [want]) {
+          if (f < lo || f > hi) continue;
+          const l = room(f, -1);
+          const r = room(f, 1);
+          if (l && r) {
+            from = f;
+            both = true;
+            break;
+          }
+          if ((l || r) && from < 0) from = f;
+        }
+      if (from < 0) continue;
+      const l = room(from, -1);
+      const r = room(from, 1);
+      for (let q = 0; q < whole; q++) {
+        const i = (i0 + from + q) % N;
+        const wide = q < climb ? S.laneWide : (S.laneWide * (whole - q)) / merge;
+        L.rise[i] = q < climb ? q / climb : 1;
+        if (l) L.left[i] = wide;
+        if (r) L.right[i] = wide;
+      }
     }
     k += len;
   }
-  return out;
+  return L;
 }
 
 /** How high the road stands at each sample of the track, for its raised stretches. */
@@ -225,7 +326,7 @@ export function buildRelief(
   road: number,
   oval: { cx: number; cy: number; rx: number; ry: number } | null,
   raised: readonly Raised[] = [],
-  slips: Slips = DEFAULT_TUNING,
+  lanes: Lanes = DEFAULT_TUNING,
 ): Relief {
   const R = new Relief(w, h);
   const C = Relief.CELL;
@@ -237,13 +338,9 @@ export function buildRelief(
   // point of the grid is nearest to
   const lift = track && raised.length ? liftsOf(track, raised) : null;
   const near = lift ? new Int32Array(R.gw * R.gh).fill(-1) : null;
-  const slip = lift ? slipsOf(track!, lift, slips) : null;
-  // (the ways up the sides reach further out than the banks may)
-  if (lift)
-    reach = Math.max(
-      reach,
-      half + SHOULDER + lift.reduce((a, b) => Math.max(a, b), 0) * slips.slipRun + 24,
-    );
+  const lane = lift ? lanesOf(track!, lift, road, lanes) : null;
+  // (the on-ramps reach further out than the banks may)
+  if (lift) reach = Math.max(reach, half + SHOULDER + lanes.laneWide + SIDE + 24);
   if (track) {
     const rc = Math.ceil(reach / C);
     for (let i = 0; i < track.n; i += 2) {
@@ -266,11 +363,15 @@ export function buildRelief(
   // a face five px through, however wide the terraces are: steep, but with a front to be seen from any side
   R.face = Math.min(1, (FACE * Math.max(1, steps)) / spec.spread);
   let max = 0;
-  for (let gy = 0; gy < R.gh; gy++)
+  for (let gy = 0; gy < R.gh; gy++) {
+    // (the loop's edges along this row, when the banks keep out of the infield)
+    const cross = spec.infield === false && track && !oval ? loopCrossings(track, gy * C) : null;
+    let ci = 0;
     for (let gx = 0; gx < R.gw; gx++) {
       const x = gx * C;
       const y = gy * C;
       const k = gy * R.gw + gx;
+      if (cross) while (ci < cross.length && cross[ci]! < x) ci++;
       // hills: two sizes of soft noise, never below the level of the lowest ground
       if (spec.hills > 0) {
         const n =
@@ -281,14 +382,23 @@ export function buildRelief(
         if (v > max) max = v;
       }
       if (lift && near![k]! >= 0) {
-        // the platform: the road's own height out to its shoulder, then down a steep side
-        // (or, at a way up, a slope a car can climb)
-        const top = lift[near![k]!]!;
-        const run = slip![near![k]!] ? Math.max(SIDE, top * slips.slipRun) : SIDE;
-        const side = clamp01((half + SHOULDER + run - dist[k]!) / run);
-        const up = top * side;
-        if (run > SIDE && dist[k]! > half - 6 && dist[k]! < half + SHOULDER + run + 12)
-          (R.slip ??= new Uint8Array(R.gw * R.gh))[k] = 1;
+        // the platform: the road's own height out to its shoulder, then down a steep side;
+        // and beside it, where there is one, the lane of an on-ramp at the height it has climbed to
+        const i = near![k]!;
+        const top = lift[i]!;
+        const edge = half + SHOULDER;
+        let up = top * clamp01((edge + SIDE - dist[k]!) / SIDE);
+        // (which side of the road this point is on says which lane it may be part of)
+        const a = track!.a[i]!;
+        const side =
+          (y - track!.y[i]!) * Math.cos(a) - (x - track!.x[i]!) * Math.sin(a) < 0 ? -1 : 1;
+        const wide = laneWide(lane!, i, side);
+        if (wide > 0) {
+          up = Math.max(up, top * lane!.rise[i]! * clamp01((edge + wide + SIDE - dist[k]!) / SIDE));
+          if (dist[k]! > half - 6 && dist[k]! < edge + wide + SIDE + 12)
+            (R.slip ??= new Uint8Array(R.gw * R.gh))[k] =
+              dist[k]! > edge - 4 && dist[k]! < edge + wide + 2 ? 2 : 1;
+        }
         (R.plat ??= new Float32Array(R.gw * R.gh))[k] = up;
         const v = (R.hills[k]! += up);
         if (v > max) max = v;
@@ -300,12 +410,14 @@ export function buildRelief(
           const q = Math.hypot((x - oval.cx) / oval.rx, (y - oval.cy) / oval.ry);
           d = (q - 1) * Math.min(oval.rx, oval.ry) - spec.from;
         } else d = dist[k]! - half - spec.from;
+        if (cross && ci % 2 === 1) d = 0;
         if (d > 0) {
           const rough = (noise(x / 150, y / 150, seed + 103) - 0.5) * 0.7 * Math.min(1, d / 40);
           R.bank[k] = clamp01(d / spec.spread + rough) * steps;
         }
       }
     }
+  }
   R.max = max + steps * spec.step;
   return R;
 }

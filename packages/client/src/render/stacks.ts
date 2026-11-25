@@ -621,11 +621,17 @@ export function queueShadows(
   w: World,
   /** Scenery whose shadow is cast from its own shape elsewhere (the pixel engine's ShadowMap). */
   cast: ((s: StaticProp) => boolean) | null,
+  /**
+   * The sun's own shadow map is drawing every thing's shadow from its shape (the pixel engine's
+   * SunShadow): only the shade beyond a deck's far edge is left to do here.
+   */
+  sun: boolean,
   shadow: ShadowFn,
 ): void {
   for (const s of w.statics) {
     if (s.down || cast?.(s)) continue;
     const lift = s.lift ?? 0;
+    if (sun && (lift <= 0 || s.def.crown)) continue;
     if (lift > 0) {
       // things up high throw their shadow further off, so you can tell how high they are
       const x = s.x + 3 + lift * 0.3;
@@ -634,7 +640,7 @@ export function queueShadows(
       const st = art.prop(s.def.id);
       if (s.def.crown) shadow(x, y, (st.cw / st.res) * 0.42, (st.ch / st.res) * 0.38, 0, 0.2);
       else {
-        shadow(x, y, st.cw / st.res / 2, st.ch / st.res / 2 - 2, s.rot, 0.24, true);
+        if (!sun) shadow(x, y, st.cw / st.res / 2, st.ch / st.res / 2 - 2, s.rot, 0.24, true);
         // and a deck is seen from this side only: the ground beyond its far edge lies in shade
         // just past what the deck hides, or nothing would tell the drop there
         const far = lift * OVER + DECK_SHADE * Math.min(1, lift / 14);
@@ -647,6 +653,7 @@ export function queueShadows(
       shadow(s.x + 3, s.y + 2, (st.cw / st.res) * 0.45, (st.ch / st.res) * 0.4, 0, 0.22);
     }
   }
+  if (sun) return;
   for (const c of w.cars)
     // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
     if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))

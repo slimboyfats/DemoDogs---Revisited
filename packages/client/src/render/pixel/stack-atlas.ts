@@ -235,7 +235,7 @@ export class StackAtlas {
         const h = s.img.height;
         const px = s.px ?? s.img.getContext('2d')?.getImageData(0, 0, w, h).data;
         if (!px) continue;
-        this.job = { s, bake: new AuxBake(px, w, h, s, s.glow) };
+        this.job = { s, bake: new AuxBake(px, w, h, s, s.glow, s.gloss) };
       }
       const { s, bake } = this.job;
       if (!bake.step(late)) return;

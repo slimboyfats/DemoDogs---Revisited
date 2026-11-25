@@ -3,7 +3,10 @@ import { compile, compileKept, countingShader, uniforms } from './gl';
 import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
 import type { ReliefLayer } from './relief-layer';
-import { STACK_FS, STACK_VS } from './stack-shaders';
+import { CAST_FS, CAST_VS, STACK_FS, STACK_VS } from './stack-shaders';
+import { BLOCK_FS, BLOCK_VS } from './light-block-glsl';
+import type { LightBlock } from './light-block';
+import type { SunShadow } from './sun-shadow';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
 const STRIDE = 14;
@@ -21,6 +24,11 @@ export interface StackSky {
   time: number;
   /** A race rising out of the ground: focus x, y and how far the rise has got; z < 0 for none. */
   grow?: readonly [number, number, number] | undefined;
+  /** The sun's shadow map for the frame and how strong its shadows are (left out or 0: none). */
+  cast?: SunShadow | undefined;
+  shade?: number | undefined;
+  /** What stands in the lights' way this frame (left out: lights throw no shadows). */
+  block?: LightBlock | undefined;
 }
 
 const NAMES = [
@@ -46,11 +54,18 @@ const NAMES = [
   'u_mirror',
   'u_time',
   'u_cone',
+  'u_lm',
+  'u_lmbox',
+  'u_lmk',
   'u_ccount',
   'u_grow',
   'u_relief',
   'u_rgrid',
   'u_rface',
+  'u_shk',
+  'u_sh',
+  'u_shbox',
+  'u_shear',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -431,6 +446,62 @@ export class StackBatch {
     this.draw(this.prog, this.u, this.atlas.tex, lights, this.drawn);
   }
 
+  private caster: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null> } | null =
+    null;
+
+  /**
+   * Everything queued, drawn into the sun's shadow map (which the caller has begun): each slice
+   * where the sun throws it, the highest kept. Call after `ready`.
+   */
+  cast(sun: SunShadow): void {
+    if (this.n === 0) return;
+    if (!this.isReady) this.ready();
+    const gl = this.gl;
+    if (!this.caster) {
+      const prog = compile(gl, CAST_VS, CAST_FS);
+      this.caster = {
+        prog,
+        u: uniforms(gl, prog, ['u_atlas', 'u_shbox', 'u_shear', 'u_relief', 'u_rgrid', 'u_rface']),
+      };
+    }
+    const { prog, u } = this.caster;
+    gl.useProgram(prog);
+    gl.uniform4fv(u.u_shbox!, sun.box);
+    gl.uniform3fv(u.u_shear!, sun.shear);
+    this.relief?.bind(2, u.u_relief!, u.u_rgrid!, u.u_rface!);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlas.tex);
+    gl.uniform1i(u.u_atlas!, 0);
+    gl.bindVertexArray(this.vao);
+    this.upload(this.drawn);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.n);
+    gl.bindVertexArray(null);
+  }
+
+  private blocker: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null> } | null =
+    null;
+
+  /** Every queued slice into the map of what stands in the lights' way (between its begin and end). */
+  block(map: LightBlock): void {
+    if (this.n === 0) return;
+    if (!this.isReady) this.ready();
+    const gl = this.gl;
+    if (!this.blocker) {
+      const prog = compile(gl, BLOCK_VS, BLOCK_FS);
+      this.blocker = { prog, u: uniforms(gl, prog, ['u_atlas', 'u_lmbox']) };
+    }
+    const { prog, u } = this.blocker;
+    gl.useProgram(prog);
+    gl.uniform4fv(u.u_lmbox!, map.box);
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlas.tex);
+    gl.uniform1i(u.u_atlas!, 0);
+    gl.bindVertexArray(this.vao);
+    this.upload(this.drawn);
+    gl.drawArraysInstanced(gl.TRIANGLES, 0, 6, this.n);
+    gl.bindVertexArray(null);
+  }
+
   /** The depth range of the view (as the vertex shader's): [nearest-to-farthest lo, hi]. */
   private depthRange(): [number, number] {
     return depthRange(this.v);
@@ -551,6 +622,23 @@ export class StackBatch {
     const [lo, hi] = depthRange(v);
     gl.uniform2f(u.u_drange, lo, 1 / (hi - lo));
     this.relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
+    // the sun's shadows: read only where there is a sun to throw them (and never by a reflection)
+    const shade = lit && !mirror && sky.cast ? (sky.shade ?? 0) : 0;
+    gl.uniform1f(u.u_shk, shade);
+    if (sky.cast && shade > 0) sky.cast.bind(3, u.u_sh, u.u_shbox, u.u_shear);
+    else {
+      // (a sampler must still have a texture of its own kind behind it)
+      gl.activeTexture(gl.TEXTURE3);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u.u_sh, 3);
+    }
+    gl.uniform1f(u.u_lmk, sky.block && !mirror ? 1 : 0);
+    if (sky.block && !mirror) sky.block.bind(4, u.u_lm, u.u_lmbox);
+    else {
+      gl.activeTexture(gl.TEXTURE4);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u.u_lm, 4);
+    }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1i(u.u_atlas, 0);
