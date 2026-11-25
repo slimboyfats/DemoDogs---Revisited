@@ -18,9 +18,11 @@ describe('venue.knotwood', () => {
     let top = 0;
     let under = 0;
     const H = w.deckH!;
-    const mid = H.findIndex((h) => h >= 24);
-    const cx = w.track!.x[mid + 20]!;
-    const cy = w.track!.y[mid + 20]!;
+    // the middle of the deck's full height, where the other pass crosses under it
+    const full = [...H.keys()].filter((i) => H[i]! >= 24);
+    const mid = full[full.length >> 1]!;
+    const cx = w.track!.x[mid]!;
+    const cy = w.track!.y[mid]!;
     runUntil(
       w,
       () => {

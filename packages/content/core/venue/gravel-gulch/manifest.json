@@ -9,30 +9,30 @@
   "mode": "mode.race",
   "seed": 1373,
   "size": {
-    "w": 1720,
-    "h": 1400
+    "w": 2408,
+    "h": 1960
   },
   "track": {
-    "road": 84,
+    "road": 112,
     "points": [
-      [240, 760],
-      [240, 460],
-      [340, 280],
-      [560, 220],
-      [800, 270],
-      [1000, 400],
-      [1200, 300],
-      [1420, 220],
-      [1550, 340],
-      [1530, 620],
-      [1460, 860],
-      [1500, 1080],
-      [1400, 1200],
-      [1100, 1200],
-      [800, 1110],
-      [560, 1180],
-      [340, 1160],
-      [240, 1000]
+      [336, 1064],
+      [336, 644],
+      [476, 392],
+      [784, 308],
+      [1120, 378],
+      [1400, 560],
+      [1680, 420],
+      [1988, 308],
+      [2170, 476],
+      [2142, 868],
+      [2044, 1204],
+      [2100, 1512],
+      [1960, 1680],
+      [1540, 1680],
+      [1120, 1554],
+      [784, 1652],
+      [476, 1624],
+      [336, 1400]
     ],
     "surfaces": [
       {
@@ -59,7 +59,7 @@
   },
   "relief": {
     "hills": 16,
-    "wave": 420,
+    "wave": 560,
     "banks": 26,
     "step": 26,
     "from": 96,
@@ -170,14 +170,6 @@
       ]
     },
     {
-      "rule": "roadside",
-      "every": 60,
-      "pair": "prop.cone",
-      "stack": "prop.crate",
-      "drum": "prop.barrel",
-      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
-    },
-    {
       "rule": "border",
       "prop": "prop.fence-tyres",
       "spacing": 10
@@ -217,7 +209,7 @@
       "rule": "along",
       "pick": {
         "where": "bend",
-        "count": 5,
+        "count": 4,
         "apart": 0.05
       },
       "items": [
@@ -270,38 +262,12 @@
     },
     {
       "rule": "along",
-      "at": [0.029],
-      "items": [
-        {
-          "prop": "prop.speed-bump",
-          "row": 4,
-          "step": 24
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 4,
-          "step": 24,
-          "ahead": 50
-        }
-      ]
-    },
-    {
-      "rule": "along",
       "at": [0.239],
       "items": [
         {
           "prop": "prop.boost-pad",
           "row": 2,
-          "step": 30
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.313],
-      "items": [
-        {
-          "prop": "prop.dip"
+          "step": 36
         }
       ]
     },
@@ -312,18 +278,18 @@
         {
           "prop": "prop.ramp",
           "row": 4,
-          "step": 24
+          "step": 26
         },
         {
           "prop": "prop.hay-wall",
           "ahead": 50,
-          "row": 11,
-          "step": 8
+          "row": 12,
+          "step": 9
         },
         {
           "prop": "prop.hay-bale",
           "ahead": 120,
-          "row": 3,
+          "row": 4,
           "step": 13
         }
       ]
@@ -338,15 +304,6 @@
           "lane": 0.5,
           "n": 3,
           "gap": 56
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.945],
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
         }
       ]
     }

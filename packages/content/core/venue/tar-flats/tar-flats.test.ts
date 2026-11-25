@@ -11,7 +11,7 @@ describe('venue.tar-flats', () => {
   });
 
   it('starts with tar pits, and the derby sets them alight and craters the ground', () => {
-    const w = makeWorld({ venue: 'venue.tar-flats', autopilot: true });
+    const w = makeWorld({ venue: 'venue.tar-flats', autopilot: true, seed: 5 });
     const tar = () => w.spills.filter((s) => s.fixed && s.def.id === 'material.tar').length;
     expect(tar()).toBe(16);
     expect(w.statics.filter((s) => s.def.id === 'prop.gas-pump').length).toBeGreaterThan(5);

@@ -9,14 +9,14 @@
   "mode": "mode.derby",
   "seed": 733,
   "size": {
-    "w": 1160,
-    "h": 900
+    "w": 1450,
+    "h": 1125
   },
   "oval": {
-    "cx": 580,
-    "cy": 450,
-    "rx": 520,
-    "ry": 390
+    "cx": 725,
+    "cy": 563,
+    "rx": 650,
+    "ry": 488
   },
   "colors": {
     "ground": "#5e5d58",
@@ -43,8 +43,8 @@
       "rule": "ring",
       "props": ["prop.water-tower", "prop.fuel-tank"],
       "count": 8,
-      "rx": 250,
-      "ry": 185
+      "rx": 313,
+      "ry": 231
     },
     {
       "rule": "build",
@@ -86,7 +86,7 @@
     },
     {
       "rule": "oval-scatter",
-      "count": 40,
+      "count": 20,
       "qMin": 0.15,
       "qMax": 0.9,
       "clear": 0,
@@ -123,62 +123,62 @@
       "items": [
         {
           "prop": "prop.turbo-pad",
-          "x": -212,
-          "y": -88,
+          "x": -265,
+          "y": -110,
           "rot": 0.393
         },
         {
           "prop": "prop.big-ramp",
-          "x": -97,
-          "y": -40,
+          "x": -121,
+          "y": -50,
           "rot": 0.393
         },
         {
           "prop": "prop.turbo-pad",
-          "x": 212,
-          "y": 88,
+          "x": 265,
+          "y": 110,
           "rot": 3.534
         },
         {
           "prop": "prop.big-ramp",
-          "x": 97,
-          "y": 40,
+          "x": 121,
+          "y": 50,
           "rot": 3.534
         },
         {
           "prop": "prop.boost-pad",
-          "x": -260,
-          "y": 120,
+          "x": -325,
+          "y": 150,
           "rot": -0.4
         },
         {
           "prop": "prop.boost-pad",
-          "x": 260,
-          "y": -120,
+          "x": 325,
+          "y": -150,
           "rot": 2.742
         },
         {
           "prop": "prop.ramp",
           "x": 0,
-          "y": -260,
+          "y": -325,
           "rot": 0
         },
         {
           "prop": "prop.ramp",
           "x": 0,
-          "y": 260,
+          "y": 325,
           "rot": 3.142
         },
         {
           "prop": "prop.dip",
-          "x": 262,
-          "y": 194,
+          "x": 328,
+          "y": 243,
           "rot": 2.502
         },
         {
           "prop": "prop.dip",
-          "x": -262,
-          "y": 194,
+          "x": -327,
+          "y": 243,
           "rot": -2.502
         }
       ]
