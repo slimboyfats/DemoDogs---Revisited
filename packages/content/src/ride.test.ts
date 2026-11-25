@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_CONTROLS } from '@demodogs/shared';
-import { groundAt, moundAt, stand } from '@demodogs/sim';
+import { groundAt, moundAt, putProp, stand } from '@demodogs/sim';
 import { loadContent } from './index';
 import { bench, flatBench, makeWorld, put } from './testing';
 
@@ -58,7 +58,11 @@ describe('the ride', () => {
 
   it('the ground is the lie of the land with the shapes in the road on it', () => {
     const w = makeWorld({ venue: 'venue.kennel-loop' });
-    expect(w.mounds.length).toBeGreaterThan(4);
+    // its jump's ramps, and a speed bump laid across the road a third of the way round
+    expect(w.mounds.length).toBeGreaterThanOrEqual(4);
+    const T = w.track!;
+    const k = Math.floor(T.n / 3);
+    putProp(w, loadContent().prop.get('prop.speed-bump')!, T.x[k]!, T.y[k]!, T.a[k]!, w.rng);
     const s = w.mounds.find((m) => m.def.mound!.shape === 'bar' && m.def.mound!.high > 0)!;
     expect(moundAt(w, s.x, s.y)).toBeCloseTo(s.def.mound!.high, 1);
     expect(groundAt(w, s.x, s.y)).toBeCloseTo(w.relief!.at(s.x, s.y) + s.def.mound!.high, 1);

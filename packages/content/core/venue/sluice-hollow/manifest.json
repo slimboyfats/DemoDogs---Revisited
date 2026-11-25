@@ -9,38 +9,35 @@
   "mode": "mode.race",
   "seed": 4417,
   "size": {
-    "w": 2000,
-    "h": 1400
+    "w": 2800,
+    "h": 1960
   },
   "track": {
-    "road": 66,
+    "road": 112,
     "points": [
-      [300, 560],
-      [540, 480],
-      [800, 530],
-      [1005, 540],
-      [1220, 500],
-      [1420, 380],
-      [1640, 300],
-      [1800, 440],
-      [1740, 680],
-      [1540, 760],
-      [1460, 930],
-      [1600, 1080],
-      [1440, 1200],
-      [1220, 1110],
-      [1030, 1080],
-      [820, 1100],
-      [600, 1180],
-      [380, 1150],
-      [240, 1000],
-      [300, 820],
-      [220, 680]
+      [420, 784],
+      [756, 672],
+      [1120, 728],
+      [1407, 756],
+      [1708, 700],
+      [2044, 532],
+      [2352, 462],
+      [2534, 672],
+      [2478, 1064],
+      [2254, 1372],
+      [1988, 1540],
+      [1708, 1540],
+      [1442, 1512],
+      [1148, 1540],
+      [840, 1624],
+      [532, 1582],
+      [350, 1372],
+      [322, 1064]
     ],
     "raised": [
       {
-        "from": 0.235,
-        "to": 0.32,
+        "from": 0.3,
+        "to": 0.38,
         "height": 16
       }
     ]
@@ -53,9 +50,9 @@
   },
   "weather": [
     {
-      "x": 1000,
-      "y": 200,
-      "r": 420,
+      "x": 1400,
+      "y": 280,
+      "r": 588,
       "sky": "rain"
     }
   ],
@@ -102,32 +99,32 @@
       "items": [
         {
           "prop": "prop.powder-keg",
-          "x": -40,
-          "y": -310,
+          "x": -56,
+          "y": -434,
           "rot": 0
         },
         {
           "prop": "prop.powder-keg",
-          "x": -52,
-          "y": -306,
+          "x": -73,
+          "y": -428,
           "rot": 1
         },
         {
           "prop": "prop.powder-keg",
-          "x": 40,
-          "y": -309,
+          "x": 56,
+          "y": -433,
           "rot": 2
         },
         {
           "prop": "prop.oil-drum",
-          "x": 64,
-          "y": -306,
+          "x": 90,
+          "y": -428,
           "rot": 0
         },
         {
           "prop": "prop.powder-keg",
-          "x": 52,
-          "y": -304,
+          "x": 73,
+          "y": -426,
           "rot": 0.5
         }
       ]
@@ -171,14 +168,6 @@
       "on": "off"
     },
     {
-      "rule": "roadside",
-      "every": 24,
-      "pair": "prop.cone",
-      "stack": "prop.tyres",
-      "drum": "prop.barrel",
-      "tanks": ["prop.water-butt", "prop.oil-drum"]
-    },
-    {
       "rule": "border",
       "prop": "prop.fence-tyres",
       "spacing": 10
@@ -218,7 +207,7 @@
       "rule": "along",
       "pick": {
         "where": "bend",
-        "count": 7,
+        "count": 4,
         "apart": 0.05
       },
       "items": [
@@ -238,72 +227,22 @@
     },
     {
       "rule": "along",
-      "at": [0.14, 0.45, 0.7],
+      "at": [0.45, 0.72],
       "items": [
         {
           "prop": "prop.sheep",
-          "lane": 1.9,
+          "lane": 2.2,
           "ahead": 0
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.3, 0.83],
-      "items": [
-        {
-          "prop": "prop.cow",
-          "lane": 2.1,
-          "ahead": 0
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.2, 0.52, 0.92],
+      "at": [0.2, 0.55],
       "items": [
         {
           "prop": "prop.gulls",
-          "lane": 0.3,
-          "ahead": 0
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.62],
-      "items": [
-        {
-          "prop": "prop.chickens",
-          "lane": 1.1,
-          "ahead": 0
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.1, 0.38, 0.77],
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.scarecrow",
-          "lane": 2
-        },
-        {
-          "prop": "prop.hay-bale",
-          "lane": 1.55,
-          "n": 2,
-          "gap": 11
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.25, 0.73],
-      "items": [
-        {
-          "prop": "prop.bull",
-          "lane": 2.3,
+          "lane": 2,
           "ahead": 0
         }
       ]
@@ -337,155 +276,21 @@
       ]
     },
     {
-      "rule": "along",
-      "at": [0.05],
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.22],
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.275],
-      "items": [
-        {
-          "prop": "prop.ramp",
-          "row": 3,
-          "step": 24
-        },
-        {
-          "prop": "prop.hay-wall",
-          "ahead": 50,
-          "row": 9,
-          "step": 8
-        },
-        {
-          "prop": "prop.hay-bale",
-          "ahead": 120,
-          "row": 3,
-          "step": 13
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.37, 0.52],
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.pothole",
-          "lane": 0.35
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.3,
-          "ahead": 26
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": 0.1,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.55,
-          "ahead": 84
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.42],
-      "items": [
-        {
-          "prop": "prop.dip"
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.6],
-      "items": [
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 46
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.78],
-      "items": [
-        {
-          "prop": "prop.boost-pad",
-          "row": 2,
-          "step": 26
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.81],
-      "items": [
-        {
-          "prop": "prop.dip"
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.dip",
-          "ahead": 116
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.9],
-      "items": [
-        {
-          "prop": "prop.dip"
-        }
-      ]
-    },
-    {
       "rule": "river",
       "material": "material.river",
       "bank": "material.mud",
       "width": 40,
       "points": [
-        [960, -30],
-        [1000, 180],
-        [990, 330],
-        [1010, 430],
-        [1000, 600],
-        [1070, 760],
-        [990, 900],
-        [1030, 1080],
-        [990, 1250],
-        [1020, 1440]
+        [1344, -42],
+        [1400, 252],
+        [1386, 462],
+        [1414, 602],
+        [1400, 840],
+        [1498, 1064],
+        [1386, 1260],
+        [1442, 1512],
+        [1386, 1750],
+        [1428, 2016]
       ],
       "bridges": [
         {
@@ -499,7 +304,7 @@
       ],
       "dam": {
         "wall": "prop.dam-wall",
-        "at": 410,
+        "at": 574,
         "span": 150,
         "lake": 3.2
       },
@@ -538,6 +343,53 @@
         {
           "prop": "prop.plank-fence",
           "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.066],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.492],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 4,
+          "step": 26
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 12,
+          "step": 9
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 4,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.926],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
         }
       ]
     }

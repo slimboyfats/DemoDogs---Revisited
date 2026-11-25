@@ -9,48 +9,42 @@
   "mode": "mode.race",
   "seed": 1373,
   "size": {
-    "w": 1720,
-    "h": 1400
+    "w": 2408,
+    "h": 1960
   },
   "track": {
-    "road": 68,
+    "road": 112,
     "points": [
-      [240, 760],
-      [230, 480],
-      [330, 280],
-      [540, 210],
-      [740, 290],
-      [860, 460],
-      [1010, 560],
-      [1180, 470],
-      [1260, 290],
-      [1420, 210],
-      [1540, 330],
-      [1500, 560],
-      [1380, 720],
-      [1420, 900],
-      [1520, 1060],
-      [1440, 1210],
-      [1220, 1200],
-      [1100, 1040],
-      [960, 900],
-      [780, 900],
-      [660, 1040],
-      [560, 1200],
-      [360, 1200],
-      [250, 1020]
+      [336, 1064],
+      [336, 644],
+      [476, 392],
+      [784, 308],
+      [1120, 378],
+      [1400, 560],
+      [1680, 420],
+      [1988, 308],
+      [2170, 476],
+      [2142, 868],
+      [2044, 1204],
+      [2100, 1512],
+      [1960, 1680],
+      [1540, 1680],
+      [1120, 1554],
+      [784, 1652],
+      [476, 1624],
+      [336, 1400]
     ],
     "surfaces": [
       {
-        "from": 0.43,
-        "to": 0.47,
+        "from": 0.44,
+        "to": 0.48,
         "material": "material.mud"
       }
     ],
     "raised": [
       {
-        "from": 0.51,
-        "to": 0.6,
+        "from": 0.53,
+        "to": 0.62,
         "height": 20
       }
     ]
@@ -64,12 +58,13 @@
     "road": "dirt"
   },
   "relief": {
-    "hills": 30,
-    "wave": 240,
-    "banks": 78,
+    "hills": 16,
+    "wave": 560,
+    "banks": 26,
     "step": 26,
-    "from": 44,
-    "spread": 110
+    "from": 96,
+    "spread": 90,
+    "infield": false
   },
   "scenery": [
     {
@@ -109,7 +104,7 @@
     {
       "rule": "patches",
       "material": "material.mud",
-      "count": 14,
+      "count": 6,
       "r": [18, 34],
       "on": "off"
     },
@@ -175,14 +170,6 @@
       ]
     },
     {
-      "rule": "roadside",
-      "every": 23,
-      "pair": "prop.cone",
-      "stack": "prop.crate",
-      "drum": "prop.barrel",
-      "tanks": ["prop.oil-drum", "prop.water-butt", "prop.fuel-tank"]
-    },
-    {
       "rule": "border",
       "prop": "prop.fence-tyres",
       "spacing": 10
@@ -222,7 +209,7 @@
       "rule": "along",
       "pick": {
         "where": "bend",
-        "count": 8,
+        "count": 4,
         "apart": 0.05
       },
       "items": [
@@ -242,33 +229,22 @@
     },
     {
       "rule": "along",
-      "at": [0.15, 0.45, 0.75],
-      "items": [
-        {
-          "prop": "prop.crows",
-          "lane": 0.3,
-          "ahead": 0
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.3, 0.6, 0.9],
+      "at": [0.25, 0.85],
       "items": [
         {
           "prop": "prop.rabbits",
-          "lane": 1.6,
+          "lane": 2,
           "ahead": 0
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.37, 0.8],
+      "at": [0.4],
       "items": [
         {
           "prop": "prop.ram",
-          "lane": 2.3,
+          "lane": 2.4,
           "ahead": 0
         }
       ]
@@ -286,127 +262,41 @@
     },
     {
       "rule": "along",
-      "at": [0.06],
-      "items": [
-        {
-          "prop": "prop.dip"
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.dip",
-          "ahead": 116
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.13],
+      "at": [0.239],
       "items": [
         {
           "prop": "prop.boost-pad",
           "row": 2,
-          "step": 26
+          "step": 36
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.2, 0.33, 0.5, 0.68, 0.82],
-      "mirror": true,
-      "items": [
-        {
-          "prop": "prop.pothole",
-          "lane": 0.35
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.3,
-          "ahead": 26
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": 0.1,
-          "ahead": 58
-        },
-        {
-          "prop": "prop.pothole",
-          "lane": -0.55,
-          "ahead": 84
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.26, 0.75],
-      "items": [
-        {
-          "prop": "prop.dip",
-          "n": 2,
-          "gap": 84
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.38],
-      "items": [
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24
-        },
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "ahead": 46
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.58],
+      "at": [0.717],
       "items": [
         {
           "prop": "prop.ramp",
-          "row": 3,
-          "step": 24
+          "row": 4,
+          "step": 26
         },
         {
-          "prop": "prop.crate",
+          "prop": "prop.hay-wall",
           "ahead": 50,
-          "row": 7,
+          "row": 12,
           "step": 9
         },
         {
-          "prop": "prop.crate",
-          "ahead": 62,
-          "row": 6,
-          "step": 9
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 4,
+          "step": 13
         }
       ]
     },
     {
       "rule": "along",
-      "at": [0.63],
-      "items": [
-        {
-          "prop": "prop.speed-bump",
-          "row": 3,
-          "step": 24,
-          "n": 4,
-          "gap": 34
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.7],
+      "at": [0.812],
       "mirror": true,
       "items": [
         {
@@ -414,15 +304,6 @@
           "lane": 0.5,
           "n": 3,
           "gap": 56
-        }
-      ]
-    },
-    {
-      "rule": "along",
-      "at": [0.91],
-      "items": [
-        {
-          "prop": "prop.turbo-pad"
         }
       ]
     }

@@ -59,7 +59,7 @@ describe(venue, () => {
   it('the powder by the dam can breach it', () => {
     const w = startRace(makeWorld({ venue, rivals: 0 }));
     w.bots.length = 0;
-    for (const p of w.props) if (p.def.id === 'prop.powder-keg' && p.y < 420) p.fuse = 0.05;
+    for (const p of w.props) if (p.def.id === 'prop.powder-keg' && p.y < 590) p.fuse = 0.05;
     runUntil(w, () => breached(river(w)), 120);
     expect(breached(river(w))).toBe(true);
   });

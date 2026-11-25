@@ -9,14 +9,14 @@
   "mode": "mode.derby",
   "seed": 4417,
   "size": {
-    "w": 1120,
-    "h": 880
+    "w": 1400,
+    "h": 1100
   },
   "oval": {
-    "cx": 560,
-    "cy": 440,
-    "rx": 500,
-    "ry": 380
+    "cx": 700,
+    "cy": 550,
+    "rx": 625,
+    "ry": 475
   },
   "colors": {
     "ground": "#5a4e40",
@@ -25,9 +25,9 @@
     "outside": "#26221f"
   },
   "relief": {
-    "hills": 10,
+    "hills": 8,
     "wave": 220,
-    "banks": 44,
+    "banks": 22,
     "step": 22,
     "from": 24,
     "spread": 80
@@ -57,73 +57,73 @@
         {
           "prop": "prop.crusher-post",
           "x": 0,
-          "y": -16,
+          "y": -20,
           "rot": 0
         },
         {
           "prop": "prop.crusher-post",
           "x": 0,
-          "y": 16,
+          "y": 20,
           "rot": 3.1416
         },
         {
           "prop": "prop.tyres-red",
-          "x": -32,
-          "y": -22,
-          "rot": 0
-        },
-        {
-          "prop": "prop.tyres",
           "x": -40,
-          "y": -26,
-          "rot": 0
-        },
-        {
-          "prop": "prop.tyres-red",
-          "x": -32,
-          "y": 22,
+          "y": -27,
           "rot": 0
         },
         {
           "prop": "prop.tyres",
+          "x": -50,
+          "y": -32,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres-red",
           "x": -40,
-          "y": 26,
-          "rot": 0
-        },
-        {
-          "prop": "prop.tyres-red",
-          "x": 32,
-          "y": -22,
+          "y": 28,
           "rot": 0
         },
         {
           "prop": "prop.tyres",
-          "x": 40,
-          "y": -26,
+          "x": -50,
+          "y": 33,
           "rot": 0
         },
         {
           "prop": "prop.tyres-red",
-          "x": 32,
-          "y": 22,
+          "x": 40,
+          "y": -27,
           "rot": 0
         },
         {
           "prop": "prop.tyres",
+          "x": 50,
+          "y": -32,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres-red",
           "x": 40,
-          "y": 26,
+          "y": 28,
+          "rot": 0
+        },
+        {
+          "prop": "prop.tyres",
+          "x": 50,
+          "y": 33,
           "rot": 0
         },
         {
           "prop": "prop.scrap-slab",
           "x": 0,
-          "y": -40,
+          "y": -50,
           "rot": 0.3
         },
         {
           "prop": "prop.scrap-slab",
-          "x": 9,
-          "y": 42,
+          "x": 11,
+          "y": 53,
           "rot": 2.8
         }
       ]
@@ -132,8 +132,8 @@
       "rule": "ring",
       "props": ["prop.scrap-tower-tall", "prop.scrap-tower"],
       "count": 10,
-      "rx": 190,
-      "ry": 145
+      "rx": 238,
+      "ry": 181
     },
     {
       "rule": "build",
@@ -231,207 +231,51 @@
       "items": [
         {
           "prop": "prop.boost-pad",
-          "x": -250,
-          "y": -150,
+          "x": -312,
+          "y": -187,
           "rot": 0.5
         },
         {
           "prop": "prop.boost-pad",
-          "x": 250,
-          "y": 150,
+          "x": 313,
+          "y": 188,
           "rot": 3.642
         },
         {
           "prop": "prop.ramp",
-          "x": -240,
-          "y": 150,
+          "x": -300,
+          "y": 188,
           "rot": -0.5
         },
         {
           "prop": "prop.ramp",
-          "x": 240,
-          "y": -150,
+          "x": 300,
+          "y": -187,
           "rot": 2.642
         },
         {
           "prop": "prop.turbo-pad",
-          "x": -330,
+          "x": -412,
           "y": 0,
           "rot": 0
         },
         {
           "prop": "prop.turbo-pad",
-          "x": 330,
+          "x": 413,
           "y": 0,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -95,
-          "y": -24,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -95,
-          "y": 0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": -95,
-          "y": 24,
-          "rot": 0
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 95,
-          "y": 24,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 95,
-          "y": 0,
-          "rot": 3.142
-        },
-        {
-          "prop": "prop.speed-bump",
-          "x": 95,
-          "y": -24,
           "rot": 3.142
         },
         {
           "prop": "prop.dip",
-          "x": 277,
-          "y": 120,
+          "x": 346,
+          "y": 150,
           "rot": 2.227
         },
         {
           "prop": "prop.dip",
           "x": 0,
-          "y": 240,
+          "y": 300,
           "rot": 3.142
-        },
-        {
-          "prop": "prop.dip",
-          "x": -277,
-          "y": 120,
-          "rot": -2.227
-        },
-        {
-          "prop": "prop.dip",
-          "x": -277,
-          "y": -120,
-          "rot": -0.915
-        },
-        {
-          "prop": "prop.dip",
-          "x": 0,
-          "y": -240,
-          "rot": 0
-        },
-        {
-          "prop": "prop.dip",
-          "x": 277,
-          "y": -120,
-          "rot": 0.915
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 115,
-          "y": 30,
-          "rot": 1.926
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 72,
-          "y": 80,
-          "rot": 2.584
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 2,
-          "y": 100,
-          "rot": 3.13
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -69,
-          "y": 82,
-          "rot": -2.61
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -114,
-          "y": 32,
-          "rot": -1.959
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -115,
-          "y": -30,
-          "rot": -1.215
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -72,
-          "y": -80,
-          "rot": -0.558
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -2,
-          "y": -100,
-          "rot": -0.012
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 69,
-          "y": -82,
-          "rot": 0.531
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 114,
-          "y": -32,
-          "rot": 1.183
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 249,
-          "y": 227,
-          "rot": 2.62
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -147,
-          "y": 270,
-          "rot": -2.863
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -396,
-          "y": 43,
-          "rot": -1.773
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -249,
-          "y": -227,
-          "rot": -0.522
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 147,
-          "y": -270,
-          "rot": 0.279
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 396,
-          "y": -43,
-          "rot": 1.369
         }
       ]
     }

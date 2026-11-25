@@ -8,13 +8,16 @@ const IDLE = { steer: 0, throttle: 0, brake: false, boost: false, fire: false };
 function cliff(w: World): { x: number; y: number; nx: number; ny: number; top: number } {
   const R = w.relief!;
   const T = w.track!;
-  for (let i = 0; i < T.n; i += 5) {
+  // (either side of the road: banks may rise only outside its loop)
+  for (let q = 0; q < T.n * 2; q += 5) {
+    const i = q % T.n;
+    const side = q < T.n ? 1 : -1;
     const j = (i + 1) % T.n;
     const tx = T.x[j]! - T.x[i]!;
     const ty = T.y[j]! - T.y[i]!;
     const l = Math.hypot(tx, ty);
-    const nx = -ty / l;
-    const ny = tx / l;
+    const nx = (-ty / l) * side;
+    const ny = (tx / l) * side;
     for (let d = w.road / 2 + 8; d < w.road / 2 + 120; d += 1) {
       const x = T.x[i]! + nx * d;
       const y = T.y[i]! + ny * d;

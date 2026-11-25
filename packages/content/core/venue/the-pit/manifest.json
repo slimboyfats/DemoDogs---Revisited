@@ -9,14 +9,14 @@
   "mode": "mode.derby",
   "seed": 99,
   "size": {
-    "w": 1060,
-    "h": 840
+    "w": 1325,
+    "h": 1050
   },
   "oval": {
-    "cx": 530,
-    "cy": 420,
-    "rx": 470,
-    "ry": 360
+    "cx": 663,
+    "cy": 525,
+    "rx": 588,
+    "ry": 450
   },
   "colors": {
     "ground": "#7b6446",
@@ -25,9 +25,9 @@
     "outside": "#3a3a3e"
   },
   "relief": {
-    "hills": 18,
+    "hills": 8,
     "wave": 200,
-    "banks": 66,
+    "banks": 22,
     "step": 22,
     "from": 24,
     "spread": 90
@@ -50,14 +50,14 @@
       "items": [
         {
           "prop": "prop.husk",
-          "x": -40,
-          "y": -10,
+          "x": -50,
+          "y": -12,
           "rot": 0.4
         },
         {
           "prop": "prop.husk-van",
-          "x": 36,
-          "y": 14,
+          "x": 45,
+          "y": 18,
           "rot": 2.6
         }
       ]
@@ -88,7 +88,7 @@
     },
     {
       "rule": "oval-scatter",
-      "count": 26,
+      "count": 13,
       "qMin": 0.3,
       "qMax": 0.9,
       "clear": 0,
@@ -105,7 +105,7 @@
     },
     {
       "rule": "oval-scatter",
-      "count": 16,
+      "count": 8,
       "qMin": 0.2,
       "qMax": 0.9,
       "clear": 0,
@@ -118,7 +118,7 @@
     },
     {
       "rule": "oval-scatter",
-      "count": 8,
+      "count": 4,
       "qMin": 0.3,
       "qMax": 0.85,
       "clear": 0,
@@ -177,146 +177,86 @@
       "items": [
         {
           "prop": "prop.turbo-pad",
-          "x": -285,
+          "x": -356,
           "y": 0,
           "rot": 0
         },
         {
           "prop": "prop.big-ramp",
-          "x": -175,
+          "x": -219,
           "y": 0,
           "rot": 0
         },
         {
           "prop": "prop.turbo-pad",
-          "x": 285,
+          "x": 356,
           "y": 0,
           "rot": 3.142
         },
         {
           "prop": "prop.big-ramp",
-          "x": 175,
+          "x": 219,
           "y": 0,
           "rot": 3.142
         },
         {
           "prop": "prop.turbo-pad",
           "x": 0,
-          "y": -230,
+          "y": -287,
           "rot": 1.571
         },
         {
           "prop": "prop.big-ramp",
           "x": 0,
-          "y": -135,
+          "y": -169,
           "rot": 1.571
         },
         {
           "prop": "prop.turbo-pad",
           "x": 0,
-          "y": 230,
+          "y": 288,
           "rot": -1.571
         },
         {
           "prop": "prop.big-ramp",
           "x": 0,
-          "y": 135,
+          "y": 169,
           "rot": -1.571
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 231,
-          "y": 73,
-          "rot": 2.07
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 96,
-          "y": 176,
-          "rot": 2.837
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -96,
-          "y": 176,
-          "rot": -2.837
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -231,
-          "y": 73,
-          "rot": -2.07
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -231,
-          "y": -73,
-          "rot": -1.072
-        },
-        {
-          "prop": "prop.pothole",
-          "x": -96,
-          "y": -176,
-          "rot": -0.305
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 96,
-          "y": -176,
-          "rot": 0.305
-        },
-        {
-          "prop": "prop.pothole",
-          "x": 231,
-          "y": -73,
-          "rot": 1.072
         },
         {
           "prop": "prop.dip",
-          "x": 152,
-          "y": 113,
+          "x": 190,
+          "y": 141,
           "rot": 2.502
         },
         {
           "prop": "prop.dip",
-          "x": -152,
-          "y": 113,
+          "x": -190,
+          "y": 141,
           "rot": -2.502
         },
         {
-          "prop": "prop.dip",
-          "x": -152,
-          "y": -113,
-          "rot": -0.64
-        },
-        {
-          "prop": "prop.dip",
-          "x": 152,
-          "y": -113,
-          "rot": 0.64
-        },
-        {
           "prop": "prop.boost-pad",
-          "x": 244,
-          "y": 180,
+          "x": 305,
+          "y": 225,
           "rot": 2.505
         },
         {
           "prop": "prop.boost-pad",
-          "x": -244,
-          "y": 180,
+          "x": -305,
+          "y": 225,
           "rot": -2.505
         },
         {
           "prop": "prop.boost-pad",
-          "x": -244,
-          "y": -180,
+          "x": -305,
+          "y": -225,
           "rot": -0.637
         },
         {
           "prop": "prop.boost-pad",
-          "x": 244,
-          "y": -180,
+          "x": 305,
+          "y": -225,
           "rot": 0.637
         }
       ]

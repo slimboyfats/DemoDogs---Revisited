@@ -144,11 +144,25 @@ const FACE = 5;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-type Spec = NonNullable<VenueManifest['relief']>;
+/** A venue's relief; banks rise in the infield too unless `infield` is false. */
+type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield'> & { infield?: boolean };
 type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
 
 /** A venue with raised road and no `relief` of its own gets this: flat but for the platforms. */
 export const FLAT_RELIEF: Spec = { hills: 0, wave: 520, banks: 0, from: 60, spread: 150, step: 8 };
+
+/** Where each row `y` of a grid crosses the road's loop, west to east: inside it between pairs. */
+function loopCrossings(track: Track, y: number): number[] {
+  const out: number[] = [];
+  const N = track.n;
+  for (let i = 0, j = N - 1; i < N; j = i, i += 1) {
+    const yi = track.y[i]!;
+    const yj = track.y[j]!;
+    if (yi > y !== yj > y)
+      out.push(((track.x[j]! - track.x[i]!) * (y - yi)) / (yj - yi) + track.x[i]!);
+  }
+  return out.sort((p, q) => p - q);
+}
 
 /** How far a platform reaches past the road's edge before its side begins, and how far through the side is (px). */
 const SHOULDER = 14;
@@ -266,11 +280,15 @@ export function buildRelief(
   // a face five px through, however wide the terraces are: steep, but with a front to be seen from any side
   R.face = Math.min(1, (FACE * Math.max(1, steps)) / spec.spread);
   let max = 0;
-  for (let gy = 0; gy < R.gh; gy++)
+  for (let gy = 0; gy < R.gh; gy++) {
+    // (the loop's edges along this row, when the banks keep out of the infield)
+    const cross = spec.infield === false && track && !oval ? loopCrossings(track, gy * C) : null;
+    let ci = 0;
     for (let gx = 0; gx < R.gw; gx++) {
       const x = gx * C;
       const y = gy * C;
       const k = gy * R.gw + gx;
+      if (cross) while (ci < cross.length && cross[ci]! < x) ci++;
       // hills: two sizes of soft noise, never below the level of the lowest ground
       if (spec.hills > 0) {
         const n =
@@ -300,12 +318,14 @@ export function buildRelief(
           const q = Math.hypot((x - oval.cx) / oval.rx, (y - oval.cy) / oval.ry);
           d = (q - 1) * Math.min(oval.rx, oval.ry) - spec.from;
         } else d = dist[k]! - half - spec.from;
+        if (cross && ci % 2 === 1) d = 0;
         if (d > 0) {
           const rough = (noise(x / 150, y / 150, seed + 103) - 0.5) * 0.7 * Math.min(1, d / 40);
           R.bank[k] = clamp01(d / spec.spread + rough) * steps;
         }
       }
     }
+  }
   R.max = max + steps * spec.step;
   return R;
 }

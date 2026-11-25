@@ -9,14 +9,13 @@ import {
   newTrack,
   type Content,
 } from '@demodogs/sim';
-import { loadContent } from './index';
-import { put, runUntil, startRace } from './testing';
+import { BENCH, put, runUntil, startRace, testContent } from './testing';
 
-const C: Content = loadContent();
+const C: Content = testContent();
 
 /** A track with one stretch of its road raised into a platform, a third of the way round. */
 function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => number } {
-  const t = newTrack(C.venue.get('venue.kennel-loop')!, 'raised', 'Raised');
+  const t = newTrack(C.venue.get(BENCH)!, 'raised', 'Raised');
   const flat = installTrack(C, t);
   const T = new World({ content: flat.content, venue: flat.venue, car: 'car.mutt', seed: 1 })
     .track!;
