@@ -49,6 +49,20 @@ describe('Resolution', () => {
     expect(r.pick(2, 390)).toBe(1);
   });
 
+  it('auto climbs back a step at a time, to full and no further; full and low never climb', () => {
+    const r = new Resolution();
+    r.drop(3, 390);
+    r.drop(3, 390);
+    expect(r.rise()).toBe(true);
+    expect(r.pick(3, 390)).toBe(1.5);
+    expect(r.rise()).toBe(true);
+    expect(r.pick(3, 390)).toBe(2);
+    expect(r.rise()).toBe(false);
+    const low = new Resolution(undefined, 'low');
+    expect(low.rise()).toBe(false);
+    expect(low.pick(3, 390)).toBe(1);
+  });
+
   it('full never drops and low starts at the bottom', () => {
     const s = store();
     const r = new Resolution(s);

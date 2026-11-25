@@ -1090,12 +1090,23 @@ function frame(t: number): void {
         fx.quality = Math.max(0.3, fx.quality * 0.65);
         perf?.note(t, 'quality', `effects thinned to ${fx.quality.toFixed(2)}`);
       }
-    } else if (!paused && session.fx.quality < 1 && slow.eased(t)) {
-      // (and gets them back when it has run easily for a while: a burst at the start of a race
-      // does not cost the whole race its light)
+    } else if (
+      !paused &&
+      (session.fx.quality < 1 || (resolution.mode === 'auto' && resolution.dropped > 0)) &&
+      slow.eased(t)
+    ) {
+      // (and gets them back when it has run easily for a while, a step at a time: a burst at the
+      // start of a race does not cost the whole race its light and its sharpness. Effects first,
+      // up to where the traced light is on, then the pixels, then the rest of the effects)
       const fx = session.fx;
-      fx.quality = Math.min(1, fx.quality / 0.65);
-      perf?.note(t, 'quality', `effects back to ${fx.quality.toFixed(2)}`);
+      if (fx.quality >= 0.64 && resolution.rise()) {
+        resize();
+        showRes();
+        perf?.note(t, 'quality', `resolution up to ${W}x${H}`);
+      } else if (fx.quality < 1) {
+        fx.quality = Math.min(1, fx.quality / 0.65);
+        perf?.note(t, 'quality', `effects back to ${fx.quality.toFixed(2)}`);
+      }
     }
     if (perf && !paused) {
       if (glWatch) perf.drew(glWatch.take());

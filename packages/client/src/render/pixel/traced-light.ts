@@ -320,7 +320,10 @@ void main() {
   // (a lamp's texel has its strength as alpha and glows as the sky's dark lets it; a flame has
   // none, and burns as bright by day)
   vec4 g = texelFetch(u_em, t, 0);
-  vec3 e = g.rgb * (g.a > 0.0 ? u_glow * 7.0 : ${FLAME.toFixed(1)});
+  // (a lamp carried up off the ground, on a car in the air, fades out of this flat scene: there
+  // its glow would flood the ground under the car and the car itself)
+  float up = m.r > 0.0 ? (1.0 - m.g) * 255.0 : 0.0;
+  vec3 e = g.rgb * (g.a > 0.0 ? u_glow * 7.0 * clamp(3.0 - up * 0.5, 0.0, 1.0) : ${FLAME.toFixed(1)});
   float solid = 0.0;
   vec2 wp = u_lmbox.xy + gl_FragCoord.xy;
   // a blast's ball, a fire, a rocket's flame: each of the frame's lights is itself a ball of
@@ -363,7 +366,9 @@ void main() {
         float f = 1.0 - along / ${CONE_REACH.toFixed(1)};
         lit += vec3(1.0, 0.93, 0.74) * f * (0.5 + 0.5 * f) * (1.0 - side * side) * 1.15 * faces(t, top, -c.zw);
       }
-      e += texelFetch(u_lc, t, 0).rgb * lit * 1.5;
+      // (what is up in the air, a car in a jump, gives none back: in this flat scene the light
+      // on it would pour out from under it over the ground)
+      e += texelFetch(u_lc, t, 0).rgb * lit * 1.5 * clamp(3.0 - up * 0.5, 0.0, 1.0);
     }
   }
   o = vec4(min(vec3(1.0), e * 0.5), solid);
