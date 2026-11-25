@@ -1,4 +1,4 @@
-import { ADDON_KINDS, GUARD_KINDS } from '@demodogs/shared';
+import { ADDON_KINDS, BASE_SPEED, GUARD_KINDS, HELD } from '@demodogs/shared';
 import { rescueIn, type Car, type World } from '@demodogs/sim';
 import type { Effects } from './effects';
 
@@ -24,6 +24,25 @@ export function fmtTime(t: number): string {
   const m = Math.floor(t / 60);
   const s = t - m * 60;
   return `${m}:${s < 10 ? '0' : ''}${s.toFixed(1)}`;
+}
+
+/** What the speedometer says is holding the car back, most telling first. */
+const HELD_SAYS: [number, string][] = [
+  [HELD.sticky, 'STUCK IN THE MUCK'],
+  [HELD.rough, 'OFF ROAD'],
+  [HELD.hill, 'UPHILL'],
+  [HELD.weighed, 'WEIGHED DOWN'],
+  [HELD.hurt, 'DAMAGED'],
+];
+
+/** The words for what is holding a car back (`Car.held`), most telling first. */
+export function heldLabels(held: number): string[] {
+  return HELD_SAYS.filter(([bit]) => held & bit).map(([, say]) => say);
+}
+
+/** The speed the dial shows for a car, in its own made-up units (px/s, near enough km/h). */
+export function dialSpeed(c: Car): number {
+  return Math.round(Math.hypot(c.vx, c.vy));
 }
 
 interface Mini {
@@ -238,6 +257,117 @@ export class Hud {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
       text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), '#ffd24a', 'center');
     }
+    this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
+  }
+
+  /** How long each reason has been showing, so a passing bump does not flash a word. */
+  private heldT = new Map<number, number>();
+  private lastT = 0;
+
+  /**
+   * The speedometer, bottom middle: a fat arc that fills with speed (blue on boost), the number
+   * big in it, and under it, in red, whatever is holding the car back.
+   */
+  private speedo(
+    P: Car,
+    W: number,
+    H: number,
+    u: number,
+    text: (
+      t: string,
+      x: number,
+      y: number,
+      f: string,
+      col?: string,
+      align?: CanvasTextAlign,
+    ) => void,
+  ): void {
+    const ctx = this.ctx;
+    const now = performance.now() / 1000;
+    const dt = Math.min(0.1, Math.max(0, now - this.lastT));
+    this.lastT = now;
+    const r = 40 * u;
+    const cx = W / 2;
+    // (the plate reaches r + 9 below the middle too, at the sides)
+    const cy = H - r * 0.6 - 26 * u;
+    const top = BASE_SPEED * P.stats.speed;
+    // the dial runs to a boost and a bit over the car's own top speed
+    const full = top * 1.45;
+    const v = P.wrecked ? 0 : dialSpeed(P);
+    const k = Math.min(1, v / full);
+    const a0 = Math.PI * 0.8;
+    const a1 = Math.PI * 2.2;
+    const held = P.wrecked ? 0 : P.held;
+    for (const [bit] of HELD_SAYS) {
+      const t = this.heldT.get(bit) ?? 0;
+      this.heldT.set(bit, held & bit ? t + dt : Math.max(0, Math.min(t, 0.25) - dt));
+    }
+    const shown = HELD_SAYS.filter(([bit]) => (this.heldT.get(bit) ?? 0) > 0.25);
+    const slowed = shown.length > 0;
+    ctx.lineCap = 'butt';
+    // the plate behind it, so it reads on snow and on tarmac alike
+    ctx.beginPath();
+    ctx.arc(cx, cy, r + 9 * u, Math.PI * 0.75, Math.PI * 2.25);
+    ctx.fillStyle = 'rgba(8,10,14,0.62)';
+    ctx.fill();
+    // the empty track of the arc, then the speed in it
+    ctx.lineWidth = 10 * u;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, a0, a1);
+    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.stroke();
+    // the car's own top speed, a tick on the arc
+    const at = a0 + (a1 - a0) * (top / full);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(at) * (r - 8 * u), cy + Math.sin(at) * (r - 8 * u));
+    ctx.lineTo(cx + Math.cos(at) * (r + 8 * u), cy + Math.sin(at) * (r + 8 * u));
+    ctx.lineWidth = 2.5 * u;
+    ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+    ctx.stroke();
+    if (k > 0.005) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, a0, a0 + (a1 - a0) * k);
+      ctx.lineWidth = 10 * u;
+      ctx.strokeStyle = P.boosting
+        ? '#4fb8ff'
+        : slowed
+          ? '#ff5a3c'
+          : k > 0.6
+            ? '#ffd24a'
+            : '#5fd35a';
+      ctx.stroke();
+    }
+    ctx.textBaseline = 'middle';
+    text(
+      String(v),
+      cx,
+      cy - 2 * u,
+      `900 ${Math.round(26 * u)}px system-ui, sans-serif`,
+      slowed ? '#ff9a7a' : '#fff',
+      'center',
+    );
+    text(
+      'KM/H',
+      cx,
+      cy + 17 * u,
+      `800 ${Math.round(9 * u)}px system-ui, sans-serif`,
+      '#cfd6e0',
+      'center',
+    );
+    if (slowed) {
+      // why it is slow, in a red chip above the dial that pulses so it is seen out of the eye's corner
+      const say = shown.map(([, s]) => s).join(' · ');
+      ctx.font = `900 ${Math.round(12 * u)}px system-ui, sans-serif`;
+      const bw = ctx.measureText(say).width + 16 * u;
+      const by = cy - r - 32 * u;
+      const pulse = 0.75 + 0.25 * Math.sin(now * 8);
+      ctx.fillStyle = `rgba(200,34,20,${(0.85 * pulse).toFixed(3)})`;
+      ctx.fillRect(cx - bw / 2, by, bw, 19 * u);
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.fillText(say, cx, by + 10 * u);
+    }
+    ctx.textBaseline = 'top';
   }
 }

@@ -97,6 +97,8 @@ export interface Car {
   /** Sliding sideways this tick (skid marks). */
   sliding: boolean;
   offroad: boolean;
+  /** What is holding it back this tick: a set of `HELD` bits (shared/constants.ts), for the HUD. */
+  held: number;
   nitro: number;
   hp: number;
   /** Health it started the race with. */
