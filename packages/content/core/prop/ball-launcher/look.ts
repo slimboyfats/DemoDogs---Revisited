@@ -66,10 +66,11 @@ const look: LookModule = {
           // the muzzle: a bell flaring out to a fat yellow ring at the front
           const bell = t > LEN - 4.5 ? 6.2 : 4.6;
           if (off < bell && (t < LEN - 1.2 || off > 3.6)) {
-            if (t < 0.6) return 'band';
+            if (x < -4.4) return 'band';
             if (t > LEN - 1.8) return up < -3 ? 'launch2' : 'launch';
-            // black bands round it and a darker yellow underneath
-            if (Math.abs(t - 4.4) < 0.9 || Math.abs(t - 9.6) < 0.9 || Math.abs(t - 14.8) < 0.9)
+            // black bands round it, each standing straight up so its edges are clean lines, and
+            // a darker yellow underneath
+            if (Math.abs(x + 1) < 0.85 || Math.abs(x - 3.7) < 0.85 || Math.abs(x - 8.4) < 0.85)
               return 'band';
             return up < -2.6 ? 'launch2' : 'launch';
           }

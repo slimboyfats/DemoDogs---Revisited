@@ -122,8 +122,22 @@ export class AuxBake {
           let b1 = top[y * cw + x] === z ? SKY : 0;
           if (glow) b1 |= Math.min(GLOW_MAX, glow[j]!);
           out[j * 2 + 1] = b1;
-          // only the surface is ever seen; what is inside stays "not known" until a dent bares it
-          if (occ[i + layer] && occ[i + 1] && occ[i - 1] && occ[i + sx] && occ[i - sx]) continue;
+          // only the surface is ever seen; what is inside stays "not known" until a dent bares it.
+          // (What lies just under the rim of the slice above is seen too: a smoothed edge is drawn
+          // a part of a texel inside the rim, and what shows there must face as the rim does.)
+          const up = i + layer;
+          if (
+            occ[up] &&
+            occ[i + 1] &&
+            occ[i - 1] &&
+            occ[i + sx] &&
+            occ[i - sx] &&
+            occ[up + 1] &&
+            occ[up - 1] &&
+            occ[up + sx] &&
+            occ[up - sx]
+          )
+            continue;
           // which way the surface faces: away from the solid around the texel
           let nx = 0;
           let ny = 0;

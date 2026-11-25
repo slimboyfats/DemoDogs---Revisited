@@ -242,7 +242,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.0004,
+      "perArea": 0.00008,
       "clear": 9,
       "items": [
         {

@@ -125,14 +125,28 @@ function calmLight(S: Sampled, st: number): Uint8Array {
         // this voxel and goes on a layer or two under it, it is lit as the top is, so a slope is
         // one face and not a stair of light and dark
         let flat = top;
+        let steep = false;
         if (!flat) {
           let ends = false;
           for (let k = 2; k <= 2 * st + 1 && !ends; k++) ends = !solid(x, y, z + k);
           if (ends)
             for (const [dx, dy] of SIDES) {
               if (solid(x + dx, y + dy, z)) continue;
-              for (let k = 1; k <= 2 * st && !flat; k++) flat = solid(x + dx, y + dy, z - k);
+              // (a slope that lies back: the step under it is two voxels deep or more)
+              for (let k = 1; k <= 2 * st && !flat; k++)
+                flat = solid(x + dx, y + dy, z - k) && solid(x + 2 * dx, y + 2 * dy, z - k);
             }
+        } else {
+          // and on a steep slope it is the other way about: a ledge one voxel deep under a rise
+          // of two or more is part of the wall, and is lit as the wall is
+          for (const [dx, dy] of SIDES)
+            if (
+              !solid(x + dx, y + dy, z) &&
+              solid(x - dx, y - dy, z + 1) &&
+              solid(x - dx, y - dy, z + 2)
+            )
+              steep = true;
+          if (steep) flat = false;
         }
         // how much of what is beside and above it is open air: a top looks a little way up, over
         // any such step, a side from its own height
@@ -146,12 +160,13 @@ function calmLight(S: Sampled, st: number): Uint8Array {
           for (let dy = -2; dy <= 2; dy++)
             for (let dx = -2; dx <= 2; dx++) if (!solid(x + dx * st, y + dy * st, z)) level++;
         // (a flat top in the open sees all 50, the middle of a wall 30 of its 75)
-        const air = open / (flat ? 50 : 30);
+        // (a ledge in a steep slope sees more air than the wall round it: it is given the wall's)
+        const air = steep ? 1 : open / (flat ? 50 : 30);
         const shade = 0.62 + 0.38 * Math.min(1, air);
         // an outer edge catches the light
         const edge = flat
           ? Math.max(0, Math.min(1, (level / 25 - 0.2) * 4)) * 0.07
-          : Math.max(0, Math.min(1, (air - 1.08) * 4)) * 0.09;
+          : Math.max(0, Math.min(1, (air - 1.3) * 4)) * 0.09;
         // and how much of the sky further up is hidden by the thing itself: under a barrel, a
         // roof or a crown it lies in soft shade (straight up and leaning each way, far first)
         let hid = 0;
