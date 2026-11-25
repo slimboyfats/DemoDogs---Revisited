@@ -65,7 +65,9 @@ const save = async (name, url) =>
   writeFile(`${out}/${name}.png`, Buffer.from(url.split(',')[1], 'base64'));
 
 for (const venue of venues) {
-  await page.goto(`${base}?start=${venue}&car=mutt&autoplay&seed=7`);
+  // (?ground=map: the ground as a map painted one texel to the art pixel, which is what there is
+  // to save as a picture; the game itself paints its ground in the shader, finer than that)
+  await page.goto(`${base}?start=${venue}&car=mutt&autoplay&seed=7&ground=map`);
   await page.waitForFunction(() => window.__dd?.session?.ground, null, { timeout: 60000 });
   const pics = await page.evaluate(() => {
     const s = window.__dd.session;

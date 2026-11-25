@@ -20,6 +20,14 @@ import { RELIEF_GLSL } from './relief-layer';
 import { SUN_GLSL } from './sun-glsl';
 import { TRACED_GLSL } from './traced-light';
 
+/**
+ * Light falls off smoothly and a shadow's edge is soft. `?light=bands` gives the older look: light
+ * in hard steps dithered into each other on the Bayer grid, and a shadow's edge dithered too.
+ */
+export const SMOOTH_LIGHT = !/[?&]light=bands\b/.test(
+  (globalThis as { location?: { search?: string } }).location?.search ?? '',
+);
+
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
 const MIRROR_TALL = 14;
 
@@ -132,6 +140,17 @@ float bayer(ivec2 p) {
   int i = (p.y & 3) * 4 + (p.x & 3);
   int t[16] = int[16](0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5);
   return (float(t[i]) + 0.5) / 16.0;
+}
+// How much light, of x: as it is (smooth), or in n hard steps dithered into each other by b.
+// lround is the same with the steps rounded down half a step, so the dimmest reach is none.
+${
+  SMOOTH_LIGHT
+    ? `float lstep(float x, float n, float b) { return x; }
+vec3 lstep(vec3 x, float n, float b) { return x; }
+float lround(float x, float n, float b) { return x - 0.5 / n; }`
+    : `float lstep(float x, float n, float b) { return floor(x * n + b) / n; }
+vec3 lstep(vec3 x, float n, float b) { return floor(x * n + b) / n; }
+float lround(float x, float n, float b) { return floor(x * n + b - 0.5) / n; }`
 }
 float hash(vec2 p) {
   p = fract(p * vec2(0.1031, 0.1030));
@@ -303,14 +322,14 @@ void main() {
   if (u_shk > 0.0) sh = sunShade(vec3(v_world.xy, v_gz + v_world.z)) * u_shk;
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
   float ndl = dot(n, u_sdir);
-  float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0) * (1.0 - sh);
+  float q = clamp(lstep(ndl, 5.0, 0.02 + b * 0.96), 0.0, 1.0) * (1.0 - sh);
   // traced light (traced-light.ts), read a little way out from the face: how much of the sky
   // the spot sees (less at the foot of things, none of it lost high up), and what is thrown on
   // it by lit and glowing things round it
   vec4 gi = u_mirror > 0.5 ? vec4(0.0, 0.0, 0.0, 1.0) : traced(v_world.xy + n.xy * 4.0 * known);
   float low = 1.0 - clamp(v_world.z / 22.0, 0.0, 1.0);
-  float occ = 1.0 - 0.6 * low * (1.0 - floor(min(1.0, gi.a * 1.1) * 8.0 + b) / 8.0);
-  vec3 back = floor(min(vec3(0.9), max(vec3(0.0), gi.rgb * (0.6 + 0.7 * low) - 0.04)) * 6.0 + b) / 6.0;
+  float occ = 1.0 - 0.6 * low * (1.0 - lstep(min(1.0, gi.a * 1.1), 8.0, b));
+  vec3 back = lstep(min(vec3(0.9), max(vec3(0.0), gi.rgb * (0.6 + 0.7 * low) - 0.04)), 6.0, b);
   vec3 base = u_amb * occ * (1.0 - 0.1 * sh) + u_sun * q;
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
@@ -328,7 +347,7 @@ void main() {
     float much = gloss == 1 ? 0.3 : gloss == 2 ? 0.62 : 1.0;
     float nh = max(0.0, dot(n, normalize(u_sdir + view)));
     float sp = pow(nh, tight);
-    gleam = u_sun * (floor(sp * 4.0 + b) / 4.0) * much * 1.5 * (1.0 - sh);
+    gleam = u_sun * lstep(sp, 4.0, b) * much * 1.5 * (1.0 - sh);
     // flakes in the paint and scratches in the steel: a texel here and there flashes white
     // as the thing turns through the light
     float fl = hash(vec2(t) * 0.37 + 3.0);
@@ -354,11 +373,11 @@ void main() {
     float open = lightOpen(v_world.xy, v_world.z, p.xy, 3.0, clamp(p.z * 0.35, 4.0, 12.0), b);
     if (open <= 0.0) continue;
     f *= level(u_lgz[i], v_gz, length(to.xy));
-    float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    float e = clamp(lround(f * (0.4 + 0.6 * f) * p.w * face, 4.0, b), 0.0, 1.5);
     l += u_lcol[i] * e;
     // (and metal throws a fire's or a blast's light back in a hard glint)
     if (gloss > 1 && known > 0.5)
-      gleam += u_lcol[i] * floor(pow(max(0.0, dot(n, normalize(normalize(to) + view))), 14.0) * f * p.w * 3.0 + b) / 3.0;
+      gleam += u_lcol[i] * lstep(pow(max(0.0, dot(n, normalize(normalize(to) + view))), 14.0) * f * p.w, 3.0, b);
   }
   for (int i = 0; i < ${MAX_CONES}; i++) {
     if (i >= u_ccount) break;
@@ -373,7 +392,7 @@ void main() {
     if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
     float face = mix(1.0, 0.25 + 1.0 * max(0.0, dot(n, normalize(to))), known);
-    l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    l += vec3(1.0, 0.93, 0.74) * clamp(lround(f * face, 4.0, b), 0.0, 1.5);
   }
   vec3 k = min(vec3(1.1), l);
   vec3 rgb = c.rgb * (base * v_shade + k * 1.1 + back) + k * (30.0 / 255.0) + back * 0.05;
@@ -399,10 +418,10 @@ void main() {
           break;
         }
       }
-      seen = floor(min(vec3(1.0), seen) * 6.0 + b) / 6.0;
+      seen = lstep(min(vec3(1.0), seen), 6.0, b);
       rgb = mix(rgb, seen, much * hit);
       vec3 far = traced(v_world.xy + way / out_ * 16.0).rgb;
-      gleam += floor(min(vec3(1.0), far * 2.4 * (1.0 - 0.6 * hit)) * 5.0 + b) / 5.0 * much;
+      gleam += lstep(min(vec3(1.0), far * 2.4 * (1.0 - 0.6 * hit)), 5.0, b) * much;
     }
   }
   // the gleam is the light's own colour laid over the paint, most on what is pale already
@@ -472,8 +491,10 @@ void main() {
 }`;
 
 /** `relief`: the ground stands at different heights (a define, so flat venues pay nothing). */
-export const groundFs = (relief: boolean): string => `#version 300 es
+/** `paint`: the painter for a ground the shader paints itself (ground-paint-glsl.ts). */
+export const groundFs = (relief: boolean, paint = ''): string => `#version 300 es
 ${relief ? '#define RELIEF' : ''}
+${paint ? '#define PAINT' : ''}
 precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
@@ -490,7 +511,7 @@ uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
 uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
 uniform float u_hk;        // height for one row of the map's shift
 #endif
-out vec4 o;${SKY_GLSL}${BOUNCE_GLSL}${TRACED_GLSL}
+out vec4 o;${SKY_GLSL}${BOUNCE_GLSL}${TRACED_GLSL}${paint}
 const float EDGE = 0.07;
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
@@ -517,9 +538,18 @@ void main() {
   float shift = floor(rl.r * 255.0 + 0.5);
   p.y += shift;
 #endif
+  ivec2 ci = ivec2(cell);
+#ifdef PAINT
+  // The country and the road are painted here, for this cell (ground-paint-glsl.ts); the canvas
+  // holds only what has been marked on them since (skids, cracks, scorches, the grid), read
+  // between its texels so a mark's edge is as soft as the mark, and laid over.
+  vec2 gp = p + 0.5;
+  vec3 c = groundPaint(gp, ivec2(floor(gp * u_fine)));
+  vec4 mk = texture(u_tex, gp / u_size);
+  c = c * (1.0 - mk.a) + mk.rgb;
+#else
   vec2 i = floor(p);
   vec2 f = p - i;
-  ivec2 ci = ivec2(cell);
   vec2 d = vec2(bayer(ci), bayer(ci.yx + ivec2(2, 1)));
   vec3 c00 = tex(i);
   vec3 c10 = tex(i + vec2(1.0, 0.0));
@@ -547,6 +577,7 @@ void main() {
   vec2 pk = step(d, f);
   vec3 dth = pk.y < 0.5 ? (pk.x < 0.5 ? c00 : c10) : (pk.x < 0.5 ? c01 : c11);
   if (like(dth, c) > 0.5) c = dth;
+#endif
   // The material under the cell, from its colour: grass is green, tarmac is grey, the rest dirt.
   float mx = max(c.r, max(c.g, c.b));
   float sat = mx - min(c.r, min(c.g, c.b));
@@ -626,7 +657,7 @@ void main() {
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
     e *= level(u_lgz[n], gh, dist);
-    l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
+    l += u_lcol[n] * clamp(lround(e * (0.4 + 0.6 * e) * lp.w, 4.0, b), 0.0, 1.5)
       * lightOpen(wp, 0.0, lp.xy, 3.0, clamp(lp.z * 0.35, 4.0, 12.0), b);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
@@ -635,7 +666,7 @@ void main() {
     if (f <= 0.0) continue;
     float far = distance(wp, u_cone[n].xy);
     f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
-    l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
+    l += vec3(1.0, 0.93, 0.74) * clamp(lround(f, 4.0, b), 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }
   vec3 q = min(vec3(1.1), l);
@@ -647,13 +678,13 @@ void main() {
     // where things stand close (the foot of a wall, a gap between two buildings)
     vec4 gi = traced(wp);
     // (a little is let go first, so open ground far from anything is clean, not stippled)
-    back = floor(min(vec3(0.9), max(vec3(0.0), gi.rgb * 2.0 - 0.05)) * 6.0 + b) / 6.0;
-    occ = 1.0 - 0.6 * (1.0 - floor(min(1.0, gi.a * 1.1) * 8.0 + b) / 8.0);
+    back = lstep(min(vec3(0.9), max(vec3(0.0), gi.rgb * 2.0 - 0.05)), 6.0, b);
+    occ = 1.0 - 0.6 * (1.0 - lstep(min(1.0, gi.a * 1.1), 8.0, b));
     if (u_gik > 1.5) {
       o = vec4(gi.rgb * 2.0 + vec3(0.25 * gi.a), 1.0);
       return;
     }
-  } else back = floor(min(vec3(0.6), bounced(wp)) * 6.0 + b) / 6.0;
+  } else back = lstep(min(vec3(0.6), bounced(wp)), 6.0, b);
   c = shoulder(c * (u_amb * occ + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
   o = vec4(c, 1.0);
 }`;
@@ -690,9 +721,9 @@ void main() {
   at.y += floor(texelFetch(u_map, ivec2(clamp(floor(at), vec2(0.0), u_size - 1.0)), 0).r * 255.0 + 0.5);
 #endif
   float a = texture(u_tex, at / u_size).r;
-  if (a < 0.05 || a < bayer(ivec2(cell))) discard;
+  if (a < 0.05${SMOOTH_LIGHT ? '' : ' || a < bayer(ivec2(cell))'}) discard;
   // the far side of a deck is in deeper shade than a thrown shadow, deepest at its foot
   float deep = texture(u_deep, at / u_size).r;
   if (u_only > 0.5 && deep < 0.02) discard;
-  o = vec4(0.0, 0.0, 0.0, u_alpha * (u_only > 0.5 ? 1.2 * deep : 1.0 + 1.2 * deep));
+  o = vec4(0.0, 0.0, 0.0, u_alpha * (u_only > 0.5 ? 1.2 * deep : 1.0 + 1.2 * deep)${SMOOTH_LIGHT ? ' * min(1.0, a * 1.15)' : ''});
 }`;

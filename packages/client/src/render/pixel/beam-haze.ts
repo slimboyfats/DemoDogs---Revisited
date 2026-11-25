@@ -127,7 +127,7 @@ void main() {
     // (the air at a lamp's own height: what stands taller than that cuts the shaft)
     haze += f * lightOpen(at, 4.0, u_cone[n].xy, 5.0, 4.0, b);
   }
-  float e = floor(min(1.0, haze) * u_thick * 5.0 + b - 0.5) / 5.0;
+  float e = lround(min(1.0, haze) * u_thick, 5.0, b);
   if (e <= 0.0) discard;
   o = vec4(vec3(1.0, 0.94, 0.78) * e * 0.5, 0.0);
 }`;

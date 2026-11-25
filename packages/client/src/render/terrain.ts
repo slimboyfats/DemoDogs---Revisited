@@ -88,6 +88,11 @@ export class Field {
       }
   }
 
+  /** The coarse grid itself (for a renderer that reads between its points on its own). */
+  grid(): { gw: number; gh: number; v: Float32Array } {
+    return { gw: this.gw, gh: this.gh, v: this.v };
+  }
+
   at(x: number, y: number): number {
     const Q = Field.Q;
     // (a point off the map reads the nearest edge)
