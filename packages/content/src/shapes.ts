@@ -43,3 +43,26 @@ export function noise3(x: number, y: number, z: number): number {
   }
   return out;
 }
+
+/** A puff of a crown: where its middle is (x, y, z) and how big round it is. */
+export type Puff = readonly [number, number, number, number];
+
+/**
+ * How deep inside a crown of round puffs a point is (below 0: outside). `squash` over 1 makes
+ * the puffs flatter. Clean round shapes with nothing ragged: the plain, bold scenery is built of these.
+ */
+export function puffs(x: number, y: number, z: number, of: readonly Puff[], squash = 1): number {
+  let inside = -9;
+  for (const [cx, cy, cz, cr] of of)
+    inside = Math.max(inside, cr - Math.hypot(x - cx, y - cy, (z - cz) * squash));
+  return inside;
+}
+
+/**
+ * Which of three tones a point of a round crown takes, 0 (in shade) to 2 (lit): by how high it is
+ * between `low` and `high`, and leaning to the light at the top left, in plain bands.
+ */
+export function band(x: number, y: number, z: number, low: number, high: number): 0 | 1 | 2 {
+  const t = (z - low) / (high - low) - (x + y) * 0.035;
+  return t > 0.62 ? 2 : t > 0.3 ? 1 : 0;
+}

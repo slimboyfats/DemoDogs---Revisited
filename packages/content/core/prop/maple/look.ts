@@ -1,18 +1,16 @@
 import type { LookModule } from '@demodogs/shared';
-import { noise3 } from '../../../src/shapes';
+import { band, puffs, type Puff } from '../../../src/shapes';
 
-const CLUMPS: readonly (readonly [number, number, number, number])[] = [
-  [0, 0, 11.5, 5.2],
-  [4.4, 0.6, 10.4, 4.2],
-  [-4.2, 1.4, 10.2, 4.3],
-  [-1.2, -4.4, 10.6, 4.0],
-  [1.8, 4.4, 10.8, 3.9],
-  [3.2, -3.4, 12.2, 3.4],
-  [-2.8, 3.6, 13.0, 3.2],
-  [0.2, -0.4, 14.6, 3.4],
+/** The crown: a wide ball of leaves with three more round it. */
+const CROWN: readonly Puff[] = [
+  [0, 0, 11.6, 6.6],
+  [4.6, 0.8, 10.2, 4.6],
+  [-4.4, 1.2, 10.2, 4.6],
+  [-0.6, -4.4, 10.6, 4.4],
 ];
+const TONES = ['maple2', 'maple', 'maple3'] as const;
 
-/** A broad maple: a short forked trunk under a wide, flat crown of amber, rust and yellow. */
+/** A broad maple, plain and round: a stout trunk under a wide crown of rust, amber and yellow. */
 const look: LookModule = {
   id: 'prop.maple',
   look: {
@@ -23,17 +21,10 @@ const look: LookModule = {
       layers: 18,
       smooth: true,
       fn: (x, y, z) => {
-        const r = Math.hypot(x, y);
-        if (z < 12 && r < 1.4 - Math.max(0, z - 7) * 0.14 + Math.max(0, 1.4 - z) * 0.9)
-          return noise3(x * 3, y * 3, z * 0.6) > 0.55 ? 'bark2' : 'bark';
-        const rag = (noise3(x * 1.3 + 5, y * 1.3, z * 1.3) - 0.5) * 2.6;
-        let inside = -9;
-        for (const [cx, cy, cz, cr] of CLUMPS)
-          inside = Math.max(inside, cr + rag - Math.hypot(x - cx, y - cy, (z - cz) * 1.35));
-        if (inside < 0) return null;
-        if (inside < 1.2 && noise3(x * 2.2 + 3, y * 2.2, z * 2.2) > 0.72) return null;
-        const tone = noise3(x * 0.8 + 11, y * 0.8, z * 0.8 + 2) + (z - 11) * 0.03;
-        return tone > 0.62 ? 'maple3' : tone > 0.42 ? 'maple' : 'maple2';
+        if (puffs(x, y, z, CROWN, 1.15) >= 0) return TONES[band(x, y, z, 6, 16.5)];
+        if (z < 10 && Math.hypot(x, y) < 1.8 + Math.max(0, 1.4 - z) * 0.7)
+          return x + y > 0.6 ? 'bark2' : 'bark';
+        return null;
       },
     },
   },

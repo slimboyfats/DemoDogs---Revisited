@@ -1,7 +1,6 @@
 import type { LookModule } from '@demodogs/shared';
-import { noise3 } from '../../../src/shapes';
 
-/** A tall pine: a straight trunk and skirts of drooping boughs narrowing to a point. */
+/** A pine, plain and bold: a short trunk and four clean skirts stacked to a point. */
 const look: LookModule = {
   id: 'prop.pine',
   look: {
@@ -13,19 +12,16 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         const r = Math.hypot(x, y);
-        if (z < 19 && r < 1.25 - z * 0.05) return 'bark';
-        if (z < 3.2 || z > 21.6) return null;
-        // five skirts, each wide at its hem and drawn in under the one above
-        const tier = (z - 3.2) / 3.7;
-        const f = tier - Math.floor(tier);
-        const reach = (21.8 - z) * 0.3 + (1 - f) * 1.9;
-        // the hem is ragged: boughs stick out all round
-        const a = Math.atan2(y, x);
-        const bough = Math.sin(a * 9 + Math.floor(tier) * 1.7) * 0.5 * (1 - f);
-        const rag = (noise3(x * 1.6, y * 1.6, z * 1.2) - 0.5) * 1.2;
-        if (r > reach + bough + rag) return null;
-        const tone = noise3(x * 1.1 + 3, y * 1.1, z * 0.8) + f * 0.25;
-        return tone > 0.78 ? 'pine3' : tone > 0.5 ? 'pine2' : 'pine';
+        if (z < 4 && r < 1.4) return x + y > 0.5 ? 'bark2' : 'bark';
+        if (z < 3 || z > 21.6) return null;
+        // four skirts, each a cone wide at its hem, each smaller than the one below
+        const tier = Math.min(3, Math.floor((z - 3) / 4.4));
+        const f = (z - 3 - tier * 4.4) / (tier === 3 ? 5.4 : 4.4);
+        const reach = (6.6 - tier * 1.35) * (1 - f * 0.72);
+        if (r > reach) return null;
+        // lit on the side to the light and at the top of each skirt, dark under the hem
+        const t = f - (x + y) * 0.06;
+        return t > 0.55 ? 'pine3' : t > 0.12 ? 'pine2' : 'pine';
       },
     },
   },

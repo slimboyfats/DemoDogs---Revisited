@@ -1,6 +1,6 @@
 import type { LookModule } from '@demodogs/shared';
 
-/** A crash rail: a post at each end and a ribbed steel rail between them, rust at the feet. */
+/** A crash rail: a stout post at each end and a broad white rail with a red stripe between them. */
 const look: LookModule = {
   id: 'prop.armco',
   look: {
@@ -13,11 +13,10 @@ const look: LookModule = {
         const ax = Math.abs(x);
         if (ax > 4.5 || Math.abs(y) > 1.1) return null;
         // the posts
-        if (ax > 3.4 && ax < 4.2 && Math.abs(y) < 0.5) return z < 1.2 ? 'rust' : 'engine';
-        // the rail: two ribs with a dark groove between them, on the track side of the posts
+        if (ax > 3.3 && ax < 4.3 && Math.abs(y) < 0.5) return 'hub';
+        // the rail, on the track side of the posts
         if (z < 2.2 || z > 5.6 || Math.abs(y) < 0.4) return null;
-        if (Math.abs(z - 3.9) < 0.35) return 'cage';
-        return z > 5 ? 'chrome' : 'hub';
+        return Math.abs(z - 3.9) < 0.6 ? 'tail' : 'picket';
       },
     },
   },
