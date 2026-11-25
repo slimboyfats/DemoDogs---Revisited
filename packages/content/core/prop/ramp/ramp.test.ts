@@ -12,4 +12,9 @@ describe('prop.ramp', () => {
     expect(padTest('prop.ramp', 30, 0, 0).maxZ).toBeLessThan(1);
     expect(padTest('prop.ramp', 160, Math.PI).maxZ).toBeLessThan(1);
   });
+  it('stops a car that comes at its tall end from behind', () => {
+    const r = padTest('prop.ramp', 160, Math.PI);
+    expect(r.events).toContain('crash');
+    expect(r.car.x).toBeLessThan(r.world.oval!.cx - 80);
+  });
 });
