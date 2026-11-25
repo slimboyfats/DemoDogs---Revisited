@@ -368,6 +368,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       const sun = (this.sun ??= new SunShadow(gl));
       sun.density = fx.quality > 0.6 ? 2 : 1;
       sun.begin(view, A.reach[0]!, A.reach[1]!);
+      sun.castGround(this.relief!);
       this.stacks.cast(sun);
       sun.end(null, W, H);
       sky.cast = sun;

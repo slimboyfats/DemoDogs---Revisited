@@ -102,6 +102,44 @@ export class SunShadow {
     gl.clear(gl.DEPTH_BUFFER_BIT);
   }
 
+  /**
+   * The ground's own heights into the map, as a sheet of `STEP` px squares lifted to the ground
+   * and pushed along the sun's rays: a hill, a terrace or a raised road throws its shadow on
+   * the level beside it and on whatever stands or drives there. Between `begin` and `end`.
+   */
+  castGround(relief: ReliefLayer): void {
+    if (relief.top <= 0) return;
+    const gl = this.gl;
+    if (!this.land) {
+      const prog = compile(gl, LAND_VS, LAND_FS);
+      this.land = {
+        prog,
+        u: uniforms(gl, prog, ['u_shbox', 'u_shear', 'u_grid', 'u_relief', 'u_rgrid', 'u_rface']),
+      };
+    }
+    const { prog, u } = this.land;
+    const [sx, sy] = this.shear as unknown as [number, number];
+    const far = relief.top;
+    // the ground whose shadow can land in the map: the map's patch, and up the rays from it
+    const x0 = Math.floor((this.box[0]! - Math.max(0, sx) * far) / STEP) * STEP;
+    const y0 = Math.floor((this.box[1]! - Math.max(0, sy) * far) / STEP) * STEP;
+    const x1 = this.box[0]! + this.box[2]! + Math.max(0, -sx) * far;
+    const y1 = this.box[1]! + this.box[3]! + Math.max(0, -sy) * far;
+    const nx = Math.ceil((x1 - x0) / STEP);
+    const ny = Math.ceil((y1 - y0) / STEP);
+    gl.useProgram(prog);
+    gl.uniform4fv(u.u_shbox!, this.box);
+    gl.uniform3fv(u.u_shear!, this.shear);
+    gl.uniform4f(u.u_grid!, x0, y0, STEP, nx);
+    relief.bind(2, u.u_relief!, u.u_rgrid!, u.u_rface!);
+    gl.bindVertexArray(this.vao);
+    gl.drawArrays(gl.TRIANGLES, 0, nx * ny * 6);
+    gl.bindVertexArray(null);
+  }
+
+  private land: { prog: WebGLProgram; u: Record<string, WebGLUniformLocation | null> } | null =
+    null;
+
   /** Back to the frame itself (`target`: where it is being drawn; null for the canvas). */
   end(target: WebGLFramebuffer | null, w: number, h: number): void {
     const gl = this.gl;
@@ -191,8 +229,32 @@ export class SunShadow {
     gl.deleteFramebuffer(this.fbo);
     gl.deleteVertexArray(this.vao);
     if (this.prog) gl.deleteProgram(this.prog);
+    if (this.land) gl.deleteProgram(this.land.prog);
   }
 }
+
+/** The side of a square of the sheet the ground is drawn into the map as (art px). */
+const STEP = 4;
+
+const LAND_VS = `#version 300 es
+uniform vec4 u_shbox;
+uniform vec3 u_shear;
+uniform vec4 u_grid;   // the sheet: x, y, the side of a square, squares to the row
+${RELIEF_GLSL}
+void main() {
+  int id = gl_VertexID % 6;
+  int q = gl_VertexID / 6;
+  int nx = int(u_grid.w);
+  vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
+  vec2 p = u_grid.xy + (vec2(float(q % nx), float(q / nx)) + corner) * u_grid.z;
+  float high = max(0.0, groundAt(p));
+  vec2 g = (p + high * u_shear.xy - u_shbox.xy) / u_shbox.zw;
+  gl_Position = vec4(g * 2.0 - 1.0, 1.0 - 2.0 * min(1.0, high / u_shear.z), 1.0);
+}`;
+
+const LAND_FS = `#version 300 es
+precision highp float;
+void main() {}`;
 
 /**
  * The ground's share of the sun's shadows, on the ground's own fine grid. Four texels of the map
