@@ -47,7 +47,6 @@ const ALL = [
   'tumble-heights',
   'frostbite-quarry',
   'sunbake-canyon',
-  'fetch-park',
   'the-pit',
   'crumple-yard',
   'rustwater-wharf',

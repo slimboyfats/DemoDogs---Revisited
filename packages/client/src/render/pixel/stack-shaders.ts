@@ -311,7 +311,6 @@ uniform int u_lcount;
 uniform vec3 u_amb;    // the sky's light on flat ground (ambient plus the sun on a flat top)
 uniform float u_snow;
 uniform float u_wet;
-uniform float u_calm;  // 1: no grain, the paint as it is (a toy venue)
 #ifdef RELIEF
 uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
 uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
@@ -400,7 +399,7 @@ void main() {
   float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
   float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
   float m = grass * g + tar * t + dirt * pebble * grit;
-  c = clamp(c * mix(k * m, 1.0, u_calm), 0.0, 1.0);
+  c = clamp(c * k * m, 0.0, 1.0);
   vec2 wp = (cell + 0.5) / u_fine;
 #ifdef RELIEF
   wp.y += shift;
