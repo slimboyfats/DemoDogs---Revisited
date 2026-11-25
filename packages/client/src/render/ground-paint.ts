@@ -21,6 +21,8 @@ import {
  * runs, and which stretch of it every part of the map is nearest to.
  */
 export interface GroundPaint {
+  /** The bright look: sunny colours, plain clean roads, a mown lawn. */
+  bright: boolean;
   w: number;
   h: number;
   seed: number;
@@ -99,7 +101,7 @@ export function nearest(
 }
 
 /** Gather what the shader paints a world's ground from. */
-export function bakePaint(w: World, F: Fields): GroundPaint {
+export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
   const V = w.venue;
   const C = V.colors;
   const T = w.track;
@@ -199,6 +201,7 @@ export function bakePaint(w: World, F: Fields): GroundPaint {
     };
   }
   return {
+    bright,
     w: w.w,
     h: w.h,
     seed: V.seed,
