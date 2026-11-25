@@ -243,7 +243,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
       const k = 1 - b.age / 70;
-      L.add(b.x, b.y, b.r * 3.2, (1.3 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
+      L.add(b.x, b.y, b.r * 5, (1.3 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
     }
     for (const c of w.cars)
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
