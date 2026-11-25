@@ -11,7 +11,7 @@ import {
 import { GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { RigArt } from './bones';
 import type { Strip } from './stack';
-import { build, CAR_DETAIL, hexRgb, tones } from './strips';
+import { build, CAR_DETAIL, DETAIL, hexRgb, tones } from './strips';
 
 export interface CarArt {
   body: Strip;
@@ -167,7 +167,11 @@ export class Art {
       const L = this.look(id, 'prop');
       const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
       for (const [from, to] of Object.entries(swap ?? {})) mats[from] = mats[to]!;
-      s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
+      s = this.make(
+        (pose && L.alts?.[pose - 1]) || L.part,
+        mats,
+        L.fine ? DETAIL * L.fine : undefined,
+      );
       // at another size it is the same thing with bigger or smaller pixels
       if (!this.looks.has(id)) s.res /= sizeOfId(id)[1];
       s.res /= L.scale ?? 1;

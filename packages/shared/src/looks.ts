@@ -53,6 +53,11 @@ export interface PropLook {
    * drawn bigger, so a great chunky thing costs no more room than a small fine one.
    */
   scale?: number;
+  /**
+   * How many times finer than other props the client builds it (absent: 1), for a big thing with
+   * slopes in it, whose steps would show. It takes that many times cubed the room.
+   */
+  fine?: number;
 }
 
 /**

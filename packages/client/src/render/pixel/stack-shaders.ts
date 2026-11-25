@@ -193,8 +193,35 @@ void main() {
     c = vec4(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255), 255.0) / 255.0;
   } else {
     t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
-    c = texelFetch(u_atlas, t, 0);
-    if (c.a < 0.5) discard;
+    if (u_smooth > 0.5) {
+      // smooth edges: how much of the four texels round this point is solid, each by how near it
+      // is, and the point is drawn where that is half or more. A row of steps comes out as one
+      // straight slanted edge, and it takes the colour of the nearest solid texel
+      vec2 p = v_tex - 0.5;
+      vec2 i0 = floor(p);
+      vec2 f = p - i0;
+      float cover = 0.0;
+      float best = -1.0;
+      ivec2 size = ivec2(v_uv.zw);
+      for (int k = 0; k < 4; k++) {
+        ivec2 d = ivec2(k & 1, k >> 1);
+        ivec2 q = ivec2(i0) + d;
+        if (q.x < 0 || q.y < 0 || q.x >= size.x || q.y >= size.y) continue;
+        float w = (d.x == 1 ? f.x : 1.0 - f.x) * (d.y == 1 ? f.y : 1.0 - f.y);
+        vec4 s = texelFetch(u_atlas, ivec2(v_uv.xy) + q, 0);
+        if (s.a < 0.5) continue;
+        cover += w;
+        if (w > best) {
+          best = w;
+          c = s;
+          t = ivec2(v_uv.xy) + q;
+        }
+      }
+      if (cover < 0.5) discard;
+    } else {
+      c = texelFetch(u_atlas, t, 0);
+      if (c.a < 0.5) discard;
+    }
   }
   if (v_tint > 0.5) {
     // an outline copy: one flat colour, unlit
@@ -382,6 +409,19 @@ void main() {
   vec2 pk = step(d, f);
   vec3 dth = pk.y < 0.5 ? (pk.x < 0.5 ? c00 : c10) : (pk.x < 0.5 ? c01 : c11);
   if (like(dth, c) > 0.5) c = dth;
+  if (u_calm > 0.5) {
+    // a toy's ground has no steps in it: the four texels run into each other over the middle
+    // half of the gap between them, at the screen's own fineness, so a painted edge on a slant
+    // is a smooth line and a flat colour stays flat
+    vec2 sp = v_uv * u_size - 0.5;
+#ifdef RELIEF
+    sp.y += shift;
+#endif
+    vec2 si = floor(sp);
+    vec2 sf = smoothstep(0.25, 0.75, sp - si);
+    c = mix(mix(tex(si), tex(si + vec2(1.0, 0.0)), sf.x),
+            mix(tex(si + vec2(0.0, 1.0)), tex(si + vec2(1.0, 1.0)), sf.x), sf.y);
+  }
   // The material under the cell, from its colour: grass is green, tarmac is grey, the rest dirt.
   float mx = max(c.r, max(c.g, c.b));
   float sat = mx - min(c.r, min(c.g, c.b));

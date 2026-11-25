@@ -74,6 +74,69 @@ interface Sampled {
   names: string[];
   grid: Uint8Array;
   lit: Uint8Array;
+  /** The same for a thing made as a toy (`calmLight`); worked out when first wanted. */
+  calm?: Uint8Array;
+}
+
+/** Ways up into the sky that `calmLight` looks along: sideways steps per step up. */
+const RAYS: readonly (readonly [number, number])[] = [
+  [0, 0],
+  [0.6, 0],
+  [-0.6, 0],
+  [0, 0.6],
+  [0, -0.6],
+];
+
+/**
+ * How lit each voxel of a toy is: every face one even tone (a top light, a side darker), a little
+ * darker in the corners where it meets another face, a little lighter along its outer edges.
+ * Nothing in steps and no two neighbours on a face apart, so a face reads as one smooth panel.
+ * What is inside takes the tone of what is over it.
+ */
+function calmLight(S: Sampled, st: number): Uint8Array {
+  const { cw, ch, n, grid } = S;
+  const out = new Uint8Array(cw * ch * n);
+  const solid = (x: number, y: number, z: number): boolean =>
+    x >= 0 && y >= 0 && z >= 0 && x < cw && y < ch && z < n && grid[(z * ch + y) * cw + x] !== 0;
+  for (let z = n - 1; z >= 0; z--)
+    for (let y = 0; y < ch; y++)
+      for (let x = 0; x < cw; x++) {
+        const i = (z * ch + y) * cw + x;
+        if (!grid[i]) continue;
+        const top = !solid(x, y, z + 1);
+        if (
+          !top &&
+          solid(x + 1, y, z) &&
+          solid(x - 1, y, z) &&
+          solid(x, y + 1, z) &&
+          solid(x, y - 1, z)
+        ) {
+          out[i] = out[i + cw * ch]!;
+          continue;
+        }
+        // how much of what is beside and above it is open air
+        let open = 0;
+        for (let dz = 0; dz <= 2; dz++)
+          for (let dy = -2; dy <= 2; dy++)
+            for (let dx = -2; dx <= 2; dx++)
+              if (!solid(x + dx * st, y + dy * st, z + dz * st)) open++;
+        // (a flat top in the open sees 50 of the 75, the middle of a wall 30)
+        const air = open / (top ? 50 : 30);
+        const shade = 0.62 + 0.38 * Math.min(1, air);
+        const edge = Math.max(0, Math.min(1, (air - 1.08) * 4)) * 0.09;
+        // and how much of the sky further up is hidden by the thing itself: under a barrel, a
+        // roof or a crown it lies in soft shade (straight up and leaning each way, far first)
+        let hid = 0;
+        for (const [rx, ry] of RAYS)
+          for (let k = 3; k <= 14; k++)
+            if (solid(x + Math.round(rx * k * st), y + Math.round(ry * k * st), z + k * st)) {
+              hid += 1 - (k - 3) / 16;
+              break;
+            }
+        const under = 1 - 0.34 * (hid / RAYS.length);
+        out[i] = Math.round(Math.min(1, ((top ? 0.86 : 0.6) * shade + edge) * under) * 255);
+      }
+  return out;
 }
 
 const sampled = new WeakMap<Part, Map<number, Sampled>>();
@@ -213,7 +276,8 @@ export function build(
   clean = false,
 ): Strip {
   const S = sample(part, res);
-  const { cw, ch, n, names, lit } = S;
+  const { cw, ch, n, names } = S;
+  const lit = clean ? (S.calm ??= calmLight(S, Math.max(1, Math.round(res / DETAIL)))) : S.lit;
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
   const W = cw * cols;
   const H = ch * Math.ceil(n / cols);

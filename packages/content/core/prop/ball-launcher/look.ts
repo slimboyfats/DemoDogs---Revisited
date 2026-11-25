@@ -31,6 +31,7 @@ const look: LookModule = {
   look: {
     kind: 'prop',
     scale: 3.6,
+    fine: 2,
     materials: {
       launch: ['#d8a400', '#ffd000', '#ffe866'],
       launch2: ['#9c7400', '#d09c00', '#f0c020'],
