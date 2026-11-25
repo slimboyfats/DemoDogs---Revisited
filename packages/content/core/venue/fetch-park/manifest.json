@@ -33,10 +33,10 @@
     ]
   },
   "colors": {
-    "ground": "#86bf3a",
-    "ground2": "#98cd46",
+    "ground": "#9fba46",
+    "ground2": "#b8c54a",
     "dirt": "#c2a06a",
-    "outside": "#4c8a2e",
+    "outside": "#6a9434",
     "terrain": "grass",
     "style": "toy",
     "paths": [
@@ -74,8 +74,8 @@
       "items": [
         {
           "prop": "prop.ball-launcher",
-          "x": -357,
-          "y": 128,
+          "x": -372,
+          "y": 129,
           "rot": 0.145
         },
         {
@@ -115,37 +115,37 @@
           "rot": 1.375
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": -155,
           "y": 61,
           "rot": 0.175
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": 206,
           "y": 114,
           "rot": 0.175
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": -71,
           "y": 106,
           "rot": 0.175
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": 69,
           "y": -113,
           "rot": 0.175
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": 238,
           "y": -63,
           "rot": 0.175
         },
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "x": -190,
           "y": 4,
           "rot": 0.175
@@ -215,7 +215,7 @@
     },
     {
       "rule": "along",
-      "at": [0.492, 0.57, 0.619, 0.665],
+      "at": [0.486, 0.549, 0.609, 0.668],
       "items": [
         {
           "prop": "prop.paw-pad"
@@ -233,8 +233,8 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.0011,
-      "clear": 7,
+      "perArea": 0.0004,
+      "clear": 9,
       "items": [
         {
           "prop": "prop.daisies",
@@ -244,11 +244,11 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00016,
+      "perArea": 0.00022,
       "clear": 14,
       "items": [
         {
-          "prop": "prop.bush",
+          "prop": "prop.toy-bush",
           "weight": 1
         }
       ]

@@ -321,28 +321,17 @@ export const MOWN = 30;
  * daisy here and there and nothing else. No ledges, no bare earth, no shade.
  */
 export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
-  // broad soft patches of a lighter green, the mower's stripes only just there, and tufts: a
-  // deeper or a brighter square of grass here and there, two art px across
+  // the lawn runs from one green to the other in broad soft patches, sunnier here and deeper
+  // there right across the park, the mower's stripes only just showing
   const a = F.big.at(x, y) * 0.6 + F.mid.at(x, y) * 0.4;
-  const C = a > 0.56 ? G2 : G;
-  let k = 1;
-  if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.025;
-  // the lawn is laid in squares three art px across, each a touch lighter or deeper
-  k *= 0.965 + 0.07 * hash2(Math.floor(x / 3), Math.floor(y / 3), F.seed + 3);
-  const tuft = hash2(x >> 1, y >> 1, F.seed + 7);
-  if (tuft > 0.975) k *= 0.9;
-  else if (tuft < 0.03) k *= 1.07;
-  const h = hash2(x, y, F.seed);
-  if (h > 0.9988) {
-    // a daisy
-    out[0] = 250;
-    out[1] = 248;
-    out[2] = 236;
-    return;
-  }
-  out[0] = clamp255(C[0] * k);
-  out[1] = clamp255(C[1] * k);
-  out[2] = clamp255(C[2] * k);
+  const t = Math.max(0, Math.min(1, (a - 0.36) / 0.3));
+  let k = 0.93 + 0.14 * F.big.at(x * 0.45 + 300, y * 0.45 + 170);
+  if (Math.floor((x + y * 0.35) / MOWN) & 1) k *= 1.02;
+  // it is laid in squares three art px across, each a touch lighter or deeper
+  k *= 0.975 + 0.05 * hash2(Math.floor(x / 3), Math.floor(y / 3), F.seed + 3);
+  out[0] = clamp255((G[0] + (G2[0] - G[0]) * t) * k);
+  out[1] = clamp255((G[1] + (G2[1] - G[1]) * t) * k);
+  out[2] = clamp255((G[2] + (G2[2] - G[2]) * t) * k);
 }
 
 /**
@@ -534,7 +523,7 @@ export interface RoadPaint {
 }
 
 /** A toy road's tarmac, and how wide its kerbs are. */
-const TOY_TAR: Rgb = [0x62, 0x66, 0x72];
+const TOY_TAR: Rgb = [0x8a, 0x86, 0x92];
 const TOY_KERB = 8;
 const TOY_KERB_FROM = 0.08;
 

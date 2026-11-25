@@ -21,10 +21,10 @@ const look: LookModule = {
   id: 'prop.pond',
   look: {
     kind: 'prop',
-    scale: 2.6,
+    scale: 3.5,
     materials: {
-      pond: ['#1d59a8', '#2a72cc', '#3a8ae0'],
-      pond2: ['#2a74c4', '#3a8fe0', '#58a9ee'],
+      pond: ['#2468c0', '#2f80dc', '#4096ee'],
+      pond2: ['#3384d8', '#479cee', '#66b4f8'],
       pondlit: ['#6fb6ee', '#8fcaf6', '#c4e6fc'],
       bank: ['#4a3a22', '#66502e', '#7d653c'],
       reed: ['#2f6a2a', '#3f8a34', '#62b048'],
@@ -36,7 +36,7 @@ const look: LookModule = {
     part: {
       w: 58,
       h: 38,
-      layers: 6,
+      layers: 8,
       smooth: true,
       fn: (x, y, z) => {
         // the jetty: planks out over the water from the east bank, on four posts
@@ -53,14 +53,15 @@ const look: LookModule = {
         const wob = (noise3(x * 0.14 + 3, y * 0.14, 0.5) - 0.5) * 0.36;
         const r = Math.hypot(x / 27, y / 17) + wob;
         if (r > 1) return null;
-        if (r > 0.86) {
-          // the bank, and reeds standing out of it, some with a brown head
-          if (z < 0.7) return 'bank';
-          const k = hash3(Math.floor(x / 0.7) + 60, Math.floor(y / 0.7) + 60, 2);
-          if (k < 0.62) return null;
-          const top = 2 + (k - 0.62) * 9;
+        if (r > 0.8) {
+          // a narrow bank, and reeds standing in clumps along it, the tall ones with a brown head
+          if (z < 0.7) return r > 0.9 ? 'bank' : 'pond';
+          const clump = noise3(x * 0.22 + 9, y * 0.22, 7.5);
+          const k = hash3(Math.floor(x / 0.8) + 60, Math.floor(y / 0.8) + 60, 2);
+          if (clump < 0.56 || k < 0.66) return null;
+          const top = 2.4 + (k - 0.66) * 16;
           if (z > top) return null;
-          return k > 0.9 && z > top - 1.2 ? 'rush' : 'reed';
+          return k > 0.86 && z > top - 1.4 ? 'rush' : 'reed';
         }
         if (z >= 0.7) return null;
         for (const [px, py, pr, flower] of PADS) {

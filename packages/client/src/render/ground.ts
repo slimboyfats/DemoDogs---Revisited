@@ -162,7 +162,16 @@ export function makeGround(w: World): Ground {
     const fx = Math.cos(a);
     const fy = Math.sin(a);
     // (three rows of chequer between two white bars)
-    for (const bar of [-9, 7]) {
+    // (a toy road has one plain white line across it and no grid)
+    if (toy) {
+      g.save();
+      g.translate(T.x[0]!, T.y[0]!);
+      g.rotate(a);
+      g.fillStyle = 'rgba(244,244,236,0.95)';
+      g.fillRect(-1.5, -road / 2 + 5, 3, road - 10);
+      g.restore();
+    }
+    for (const bar of toy ? [] : [-9, 7]) {
       g.save();
       g.translate(T.x[0]! + fx * bar, T.y[0]! + fy * bar);
       g.rotate(a);
@@ -170,7 +179,7 @@ export function makeGround(w: World): Ground {
       g.fillRect(-1, -road / 2 + 2, 2, road - 4);
       g.restore();
     }
-    for (let k = -road / 2; k < road / 2; k += 4)
+    for (let k = -road / 2; k < (toy ? -road : road / 2); k += 4)
       for (let row = 0; row < 3; row++) {
         g.fillStyle = (k / 4 + row) & 1 ? '#111' : '#f2f2f2';
         g.save();
@@ -183,7 +192,7 @@ export function makeGround(w: World): Ground {
         g.restore();
       }
     const paint = C.road !== 'dirt';
-    for (let slot = 0; slot < w.cars.length; slot++) {
+    for (let slot = 0; slot < (toy ? 0 : w.cars.length); slot++) {
       const i = w.gridSlot(slot);
       const side = slot % 2 ? 1 : -1;
       const sn = -Math.sin(T.a[i]!);

@@ -31,6 +31,17 @@ const tile = (pose: number): Part => ({
 /** A paw boost tile: a blue paw print and two arrows painted on the road, the light running along them. */
 const look: LookModule = {
   id: 'prop.paw-pad',
-  look: { kind: 'prop', part: tile(0), alts: [tile(1), tile(2)] },
+  look: {
+    kind: 'prop',
+    scale: 1.5,
+    // (brighter than the game's other boost tiles: sky blue all over, the lit part paler)
+    materials: {
+      turbodim: ['#1a7cf0', '#2a96ff', '#4cb0ff'],
+      turbowarm: ['#2a9cff', '#48b6ff', '#7ad0ff'],
+      turbohot: ['#6fd0ff', '#96e2ff', '#c4f2ff'],
+    },
+    part: tile(0),
+    alts: [tile(1), tile(2)],
+  },
 };
 export default look;

@@ -11,15 +11,15 @@ const look: LookModule = {
     kind: 'prop',
     scale: 1.5,
     materials: {
-      hedge: ['#236f2a', '#34913a', '#58b848'],
-      hedge2: ['#3a8f34', '#55b044', '#86d458'],
-      hedge3: ['#195a24', '#236f2c', '#3a9238'],
-      hedge4: ['#124a1e', '#1a5c26', '#2a7a30'],
+      hedge: ['#2f6a22', '#42842a', '#5a9e34'],
+      hedge2: ['#5f8e2a', '#7eae36', '#a2cc48'],
+      hedge3: ['#1f4f1c', '#2b6422', '#3b7a2a'],
+      hedge4: ['#133a16', '#1a481a', '#265a20'],
     },
     part: {
       w: 12,
       h: 9,
-      layers: 11,
+      layers: 14,
       smooth: true,
       fn: (x, y, z) => {
         if (Math.abs(x) > 6 || Math.abs(y) > 3.9) return null;
@@ -27,11 +27,13 @@ const look: LookModule = {
         const qy = Math.floor((y + 20) / 1.3);
         // every column of cubes its own height, the outer ones a cube lower
         const edge = Math.abs(y) > 2.6 ? 1.3 : 0;
-        const top = 10.4 - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * 1.3;
+        // (and the hedge swells and dips along its length, in lumps)
+        const lump = Math.floor(hash3(Math.floor((x + 20) / 3), 5, 2) * 2) * 1.3;
+        const top = 11.7 + lump - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * 1.3;
         if (z > top) return null;
         const qz = Math.floor(z / 1.3);
         const t = hash3(qx, qy, qz + 3);
-        if (z > top - 1.3) return t > 0.45 ? 'hedge2' : 'hedge';
+        if (z > top - 1.3) return t > 0.25 ? 'hedge2' : 'hedge';
         if (z < 2.6) return t > 0.5 ? 'hedge4' : 'hedge3';
         return t > 0.86 ? 'hedge2' : t > 0.5 ? 'hedge' : 'hedge3';
       },

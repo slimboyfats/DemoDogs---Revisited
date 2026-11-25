@@ -388,8 +388,15 @@ export class Effects {
    * A thin puff of single cells: tyre smoke, or dust off the dirt. The air carries each cell on
    * its own, so a puff frays out cell by cell instead of fading as one blob.
    */
-  puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
-    const rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460;
+  puff(
+    x: number,
+    y: number,
+    z: number,
+    kind: 'smoke' | 'dust',
+    vx = 0,
+    vy = 0,
+    rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460,
+  ): void {
     const dust = kind === 'dust';
     const n = Math.max(1, Math.round(4 * this.quality));
     for (let i = 0; i < n; i++)
@@ -1974,6 +1981,10 @@ export class Effects {
           c.y - sn * 11 * c.size + rand(-3, 3),
           1.5,
           'dust',
+          0,
+          0,
+          // (pale, so it shows as a little cloud on the clean road and not as grit)
+          0xe8dfca,
         );
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;

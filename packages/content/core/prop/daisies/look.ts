@@ -1,5 +1,4 @@
 import type { LookModule } from '@demodogs/shared';
-import { hash3 } from '../../../src/shapes';
 
 /** A few daisies: white heads with a yellow eye on short stems, and a leaf or two. */
 const look: LookModule = {
@@ -8,24 +7,29 @@ const look: LookModule = {
     kind: 'prop',
     scale: 1.5,
     materials: {
-      daisy: ['#d9d9cf', '#f4f4ea', '#ffffff'],
-      daisyeye: ['#c99a10', '#f0c020', '#ffe060'],
-      daisyleaf: ['#2c7a2e', '#3f9c38', '#5cba48'],
+      daisy: ['#e6e6dc', '#f8f8f0', '#fcfcf4'],
+      daisyeye: ['#d8a410', '#f6c820', '#ffe060'],
+      daisyleaf: ['#3a7a26', '#4e9430', '#68ae3c'],
     },
     part: {
-      w: 6,
-      h: 6,
+      w: 8,
+      h: 8,
       layers: 3,
       smooth: true,
       fn: (x, y, z) => {
-        const gx = Math.round(x / 1.6);
-        const gy = Math.round(y / 1.6);
-        const k = hash3(gx + 9, gy + 9, 3);
-        if (k < 0.45 || Math.hypot(gx, gy) > 1.5) return null;
-        const d = Math.hypot(x - gx * 1.6, y - gy * 1.6);
-        const top = 1.4 + k;
-        if (z > top - 0.7 && z < top) return d < 0.3 ? 'daisyeye' : d < 0.75 ? 'daisy' : null;
-        return z < top - 0.7 && d < 0.3 ? 'daisyleaf' : null;
+        // three or four flowers a little apart, each a white head two cubes across round a yellow
+        // eye, on a leafy foot
+        for (const [fx, fy, fh] of [
+          [-2, -1.5, 1.6],
+          [1.5, -2.2, 1.2],
+          [2.2, 1.6, 1.8],
+          [-1.2, 2.2, 1.4],
+        ] as const) {
+          const d = Math.max(Math.abs(x - fx), Math.abs(y - fy));
+          if (z > fh - 0.8 && z < fh) return d < 0.35 ? 'daisyeye' : d < 0.95 ? 'daisy' : null;
+          if (z <= fh - 0.8 && d < 0.4) return 'daisyleaf';
+        }
+        return null;
       },
     },
   },

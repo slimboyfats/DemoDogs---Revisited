@@ -3,10 +3,10 @@ import { hash3 } from '../../../src/shapes';
 
 /** The greens of a toy tree's crown, from deep in its shade to its sunlit top. */
 export const TOY_LEAVES: Record<string, Tones> = {
-  toyleaf: ['#2f8a2c', '#46a836', '#64c244'],
-  toyleaf2: ['#48a034', '#66c040', '#94dc58'],
-  toyleaf3: ['#1d6426', '#2a7f2c', '#3c9a36'],
-  toyleaf4: ['#165222', '#1f6a28', '#2c8230'],
+  toyleaf: ['#356f22', '#4a8a2a', '#62a434'],
+  toyleaf2: ['#648f28', '#82ae34', '#a6cc46'],
+  toyleaf3: ['#22521c', '#2f6822', '#3f7e2a'],
+  toyleaf4: ['#143a16', '#1c4a1a', '#285c20'],
   toybark: ['#4e3018', '#6e4622', '#8a5a2c'],
   toybark2: ['#3a220c', '#523216', '#6a4420'],
 };
@@ -46,20 +46,27 @@ export function toyTree(
         const ay = Math.abs(cy);
         // roots run out along the four ways only
         const root =
-          cz < cube && Math.min(ax, ay) < trunk * 0.6 && Math.max(ax, ay) < flare + cube * 0.6;
+          cz < cube * 2 &&
+          Math.min(ax, ay) < trunk * 0.6 &&
+          Math.max(ax, ay) < flare + cube * (cz < cube ? 1.7 : 0.6);
         if ((ax < flare && ay < flare) || root)
           return hash3(qx + 9, qy + 9, qz) > 0.6 ? 'toybark2' : 'toybark';
       }
-      // the crown: whichever cube this point is in belongs to it if the cube's middle does
-      let lit = -9;
+      // the crown: a cube belongs to the lump it is deepest inside, if its middle is in one
+      let deep = 1;
+      let lit = 0;
       for (const [bx, by, bz, br] of balls) {
-        const d = Math.hypot(cx - bx, cy - by, (cz - bz) * 1.15);
-        // how near the top of its lump this cube is
-        if (d < br) lit = Math.max(lit, (cz - bz) / br);
+        const d = Math.hypot(cx - bx, cy - by, (cz - bz) * 1.15) / br;
+        if (d < deep) {
+          deep = d;
+          // how near the top of its lump this cube is
+          lit = (cz - bz) / br;
+        }
       }
-      if (lit === -9) return null;
-      const t = lit + (hash3(qx + 40, qy + 40, qz) - 0.5) * 0.7;
-      return t > 0.55 ? 'toyleaf2' : t > 0 ? 'toyleaf' : t > -0.45 ? 'toyleaf3' : 'toyleaf4';
+      if (deep === 1) return null;
+      // (each lump sunlit on top and dark underneath, so the crown reads as many of them)
+      const t = lit + (hash3(qx + 40, qy + 40, qz) - 0.5) * 0.5;
+      return t > 0.55 ? 'toyleaf2' : t > 0.15 ? 'toyleaf' : t > -0.3 ? 'toyleaf3' : 'toyleaf4';
     },
   };
 }
