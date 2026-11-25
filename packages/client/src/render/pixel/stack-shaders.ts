@@ -281,8 +281,8 @@ void main() {
   // it by lit and glowing things round it
   vec4 gi = u_mirror > 0.5 ? vec4(0.0, 0.0, 0.0, 1.0) : traced(v_world.xy + n.xy * 4.0 * known);
   float low = 1.0 - clamp(v_world.z / 22.0, 0.0, 1.0);
-  float occ = 1.0 - 0.6 * low * (1.0 - floor(gi.a * 8.0 + b) / 8.0);
-  vec3 back = floor(min(vec3(0.9), gi.rgb * (0.6 + 0.7 * low)) * 6.0 + b) / 6.0;
+  float occ = 1.0 - 0.6 * low * (1.0 - floor(min(1.0, gi.a * 1.1) * 8.0 + b) / 8.0);
+  vec3 back = floor(min(vec3(0.9), max(vec3(0.0), gi.rgb * (0.6 + 0.7 * low) - 0.04)) * 6.0 + b) / 6.0;
   vec3 base = u_amb * occ * (1.0 - 0.1 * sh) + u_sun * q;
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
@@ -576,8 +576,9 @@ void main() {
     // traced: light from all round, stopped by what is in between, and the sky's own light less
     // where things stand close (the foot of a wall, a gap between two buildings)
     vec4 gi = traced(wp);
-    back = floor(min(vec3(0.9), gi.rgb * 2.0) * 6.0 + b) / 6.0;
-    occ = 1.0 - 0.6 * (1.0 - floor(gi.a * 8.0 + b) / 8.0);
+    // (a little is let go first, so open ground far from anything is clean, not stippled)
+    back = floor(min(vec3(0.9), max(vec3(0.0), gi.rgb * 2.0 - 0.05)) * 6.0 + b) / 6.0;
+    occ = 1.0 - 0.6 * (1.0 - floor(min(1.0, gi.a * 1.1) * 8.0 + b) / 8.0);
     if (u_gik > 1.5) {
       o = vec4(gi.rgb * 2.0 + vec3(0.25 * gi.a), 1.0);
       return;
