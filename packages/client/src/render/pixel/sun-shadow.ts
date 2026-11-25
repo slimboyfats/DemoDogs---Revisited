@@ -247,7 +247,16 @@ void main() {
   int nx = int(u_grid.w);
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
   vec2 p = u_grid.xy + (vec2(float(q % nx), float(q / nx)) + corner) * u_grid.z;
-  float high = max(0.0, groundAt(p));
+  // The height grid is coarse, and an edge that runs aslant across it is stepped: thrown as it
+  // is, a wall's shadow has teeth. So the edge that is thrown is the ground smoothed over a few
+  // px, and never higher than the ground is (or the foot of a wall would shade itself).
+  float here = groundAt(p);
+  float round = (here * 2.0
+    + groundAt(p + vec2(6.0, 0.0)) + groundAt(p - vec2(6.0, 0.0))
+    + groundAt(p + vec2(0.0, 6.0)) + groundAt(p - vec2(0.0, 6.0))
+    + groundAt(p + vec2(4.5, 4.5)) + groundAt(p - vec2(4.5, 4.5))
+    + groundAt(p + vec2(4.5, -4.5)) + groundAt(p - vec2(4.5, -4.5))) / 10.0;
+  float high = max(0.0, min(here, round));
   vec2 g = (p + high * u_shear.xy - u_shbox.xy) / u_shbox.zw;
   gl_Position = vec4(g * 2.0 - 1.0, 1.0 - 2.0 * min(1.0, high / u_shear.z), 1.0);
 }`;

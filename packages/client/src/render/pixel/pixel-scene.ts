@@ -7,7 +7,7 @@ import type { Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
 import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
-import { queueShadows, queueStacks, type StackSink } from '../stacks';
+import { lampsOut, queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { SunShadow } from './sun-shadow';
@@ -160,6 +160,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   warm(on: boolean): void {
     this.stacks.warm = on;
   }
+  lamps(out: number): void {
+    this.stacks.lampsOut = out;
+  }
   /** Should your own car get its line this frame? */
   get rimOn(): boolean {
     return this.outline === 'on' || (this.outline === 'auto' && this.sky.now.dark >= 0.4);
@@ -265,8 +268,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
       if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
+      // (a beam from whichever head lamps are lit this instant: both, one to its side, or none)
+      const out = lampsOut(c, w.time) & 3;
+      if (out === 3) return;
       const a = (c.def.body.halfLength - 1) * c.size;
-      L.cone(c.x + Math.cos(c.h) * a, c.y + Math.sin(c.h) * a, c.h);
+      const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * c.def.body.halfWidth * 0.55 * c.size;
+      L.cone(
+        c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
+        c.y + Math.sin(c.h) * a + Math.cos(c.h) * side,
+        c.h,
+      );
     };
     lamp(w.player);
     // (a phone that is struggling gets your own beam and two more)

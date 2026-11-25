@@ -218,6 +218,8 @@ export class StackBatch {
   private sky: StackSky = FLAT;
   /** Slices queued while this is set are of something warm and moving: snow hardly lies on it. */
   warm = false;
+  /** Which lamps of the warm thing being queued are dark (bits; see `lampsOut` in stacks.ts). */
+  lampsOut = 0;
   private isReady = false;
   /** The ground the slices stand on (set by the scene before it draws). */
   relief: ReliefLayer | null = null;
@@ -337,7 +339,7 @@ export class StackBatch {
     const rows = Math.max(1, Math.ceil((zk * thick) / res - 0.02));
     const u = a.x + sliceX(s, i);
     const v = a.y + sliceY(s, i);
-    if (!tint && this.warm) tint = -1;
+    if (!tint && this.warm) tint = -1 - this.lampsOut;
     for (let k = 0; k < rows; k++)
       this.push(x, y, z + k / zk, up + k, rot, u, v, s.cw, s.ch, alpha, res, tint, T?.tx, T?.ty);
   }

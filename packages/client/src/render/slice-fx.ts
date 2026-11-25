@@ -227,6 +227,9 @@ export class Builder implements StackSink {
   warm(on: boolean): void {
     this.R.warm?.(on);
   }
+  lamps(out: number): void {
+    this.R.lamps?.(out);
+  }
   get rimOn(): boolean {
     return this.R.rimOn ?? false;
   }

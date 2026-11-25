@@ -9,7 +9,7 @@ import {
 import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
 import { blastCritters } from './critters';
-import type { Car, LooseProp, StaticProp } from './entities';
+import { LAMP, type Car, type LooseProp, type StaticProp } from './entities';
 import { topple } from './hazards';
 import { clamp } from './math';
 import { tipOff } from './docks';
@@ -20,6 +20,9 @@ import { stand } from './stand';
 import { giveWay, wouldHold } from './spans';
 import { fireproof, held, padded, shared } from './guards';
 import type { World } from './world';
+
+/** A blow on a corner harder than this smashes the lamp there. */
+const LAMP_BLOW = 3;
 
 /** Damage a car at (px, py), credited to `by`. Scaled by the mode and the car's armour. */
 export function damage(
@@ -47,6 +50,11 @@ export function damage(
   const lx = clamp(L[0] / c.size, -12, 12);
   const ly = clamp(L[1] / c.size, -6, 6);
   w.emit({ t: 'hit', car: c.index, by: by ? by.index : -1, x: px, y: py, lx, ly, amount: dealt });
+  // a blow on a corner smashes the lamp there
+  const end = c.def.body.halfLength * 0.4;
+  if (dealt > LAMP_BLOW && Math.abs(lx) > end)
+    c.lamps |=
+      lx > 0 ? (ly < 0 ? LAMP.headLeft : LAMP.headRight) : ly < 0 ? LAMP.tailLeft : LAMP.tailRight;
   if (c.hp < 74 || (dealt > 14 && lx < -7)) detach(w, c, 'rear');
   if (c.hp < 52 || (dealt > 18 && lx > 7)) detach(w, c, 'front');
   if (c.hp < 34) detach(w, c, 'top');
@@ -63,6 +71,8 @@ export function damage(
 export function detach(w: World, c: Car, part: CarPart): void {
   if (!c.has[part]) return;
   c.has[part] = false;
+  if (part === 'front') c.lamps |= LAMP.headLeft | LAMP.headRight;
+  if (part === 'rear') c.lamps |= LAMP.tailLeft | LAMP.tailRight;
   const off =
     part === 'front'
       ? c.def.body.halfLength + 0.5
@@ -120,6 +130,7 @@ export function respawn(w: World, c: Car): void {
   if (!T) return;
   const i = (c.idx - 2 + T.n) % T.n;
   c.has = { front: true, rear: true, top: true };
+  c.lamps = 0;
   c.hp = 100;
   c.wrecked = false;
   c.buried = false;
