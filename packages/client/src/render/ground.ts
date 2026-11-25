@@ -17,7 +17,9 @@ import {
   paintWilds,
   rgbOf,
   terrainOf,
+  type Rgb,
 } from './terrain';
+import { bakePaint, toneAt, type GroundPaint } from './ground-paint';
 
 const TAU = Math.PI * 2;
 
@@ -51,7 +53,23 @@ export interface Ground {
   g: CanvasRenderingContext2D;
   /** The box painted since a renderer last copied the ground (x0, y0, x1, y1), or null. */
   dirty: [number, number, number, number] | null;
+  /**
+   * Set when the country and the road are not on the canvas at all: the renderer paints them
+   * itself from this, as fine as the screen is, and the canvas holds only the marks laid over
+   * them (clear where there are none).
+   */
+  paint: GroundPaint | null;
+  /** About what colour the ground is at (x, y), marks aside. */
+  tone(x: number, y: number): Rgb;
 }
+
+/**
+ * Whether new grounds leave the country and the road to the renderer (`Ground.paint`). The pixel
+ * engine turns it on; the canvas renderer reads the whole ground from the canvas, as do tests.
+ */
+export const groundMode = { shader: false };
+/** The most samples a road's line may have for the shader to paint it (one texel a sample). */
+const MOST_SAMPLES = 4096;
 
 /** Note that the box around (x, y) with half-size r was painted. */
 export function markGround(g: Ground, x: number, y: number, r: number): void {
@@ -136,16 +154,20 @@ export function makeGround(w: World): Ground {
   const up = (i: number) => D !== null && !!T && D[i % T.n]! > 3;
   // the country, the road and the bowl, a pixel at a time
   const F = makeFields(w.w, w.h, V.seed);
-  const img = g.createImageData(w.w, w.h);
-  paintTerrain(img.data, w.w, w.h, C, F);
-  if (T) {
-    paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
-    if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
-    paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
-    paintLanes(img.data, w);
+  const bare = groundMode.shader && (!T || T.n <= MOST_SAMPLES);
+  const paint = bare ? bakePaint(w, F) : null;
+  if (!bare) {
+    const img = g.createImageData(w.w, w.h);
+    paintTerrain(img.data, w.w, w.h, C, F);
+    if (T) {
+      paintWilds(img.data, w.w, w.h, T, w.road / 2 + 120, w.road / 2 + 380, C, V.seed);
+      if (D) paintGully(img.data, w.w, w.h, T, w.road, C, V.seed, up);
+      paintRoad(img.data, w.w, w.h, { T, road: w.road, colors: C, F, use: (i) => !up(i) });
+      paintLanes(img.data, w);
+    }
+    if (w.oval) paintBowl(img.data, w.w, w.h, w.oval, C, F);
+    g.putImageData(img, 0, 0);
   }
-  if (w.oval) paintBowl(img.data, w.w, w.h, w.oval, C, F);
-  g.putImageData(img, 0, 0);
   if (T) {
     const road = w.road;
     g.lineJoin = 'round';
@@ -255,6 +277,10 @@ export function makeGround(w: World): Ground {
     g.stroke();
   }
   dressVerge(g, w, r, F);
+  if (paint) {
+    const P = paint;
+    return { cv, g, dirty: null, paint, tone: (x, y) => toneAt(w, P, F, x, y) };
+  }
   // a little grain per art pixel; the fine grain (blades, gravel, pebbles) is the shader's
   const id = g.getImageData(0, 0, w.w, w.h);
   const px = id.data;
@@ -265,7 +291,15 @@ export function makeGround(w: World): Ground {
     px[i + 2] = px[i + 2]! + n;
   }
   g.putImageData(id, 0, 0);
-  return { cv, g, dirty: null };
+  const tone = (x: number, y: number): Rgb => {
+    const x0 = Math.max(0, Math.min(cv.width - 4, Math.round(x) - 2));
+    const y0 = Math.max(0, Math.min(cv.height - 4, Math.round(y) - 2));
+    const d = g.getImageData(x0, y0, 4, 4).data;
+    const out: Rgb = [0, 0, 0];
+    for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) out[c]! += d[i + c]! / 16;
+    return out;
+  };
+  return { cv, g, dirty: null, paint: null, tone };
 }
 
 /**

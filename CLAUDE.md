@@ -115,9 +115,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Custom tracks are data, not content.** A track from the track creator is a `TrackFile` (shared/track-file.ts);
   `installTrack` (sim/custom.ts) turns it into a venue in a copy of the content. It names props by id and must keep
   loading when ids go: unknown ones are left out, never an error. Every prop is placeable; nothing is added per prop.
-- **The ground is painted once, per pixel** (client `render/terrain.ts`, then decals in `render/ground.ts`). A venue's
-  `colors.terrain` (grass, dirt, sand, snow, gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are
-  optional and looks only, so the sim never reads them.
+- **The ground is painted in the shader**, as fine as the screen is (client `render/pixel/ground-paint-glsl.ts`,
+  from what `render/ground-paint.ts` gathers: the noise, the road's line, what is nearest). The ground canvas holds
+  only marks laid over it (decals in `render/ground.ts`, skids, scorches), clear where there are none. The same
+  painter for a map, one texel to the art pixel, is `render/terrain.ts`: the canvas fallback and `?ground=map` use
+  it, so a change to how the ground looks is made in both. A venue's `colors.terrain` (grass, dirt, sand, snow,
+  gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are optional and looks only, so the sim never
+  reads them. Light is smooth and shadows soft-edged; `?light=bands` is the older dithered look.
 - **The ground has height** where a venue has `relief` (hills under the road, sheer terraces beyond it): `Relief`
   (sim/relief.ts) is the one height map. The sim uses it for slopes, faces a car cannot climb and edges it drives off;
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map

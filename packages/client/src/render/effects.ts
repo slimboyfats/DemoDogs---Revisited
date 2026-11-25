@@ -571,25 +571,13 @@ export class Effects {
    * grass smokes olive, one on dirt tan and one on the road grey (mudders' soot). Four shades.
    */
   private dustTones(x: number, y: number): readonly number[] {
-    const cv = this.ground.cv;
-    const x0 = Math.max(0, Math.min(cv.width - 4, Math.round(x) - 2));
-    const y0 = Math.max(0, Math.min(cv.height - 4, Math.round(y) - 2));
-    let d: Uint8ClampedArray;
+    let t: readonly number[];
     try {
-      d = this.ground.g.getImageData(x0, y0, 4, 4).data;
+      t = this.ground.tone(x, y);
     } catch {
       return SMOKE_TONES;
     }
-    let R = 0;
-    let G = 0;
-    let B = 0;
-    for (let i = 0; i < d.length; i += 4) {
-      R += d[i]!;
-      G += d[i + 1]!;
-      B += d[i + 2]!;
-    }
-    const n = d.length / 4;
-    const base = [(R / n + 0x62) / 2, (G / n + 0x5c) / 2, (B / n + 0x58) / 2];
+    const base = [(t[0]! + 0x62) / 2, (t[1]! + 0x5c) / 2, (t[2]! + 0x58) / 2];
     return [0.6, 0.75, 0.9, 1.05].map(
       (k) =>
         (Math.min(255, Math.round(base[0]! * k)) << 16) |

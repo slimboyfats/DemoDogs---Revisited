@@ -1,5 +1,5 @@
 import { compile, texture, uniforms } from './gl';
-import { GROUND_VS } from './stack-shaders';
+import { GROUND_VS, SMOOTH_LIGHT } from './stack-shaders';
 import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
 import { SUN_BIAS, SUN_GLSL, SUN_TOP } from './sun-glsl';
@@ -308,7 +308,7 @@ void main() {
   float c = step(lim, (1.0 - texelFetch(u_sh, t + ivec2(0, 1), 0).r) * u_shear.z);
   float d = step(lim, (1.0 - texelFetch(u_sh, t + ivec2(1, 1), 0).r) * u_shear.z);
   float cov = mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
-  if (cov < 0.04 || cov < bayer(ivec2(cell))) discard;
+  if (cov < 0.04${SMOOTH_LIGHT ? '' : ' || cov < bayer(ivec2(cell))'}) discard;
   // shade is the sky's light without the sun's: a little blue
-  o = vec4(vec3(0.0, 0.01, 0.05) * u_alpha, u_alpha);
+  o = vec4(vec3(0.0, 0.01, 0.05) * u_alpha, u_alpha)${SMOOTH_LIGHT ? ' * cov' : ''};
 }`;
