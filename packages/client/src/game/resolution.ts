@@ -37,7 +37,7 @@ interface Store {
 
 /**
  * How sharp the game is drawn. AUTO starts at full and steps down by itself when the device keeps
- * falling behind (and stays down for the visit); FULL never steps down; LOW starts at the bottom.
+ * falling behind, and steps back up when it has run easily for a while; FULL never steps down; LOW starts at the bottom.
  * The choice is saved on the device; `?res=auto|full|low` picks one for a visit without saving.
  */
 export class Resolution {
@@ -78,6 +78,13 @@ export class Resolution {
     if (this.mode !== 'auto') return false;
     if (this.dropped >= resSteps(dpr, shortCss).length - 1) return false;
     this.dropped++;
+    return true;
+  }
+
+  /** AUTO only: go back up a step if one was dropped. True when the picture has to be laid out again. */
+  rise(): boolean {
+    if (this.mode !== 'auto' || this.dropped <= 0) return false;
+    this.dropped--;
     return true;
   }
 
