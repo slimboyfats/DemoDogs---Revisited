@@ -1,4 +1,4 @@
-import type { LookModule } from '@demodogs/shared';
+import { withFinish, type LookModule } from '@demodogs/shared';
 import { BOX, BOX_TONES, box } from '../../../src/docks';
 
 /** A red container stacked on top of another: the same box, a container's height up. */
@@ -7,12 +7,16 @@ const look: LookModule = {
   look: {
     kind: 'prop',
     materials: BOX_TONES,
-    part: {
-      ...BOX,
-      layers: BOX.layers * 2,
-      smooth: true,
-      fn: (x, y, z) => box(x, y, z - BOX.layers, 'boxr', 'boxr2'),
-    },
+    // (bare painted steel: every face of it glints)
+    part: withFinish(
+      {
+        ...BOX,
+        layers: BOX.layers * 2,
+        smooth: true,
+        fn: (x, y, z) => box(x, y, z - BOX.layers, 'boxr', 'boxr2'),
+      },
+      (_x, _y, _z, m) => (m === 'black' ? null : 'metal'),
+    ),
   },
 };
 export default look;

@@ -1,4 +1,4 @@
-import type { Part, Tones } from '@demodogs/shared';
+import { finishOf, type Finish, type Part, type Tones } from '@demodogs/shared';
 import type { Strip } from './stack';
 
 /**
@@ -152,6 +152,31 @@ function sample(part: Part, res: number): Sampled {
   return out;
 }
 
+/** How each finish shines: the stack shader's 0 dull, 1 painted, 2 metal, 3 polished. */
+export const FINISH_GLOSS: Readonly<Record<Exclude<Finish, 'glow'>, number>> = {
+  matte: 0,
+  paint: 1,
+  metal: 2,
+  chrome: 3,
+  glass: 3,
+};
+
+/**
+ * How a named material glows (0 to 7) and shines (0 to 3): by its own finish if its name carries
+ * one (`paintr@metal`), or else the way the palette's lists say its colour does.
+ */
+export function shineOf(
+  name: string,
+  glows?: Readonly<Record<string, number>>,
+  glosses?: Readonly<Record<string, number>>,
+): [glow: number, gloss: number] {
+  if (!name) return [0, 0];
+  const { material: m, finish } = finishOf(name);
+  if (finish === 'glow') return [7, glosses?.[m] ?? 0];
+  if (finish) return [0, FINISH_GLOSS[finish]];
+  return [glows?.[m] ?? 0, glosses?.[m] ?? 0];
+}
+
 /** A part as a strip in the given materials, `res` texels to the art pixel. */
 export function build(
   part: Part,
@@ -168,15 +193,17 @@ export function build(
   cv.width = W;
   cv.height = H;
   const px = new Uint8ClampedArray(W * H * 4);
-  const rgb = names.map((m) => {
+  // (a name may carry a finish of its own, `paintr@metal`: the colour is the material's)
+  const told = names.map((m) => finishOf(m));
+  const rgb = told.map(({ material: m }) => {
     if (m && !mats[m]) throw new Error(`no material ${m}`);
     return m ? mats[m]!.map(hexRgb) : [];
   });
   // which of its materials glow (lamps, lenses), and so which texels: kept beside the pixels
-  const shine = names.map((m) => (m && glows?.[m]) || 0);
+  const shine = names.map((m) => shineOf(m, glows, glosses)[0]);
   const glow = shine.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
   // and which shine in the light (paint, metal, chrome and glass)
-  const sheen = names.map((m) => (m && glosses?.[m]) || 0);
+  const sheen = names.map((m) => shineOf(m, glows, glosses)[1]);
   const gloss = sheen.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
   const c = [0, 0, 0];
   for (let z = 0; z < n; z++)

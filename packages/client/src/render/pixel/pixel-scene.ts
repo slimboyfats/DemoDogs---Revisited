@@ -12,6 +12,7 @@ import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { SunShadow } from './sun-shadow';
 import { LightBlock } from './light-block';
+import { TracedLight } from './traced-light';
 import { BeamHaze } from './beam-haze';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
@@ -91,6 +92,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   /** Lights throw shadows too: what stands in their way is mapped each frame there is a light. */
   lightCast = true;
   private block: LightBlock | null = null;
+  /**
+   * Light traced across the frame (see TracedLight): what lit and glowing things throw on what
+   * is round them, and shade where the sky is shut out. Off: the sun's one bounce, as before.
+   */
+  traced = true;
+  /** Flames are light of their own in the traced light (FLAME LIGHT when paused, `?flames=0`). */
+  flames = true;
+  /** Show the traced light's field itself in place of the ground (to look at it). */
+  showTraced = false;
+  private field: TracedLight | null = null;
   private haze: BeamHaze | null = null;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
@@ -234,7 +245,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
       const k = 1 - b.age / 70;
-      L.add(b.x, b.y, b.r * 3.2, (1.3 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
+      L.add(b.x, b.y, b.r * 7, (1.8 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
     }
     for (const c of w.cars)
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
@@ -446,9 +457,31 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       const block = (this.block ??= new LightBlock(gl));
       block.begin(view);
       this.stacks.block(block);
+      // (the flames too, as light: the traced light takes its shape from them)
+      if (this.traced && this.flames && fx.quality > 0.6) this.gas?.emit(block.box);
       block.end(null, W, H);
       sky.block = block;
-    } else sky.block = undefined;
+      // (the rays are walked while nothing else is bound: the frame's own target comes after)
+      if (this.traced && fx.quality > 0.6) {
+        const field = (this.field ??= new TracedLight(gl));
+        const k = cast ? this.shade : 0;
+        field.trace(
+          block,
+          this.lights,
+          this.relief!,
+          cast ? this.sun : null,
+          [A.sun[0]! * k, A.sun[1]! * k, A.sun[2]! * k],
+          A.glow,
+          null,
+          W,
+          H,
+        );
+        sky.traced = field;
+      } else sky.traced = undefined;
+    } else {
+      sky.block = undefined;
+      sky.traced = undefined;
+    }
 
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
@@ -468,7 +501,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       gl.depthMask(true);
     } else gl.disable(gl.DEPTH_TEST);
     const groundSky = { ground: A.ground, snow: sky.snow, wet: sky.wet };
-    this.groundLayer!.draw(view, this.lights, groundSky, blocked ? this.block : null, bounce);
+    this.groundLayer!.draw(
+      view,
+      this.lights,
+      groundSky,
+      blocked ? this.block : null,
+      bounce,
+      sky.traced,
+      this.showTraced,
+    );
     gl.disable(gl.DEPTH_TEST);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is

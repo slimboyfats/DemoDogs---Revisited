@@ -4,6 +4,7 @@ import { compile, texture, uniforms } from './gl';
 import { groundFs, GROUND_VS } from './stack-shaders';
 import type { ReliefLayer } from './relief-layer';
 import type { LightBlock } from './light-block';
+import type { TracedLight } from './traced-light';
 import type { Lights } from './lighting';
 import { depthRange, type StackView } from './stack-batch';
 
@@ -53,6 +54,8 @@ export class GroundLayer {
       'u_lmk',
       'u_lc',
       'u_bounce',
+      'u_gi',
+      'u_gik',
     ]);
     this.vao = gl.createVertexArray();
   }
@@ -81,6 +84,9 @@ export class GroundLayer {
     sky?: { ground: Float32Array; snow: number; wet: number },
     block?: LightBlock | null,
     bounce?: readonly [number, number, number],
+    /** The frame's traced light (needs `block`), and whether to show the field itself. */
+    traced?: TracedLight | null,
+    show = false,
   ): void {
     const gl = this.gl;
     const u = this.u;
@@ -113,6 +119,14 @@ export class GroundLayer {
       gl.activeTexture(gl.TEXTURE5);
       gl.bindTexture(gl.TEXTURE_2D, this.tex);
       gl.uniform1i(u.u_lc, 5);
+    }
+    const gi = block ? traced : null;
+    gl.uniform1f(u.u_gik, gi ? (show ? 2 : 1) : 0);
+    if (gi) gi.bind(6, u.u_gi);
+    else {
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, this.tex);
+      gl.uniform1i(u.u_gi, 6);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);

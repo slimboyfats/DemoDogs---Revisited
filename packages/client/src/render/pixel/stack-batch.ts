@@ -6,6 +6,7 @@ import type { ReliefLayer } from './relief-layer';
 import { CAST_FS, CAST_VS, STACK_FS, STACK_VS } from './stack-shaders';
 import { BLOCK_FS, BLOCK_VS } from './light-block-glsl';
 import type { LightBlock } from './light-block';
+import type { TracedLight } from './traced-light';
 import type { SunShadow } from './sun-shadow';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint. */
@@ -29,6 +30,8 @@ export interface StackSky {
   shade?: number | undefined;
   /** What stands in the lights' way this frame (left out: lights throw no shadows). */
   block?: LightBlock | undefined;
+  /** The frame's traced light, over the same ground as `block` (left out: none). */
+  traced?: TracedLight | undefined;
 }
 
 const NAMES = [
@@ -66,6 +69,8 @@ const NAMES = [
   'u_sh',
   'u_shbox',
   'u_shear',
+  'u_gi',
+  'u_gik',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -490,11 +495,15 @@ export class StackBatch {
     const gl = this.gl;
     if (!this.blocker) {
       const prog = compile(gl, BLOCK_VS, BLOCK_FS);
-      this.blocker = { prog, u: uniforms(gl, prog, ['u_atlas', 'u_lmbox']) };
+      this.blocker = { prog, u: uniforms(gl, prog, ['u_atlas', 'u_lmbox', 'u_aux', 'u_lamps']) };
     }
     const { prog, u } = this.blocker;
     gl.useProgram(prog);
     gl.uniform4fv(u.u_lmbox!, map.box);
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this.atlas.auxTex ?? this.atlas.tex);
+    gl.uniform1i(u.u_aux!, 1);
+    gl.uniform1f(u.u_lamps!, this.atlas.auxTex ? 1 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.atlas.tex);
     gl.uniform1i(u.u_atlas!, 0);
@@ -640,6 +649,14 @@ export class StackBatch {
       gl.activeTexture(gl.TEXTURE4);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(u.u_lm, 4);
+    }
+    const traced = sky.block && !mirror ? sky.traced : undefined;
+    gl.uniform1f(u.u_gik, traced ? 1 : 0);
+    if (traced) traced.bind(6, u.u_gi);
+    else {
+      gl.activeTexture(gl.TEXTURE6);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u.u_gi, 6);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
