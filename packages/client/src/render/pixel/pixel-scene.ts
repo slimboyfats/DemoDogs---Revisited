@@ -11,6 +11,7 @@ import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { GroundLayer } from './ground-layer';
 import { SunShadow } from './sun-shadow';
+import { LightBlock } from './light-block';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
 import { ShadowMap, casts } from '../cast';
@@ -86,6 +87,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
    */
   sunCast = true;
   private sun: SunShadow | null = null;
+  /** Lights throw shadows too: what stands in their way is mapped each frame there is a light. */
+  lightCast = true;
+  private block: LightBlock | null = null;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -415,6 +419,17 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       sky.shade = 0;
     }
 
+    this.gatherLights(w, fx);
+    const lit = this.lights.count + this.lights.coneCount > 0;
+    const blocked = this.lightCast && sky.lit && lit && fx.quality > 0.5;
+    if (blocked) {
+      const block = (this.block ??= new LightBlock(gl));
+      block.begin(view);
+      this.stacks.block(block);
+      block.end(null, W, H);
+      sky.block = block;
+    } else sky.block = undefined;
+
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
     if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
@@ -425,7 +440,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.clearDepth(1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.BLEND);
-    this.gatherLights(w, fx);
     // raised ground writes its depth as it is drawn, so a bank hides what is behind it
     const raised = !!this.relief!.map;
     if (raised) {
@@ -434,7 +448,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       gl.depthMask(true);
     } else gl.disable(gl.DEPTH_TEST);
     const groundSky = { ground: A.ground, snow: sky.snow, wet: sky.wet };
-    this.groundLayer!.draw(view, this.lights, groundSky);
+    this.groundLayer!.draw(view, this.lights, groundSky, blocked ? this.block : null);
     gl.disable(gl.DEPTH_TEST);
 
     // shadows, in projected map space (x, squashed y) so mudders' quad batch draws them as is

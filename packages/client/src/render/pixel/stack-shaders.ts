@@ -14,6 +14,7 @@
 
 import { AZS, ELS } from './aux';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS } from './lighting';
+import { BLOCK_GLSL } from './light-block-glsl';
 import { FAR_DARK, FAR_SHADE } from '../relief-map';
 import { RELIEF_GLSL } from './relief-layer';
 import { SUN_GLSL } from './sun-glsl';
@@ -148,7 +149,7 @@ float beam(vec2 wp, vec4 c) {
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
   return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.15;
-}`;
+}${BLOCK_GLSL}`;
 
 export const STACK_FS = `#version 300 es
 precision highp float;
@@ -296,6 +297,9 @@ void main() {
     float f = 1.0 - d / p.z;
     // a light falls hardest on what is turned towards it
     float face = mix(1.0, 0.55 + 0.7 * max(0.0, dot(n, normalize(to))), known);
+    // (and none of it reaches what something stands in front of)
+    float open = lightOpen(v_world.xy, v_world.z, p.xy, 8.0, max(4.0, p.z * 0.35), b);
+    if (open <= 0.0) continue;
     float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
     // (and metal throws a fire's or a blast's light back in a hard glint)
@@ -307,6 +311,7 @@ void main() {
     vec4 p = u_cone[i];
     float f = beam(v_world.xy, p);
     if (f <= 0.0) continue;
+    if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
     float face = mix(1.0, 0.25 + 1.0 * max(0.0, dot(n, normalize(to))), known);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
@@ -528,11 +533,15 @@ void main() {
     float dist = length(wp - lp.xy);
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
-    l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
+      * lightOpen(wp, 0.0, lp.xy, 8.0, max(4.0, lp.z * 0.35), b);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
-    l += vec3(1.0, 0.93, 0.74) * clamp(floor(beam(wp, u_cone[n]) * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    float f = beam(wp, u_cone[n]);
+    if (f <= 0.0) continue;
+    l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
+      * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }
   vec3 q = min(vec3(0.7), l);
   c = min(vec3(1.0), c * (u_amb + q * 1.1) + q * (30.0 / 255.0));

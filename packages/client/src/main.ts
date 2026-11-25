@@ -521,6 +521,43 @@ for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
     resize();
   };
 
+// the sun, moved by hand: round the compass, and how long its shadows are (0: as the hour says).
+// The race behind the pause menu is relit as the sliders are dragged; ?sun=90,3 sets both.
+const sunHand = { turn: 0, long: 0 };
+{
+  const [a, b] = (params.get('sun') ?? safeStore()?.getItem('dd.sun') ?? '').split(',').map(Number);
+  if (Number.isFinite(a)) sunHand.turn = (((a as number) % 360) + 360) % 360;
+  if (Number.isFinite(b)) sunHand.long = Math.max(0, Math.min(6, b as number));
+}
+function showSun(): void {
+  if (scene instanceof PixelScene) {
+    scene.sky.sunTurn = (sunHand.turn * Math.PI) / 180;
+    scene.sky.sunLong = sunHand.long > 0 ? sunHand.long : null;
+  }
+  for (const r of document.querySelectorAll<HTMLInputElement>('.sunTurn'))
+    r.value = String(sunHand.turn);
+  for (const r of document.querySelectorAll<HTMLInputElement>('.sunLong'))
+    r.value = String(sunHand.long * 2);
+  for (const o of document.querySelectorAll<HTMLElement>('.sunTurnName'))
+    o.textContent = `${sunHand.turn}°`;
+  for (const o of document.querySelectorAll<HTMLElement>('.sunLongName'))
+    o.textContent = sunHand.long > 0 ? `×${sunHand.long}` : 'AUTO';
+}
+function setSun(turn: number, long: number): void {
+  sunHand.turn = turn;
+  sunHand.long = long;
+  try {
+    safeStore()?.setItem('dd.sun', `${turn},${long}`);
+  } catch {
+    // (a full or locked store: the sun stays where it was put for this visit)
+  }
+  showSun();
+}
+for (const r of document.querySelectorAll<HTMLInputElement>('.sunTurn'))
+  r.oninput = () => setSun(Number(r.value), sunHand.long);
+for (const r of document.querySelectorAll<HTMLInputElement>('.sunLong'))
+  r.oninput = () => setSun(sunHand.turn, Number(r.value) / 2);
+
 function show(id: string | null): void {
   for (const k of [
     'menu',
@@ -1034,7 +1071,8 @@ function boot(): void {
     if (params.get('relief') === '0') scene.raised = false;
     if (params.get('reflect') === '0') scene.reflections = false;
     // ?shadows=old: tall scenery's baked shadows and ovals under what moves, to compare
-    if (params.get('shadows') === 'old') scene.sunCast = false;
+    if (params.get('shadows') === 'old') scene.sunCast = scene.lightCast = false;
+    showSun();
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;
     setSky(params.get('sky') ?? 'day', true);
