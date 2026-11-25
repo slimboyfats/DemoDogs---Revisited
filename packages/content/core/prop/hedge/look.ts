@@ -22,16 +22,17 @@ const look: LookModule = {
       smooth: true,
       fn: (x, y, z) => {
         if (Math.abs(x) > 6 || Math.abs(y) > 3.9) return null;
-        const qx = Math.floor((x + 20) / 1.5);
-        const qy = Math.floor((y + 20) / 1.3);
-        // every column of cubes its own height, the outer ones a cube lower
-        const edge = Math.abs(y) > 2.6 ? 1.3 : 0;
-        // (and the hedge swells and dips along its length, in lumps)
-        const lump = Math.floor(hash3(Math.floor((x + 20) / 3), 5, 2) * 2) * 1.3;
-        const top = 11.7 + lump - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * 1.3;
+        // a clipped hedge of fine cubes: every column its own height by a cube or two, the outer
+        // ones a step lower, and the whole of it swelling and dipping a little along its length
+        const C = 2 / 3;
+        const qx = Math.floor((x + 20) / C);
+        const qy = Math.floor((y + 20) / C);
+        const edge = Math.abs(y) > 3.2 ? C : 0;
+        const lump = Math.floor(hash3(Math.floor((x + 20) / 3), 5, 2) * 2) * C;
+        const top = 12.4 + lump - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * C;
         if (z > top) return null;
         // clean bands: a sunlit top, plain green sides, a darker foot
-        if (z > top - 1.3) return 'hedge2';
+        if (z > top - C) return 'hedge2';
         return z < 2.6 ? 'hedge3' : 'hedge';
       },
     },

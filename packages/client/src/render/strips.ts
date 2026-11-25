@@ -152,14 +152,68 @@ function sample(part: Part, res: number): Sampled {
   return out;
 }
 
-/** A part as a strip in the given materials, `res` texels to the art pixel. */
+/** A colour made cleaner and brighter, as a toy is painted; what is dark or grey stays so. */
+export function toyTone(c: readonly number[]): number[] {
+  const mx = Math.max(c[0]!, c[1]!, c[2]!);
+  const mn = Math.min(c[0]!, c[1]!, c[2]!);
+  const sat = mx ? (mx - mn) / mx : 0;
+  if (mx < 60 || sat < 0.12) return [c[0]!, c[1]!, c[2]!];
+  // further from grey, and a little lighter
+  const grey = (c[0]! + c[1]! + c[2]!) / 3;
+  return c.map((v) => {
+    const s = grey + (v - grey) * 1.22;
+    return Math.max(0, Math.min(255, s + (255 - s) * 0.1));
+  });
+}
+
+/**
+ * The same voxels with the speckle taken out: a voxel that stands alone in its material among
+ * neighbours that agree with each other takes theirs, so a surface is clean panels of one colour.
+ * Lines and anything two voxels across are left, and so is whatever glows.
+ */
+function despeckle(
+  grid: Uint8Array,
+  cw: number,
+  ch: number,
+  n: number,
+  keep: readonly boolean[],
+): Uint8Array {
+  const out = grid.slice();
+  const count = new Uint8Array(256);
+  const near = [1, -1, cw, -cw, cw * ch, -cw * ch];
+  for (let z = 1; z < n - 1; z++)
+    for (let y = 1; y < ch - 1; y++)
+      for (let x = 1; x < cw - 1; x++) {
+        const i = (z * ch + y) * cw + x;
+        const m = grid[i]!;
+        if (!m || keep[m]) continue;
+        let same = 0;
+        let best = 0;
+        for (const d of near) {
+          const o = grid[i + d]!;
+          if (!o) continue;
+          if (o === m) same++;
+          else if (++count[o]! > count[best]! || !best) best = o;
+        }
+        if (same <= 1 && best && count[best]! >= 3 && !keep[best]) out[i] = best;
+        for (const d of near) count[grid[i + d]!] = 0;
+      }
+  return out;
+}
+
+/**
+ * A part as a strip in the given materials, `res` texels to the art pixel. `clean`: as a toy is
+ * made, in clean panels of brighter colour (`despeckle`, `toyTone`).
+ */
 export function build(
   part: Part,
   mats: Record<string, Tones>,
   res = DETAIL,
   glows?: Readonly<Record<string, number>>,
+  clean = false,
 ): Strip {
-  const { cw, ch, n, names, grid, lit } = sample(part, res);
+  const S = sample(part, res);
+  const { cw, ch, n, names, lit } = S;
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
   const W = cw * cols;
   const H = ch * Math.ceil(n / cols);
@@ -169,11 +223,20 @@ export function build(
   const px = new Uint8ClampedArray(W * H * 4);
   const rgb = names.map((m) => {
     if (m && !mats[m]) throw new Error(`no material ${m}`);
-    return m ? mats[m]!.map(hexRgb) : [];
+    return m ? mats[m]!.map((h) => (clean ? toyTone(hexRgb(h)) : hexRgb(h))) : [];
   });
   // which of its materials glow (lamps, lenses), and so which texels: kept beside the pixels
   const shine = names.map((m) => (m && glows?.[m]) || 0);
   const glow = shine.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
+  const grid = clean
+    ? despeckle(
+        S.grid,
+        cw,
+        ch,
+        n,
+        shine.map((g) => g > 0),
+      )
+    : S.grid;
   const c = [0, 0, 0];
   for (let z = 0; z < n; z++)
     for (let y = 0; y < ch; y++)

@@ -1,17 +1,16 @@
 import type { LookModule } from '@demodogs/shared';
-import { TOY_LEAVES, toyTree } from '../toy-tree/look';
+import { TOY_LEAVES, blockTree } from '../toy-tree/look';
 
-/** A low clump of leafy cubes, three lumps of it, sitting on the lawn with no trunk to see. */
+/** A low clump of leaves in blocks: one cube and a smaller one against it, on the lawn. */
 const look: LookModule = {
   id: 'prop.toy-bush',
   look: {
     kind: 'prop',
     materials: TOY_LEAVES,
     scale: 2,
-    part: toyTree(12, 8, 0, -9, 1.4, [
-      [0.4, 0.2, 2.8, 3.6],
-      [-2.4, 1.4, 1.8, 2.8],
-      [2, -2, 1.8, 2.7],
+    part: blockTree(12, 8, 0, 0, 0, [
+      [-0.8, -0.4, 0, 5.2, 3.2],
+      [2.6, 1.6, 0, 3.4, 2.2],
     ]),
   },
 };

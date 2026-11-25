@@ -559,8 +559,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         a * dim,
         Shape.Rect,
       );
-    // what is thrown shows its path over everything: round dots through the air, and a soft
-    // shadow in a ring of dashes on the spot it will land on
+    // what is thrown shows its path over everything: dots through the air, and a soft shadow in
+    // a ring of dashes on the spot it will land on (all of them squares on a toy venue)
+    const dot = FX_CELL > 0 ? Shape.Rect : Shape.Disc;
     for (const v of this.arc)
       if (v.shade)
         this.quads.push(
@@ -570,9 +571,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
           v.s * G * this.ys,
           v.rgb,
           v.a,
-          Shape.Disc,
+          dot,
         );
-    for (const v of this.arc) if (!v.shade) normal(v.x, v.y, v.z, v.s, v.rgb, v.a, Shape.Disc);
+    for (const v of this.arc) if (!v.shade) normal(v.x, v.y, v.z, v.s, v.rgb, v.a, dot);
     const one = 1 / G;
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);

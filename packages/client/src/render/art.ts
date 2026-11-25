@@ -46,6 +46,7 @@ export class Art {
   wheels: Strip[];
   /** Texels to the art pixel that cars are built at (see `chunky`). */
   private carDetail = CAR_DETAIL;
+  /** Everything is built as a toy is made: clean panels, brighter paint, cars as toy trucks. */
   private toyCars = false;
   readonly pickup: Strip;
   readonly plank: Strip;
@@ -63,7 +64,7 @@ export class Art {
   built = 0;
 
   private make(part: Part, mats: Record<string, Tones>, res?: number): Strip {
-    const s = build(part, mats, res, GLOWS);
+    const s = build(part, mats, res, GLOWS, this.toyCars);
     this.built += s.cw * s.ch * s.n;
     return s;
   }
@@ -226,6 +227,9 @@ export class Art {
     if (on === this.toyCars) return;
     this.toyCars = on;
     this.cars.clear();
+    this.props.clear();
+    this.rigs.clear();
+    this.bots.clear();
     this.heights.clear();
     this.roofs.clear();
     this.gunMounts.clear();

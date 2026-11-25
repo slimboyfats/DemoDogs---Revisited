@@ -57,12 +57,13 @@ const look: LookModule = {
         // along the barrel and out from its axis
         const t = (x - A[0]) * UX + (z - A[2]) * UZ;
         const up = -(x - A[0]) * UZ + (z - A[2]) * UX;
-        const off = Math.hypot(y, up);
+        // (a square barrel: its section is a box, as everything in the park is)
+        const off = Math.max(Math.abs(y), Math.abs(up));
         if (t > -1.6 && t < LEN) {
           // the ball sitting in the mouth
-          if (Math.hypot(t - (LEN - 0.4), off) < 3.8) return 'tennis';
+          if (Math.hypot(t - (LEN - 0.4), y, up) < 3.8) return 'tennis';
           // the muzzle: a bell flaring out to a fat yellow ring at the front
-          const bell = t > LEN - 4.5 ? 5 + (t - (LEN - 4.5)) * 0.42 : 5;
+          const bell = t > LEN - 4.5 ? 6.2 : 4.6;
           if (off < bell && (t < LEN - 1.2 || off > 3.6)) {
             if (t < 0.6) return 'band';
             if (t > LEN - 1.8) return up < -3 ? 'launch2' : 'launch';
@@ -78,7 +79,7 @@ const look: LookModule = {
         const my = Math.abs(y);
         if (z < 10.5 && mx < 6.4 - Math.floor(z / 3) * 0.9 && my < 6.6 - Math.floor(z / 3) * 0.7)
           return Math.floor(z / 3) & 1 ? 'steel2' : 'steel';
-        if (Math.hypot(x - 5, z - 11) < 2.4 && my < 6.4) return 'steel';
+        if (Math.abs(x - 5) < 2.2 && Math.abs(z - 11) < 2.2 && my < 6.4) return 'steel';
         if (z < 4.6 && Math.abs(my - 6.6) < 1.1 && Math.abs(mx - (8.6 - z * 0.7)) < 1)
           return 'launch';
         // the cage behind: low, an open lattice of thin dark bars, the balls showing through

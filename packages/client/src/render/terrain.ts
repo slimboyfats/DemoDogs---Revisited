@@ -313,6 +313,19 @@ export function terrainPixel(
   out[2] = clamp255(pb * k);
 }
 
+/**
+ * A venue's ground colour as a toy venue wears it: lifted until it is bright, and a little further
+ * from grey, so a dark field or a dull yard comes out clean. A colour already bright is left.
+ */
+export function toyGround(c: Rgb): Rgb {
+  const mx = Math.max(c[0], c[1], c[2]);
+  const k = Math.min(1.6, Math.max(1, 196 / Math.max(1, mx)));
+  if (k === 1) return c;
+  const grey = ((c[0] + c[1] + c[2]) / 3) * k;
+  const f = (v: number): number => clamp255(grey + (v * k - grey) * 1.12);
+  return [f(c[0]), f(c[1]), f(c[2])];
+}
+
 /** How wide one square of a toy lawn's turf is. */
 export const TURF = 14;
 
@@ -388,10 +401,12 @@ export function paintTerrain(
   const out: Rgb = [0, 0, 0];
   let k = 0;
   const toy = colors.style === 'toy';
+  const T = toyGround(G);
+  const T2 = toyGround(G2);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       if (toy) {
-        toyPixel(out, x, y, G, G2, F);
+        toyPixel(out, x, y, T, T2, F);
         if (colors.paths) pathPixel(out, x, y, colors.paths, D, F);
       } else terrainPixel(out, x, y, terrain, G, G2, D, F);
       px[k] = out[0];
