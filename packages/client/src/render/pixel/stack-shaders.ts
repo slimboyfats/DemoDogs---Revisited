@@ -47,6 +47,7 @@ flat out vec2 v_cs;
 flat out float v_tint;
 flat out float v_shade;
 flat out float v_gz;
+flat out vec2 v_tilt;
 // What stands in the shade of higher ground is in it too, the way the ground itself is painted
 // (relief-map.ts): under a cliff to its upper left, and in the dark beyond the far edge of a drop.
 float shadeAt(vec2 p, float g) {
@@ -112,6 +113,7 @@ void main() {
   v_alpha = a_alpha;
   v_cs = vec2(c, s);
   v_tint = a_tint;
+  v_tilt = a_tilt;
 }`;
 
 /** Helpers the ground and the stacks share, so the two agree to the cell. */
@@ -162,6 +164,7 @@ flat in vec2 v_cs;
 flat in float v_tint;
 flat in float v_shade;
 flat in float v_gz;
+flat in vec2 v_tilt;
 uniform highp sampler2D u_atlas;
 uniform highp sampler2D u_aux;
 uniform vec4 u_lpos[${MAX_LIGHTS}];  // x, y, radius, strength
@@ -236,6 +239,11 @@ void main() {
     lamp = float(a.y & 7) / 7.0;
     gloss = (a.y >> 3) & 3;
     sky = (a.y & 128) != 0;
+  }
+  // a slice that lies sloped (a ramp's face, a car on a hill) faces the way the slope does
+  if (u_lit > 0.5 && dot(v_tilt, v_tilt) > 0.0004) {
+    n = normalize(n + vec3(-v_tilt * max(n.z, 0.0), 0.0));
+    known = 1.0;
   }
   if (u_mirror > 0.5) {
     // dim and a little blue; a lamp still shows its own colour
