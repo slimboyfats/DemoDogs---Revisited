@@ -64,7 +64,8 @@ void main() {
 /**
  * Red: the slice's height; green: that height from the top. Blended by MAX: the top and the
  * underside. The second target takes the slice's colour (and its height as alpha), for the light
- * that things throw back on the ground beside them.
+ * that things throw back on the ground beside them; the third the light of what glows (a lamp's
+ * texels in their own colour), for the traced light (glow-field.ts).
  */
 export const BLOCK_FS = `#version 300 es
 precision highp float;
@@ -73,15 +74,20 @@ in vec2 v_tex;
 in float v_high;
 flat in vec4 v_uv;
 uniform highp sampler2D u_atlas;
+uniform highp sampler2D u_aux;
+uniform float u_lamps;   // 1: the atlas has its second texture, where the lamps are marked
 layout(location = 0) out vec4 o;
 layout(location = 1) out vec4 oc;
+layout(location = 2) out vec4 oe;
 void main() {
   vec3 c;
+  float lamp = 0.0;
   if (v_uv.y >= 0.0) {
     ivec2 t = ivec2(v_uv.xy) + ivec2(clamp(floor(v_tex), vec2(0.0), v_uv.zw - 1.0));
     vec4 x = texelFetch(u_atlas, t, 0);
     if (x.a < 0.5) discard;
     c = x.rgb;
+    if (u_lamps > 0.5) lamp = float(int(texelFetch(u_aux, t, 0).g * 255.0 + 0.5) & 7) / 7.0;
   } else {
     int p = int(v_uv.x + 0.5);
     c = vec3(float((p >> 16) & 255), float((p >> 8) & 255), float(p & 255)) / 255.0;
@@ -89,6 +95,7 @@ void main() {
   float h = min(255.0, v_high + 1.0) / 255.0;
   o = vec4(h, 1.0 - min(255.0, v_high) / 255.0, 0.0, 1.0);
   oc = vec4(c, h);
+  oe = vec4(c * lamp, lamp);
 }`;
 
 /**

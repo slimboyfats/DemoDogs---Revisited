@@ -8,10 +8,15 @@ import type { StackView } from './stack-batch';
  * stacks walk each light's ray across it (`lightOpen`), so a headlamp, a blast, a fire or a
  * lamp post throws real shadows that move as it does.
  */
+/** The map's corner lies on a multiple of this (art px): the widest spacing of the traced light's probes. */
+export const SNAP = 32;
+
 export class LightBlock {
   readonly tex: WebGLTexture;
   /** The colour of what stands there (alpha: how high), for light thrown back on the ground. */
   readonly col: WebGLTexture;
+  /** The light of what glows there (lamps, tail lights, lit windows): its colour times how lit. */
+  readonly em: WebGLTexture;
   private readonly fbo: WebGLFramebuffer;
   private tw = 0;
   private th = 0;
@@ -21,6 +26,7 @@ export class LightBlock {
   constructor(private readonly gl: WebGL2RenderingContext) {
     this.tex = texture(gl, gl.NEAREST);
     this.col = texture(gl, gl.LINEAR);
+    this.em = texture(gl, gl.NEAREST);
     this.fbo = gl.createFramebuffer();
   }
 
@@ -32,8 +38,9 @@ export class LightBlock {
     const gl = this.gl;
     const top = v.top ?? 0;
     const up = ((60 + top) * v.zk) / v.scale / v.ys;
-    const x0 = Math.floor(-v.ox / v.scale - 24);
-    const y0 = Math.floor(-v.oy / (v.scale * v.ys) - 24);
+    // (it moves in steps of `SNAP`, so the traced light's probes stand still on the ground)
+    const x0 = Math.floor((-v.ox / v.scale - 24) / SNAP) * SNAP;
+    const y0 = Math.floor((-v.oy / (v.scale * v.ys) - 24) / SNAP) * SNAP;
     const x1 = (v.w - v.ox) / v.scale + 24;
     const y1 = (v.h - v.oy) / (v.scale * v.ys) + 24 + up;
     const w = Math.ceil((x1 - x0) / 64) * 64;
@@ -58,7 +65,20 @@ export class LightBlock {
         null,
       );
       gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT1, gl.TEXTURE_2D, this.col, 0);
-      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1]);
+      gl.bindTexture(gl.TEXTURE_2D, this.em);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA8,
+        this.tw,
+        this.th,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        null,
+      );
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT2, gl.TEXTURE_2D, this.em, 0);
+      gl.drawBuffers([gl.COLOR_ATTACHMENT0, gl.COLOR_ATTACHMENT1, gl.COLOR_ATTACHMENT2]);
     }
     this.box[0] = x0;
     this.box[1] = y0;
@@ -102,7 +122,13 @@ export class LightBlock {
     gl.activeTexture(gl.TEXTURE0);
   }
 
+  /** The map's size in texels (one to the art px). */
+  get size(): readonly [number, number] {
+    return [this.tw, this.th];
+  }
+
   dispose(): void {
+    this.gl.deleteTexture(this.em);
     this.gl.deleteTexture(this.col);
     this.gl.deleteTexture(this.tex);
     this.gl.deleteFramebuffer(this.fbo);

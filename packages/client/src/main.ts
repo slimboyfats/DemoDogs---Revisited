@@ -1109,6 +1109,9 @@ function boot(): void {
     if (params.get('reflect') === '0') scene.reflections = false;
     // ?shadows=old: tall scenery's baked shadows and ovals under what moves, to compare
     if (params.get('shadows') === 'old') scene.sunCast = scene.lightCast = false;
+    // ?gi=0: no traced light (the sun's one bounce, as before); ?gi=show: the traced field itself
+    if (params.get('gi') === '0') scene.traced = false;
+    if (params.get('gi') === 'show') scene.showTraced = true;
     showSun();
     const line = params.get('outline');
     if (line === 'on' || line === 'off') scene.outline = line;

@@ -18,6 +18,7 @@ import { BLOCK_GLSL, BOUNCE_GLSL } from './light-block-glsl';
 import { FAR_DARK, FAR_SHADE } from '../relief-map';
 import { RELIEF_GLSL } from './relief-layer';
 import { SUN_GLSL } from './sun-glsl';
+import { TRACED_GLSL } from './traced-light';
 
 /** Slices higher than this (art px) are left out of wet ground's reflections. */
 const MIRROR_TALL = 14;
@@ -193,7 +194,7 @@ uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
 uniform float u_shk;     // how strong the sun's cast shadows are (0: none are read)
 uniform vec2 u_dir;      // cos and sin of the camera's pitch
-out vec4 o;${SKY_GLSL}${SUN_GLSL}
+out vec4 o;${SKY_GLSL}${SUN_GLSL}${TRACED_GLSL}
 void main() {
   if (u_mirror > 0.5) {
     // the reflection in wet ground shows through a screen door, most where water stands: the
@@ -275,7 +276,14 @@ void main() {
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
   float ndl = dot(n, u_sdir);
   float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0) * (1.0 - sh);
-  vec3 base = u_amb * (1.0 - 0.1 * sh) + u_sun * q;
+  // traced light (traced-light.ts), read a little way out from the face: how much of the sky
+  // the spot sees (less at the foot of things, none of it lost high up), and what is thrown on
+  // it by lit and glowing things round it
+  vec4 gi = u_mirror > 0.5 ? vec4(0.0, 0.0, 0.0, 1.0) : traced(v_world.xy + n.xy * 4.0 * known);
+  float low = 1.0 - clamp(v_world.z / 22.0, 0.0, 1.0);
+  float occ = 1.0 - 0.6 * low * (1.0 - floor(gi.a * 8.0 + b) / 8.0);
+  vec3 back = floor(min(vec3(0.9), gi.rgb * (0.6 + 0.7 * low)) * 6.0 + b) / 6.0;
+  vec3 base = u_amb * occ * (1.0 - 0.1 * sh) + u_sun * q;
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
   if (known > 0.5) {
@@ -334,7 +342,7 @@ void main() {
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
   }
   vec3 k = min(vec3(1.1), l);
-  vec3 rgb = c.rgb * (base * v_shade + k * 1.1) + k * (30.0 / 255.0);
+  vec3 rgb = c.rgb * (base * v_shade + k * 1.1 + back) + k * (30.0 / 255.0) + back * 0.05;
   // the gleam is the light's own colour laid over the paint, most on what is pale already
   rgb = shoulder(rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
   // a lamp shows its own colour however dark it is round it
@@ -420,7 +428,7 @@ uniform sampler2D u_map;   // the picture-to-ground map (relief-map.ts)
 uniform vec4 u_depth;      // depth along the view: y * x + height * y, less z, times w
 uniform float u_hk;        // height for one row of the map's shift
 #endif
-out vec4 o;${SKY_GLSL}${BOUNCE_GLSL}
+out vec4 o;${SKY_GLSL}${BOUNCE_GLSL}${TRACED_GLSL}
 const float EDGE = 0.07;
 vec3 tex(vec2 t) {
   return texelFetch(u_tex, ivec2(clamp(t, vec2(0.0), u_size - 1.0)), 0).rgb;
@@ -562,8 +570,20 @@ void main() {
   }
   vec3 q = min(vec3(1.1), l);
   // (and what stands in the sun beside it throws some of its own colour back on it, in steps)
-  vec3 back = floor(min(vec3(0.6), bounced(wp)) * 6.0 + b) / 6.0;
-  c = shoulder(c * (u_amb + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
+  vec3 back;
+  float occ = 1.0;
+  if (u_gik > 0.0) {
+    // traced: light from all round, stopped by what is in between, and the sky's own light less
+    // where things stand close (the foot of a wall, a gap between two buildings)
+    vec4 gi = traced(wp);
+    back = floor(min(vec3(0.9), gi.rgb * 2.0) * 6.0 + b) / 6.0;
+    occ = 1.0 - 0.6 * (1.0 - floor(gi.a * 8.0 + b) / 8.0);
+    if (u_gik > 1.5) {
+      o = vec4(gi.rgb * 2.0 + vec3(0.25 * gi.a), 1.0);
+      return;
+    }
+  } else back = floor(min(vec3(0.6), bounced(wp)) * 6.0 + b) / 6.0;
+  c = shoulder(c * (u_amb * occ + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
   o = vec4(c, 1.0);
 }`;
 
