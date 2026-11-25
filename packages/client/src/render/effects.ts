@@ -1278,7 +1278,25 @@ export class Effects {
             this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
           }
           const own = this.scarred.delete(s) || strip !== this.art.prop(s.def.id);
-          if (Wreckage.cracks(strip)) {
+          if (strip.res < 2.5) {
+            // a toy thing, built of big cubes: it bursts into them, and they tumble away and are
+            // gone (no slabs left lying about a tidy park)
+            const from = {
+              x: s.x,
+              y: s.y,
+              h: s.rot,
+              z: s.lift ?? 0,
+              ox: e.x,
+              oy: e.y,
+              vx: 0,
+              vy: 0,
+            };
+            this.burst(this.chipsOf(strip, !own, 1), 70, { ...from, speed: 95 });
+            this.burst(this.chipsOf(strip, !own, 2), 16, { ...from, speed: 60 });
+            for (let i = 0; i < 5; i++)
+              this.puff(s.x + rand(-6, 6), s.y + rand(-6, 6), rand(2, 10), 'dust');
+            if (own) this.dropped.push(strip);
+          } else if (Wreckage.cracks(strip)) {
             // it cracks into pieces that keep their own pixels, and grit from the cracks
             pixels(strip);
             this.wreck.fall({

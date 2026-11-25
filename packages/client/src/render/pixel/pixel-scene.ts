@@ -5,7 +5,7 @@ import type { Art } from '../art';
 import type { Effects } from '../effects';
 import { coloursOf, type Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
-import { PITCH, type Camera } from '../scene';
+import { FX_CELL, PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
 import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
@@ -54,7 +54,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private ground: Ground | null = null;
   private scale = 4;
   /** Screen cells to the art pixel for particles (see `fineGrid`). */
-  private fxGrid = fineGrid(4);
+  private fine = fineGrid(4);
+  /** Cells of fire and smoke to the art pixel: the screen's fine grid, or a toy venue's fat cubes. */
+  private get fxGrid(): number {
+    return FX_CELL > 0 ? 1 / FX_CELL : this.fine;
+  }
   /** Fire and smoke on the GPU; null where it cannot (then they stay on the CPU). */
   private gas: GasGpu | null | undefined = undefined;
   private get ys(): number {
@@ -160,7 +164,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   setScale(s: number): void {
     this.scale = s;
-    this.fxGrid = fineGrid(s);
+    this.fine = fineGrid(s);
   }
 
   sx(x: number): number {
@@ -220,7 +224,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const L = this.lights;
     L.clear();
     const t = w.time;
-    for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
+    // (a toy venue is bright already: a flash there only warms the ground)
+    const flash = FX_CELL > 0 ? 0.6 : 1.6;
+    for (const f of fx.flashes) L.add(f.x, f.y, f.r, flash * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
       const k = 1 - b.age / 70;
@@ -395,9 +401,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.depthMask(true);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
-    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    // (on a toy venue what flies off things is drawn as fat cubes, none smaller than two art px)
+    const fat = (n: number): number => (FX_CELL > 0 ? Math.max(2, n * 1.8) : n);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
+    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
+    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
     arcDots(w, this.arc);
     this.stacks.ready();
     if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
@@ -536,8 +544,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
     const cellN: Put = (x, y, z, n, rgb, a, shape) =>
       this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
+    // (fat cells cover several times the ground, so each adds less light or a blast goes white)
+    const dim = FX_CELL > 0 ? 0.22 : 1;
     const cellG: Put = (x, y, z, n, rgb, a) =>
-      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
+      this.glow.push(
+        at(x, n),
+        at(this.my(y, z + this.rise(x, y)), n),
+        n,
+        n,
+        rgb,
+        a * dim,
+        Shape.Rect,
+      );
     // what is thrown shows its path over everything: round dots through the air, and a soft
     // shadow in a ring of dashes on the spot it will land on
     for (const v of this.arc)

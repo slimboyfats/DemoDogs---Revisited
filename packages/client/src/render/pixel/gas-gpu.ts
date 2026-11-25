@@ -1,5 +1,15 @@
 import { compile, uniforms } from './gl';
-import { BANG_RAMP, CKind, FIRE_RAMP, HOT, ringStrength, type Gust, type Ring } from './cells';
+import { FX_CELL } from '../scene';
+import {
+  BANG_RAMP,
+  CKind,
+  FIRE_RAMP,
+  fireStyle,
+  HOT,
+  ringStrength,
+  type Gust,
+  type Ring,
+} from './cells';
 import { LIGHT_BANDS, MAX_LIGHTS, type Lights } from './lighting';
 import { WIND } from './particles';
 import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
@@ -298,7 +308,9 @@ void main() {
     if (u_pass != 0) return;
     if (th >= min(1.0, t * 8.0 + 0.4) * (t < 0.5 ? 1.0 : (1.0 - t) / 0.5)) return;
     float s = stepT(t, th, 6.0);
-    c = min(vec3(1.0), rgbOf(a2.z) * (s < 0.34 ? 0.55 : s < 0.67 ? 1.0 : 1.45));
+    // (a pale puff stays pale: its deep cells would read as grit on a clean road)
+    vec3 own = rgbOf(a2.z);
+    c = min(vec3(1.0), own * (s < 0.34 ? (own.r > 0.815 ? 0.9 : 0.55) : s < 0.67 ? 1.0 : 1.45));
     lit = true;
   } else if (k == ${CKind.Fog}) {
     if (u_pass != 0) return;
@@ -457,8 +469,9 @@ export class GasGpu {
   private readonly ma = new Float32Array(MAX_MOVERS * 4);
   private readonly mb = new Float32Array(MAX_MOVERS * 4);
   private readonly sw = new Float32Array(MAX_SWIRLS * 4);
-  private readonly fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
-  private readonly bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
+  private fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
+  private bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
+  private ramps = fireStyle.version;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -682,9 +695,17 @@ export class GasGpu {
     gl.uniform1f(u.u_cosP, v.cosP);
     relief?.bind(2, u.u_relief, u.u_rgrid, u.u_rface);
     gl.uniform1i(u.u_pass, pass);
+    if (this.ramps !== fireStyle.version) {
+      this.ramps = fireStyle.version;
+      this.fireRamp = new Float32Array(FIRE_RAMP.flatMap(rgb3));
+      this.bangRamp = new Float32Array(BANG_RAMP.flatMap(rgb3));
+    }
     gl.uniform3fv(u.u_fire, this.fireRamp);
     gl.uniform3fv(u.u_bang, this.bangRamp);
-    gl.uniform3fv(u.u_hot, rgb3(HOT));
+    // (fat cells cover several times the ground, so each adds less light or a blast goes white)
+    const hot = rgb3(HOT);
+    const dim = FX_CELL > 0 ? 0.25 : 1;
+    gl.uniform3f(u.u_hot, hot[0]! * dim, hot[1]! * dim, hot[2]! * dim);
     gl.uniform1i(u.u_lcount, lights.count);
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);

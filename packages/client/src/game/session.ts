@@ -7,7 +7,8 @@ import type { Art } from '../render/art';
 import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
 import { coloursOf, makeGround, type Ground } from '../render/ground';
-import { PITCH, PITCH_PLAIN, PITCH_TOY, setPitch, type Camera } from '../render/scene';
+import { setFireStyle } from '../render/pixel/cells';
+import { PITCH, PITCH_PLAIN, PITCH_TOY, setFxCell, setPitch, type Camera } from '../render/scene';
 import { shadeDepth, sunReach } from '../render/cast';
 import { terrainOf } from '../render/terrain';
 
@@ -113,6 +114,9 @@ export class Session {
     // shadows; whoever made the session sets the view next, which takes the pitch up
     const toy = coloursOf(this.world.venue.colors).style === 'toy';
     setPitch(toy ? PITCH_TOY : PITCH_PLAIN);
+    // (fire, smoke and sparks in fat cubes on a toy venue)
+    setFxCell(toy ? 1.5 : 0);
+    setFireStyle(toy);
     sunReach.k = toy ? 1.25 : 1;
     shadeDepth.k = toy ? 1.35 : 1;
     o.art.chunky(toy);

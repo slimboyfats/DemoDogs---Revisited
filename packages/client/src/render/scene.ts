@@ -21,6 +21,15 @@ export function setPitch(p: number): void {
   PITCH = p;
 }
 
+/**
+ * How big one cell of fire, smoke and sparks is drawn, in art px: 0 is the screen's own fine grid
+ * (about a CSS pixel); a toy venue draws them as fat cubes. Set when a race is made.
+ */
+export let FX_CELL = 0;
+export function setFxCell(artPx: number): void {
+  FX_CELL = artPx;
+}
+
 interface Baked {
   img: HTMLCanvasElement;
   ax: number;
