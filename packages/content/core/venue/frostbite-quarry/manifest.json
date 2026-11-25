@@ -54,7 +54,8 @@
         "height": 30,
         "ramp": 180
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#c4ced4",
@@ -67,7 +68,7 @@
     "wave": 560,
     "banks": 60,
     "step": 30,
-    "from": 90,
+    "from": 144,
     "spread": 120,
     "infield": false
   },
@@ -87,7 +88,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -104,7 +105,7 @@
     {
       "rule": "bend-wall",
       "props": ["prop.rock", "prop.block"],
-      "offset": 17,
+      "offset": 44,
       "minCurve": 0.2
     },
     {
@@ -124,7 +125,7 @@
     {
       "rule": "build",
       "count": 44,
-      "clear": 10,
+      "clear": 44,
       "along": 90,
       "kinds": [
         {
@@ -156,7 +157,7 @@
     {
       "rule": "scatter",
       "perArea": 0.000408,
-      "clear": 32,
+      "clear": 56,
       "items": [
         {
           "prop": "prop.pine",

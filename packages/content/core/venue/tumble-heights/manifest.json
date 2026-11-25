@@ -40,7 +40,8 @@
         "to": 0.5,
         "height": 18
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#5d5f63",
@@ -52,7 +53,7 @@
   "relief": {
     "banks": 32,
     "step": 32,
-    "from": 96,
+    "from": 150,
     "spread": 60,
     "infield": false
   },
@@ -63,13 +64,13 @@
       "pillar": "prop.overpass-pillar",
       "deck": "prop.overpass-deck",
       "step": 12,
-      "out": 6,
+      "out": 30,
       "width": 2
     },
     {
       "rule": "kerb",
       "every": 14,
-      "offset": 3,
+      "offset": 30,
       "chance": 0.25,
       "items": [
         {
@@ -93,7 +94,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -115,13 +116,13 @@
       "cols": [2, 4],
       "rows": [2, 4],
       "step": 11,
-      "clear": 14,
+      "clear": 30,
       "along": 24
     },
     {
       "rule": "build",
       "count": 30,
-      "clear": 22,
+      "clear": 56,
       "along": 60,
       "kinds": [
         {
@@ -154,8 +155,8 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.000012,
-      "clear": 34,
+      "perArea": 1.2e-5,
+      "clear": 58,
       "items": [
         {
           "prop": "prop.parked-car",

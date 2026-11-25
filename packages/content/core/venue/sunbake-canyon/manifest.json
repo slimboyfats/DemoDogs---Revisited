@@ -48,7 +48,8 @@
         "to": 0.48,
         "height": 26
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#d29a62",
@@ -62,7 +63,7 @@
     "wave": 560,
     "banks": 72,
     "step": 36,
-    "from": 70,
+    "from": 124,
     "spread": 130,
     "infield": false
   },
@@ -73,7 +74,7 @@
       "leg": "prop.sandstone-cliff",
       "span": "prop.arch-span",
       "step": 9,
-      "offset": 4
+      "offset": 10
     },
     {
       "rule": "gantry",
@@ -82,7 +83,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [80, 220],
       "gap": [150, 320],
       "items": [
@@ -117,7 +118,7 @@
     {
       "rule": "build",
       "count": 70,
-      "clear": 6,
+      "clear": 40,
       "along": 30,
       "kinds": [
         {
@@ -132,13 +133,13 @@
     {
       "rule": "bend-wall",
       "props": ["prop.sandstone-cliff", "prop.rockfall"],
-      "offset": 22,
+      "offset": 44,
       "minCurve": 0.25
     },
     {
       "rule": "build",
       "count": 14,
-      "clear": 16,
+      "clear": 50,
       "along": 120,
       "kinds": [
         {
@@ -169,7 +170,7 @@
     {
       "rule": "scatter",
       "perArea": 0.0003,
-      "clear": 26,
+      "clear": 50,
       "items": [
         {
           "prop": "prop.cactus",

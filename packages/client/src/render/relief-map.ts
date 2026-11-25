@@ -80,15 +80,15 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       else if (v - at(x, y - 3) > 5) shade *= 1.3;
       // (and where the picture jumps down a drop, the rows between are its face too)
       const face = steep || (s - prev >= 2 && at(x, y - 1) - v > 1);
-      // a way up the side of raised road is packed earth, so it is told from the grass round it
-      const way =
-        !face && slope > 0.08 && R.slipAt(x + 0.5, y + 0.5) && R.platAt(x + 0.5, y + 0.5) > 0.3;
+      // the lane of an on-ramp is packed earth, so it is told from the grass round it (barred
+      // across where it climbs, plain where it has come level with the road)
+      const way = !face && R.laneAt(x + 0.5, y + 0.5);
       const g = Math.max(0, Math.min(255, Math.round(128 * shade)));
       for (let j = Math.max(0, Math.min(prev + 1, s)); j <= s; j++) {
         const k = (j * w + x) * 4;
         out[k] = Math.min(255, y - j);
         out[k + 1] = g;
-        out[k + 2] = face ? 255 : way ? 128 : 0;
+        out[k + 2] = face ? 255 : way ? (slope > 0.06 ? 150 : 96) : 0;
       }
     }
   // the near edge of raised ground: its cut face down to the bottom of the map

@@ -42,7 +42,8 @@
         "height": 32,
         "ramp": 150
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#4a5e36",
@@ -56,7 +57,7 @@
     "wave": 420,
     "banks": 20,
     "step": 20,
-    "from": 96,
+    "from": 150,
     "spread": 90,
     "infield": false
   },
@@ -68,7 +69,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -85,7 +86,7 @@
     {
       "rule": "build",
       "count": 60,
-      "clear": 10,
+      "clear": 44,
       "kinds": [
         {
           "shape": "yard",
@@ -116,7 +117,7 @@
     {
       "rule": "scatter",
       "perArea": 0.00052,
-      "clear": 30,
+      "clear": 54,
       "items": [
         {
           "prop": "prop.pine",

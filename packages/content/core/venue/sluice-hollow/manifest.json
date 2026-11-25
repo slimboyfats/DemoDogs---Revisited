@@ -40,7 +40,8 @@
         "to": 0.38,
         "height": 16
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#556b3c",
@@ -65,7 +66,7 @@
     {
       "rule": "build",
       "count": 16,
-      "clear": 12,
+      "clear": 46,
       "along": 70,
       "kinds": [
         {
@@ -132,7 +133,7 @@
     {
       "rule": "scatter",
       "perArea": 0.0005,
-      "clear": 28,
+      "clear": 52,
       "items": [
         {
           "prop": "prop.pine",
@@ -254,7 +255,7 @@
       "long": [54, 96],
       "deep": [30, 54],
       "step": 5.5,
-      "clear": 10
+      "clear": 44
     },
     {
       "rule": "scatter",
@@ -332,7 +333,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [

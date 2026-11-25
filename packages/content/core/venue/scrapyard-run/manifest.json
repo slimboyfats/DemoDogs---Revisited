@@ -45,7 +45,8 @@
         "to": 0.63,
         "height": 18
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#6b5b3e",
@@ -57,7 +58,7 @@
   "relief": {
     "banks": 20,
     "step": 20,
-    "from": 96,
+    "from": 150,
     "spread": 90,
     "infield": false
   },
@@ -79,7 +80,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -100,7 +101,7 @@
     {
       "rule": "bend-wall",
       "props": ["prop.tyres-red", "prop.tyres"],
-      "offset": 17,
+      "offset": 44,
       "minCurve": 0.2
     },
     {
@@ -120,7 +121,7 @@
     {
       "rule": "build",
       "count": 30,
-      "clear": 10,
+      "clear": 44,
       "along": 90,
       "kinds": [
         {
@@ -152,7 +153,7 @@
     {
       "rule": "scatter",
       "perArea": 0.00025,
-      "clear": 34,
+      "clear": 58,
       "items": [
         {
           "prop": "prop.husk",
@@ -267,7 +268,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.00005,
+      "perArea": 5e-5,
       "clear": 6,
       "items": [
         {

@@ -423,6 +423,11 @@ export const VenueSchema = z.strictObject({
           }),
         )
         .optional(),
+      /**
+       * What the edges of raised road are railed with: lengths of this prop stand end to end
+       * along both edges, open only where an on-ramp joins. None if left out.
+       */
+      rail: id('prop').optional(),
     })
     .optional(),
   /** Derby venues: the walled oval. */

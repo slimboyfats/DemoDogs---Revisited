@@ -18,7 +18,7 @@ function cliff(w: World): { x: number; y: number; nx: number; ny: number; top: n
     const l = Math.hypot(tx, ty);
     const nx = (-ty / l) * side;
     const ny = (tx / l) * side;
-    for (let d = w.road / 2 + 8; d < w.road / 2 + 120; d += 1) {
+    for (let d = w.road / 2 + 8; d < w.road / 2 + 240; d += 1) {
       const x = T.x[i]! + nx * d;
       const y = T.y[i]! + ny * d;
       const rise = R.at(x + nx * 4, y + ny * 4) - R.at(x, y);

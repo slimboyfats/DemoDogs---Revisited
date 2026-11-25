@@ -41,7 +41,8 @@
         "to": 0.5,
         "height": 16
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#36552f",
@@ -52,7 +53,7 @@
   "relief": {
     "banks": 22,
     "step": 22,
-    "from": 96,
+    "from": 150,
     "spread": 90,
     "infield": false
   },
@@ -75,7 +76,7 @@
       "clumps": [4, 6],
       "lift": [19, 30],
       "reach": 30,
-      "edge": 9
+      "edge": 30
     },
     {
       "rule": "gantry",
@@ -84,7 +85,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -101,7 +102,7 @@
     {
       "rule": "bend-wall",
       "props": ["prop.tyres", "prop.tyres-red"],
-      "offset": 17,
+      "offset": 44,
       "minCurve": 0.22
     },
     {
@@ -121,7 +122,7 @@
     {
       "rule": "scatter",
       "perArea": 0.0004,
-      "clear": 30,
+      "clear": 54,
       "items": [
         {
           "prop": "prop.tree",

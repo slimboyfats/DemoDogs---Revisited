@@ -41,7 +41,8 @@
         "to": 0.41,
         "height": 16
       }
-    ]
+    ],
+    "rail": "prop.armco"
   },
   "colors": {
     "ground": "#6f5a4e",
@@ -53,7 +54,7 @@
   "relief": {
     "banks": 28,
     "step": 28,
-    "from": 90,
+    "from": 144,
     "spread": 60,
     "infield": false
   },
@@ -65,7 +66,7 @@
     },
     {
       "rule": "trackside",
-      "offset": 24,
+      "offset": 48,
       "run": [110, 380],
       "gap": [50, 170],
       "items": [
@@ -89,7 +90,7 @@
     {
       "rule": "build",
       "count": 95,
-      "clear": 10,
+      "clear": 44,
       "kinds": [
         {
           "wall": "prop.brick-wall",
@@ -129,8 +130,8 @@
     },
     {
       "rule": "scatter",
-      "perArea": 0.000029,
-      "clear": 30,
+      "perArea": 2.9e-5,
+      "clear": 54,
       "items": [
         {
           "prop": "prop.water-tower",
