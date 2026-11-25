@@ -24,12 +24,6 @@ const KEYS: readonly { at: number; amb: Rgb; sun: Rgb; high: number; glow: numbe
   { at: 1, amb: [0.2, 0.25, 0.4], sun: [0.16, 0.2, 0.32], high: 0.6, glow: 1 },
 ];
 
-/**
- * A toy venue's day: the shade a little cool, the sun strong and golden, so tops are a touch
- * brighter and warmer than painted and the sides away from the sun stand out.
- */
-const WARM: { amb: Rgb; sun: Rgb } = { amb: [0.46, 0.48, 0.54], sun: [1.04, 0.94, 0.7] };
-
 /** How dark it must be before cars put their headlamps on. */
 export const LAMPS_AT = 0.42;
 
@@ -41,8 +35,6 @@ export class Atmosphere {
   dark = 0;
   wet = 0;
   snow = 0;
-  /** A warm, bright afternoon instead of the plain day (toy venues), 0 or 1. */
-  warm = 0;
   /** Light everything flat, as before there was a sky (weak phones, and to compare). */
   flat = false;
   /** The least darkness and wet the race itself asks for (world modifiers: night, rain). */
@@ -102,13 +94,9 @@ export class Atmosphere {
     const mix = (x: number, y: number) => x + (y - x) * f;
     // overcast: rain and snow take the edge off the sun and grey the light a little
     const cast = 1 - 0.45 * Math.max(n.wet, n.snow * 0.7);
-    // (a warm day gives way to dusk and night like any other)
-    const warm = this.warm * Math.max(0, 1 - n.dark * 2);
     for (let i = 0; i < 3; i++) {
-      const amb = mix(a.amb[i]!, b.amb[i]!);
-      const sun = mix(a.sun[i]!, b.sun[i]!);
-      this.amb[i] = (amb + (WARM.amb[i]! - amb) * warm) * (1 - 0.06 * (1 - cast));
-      this.sun[i] = (sun + (WARM.sun[i]! - sun) * warm) * cast;
+      this.amb[i] = mix(a.amb[i]!, b.amb[i]!) * (1 - 0.06 * (1 - cast));
+      this.sun[i] = mix(a.sun[i]!, b.sun[i]!) * cast;
     }
     // towards the sun: opposite to the way shadows are thrown on the ground (cast.ts), and lower
     // than the shadows' length says, so walls take the light

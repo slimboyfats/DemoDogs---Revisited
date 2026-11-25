@@ -3,9 +3,9 @@ import { armsLights } from '../arms-fx';
 import { arsenalLights } from '../arsenal-fx';
 import type { Art } from '../art';
 import type { Effects } from '../effects';
-import { coloursOf, type Ground } from '../ground';
+import type { Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
-import { FX_CELL, PITCH, type Camera } from '../scene';
+import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
 import { queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
@@ -21,7 +21,6 @@ import { GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
 import { StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
-import { arcDots, type ArcDot } from '../arc-fx';
 import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
 import { DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
@@ -54,19 +53,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private ground: Ground | null = null;
   private scale = 4;
   /** Screen cells to the art pixel for particles (see `fineGrid`). */
-  private fine = fineGrid(4);
-  /** Cells of fire and smoke to the art pixel: the screen's fine grid, or a toy venue's fat cubes. */
-  private get fxGrid(): number {
-    return FX_CELL > 0 ? 1 / FX_CELL : this.fine;
-  }
+  private fxGrid = fineGrid(4);
   /** Fire and smoke on the GPU; null where it cannot (then they stay on the CPU). */
   private gas: GasGpu | null | undefined = undefined;
-  private get ys(): number {
-    return Math.sin(PITCH);
-  }
-  private get cosP(): number {
-    return Math.cos(PITCH);
-  }
+  private readonly ys = Math.sin(PITCH);
+  private readonly cosP = Math.cos(PITCH);
   private ox = 0;
   private oy = 0;
   private vw = 1;
@@ -82,7 +73,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private shade = 1;
   /** The shockwave lens (made on first use), and whether to bend the picture at all. */
   private lens: LensPass | null = null;
-  private readonly arc: ArcDot[] = [];
   private readonly lenses: Lens[] = [];
   distort = true;
   /** The sky: how dark, how wet, how much snow (set its `dark`, `wet`, `snow`; see Atmosphere). */
@@ -164,7 +154,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   setScale(s: number): void {
     this.scale = s;
-    this.fine = fineGrid(s);
+    this.fxGrid = fineGrid(s);
   }
 
   sx(x: number): number {
@@ -224,9 +214,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const L = this.lights;
     L.clear();
     const t = w.time;
-    // (a toy venue is bright already: a flash there only warms the ground)
-    const flash = FX_CELL > 0 ? 0.25 : 1.6;
-    for (const f of fx.flashes) L.add(f.x, f.y, f.r, flash * (f.life / f.max), f.rgb);
+    for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
       const k = 1 - b.age / 70;
@@ -361,15 +349,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
-    // (a toy venue is seen like a miniature: soft focus towards the top and bottom of the screen)
-    const blur = FX_CELL > 0 ? H * 0.0075 : 0;
-    const post = lenses.length > 0 || blur > 0;
-    if (post) (this.lens ??= new LensPass(gl)).begin(W, H);
+    if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
 
     gl.viewport(0, 0, W, H);
-    // a toy venue has a warm afternoon sun of its own
-    this.sky.warm = coloursOf(w.venue.colors).style === 'toy' ? 1 : 0;
-    this.groundLayer!.calm = this.sky.warm;
     const bg = hex(w.venue.colors.outside);
     gl.clearColor(((bg >> 16) & 255) / 255, ((bg >> 8) & 255) / 255, (bg & 255) / 255, 1);
     gl.clearDepth(1);
@@ -404,12 +386,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     gl.depthMask(true);
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
-    // (on a toy venue what flies off things is drawn as fat cubes, none smaller than two art px)
-    const fat = (n: number): number => (FX_CELL > 0 ? Math.max(2, n * 1.8) : n);
-    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
-    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
-    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, fat(v.s));
-    arcDots(w, this.arc);
+    for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
+    for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     this.stacks.ready();
     if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
       // wet ground: the stacks upside down under their feet first, then the depth buffer afresh
@@ -451,7 +430,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (post) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys, blur);
+    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {
@@ -547,33 +526,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // sizes in fine cells (fire, smoke, leaves, arcs: mudders' single cells)
     const cellN: Put = (x, y, z, n, rgb, a, shape) =>
       this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
-    // (fat cells cover several times the ground, so each adds less light or a blast goes white)
-    const dim = FX_CELL > 0 ? 0.22 : 1;
     const cellG: Put = (x, y, z, n, rgb, a) =>
-      this.glow.push(
-        at(x, n),
-        at(this.my(y, z + this.rise(x, y)), n),
-        n,
-        n,
-        rgb,
-        a * dim,
-        Shape.Rect,
-      );
-    // what is thrown shows its path over everything: dots through the air, and a soft shadow in
-    // a ring of dashes on the spot it will land on (all of them squares on a toy venue)
-    const dot = FX_CELL > 0 ? Shape.Rect : Shape.Disc;
-    for (const v of this.arc)
-      if (v.shade)
-        this.quads.push(
-          v.x * G,
-          this.my(v.y, this.rise(v.x, v.y)) * G,
-          v.s * G,
-          v.s * G * this.ys,
-          v.rgb,
-          v.a,
-          dot,
-        );
-    for (const v of this.arc) if (!v.shade) normal(v.x, v.y, v.z, v.s, v.rgb, v.a, dot);
+      this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
     const one = 1 / G;
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);

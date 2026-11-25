@@ -11,7 +11,7 @@ import {
 import { GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { RigArt } from './bones';
 import type { Strip } from './stack';
-import { build, CAR_DETAIL, DETAIL, hexRgb, tones } from './strips';
+import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
 export interface CarArt {
   body: Strip;
@@ -43,11 +43,7 @@ const scale = (hex: string, k: number): string =>
  * are built per paint colour, since paint is baked into the strip.
  */
 export class Art {
-  wheels: Strip[];
-  /** Texels to the art pixel that cars are built at (see `chunky`). */
-  private carDetail = CAR_DETAIL;
-  /** Everything is built as a toy is made: clean panels, brighter paint, cars as toy trucks. */
-  private toyCars = false;
+  readonly wheels: Strip[];
   readonly pickup: Strip;
   readonly plank: Strip;
   /** A decoy thrown out for rockets to chase. */
@@ -64,7 +60,7 @@ export class Art {
   built = 0;
 
   private make(part: Part, mats: Record<string, Tones>, res?: number): Strip {
-    const s = build(part, mats, res, GLOWS, this.toyCars);
+    const s = build(part, mats, res, GLOWS);
     this.built += s.cw * s.ch * s.n;
     return s;
   }
@@ -95,7 +91,7 @@ export class Art {
     const key = `${id}|${x.toFixed(1)}|${y.toFixed(1)}`;
     let h = this.heights.get(key);
     if (h === undefined) {
-      const B = this.carBody(id);
+      const B = this.look(id, 'car').body;
       h = 0;
       for (let z = B.layers; z > 0; z -= 0.25)
         if (B.fn(x, y, B.smooth ? z - 0.125 : Math.floor(z - 0.125))) {
@@ -113,7 +109,7 @@ export class Art {
   carRoof(id: string): number {
     let x = this.roofs.get(id);
     if (x === undefined) {
-      const B = this.carBody(id);
+      const B = this.look(id, 'car').body;
       let top = 0;
       let from = 0;
       let to = 0;
@@ -167,14 +163,9 @@ export class Art {
       const L = this.look(id, 'prop');
       const mats: Record<string, Tones> = { ...PALETTE, ...L.materials };
       for (const [from, to] of Object.entries(swap ?? {})) mats[from] = mats[to]!;
-      s = this.make(
-        (pose && L.alts?.[pose - 1]) || L.part,
-        mats,
-        L.fine ? DETAIL * L.fine : undefined,
-      );
+      s = this.make((pose && L.alts?.[pose - 1]) || L.part, mats);
       // at another size it is the same thing with bigger or smaller pixels
       if (!this.looks.has(id)) s.res /= sizeOfId(id)[1];
-      s.res /= L.scale ?? 1;
       this.props.set(key, s);
     }
     return s;
@@ -223,28 +214,6 @@ export class Art {
     for (let p = 1; p < this.poses(id); p++) this.prop(id, undefined, p);
   }
 
-  /**
-   * Cars drawn as their toy trucks (a toy venue), or as themselves. Cars built the other way are
-   * forgotten, so call it before a race's cars are drawn.
-   */
-  chunky(on: boolean): void {
-    if (on === this.toyCars) return;
-    this.toyCars = on;
-    this.cars.clear();
-    this.props.clear();
-    this.rigs.clear();
-    this.bots.clear();
-    this.heights.clear();
-    this.roofs.clear();
-    this.gunMounts.clear();
-  }
-
-  /** The shape a car is drawn in: its toy truck on a toy venue, if it has one. */
-  private carBody(id: string): Part {
-    const L = this.look(id, 'car');
-    return (this.toyCars && L.toy) || L.body;
-  }
-
   car(id: string, paint: string): CarArt {
     const key = id + paint;
     let a = this.cars.get(key);
@@ -260,9 +229,9 @@ export class Art {
         paint2: tones(scale(paint, 0.68)),
       };
       a = {
-        body: this.make(this.carBody(id), m, this.carDetail),
-        top: this.make(L.top, m, this.carDetail),
-        bumper: this.make(kit.BUMPER, m, this.carDetail),
+        body: this.make(L.body, m, CAR_DETAIL),
+        top: this.make(L.top, m, CAR_DETAIL),
+        bumper: this.make(kit.BUMPER, m, CAR_DETAIL),
         chunk: this.make(kit.CHUNK, m),
       };
       this.cars.set(key, a);

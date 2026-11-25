@@ -3,10 +3,6 @@ import { sliceX, sliceY, tall, type Strip } from './stack';
 
 /** Where the sun throws a shadow: art px across the ground per art px of height. */
 export const SUN: readonly [number, number] = [0.32, 0.22];
-/** How many times longer than that shadows are thrown: a low afternoon sun on a toy venue. */
-export const sunReach = { k: 1 };
-/** How many times as dark as usual cast shadows are (a toy venue's are deep and short). */
-export const shadeDepth = { k: 1 };
 
 /** Scenery this tall (art px), or standing up off the ground, throws a shadow of its own shape. */
 const TALL = 14;
@@ -81,8 +77,8 @@ export class ShadowMap {
     return [
       Math.floor(s.x - r),
       Math.floor(s.y - r - ((s.lift ?? 0) > 0 ? top * OVER + FAR_BAND : 0)),
-      Math.ceil(s.x + r + top * SUN[0] * sunReach.k),
-      Math.ceil(s.y + r + top * SUN[1] * sunReach.k),
+      Math.ceil(s.x + r + top * SUN[0]),
+      Math.ceil(s.y + r + top * SUN[1]),
     ];
   }
 
@@ -109,30 +105,23 @@ export class ShadowMap {
     const hw = st.cw / R / 2;
     const hh = st.ch / R / 2;
     const M = this.mask;
-    // one sample per art px: a layer at a time, its texels at the middle of each art px. (A look
-    // drawn bigger than it is built has less than a texel to the art px: every texel is sampled,
-    // and each one shades the square of ground it stands over.)
-    const step = Math.max(1, Math.floor(R));
-    const span = Math.max(1, Math.ceil(1 / R));
-    for (let i = Math.floor(step / 2); i < st.n; i += step) {
+    // one sample per art px: a layer at a time, its texels at the middle of each art px
+    for (let i = Math.floor(R / 2); i < st.n; i += R) {
       const z = lift + i / R;
       if (z < 0) continue;
-      const ox = s.x + z * SUN[0] * sunReach.k;
-      const oy = s.y + z * SUN[1] * sunReach.k;
+      const ox = s.x + z * SUN[0];
+      const oy = s.y + z * SUN[1];
       const sx0 = sliceX(st, i);
       const sy0 = sliceY(st, i);
-      for (let ty = Math.floor(step / 2); ty < st.ch; ty += step)
-        for (let tx = Math.floor(step / 2); tx < st.cw; tx += step) {
+      for (let ty = Math.floor(R / 2); ty < st.ch; ty += R)
+        for (let tx = Math.floor(R / 2); tx < st.cw; tx += R) {
           if (px[((sy0 + ty) * W + sx0 + tx) * 4 + 3]! < 128) continue;
           const lx = (tx + 0.5) / R - hw;
           const ly = (ty + 0.5) / R - hh;
           const gx = Math.floor(ox + lx * cs - ly * sn);
           const gy = Math.floor(oy + lx * sn + ly * cs);
-          for (let qy = gy; qy < gy + span; qy++)
-            for (let qx = gx; qx < gx + span; qx++) {
-              if (qx < bx0 || qy < by0 || qx >= bx1 || qy >= by1) continue;
-              M[qy * this.w + qx] = 255;
-            }
+          if (gx < bx0 || gy < by0 || gx >= bx1 || gy >= by1) continue;
+          M[gy * this.w + gx] = 255;
         }
     }
     if (lift <= 0 || s.def.crown) return;

@@ -6,10 +6,8 @@ import type { Input } from '../input/input';
 import type { Art } from '../render/art';
 import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
-import { coloursOf, makeGround, type Ground } from '../render/ground';
-import { setFireStyle } from '../render/pixel/cells';
-import { PITCH, PITCH_PLAIN, PITCH_TOY, setFxCell, setPitch, type Camera } from '../render/scene';
-import { shadeDepth, sunReach } from '../render/cast';
+import { makeGround, type Ground } from '../render/ground';
+import { PITCH, type Camera } from '../render/scene';
 import { terrainOf } from '../render/terrain';
 
 /** How far off another car's engine can be heard, in art pixels. */
@@ -110,16 +108,6 @@ export class Session {
     made?: { world: World; ground: Ground },
   ) {
     this.world = made?.world ?? makeWorld(o);
-    // a toy venue is seen from lower down, so things stand up, under a low golden sun that throws long deep
-    // shadows; whoever made the session sets the view next, which takes the pitch up
-    const toy = coloursOf(this.world.venue.colors).style === 'toy';
-    setPitch(toy ? PITCH_TOY : PITCH_PLAIN);
-    // (fire, smoke and sparks in fat cubes on a toy venue)
-    setFxCell(toy ? 1.5 : 0);
-    setFireStyle(toy);
-    sunReach.k = toy ? 1.8 : 1;
-    shadeDepth.k = toy ? 1.5 : 1;
-    o.art.chunky(toy);
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;

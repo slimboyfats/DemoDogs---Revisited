@@ -1,9 +1,7 @@
-import { FX_CELL } from '../scene';
 import { fineGrid } from '../strips';
 import type { ShadowMap } from '../cast';
 import { compile, texture, uniforms } from './gl';
 import { GROUND_VS, shadowFs } from './stack-shaders';
-import { shadeDepth } from '../cast';
 import type { ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
 
@@ -43,7 +41,6 @@ export class ShadowLayer {
       'u_size',
       'u_tex',
       'u_alpha',
-      'u_smooth',
       'u_fine',
       'u_map',
       'u_deep',
@@ -89,8 +86,7 @@ export class ShadowLayer {
     gl.uniform1f(u.u_ys, v.ys);
     gl.uniform1f(u.u_fine, fineGrid(v.scale));
     gl.uniform2f(u.u_size, this.map.w, this.map.h);
-    gl.uniform1f(u.u_alpha, Math.min(0.6, DARK * strength * shadeDepth.k));
-    gl.uniform1f(u.u_smooth, FX_CELL > 0 ? 1 : 0);
+    gl.uniform1f(u.u_alpha, DARK * strength);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.uniform1i(u.u_tex, 0);

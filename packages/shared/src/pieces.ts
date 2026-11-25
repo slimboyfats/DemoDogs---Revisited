@@ -106,22 +106,6 @@ export type CritterManifest = z.infer<typeof CritterSchema>;
 /** A car (mass 1) knocks an animal lighter than this into the air; a heavier one stops the car. */
 export const FLUNG_BELOW = 0.6;
 
-/**
- * It throws: every `every` seconds it lobs a `ball` (a loose prop) out of its `mouth` (forward
- * and up from its foot, art px) the way it faces, give or take `spread` radians, in an arc
- * `apex` above the mouth, to land between the two `reach`es away. It has `pool` balls out at
- * most: then it throws the oldest again.
- */
-export const ThrowerSchema = z.strictObject({
-  ball: prop,
-  every: z.number().positive(),
-  reach: z.tuple([z.number().positive(), z.number().positive()]),
-  spread: z.number().min(0).default(0.2),
-  apex: z.number().positive().default(34),
-  mouth: z.tuple([z.number(), z.number().min(0)]).default([8, 14]),
-  pool: z.number().int().min(1).max(12).default(5),
-});
-
 /** The fields a prop may carry to be a track piece. Spread into PropSchema. */
 export const pieceFields = {
   pad: PadSchema.optional(),
@@ -129,7 +113,6 @@ export const pieceFields = {
   /** A piece of raised deck with rails: the prop that is the same piece with none. */
   bare: z.string().optional(),
   critter: CritterSchema.optional(),
-  thrower: ThrowerSchema.optional(),
   /**
    * Static props that are not solid: flattened for good by a car that drives over them (long
    * grass, corn, flowers).

@@ -8,8 +8,6 @@
 
 export type Terrain = 'grass' | 'dirt' | 'sand' | 'snow' | 'gravel' | 'paved';
 export type RoadStyle = 'tarmac' | 'dirt';
-/** `toy`: everything clean and bright, like a model on a table. */
-export type GroundStyle = 'toy';
 
 export interface GroundColors {
   ground: string;
@@ -18,9 +16,6 @@ export interface GroundColors {
   outside: string;
   terrain?: Terrain | undefined;
   road?: RoadStyle | undefined;
-  style?: GroundStyle | undefined;
-  /** Footpaths across a toy lawn: lines of points and their width. */
-  paths?: { points: [number, number][]; width: number }[] | undefined;
 }
 
 export type Rgb = [number, number, number];
@@ -313,79 +308,6 @@ export function terrainPixel(
   out[2] = clamp255(pb * k);
 }
 
-/**
- * A venue's ground colour as a toy venue wears it: lifted until it is bright, and a little further
- * from grey, so a dark field or a dull yard comes out clean. A colour already bright is left.
- */
-export function toyGround(c: Rgb): Rgb {
-  const mx = Math.max(c[0], c[1], c[2]);
-  const k = Math.min(1.6, Math.max(1, 196 / Math.max(1, mx)));
-  if (k === 1) return c;
-  const grey = ((c[0] + c[1] + c[2]) / 3) * k;
-  const f = (v: number): number => clamp255(grey + (v * k - grey) * 1.12);
-  return [f(c[0]), f(c[1]), f(c[2])];
-}
-
-/** How wide one square of a toy lawn's turf is. */
-export const TURF = 14;
-
-/**
- * One pixel of a toy venue's ground: clean even green, laid as turf in squares, a few of them and
- * their neighbours a shade lighter or deeper. No ledges, no bare earth, no grain.
- */
-export function toyPixel(out: Rgb, x: number, y: number, G: Rgb, G2: Rgb, F: Fields): void {
-  // the lawn drifts a little from one green to the other in broad soft patches
-  const a = F.big.at(x, y) * 0.6 + F.mid.at(x, y) * 0.4;
-  const t = Math.max(0, Math.min(1, (a - 0.36) / 0.3)) * 0.6;
-  // squares of turf: here and there a clutch of them stands out, lighter or deeper
-  const cx = Math.floor(x / TURF);
-  const cy = Math.floor(y / TURF);
-  const clutch = hash2(cx >> 1, cy >> 1, F.seed + 3);
-  const own = hash2(cx, cy, F.seed + 5);
-  let k = 1;
-  if (clutch > 0.9 ? own > 0.4 : own > 0.975) k = 1.07;
-  else if (clutch < 0.07 && own > 0.5) k = 0.95;
-  out[0] = clamp255((G[0] + (G2[0] - G[0]) * t) * k);
-  out[1] = clamp255((G[1] + (G2[1] - G[1]) * t) * k);
-  out[2] = clamp255((G[2] + (G2[2] - G[2]) * t) * k);
-}
-
-/**
- * A toy venue's footpaths over one pixel of its lawn: bare earth in squares, ragged at the edges,
- * a shade deeper down the two ruts feet and wheels have worn.
- */
-export function pathPixel(
-  out: Rgb,
-  x: number,
-  y: number,
-  paths: NonNullable<GroundColors['paths']>,
-  D: Rgb,
-  F: Fields,
-): void {
-  // (in squares two art px across, like the lawn's tufts)
-  const qx = (x >> 1) * 2 + 1;
-  const qy = (y >> 1) * 2 + 1;
-  for (const P of paths) {
-    let best = 1e9;
-    for (let i = 0; i + 1 < P.points.length; i++) {
-      const [ax, ay] = P.points[i]!;
-      const [bx, by] = P.points[i + 1]!;
-      const dx = bx - ax;
-      const dy = by - ay;
-      const t = Math.max(0, Math.min(1, ((qx - ax) * dx + (qy - ay) * dy) / (dx * dx + dy * dy)));
-      best = Math.min(best, Math.hypot(qx - ax - dx * t, qy - ay - dy * t));
-    }
-    const half = P.width / 2 + (hash2(qx, qy, F.seed + 11) - 0.5) * 5;
-    if (best > half) continue;
-    const rut = Math.abs(best - P.width * 0.22) < 1.4 ? 0.84 : 1;
-    const k = rut * (0.94 + 0.12 * hash2(qx, qy, F.seed + 13));
-    out[0] = clamp255(D[0] * k);
-    out[1] = clamp255(D[1] * k);
-    out[2] = clamp255(D[2] * k);
-    return;
-  }
-}
-
 /** Fill a whole RGBA map with a venue's country. */
 export function paintTerrain(
   px: Uint8ClampedArray,
@@ -400,15 +322,9 @@ export function paintTerrain(
   const D = rgbOf(colors.dirt);
   const out: Rgb = [0, 0, 0];
   let k = 0;
-  const toy = colors.style === 'toy';
-  const T = toyGround(G);
-  const T2 = toyGround(G2);
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
-      if (toy) {
-        toyPixel(out, x, y, T, T2, F);
-        if (colors.paths) pathPixel(out, x, y, colors.paths, D, F);
-      } else terrainPixel(out, x, y, terrain, G, G2, D, F);
+      terrainPixel(out, x, y, terrain, G, G2, D, F);
       px[k] = out[0];
       px[k + 1] = out[1];
       px[k + 2] = out[2];
@@ -479,7 +395,7 @@ export function measure(
  * so a bend's kerbs begin a little before it and run a little past: 0 where there is no kerb
  * (a straight, a gentle curve), about 1 through a hairpin.
  */
-export function bends(T: Line, from = KERB_FROM): Float32Array {
+export function bends(T: Line): Float32Array {
   const TAU = Math.PI * 2;
   const span = Math.max(2, Math.round(28 / T.step));
   const raw = new Float32Array(T.n);
@@ -498,7 +414,7 @@ export function bends(T: Line, from = KERB_FROM): Float32Array {
       const v = raw[(i + d + T.n) % T.n]!;
       if (Math.abs(v) > Math.abs(best)) best = v;
     }
-    out[i] = Math.abs(best) >= from ? best : 0;
+    out[i] = Math.abs(best) >= KERB_FROM ? best : 0;
   }
   // kerbs come in whole runs: a gap too short to notice is closed, a run too short to be a bend
   // is taken up
@@ -540,11 +456,6 @@ export interface RoadPaint {
   use: (i: number) => boolean;
 }
 
-/** A toy road's tarmac, and how wide its kerbs are. */
-const TOY_TAR: Rgb = [0x8a, 0x86, 0x92];
-const TOY_KERB = 8;
-const TOY_KERB_FROM = 0.08;
-
 /** How far past the road's edge the verge can reach. */
 export const VERGE = 36;
 
@@ -558,12 +469,10 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
   const half = o.road / 2;
   const terrain = terrainOf(colors);
   const style: RoadStyle = colors.road ?? 'tarmac';
-  const toy = colors.style === 'toy' && style === 'tarmac';
   const G = rgbOf(colors.ground);
   const D = rgbOf(colors.dirt);
   const N = measure(T, w, h, half + VERGE, o.use);
-  // (a toy road is kerbed round every corner, however gentle)
-  const B = bends(T, toy ? TOY_KERB_FROM : KERB_FROM);
+  const B = bends(T);
   const seed = F.seed;
   // tarmac takes a little of the country's colour, so every venue's road is its own grey
   const TAR: Rgb = [
@@ -632,44 +541,7 @@ export function paintRoad(px: Uint8ClampedArray, w: number, h: number, o: RoadPa
       let g: number;
       let b: number;
       let m = 1;
-      if (toy) {
-        // a toy road: one clean grey, crisp white lines, fat red and white kerbs round every
-        // bend, and a neat dark trim where it meets the lawn
-        if (d > half + TOY_KERB + 1.5) continue;
-        if (d <= half) {
-          r = TOY_TAR[0];
-          g = TOY_TAR[1];
-          b = TOY_TAR[2];
-          // two lanes a touch darker than the middle and the edges
-          if (Math.abs(d - half * 0.46) < half * 0.2) m = 0.965;
-          if (d > half - 5 && d < half - 2.5) {
-            r = 244;
-            g = 244;
-            b = 236;
-            m = 1;
-          } else if (d < 1.4 && ((ali % 34) + 34) % 34 < 17) {
-            r = 240;
-            g = 240;
-            b = 230;
-            m = 1;
-          }
-        } else if (kerbed && d <= half + TOY_KERB) {
-          const red = (Math.floor(al / 10) & 1) === 0;
-          r = red ? 0xe2 : 0xf6;
-          g = red ? 0x36 : 0xf3;
-          b = red ? 0x32 : 0xea;
-          // it stands proud: a lit lip towards the light, a dark foot away from it
-          if (d > half + TOY_KERB - 1.4) m = lit < 0 ? 0.62 : 0.88;
-          else if (d < half + 1.2 && lit < 0) m = 1.06;
-        } else if (d <= (kerbed ? half + TOY_KERB : half) + 1.5) {
-          const p = k * 4;
-          const f = lit < -0.15 ? 0.72 : 0.86;
-          px[p] = clamp255(px[p]! * f);
-          px[p + 1] = clamp255(px[p + 1]! * f);
-          px[p + 2] = clamp255(px[p + 2]! * f);
-          continue;
-        } else continue;
-      } else if (style === 'dirt') {
+      if (style === 'dirt') {
         const ext = half + (mid - 0.5) * 9;
         if (d > ext + 4) continue;
         if (d > ext) {

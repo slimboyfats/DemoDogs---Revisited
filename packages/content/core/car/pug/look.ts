@@ -1,6 +1,5 @@
 import type { LookModule } from '@demodogs/shared';
 import { carBody } from '../../../src/carshape';
-import { toyTruck } from '../../../src/toytruck';
 import { CAR_CELL } from '../../../src/shapes';
 
 /** Is (y, z) on a tube of radius r running along x at (cy, cz)? */
@@ -60,20 +59,6 @@ const look: LookModule = {
   look: {
     kind: 'car',
     body: { ...CAR_CELL, smooth: true, fn: body },
-    toy: {
-      ...CAR_CELL,
-      smooth: true,
-      fn: toyTruck({
-        a: 10.5,
-        b: 5.4,
-        well: 3,
-        axles: [7, -6.8],
-        hood: 3.4,
-        nose: 2.9,
-        cab: { x0: -3.6, x1: 3.2, roof: 6.9, rake: 0 },
-        cage: true,
-      }),
-    },
     // a pair of spotlights on a bar
     top: {
       w: 4,

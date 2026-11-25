@@ -110,10 +110,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   loading when ids go: unknown ones are left out, never an error. Every prop is placeable; nothing is added per prop.
 - **The ground is painted once, per pixel** (client `render/terrain.ts`, then decals in `render/ground.ts`). A venue's
   `colors.terrain` (grass, dirt, sand, snow, gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are
-  optional and looks only, so the sim never reads them. `colors.style: "toy"` draws a venue as a toy
-  (Fetch Park): clean turf in squares, a spotless road, fat kerbs, even shading, cars as toy trucks, everything built
-  of cubes and squares with nothing round, fire and dust in cubes, soft focus at the screen's edges. `?look=toy`
-  draws any venue that way and `?look=classic` draws a toy venue the old way.
+  optional and looks only, so the sim never reads them.
 - **The ground has height** where a venue has `relief` (hills under the road, sheer terraces beyond it): `Relief`
   (sim/relief.ts) is the one height map. The sim uses it for slopes, faces a car cannot climb and edges it drives off;
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map

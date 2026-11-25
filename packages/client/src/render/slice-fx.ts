@@ -129,9 +129,7 @@ export class SliceFx {
     }
     for (let i = this.statics; i < w.statics.length; i++) this.start(w.statics[i]!);
     this.statics = w.statics.length;
-    // (what comes into the world already flying was thrown, whole: it is not built in the air)
-    for (let i = this.props; i < w.props.length; i++)
-      if (w.props[i]!.z <= 4) this.start(w.props[i]!, w.props[i]!.z);
+    for (let i = this.props; i < w.props.length; i++) this.start(w.props[i]!, w.props[i]!.z);
     this.props = w.props.length;
     for (let i = 0; i < w.pickups.length; i++) {
       const p = w.pickups[i]!;

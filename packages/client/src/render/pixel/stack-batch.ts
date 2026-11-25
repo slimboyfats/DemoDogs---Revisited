@@ -1,4 +1,3 @@
-import { FX_CELL } from '../scene';
 import { sliceX, sliceY, type Strip } from '../stack';
 import { compile, compileKept, countingShader, uniforms } from './gl';
 import type { Lights } from './lighting';
@@ -38,7 +37,6 @@ const NAMES = [
   'u_count',
   'u_aux',
   'u_lit',
-  'u_smooth',
   'u_amb',
   'u_sun',
   'u_sdir',
@@ -528,7 +526,6 @@ export class StackBatch {
     gl.useProgram(prog);
     const lit = sky.lit && !!this.atlas.auxTex;
     gl.uniform1f(u.u_lit, lit ? 1 : 0);
-    gl.uniform1f(u.u_smooth, FX_CELL > 0 ? 1 : 0);
     gl.uniform3fv(u.u_amb, sky.amb);
     gl.uniform3fv(u.u_sun, sky.sun);
     gl.uniform3fv(u.u_sdir, sky.dir);

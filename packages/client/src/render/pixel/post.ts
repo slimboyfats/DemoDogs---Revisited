@@ -28,7 +28,6 @@ uniform float u_rippleW[${MAX_RIPPLES}];
 uniform vec2 u_origin;
 uniform float u_scale;
 uniform float u_ys;
-uniform float u_blur;  // soft focus towards the top and bottom edges, device px at the edge; 0: none
 out vec4 o;
 void main() {
   vec2 px = vec2(gl_FragCoord.x, u_view.y - gl_FragCoord.y);
@@ -53,21 +52,7 @@ void main() {
   disp = floor(disp / u_scale + 0.5) * u_scale;
   vec2 uv = (px - disp) / u_view;
   uv.y = 1.0 - uv.y;
-  vec3 c = texture(u_scene, clamp(uv, vec2(0.0), vec2(1.0))).rgb;
-  if (u_blur > 0.0) {
-    // a miniature seen close: sharp across the middle, softer the nearer the top or the bottom
-    float e = abs(px.y / u_view.y - 0.5) * 2.0;
-    float k = smoothstep(0.58, 1.0, e) * u_blur;
-    if (k > 0.35) {
-      for (int i = 0; i < 8; i++) {
-        float a = float(i) * 0.7853982 + 0.39;
-        vec2 d = vec2(cos(a), sin(a)) * k * (i % 2 == 0 ? 1.0 : 0.55) / u_view;
-        c += texture(u_scene, clamp(uv + d, vec2(0.0), vec2(1.0))).rgb;
-      }
-      c /= 9.0;
-    }
-  }
-  o = vec4(c, 1.0);
+  o = vec4(texture(u_scene, clamp(uv, vec2(0.0), vec2(1.0))).rgb, 1.0);
 }`;
 
 /** One ring for the pass, in device pixels. */
@@ -107,10 +92,9 @@ export class LensPass {
       'u_origin',
       'u_scale',
       'u_ys',
-      'u_blur',
     ]);
     this.fbo = gl.createFramebuffer();
-    this.scene = texture(gl, gl.LINEAR);
+    this.scene = texture(gl);
     this.depth = gl.createRenderbuffer();
     this.vao = gl.createVertexArray();
   }
@@ -136,13 +120,7 @@ export class LensPass {
    * Put the scene on the canvas through the lens rings. `origin` and `cell` give the grid the
    * push snaps to (device px), `ys` how much the ground is squashed up the screen.
    */
-  end(
-    lenses: readonly Lens[],
-    origin: readonly [number, number],
-    cell: number,
-    ys: number,
-    blur = 0,
-  ): void {
+  end(lenses: readonly Lens[], origin: readonly [number, number], cell: number, ys: number): void {
     const gl = this.gl;
     const n = Math.min(MAX_RIPPLES, lenses.length);
     for (let i = 0; i < n; i++) {
@@ -166,7 +144,6 @@ export class LensPass {
     gl.uniform2f(this.u.u_origin, origin[0], origin[1]);
     gl.uniform1f(this.u.u_scale, cell);
     gl.uniform1f(this.u.u_ys, ys);
-    gl.uniform1f(this.u.u_blur, blur);
     gl.uniform1i(this.u.u_rippleCount, n);
     gl.uniform4fv(this.u.u_ripple, this.buf);
     gl.uniform1fv(this.u.u_rippleW, this.widths);

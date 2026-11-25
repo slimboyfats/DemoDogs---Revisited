@@ -42,7 +42,6 @@ export class GroundLayer {
       'u_amb',
       'u_snow',
       'u_wet',
-      'u_calm',
       'u_cone',
       'u_ccount',
       'u_map',
@@ -51,9 +50,6 @@ export class GroundLayer {
     ]);
     this.vao = gl.createVertexArray();
   }
-
-  /** 1: the ground is drawn without the shader's grain (a toy venue's clean paint). */
-  calm = 0;
 
   /** Copy up whatever was painted since the last frame. */
   sync(): void {
@@ -95,7 +91,6 @@ export class GroundLayer {
     else gl.uniform3f(u.u_amb, 1, 1, 1);
     gl.uniform1f(u.u_snow, sky?.snow ?? 0);
     gl.uniform1f(u.u_wet, sky?.wet ?? 0);
-    gl.uniform1f(u.u_calm, this.calm);
     gl.uniform2f(u.u_size, this.ground.cv.width, this.ground.cv.height);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
