@@ -58,6 +58,8 @@ function el<K extends keyof HTMLElementTagNameMap>(
 }
 
 export interface CareerHooks {
+  /** Something to be heard: the till, a refusal, or the engine of a car put on the turntable. */
+  heard?: (what: 'buy' | 'denied' | 'rev', car?: string) => void;
   /** The career changed (a purchase): save it. */
   change(k: Career): void;
   race(id: RaceId): void;
@@ -107,7 +109,11 @@ export class CareerScreen {
       this.k = r.career;
       this.hooks.change(r.career);
       this.note = done;
-    } else this.note = r.why;
+      this.hooks.heard?.('buy');
+    } else {
+      this.note = r.why;
+      this.hooks.heard?.('denied');
+    }
     this.render();
   }
 
@@ -221,6 +227,7 @@ export class CareerScreen {
                   // first tap puts it on the turntable, the second buys it
                   if (this.preview !== c.id) {
                     this.preview = c.id;
+                    this.hooks.heard?.('rev', c.id);
                     this.note = `${c.name}: tap again to buy.`;
                     this.render();
                   } else {

@@ -43,14 +43,56 @@ const rangeAct = (tick) => {
   if (at) dd.dev.use(P.x + at[0], P.y + at[1], 'blast');
 };
 
+/** Nothing but the sounds named, a second apart, on a quiet range (`say` makes each one). */
+const sayEach = (list, say, gap = 60) =>
+  `(tick) => {
+    const dd = window.__dd;
+    if (tick === 0) dd.sound.engineStop();
+    const list = ${JSON.stringify(list)};
+    if (tick % ${gap} === 20 && list[(tick - 20) / ${gap}] !== undefined)
+      (${say})(dd.sound, list[(tick - 20) / ${gap}]);
+  }`;
+const KNOCKS = ['car', 'metal', 'wood', 'stone', 'rubber', 'glass', 'soft'];
+const JINGLES = ['final-lap', 'win', 'podium', 'finish', 'lost', 'last-standing'];
+const SHOP = ['buy', 'denied', 'cash', 'unlock', 'cup', 'cup-lost'];
+const CARS = ['terrier', 'pug', 'mutt', 'bruiser', 'whippet', 'wolfhound'];
+
 const scenes = [
+  // each car's engine from a standing start, the same road for all of them
+  ...CARS.map((c) => ({
+    name: `engine-${c}`,
+    url: `?start=kennel-loop&car=${c}&autoplay&seed=7`,
+    seconds: 7,
+  })),
+  // what a crash sounds like by what was hit, the tunes for moments, and the shop's
+  {
+    name: 'knocks',
+    url: '?dev&car=mutt',
+    seconds: 8,
+    act: sayEach(KNOCKS, '(s, k) => s.crash(70, k)'),
+    hide: 'devPanel',
+  },
+  {
+    name: 'jingles',
+    url: '?dev&car=mutt',
+    seconds: 15,
+    act: sayEach(JINGLES, '(s, k) => s.jingle(k)', 140),
+    hide: 'devPanel',
+  },
+  {
+    name: 'shop',
+    url: '?dev&car=mutt',
+    seconds: 16,
+    act: sayEach(SHOP, '(s, k) => s.jingle(k)', 120),
+    hide: 'devPanel',
+  },
   { name: 'race-grass', url: '?start=kennel-loop&car=mutt&autoplay&seed=7', seconds: 22 },
   { name: 'race-paved', url: '?start=brickworks&car=mutt&autoplay&seed=3', seconds: 14 },
   { name: 'race-dirt', url: '?start=sunbake-canyon&car=mutt&autoplay&seed=5', seconds: 12 },
   { name: 'race-snow', url: '?start=frostbite-quarry&car=mutt&autoplay&seed=5', seconds: 12 },
   { name: 'derby', url: '?start=the-pit&car=mutt&autoplay&seed=4', seconds: 14 },
   { name: 'blasts', url: '?dev&car=mutt', seconds: 8, act: rangeAct, hide: 'devPanel' },
-].filter((s) => !only || s.name === only);
+].filter((s) => !only || s.name === only || s.name.startsWith(`${only}-`));
 const cut = Number(args.find((a) => a.startsWith('--seconds='))?.slice(10));
 if (cut) for (const s of scenes) s.seconds = cut;
 

@@ -21,5 +21,6 @@
     "globs": 6,
     "drums": 3,
     "drum": "prop.barrel"
-  }
+  },
+  "ambient": "water"
 }

@@ -8,5 +8,6 @@
   },
   "grip": 0.06,
   "colour": "#bcd9e6",
-  "alpha": 0.6
+  "alpha": 0.6,
+  "sound": "glass"
 }

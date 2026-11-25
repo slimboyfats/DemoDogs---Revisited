@@ -17,8 +17,11 @@ export type SimEvent =
       ly: number;
       amount: number;
     }
-  /** Two hard things met. impact is the closing speed. */
-  | { t: 'crash'; x: number; y: number; impact: number; player: boolean }
+  /**
+   * Two hard things met. impact is the closing speed. `made`: the material of the scenery a car
+   * ran into (its manifest's `made`), absent when it was another car or nothing with a material.
+   */
+  | { t: 'crash'; x: number; y: number; impact: number; player: boolean; made?: string }
   | { t: 'scrape'; x: number; y: number; player: boolean }
   | {
       t: 'detach';

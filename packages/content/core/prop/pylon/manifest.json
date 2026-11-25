@@ -9,5 +9,6 @@
   "body": "static",
   "radius": 5,
   "made": "material.steel",
-  "integrity": 170
+  "integrity": 170,
+  "ambient": "hum"
 }

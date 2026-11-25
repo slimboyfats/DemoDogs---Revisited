@@ -74,10 +74,10 @@ export class Music {
   }
 
   /** Something loud went off: the tune steps back for a moment. */
-  duck(amount: number, now: number): void {
+  duck(amount: number, now: number, hold = 0.18): void {
     const g = this.bus.gain;
     g.setTargetAtTime(LEVEL * (1 - Math.min(0.7, amount)), now, 0.012);
-    g.setTargetAtTime(LEVEL, now + 0.18, 0.3);
+    g.setTargetAtTime(LEVEL, now + hold, 0.3);
   }
 
   /** Put down every note that starts before `now + AHEAD`. */

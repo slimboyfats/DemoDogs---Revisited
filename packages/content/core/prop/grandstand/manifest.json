@@ -9,5 +9,6 @@
   "body": "static",
   "radius": 6.5,
   "made": "material.wood",
-  "integrity": 70
+  "integrity": 70,
+  "ambient": "crowd"
 }

@@ -19,5 +19,6 @@
     "dust": 0.2,
     "drift": 0.1
   },
-  "colour": "#9cc4d8"
+  "colour": "#9cc4d8",
+  "sound": "glass"
 }

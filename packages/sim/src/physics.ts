@@ -424,6 +424,7 @@ function bump(
   ny: number,
   depth: number,
   hard: number,
+  made?: string,
 ): void {
   c.x += nx * depth;
   c.y += ny * depth;
@@ -438,7 +439,14 @@ function bump(
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
       if (!padded(w, c, px, py)) damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);
-      w.emit({ t: 'crash', x: px, y: py, impact: impact * 0.5, player: c === w.player });
+      w.emit({
+        t: 'crash',
+        x: px,
+        y: py,
+        impact: impact * 0.5,
+        player: c === w.player,
+        ...(made ? { made } : {}),
+      });
     }
   } else if (impact > 8 && c.scrapeCd <= 0) {
     c.scrapeCd = 0.12;
@@ -507,10 +515,17 @@ export function collideWorld(w: World, c: Car): void {
         c.vy *= keep;
         if (!padded(w, c, px, py))
           damage(w, c, ((vn - 28) * 0.1 * s.def.hardness) / big, null, px, py);
-        w.emit({ t: 'crash', x: px, y: py, impact: vn * 0.5, player: c === w.player });
+        w.emit({
+          t: 'crash',
+          x: px,
+          y: py,
+          impact: vn * 0.5,
+          player: c === w.player,
+          ...(s.def.made ? { made: s.def.made } : {}),
+        });
         break;
       }
-      bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness);
+      bump(w, c, px, py, dx / d, dy / d, m - d, s.def.hardness, s.def.made);
     }
   }
 }

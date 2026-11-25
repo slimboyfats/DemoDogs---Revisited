@@ -19,5 +19,6 @@
     "dust": 0.5,
     "drift": 0.5
   },
-  "colour": "#6b4724"
+  "colour": "#6b4724",
+  "sound": "wood"
 }

@@ -9,5 +9,6 @@
   "body": "static",
   "radius": 2,
   "made": "material.wood",
-  "integrity": 20
+  "integrity": 20,
+  "ambient": "water"
 }

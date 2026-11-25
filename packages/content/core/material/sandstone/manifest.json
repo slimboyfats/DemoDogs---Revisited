@@ -11,5 +11,6 @@
     "impact": 1.5,
     "heat": 9
   },
-  "colour": "#ad5f38"
+  "colour": "#ad5f38",
+  "sound": "stone"
 }

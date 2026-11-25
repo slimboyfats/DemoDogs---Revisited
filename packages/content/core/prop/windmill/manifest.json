@@ -9,5 +9,6 @@
   "body": "static",
   "radius": 8.5,
   "made": "material.stone",
-  "integrity": 220
+  "integrity": 220,
+  "ambient": "creak"
 }

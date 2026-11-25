@@ -26,5 +26,12 @@
   "top": {
     "x": 1,
     "z": 7
+  },
+  "engine": {
+    "pitch": 1,
+    "lump": 0.5,
+    "rasp": 0.45,
+    "whine": 0,
+    "weight": 0.36
   }
 }

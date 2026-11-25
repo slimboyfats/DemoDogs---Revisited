@@ -40,7 +40,7 @@ import { CKind, Cells } from './pixel/cells';
 import { AddonFx } from './addons-fx';
 import { DefenceFx } from './defence-fx';
 import { PLAIN, Wreckage } from './wreckage';
-import type { Sound } from '../audio/sound';
+import type { Sound, Timbre } from '../audio/sound';
 import { dropEvent, feedClouds } from './drops-fx';
 import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
@@ -327,6 +327,22 @@ export class Effects {
   /** The art, for the effects kept in other files. */
   get artOf(): Art {
     return this.art;
+  }
+
+  /** What a thing made of the material `id` sounds like when it is hit: a car's body without one. */
+  timbre(id: string | undefined): Timbre {
+    return (id && this.w.content.material.get(id)?.sound) || 'car';
+  }
+
+  /**
+   * The edge of the world is a wall the sim has no name for; what stands along it is for looks
+   * (a tyre fence, a board fence). A crash right against one of those sounds like it.
+   */
+  private fenceAt(x: number, y: number): string | undefined {
+    for (const s of this.w.near(x, y, 16))
+      if (!s.def.solid && s.def.made && !s.down && Math.hypot(s.x - x, s.y - y) < s.def.radius + 9)
+        return s.def.made;
+    return undefined;
   }
 
   /** A heavy landing, as loud as `v`. */
@@ -975,7 +991,7 @@ export class Effects {
         case 'crash': {
           for (let i = 0; i < 6; i++) this.spark(e.x, e.y, 3, e.impact * 0.4);
           const v = this.vol(e.x, e.y);
-          if (v > 0) S.crash(e.impact * v);
+          if (v > 0) S.crash(e.impact * v, this.timbre(e.made ?? this.fenceAt(e.x, e.y)));
           break;
         }
         case 'press': {
@@ -1044,9 +1060,11 @@ export class Effects {
               rand(0, TAU),
               7,
             );
-          if (c === w.player)
+          if (c === w.player) {
             this.setMsg(w.kind === 'race' ? 'TOTALLED! TOWING YOU BACK' : 'YOU ARE SCRAP', 2.4);
-          else if (w.kind === 'derby' && this.near(c.x, c.y, 300) && e.by !== w.player.index)
+            // out of a derby for good: the blast first, then the bad news
+            if (w.kind !== 'race') S.jingle('lost', 0.7);
+          } else if (w.kind === 'derby' && this.near(c.x, c.y, 300) && e.by !== w.player.index)
             this.text(c.x, c.y, `${c.name} IS OUT`, '#ffb08a');
           break;
         }
@@ -1237,6 +1255,9 @@ export class Effects {
           const s = w.statics[e.prop]!;
           // one that fell over bursts where it lands instead (see collapse)
           if (this.toppled.has(s)) break;
+          // it goes with the sound of what it was: boards crack, a rail clangs, a pane shatters
+          const loud = this.vol(e.x, e.y);
+          if (loud > 0) S.knock(this.timbre(s.def.made), 0.5 * loud);
           let strip = this.scarred.get(s) ?? this.art.prop(s.def.id);
           if (s.def.topples) {
             // it does not break up: it tips off what it stood on and falls whole (a loose prop now)
@@ -1485,7 +1506,7 @@ export class Effects {
             this.text(e.x, e.y, e.label, '#a6fbff');
             if (e.kind === 'repair' || e.kind === 'cash' || e.kind === 'weld') S.repair();
             else if (e.kind === 'nitro') S.nitro();
-            else S.pickup();
+            else S.pickup(e.kind);
           }
           break;
         case 'blade': {
@@ -1723,9 +1744,13 @@ export class Effects {
           break;
         case 'final-lap':
           this.setMsg('FINAL LAP', 1.6);
+          if (e.car === w.player.index) S.jingle('final-lap');
           break;
         case 'finish':
-          if (e.car === w.player.index) this.setMsg(e.place === 1 ? 'YOU WIN!' : 'FINISHED', 2.4);
+          if (e.car === w.player.index) {
+            this.setMsg(e.place === 1 ? 'YOU WIN!' : 'FINISHED', 2.4);
+            S.jingle(e.place === 1 ? 'win' : e.place <= 3 ? 'podium' : 'finish');
+          }
           break;
         case 'over':
           break;
@@ -1733,11 +1758,11 @@ export class Effects {
     }
     if (w.kind === 'derby' && w.endT > 0 && !this.endShown) {
       this.endShown = true;
-      if (!w.player.wrecked)
-        this.setMsg(
-          w.cars.filter((c) => !c.wrecked).length <= 1 ? 'LAST DOG STANDING!' : 'TIME!',
-          3,
-        );
+      if (!w.player.wrecked) {
+        const last = w.cars.filter((c) => !c.wrecked).length <= 1;
+        this.setMsg(last ? 'LAST DOG STANDING!' : 'TIME!', 3);
+        S.jingle(last ? 'last-standing' : 'finish');
+      }
     }
   }
   private endShown = false;

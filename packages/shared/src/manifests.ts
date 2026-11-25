@@ -51,6 +51,21 @@ export const CarSchema = z.strictObject({
     .max(3),
   /** Where the roof piece sits: x along the car, z its underside. */
   top: z.strictObject({ x: z.number(), z: z.number() }),
+  /**
+   * How its engine sounds, for the client alone: `pitch` around 1 (a van 0.7, a racer 1.4), the
+   * rest 0 to 1 (`lump` of the idle, `rasp` of its edge, a blower's `whine`, `weight` an octave
+   * down). What is left out is worked out from its stats, so a car without this still has a voice.
+   */
+  engine: z
+    .strictObject({
+      pitch: z.number().min(0.6).max(1.6),
+      lump: z.number().min(0).max(1),
+      rasp: z.number().min(0).max(1),
+      whine: z.number().min(0).max(1),
+      weight: z.number().min(0).max(1),
+    })
+    .partial()
+    .optional(),
 });
 export type CarManifest = z.infer<typeof CarSchema>;
 
@@ -835,6 +850,11 @@ export const PropSchema = z.strictObject({
   /** Damage a car takes hitting it is scaled by this (tyres are soft). */
   hardness: z.number().min(0).default(1),
   /**
+   * The noise it makes just standing there, for the client alone: heard by a car near it. A tree
+   * (a prop with a `crown`) has birds in it without saying so.
+   */
+  ambient: z.enum(['birds', 'crowd', 'flap', 'creak', 'hum', 'water']).optional(),
+  /**
    * Static props: what it is made of and how much it takes before it comes down. Without
    * `integrity` it cannot be broken.
    */
@@ -1086,6 +1106,8 @@ export const MaterialSchema = z.strictObject({
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),
+  /** What a thing made of it sounds like when a car hits it, for the client alone. */
+  sound: z.enum(['metal', 'wood', 'stone', 'rubber', 'glass', 'soft']).default('stone'),
 });
 export type MaterialManifest = z.infer<typeof MaterialSchema>;
 
