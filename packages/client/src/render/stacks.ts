@@ -672,13 +672,14 @@ export function queueShadows(
     if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
       // (off the ground its shadow falls away from it, down and to the right, and thins: it is
       // how you see a car has left an edge and is in the air)
+      // (under a toy venue's low sun it lies well out to one side even with the car on the ground)
       shadow(
-        c.x + 1.5 + c.z * 0.45,
-        c.y + 1.5 + c.z * 0.3,
+        c.x + (FX_CELL > 0 ? 3.4 * c.size : 1.5) + c.z * 0.45,
+        c.y + (FX_CELL > 0 ? 2.4 * c.size : 1.5) + c.z * 0.3,
         (c.def.body.halfLength + 2) * (1 - Math.min(0.4, c.z / 80)) * c.size,
         (c.def.body.halfWidth + 1.9) * (1 - Math.min(0.3, c.z / 100)) * c.size,
         c.h,
-        0.3 + Math.min(0.12, c.z / 150),
+        (FX_CELL > 0 ? 0.4 : 0.3) + Math.min(0.12, c.z / 150),
       );
   for (const b of w.bots) if (b.alive && R.visible(b.x, b.y, 8)) shadow(b.x, b.y, 4, 3, 0, 0.25);
   // an animal's shadow stays on the ground under it: it is how you see a bird is up in the air

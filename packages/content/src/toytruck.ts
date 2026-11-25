@@ -3,7 +3,7 @@ import type { ShapeFn } from '@demodogs/shared';
 /**
  * Cars as toy trucks: a narrow body of clean flat panels that sits between fat wheels standing out
  * at its sides, a square cab with dark glass, a bumper bar at each end, a grille and lamps, and a
- * white stripe. Every car has its own shape from the same few numbers. Pure.
+ * broad white stripe over the bonnet and the roof. Every car has its own shape from the same few numbers. Pure.
  */
 export interface ToyTruck {
   /** Half length and half width of the body where it is widest (between the wheels). */
@@ -68,16 +68,14 @@ export function toyTruck(s: ToyTruck): ShapeFn {
       if (end < 0.7) {
         const lamp = ay > s.well - 1.5 && ay < s.well - 0.2 && z > top - 1.8 && z < top - 0.5;
         if (lamp) return x > 0 ? 'light' : 'tail';
-        if (x > 0 && ay < s.well - 1.8 && z > 3.0 && z < top - 0.6)
-          return ((ay * 2.2) | 0) % 2 ? 'under' : 'grille';
+        if (x > 0 && ay < s.well - 1.8 && z > 3.0 && z < top - 0.6) return 'grille';
       }
       if (s.bed && x < C.x0 - 0.5 && end > 0.9 && ay < hw - 0.8) {
         if (z > 2.7) return null;
         if (z > 2.2) return 'grille';
       }
-      if (z > 3.1 && z < 3.85 && end >= 0.7) return stripe;
-      // a stripe down the bonnet
-      if (x > C.x1 && ay < 0.9 && top - z < 0.5 && end >= 0.7) return stripe;
+      // one broad stripe down the bonnet (and on over the roof)
+      if (x > C.x1 && ay < 1.3 && top - z < 0.5 && end >= 0.7) return stripe;
       return 'paint';
     }
     if (s.cage) {
@@ -104,14 +102,13 @@ export function toyTruck(s: ToyTruck): ShapeFn {
     const side = cw - ay;
     if (z > C.roof - 0.8) {
       if (side + (C.roof - z) < 0.4) return null;
-      return ay < 0.9 ? stripe : 'paint';
+      return ay < 1.3 ? stripe : 'paint';
     }
     if (s.box !== undefined && x < s.box) return z > 5.2 && z < 5.95 ? stripe : 'paint';
     // pillars at the corners, a sill under the glass
     const fore = Math.min(x - x0, x1 - x);
     if ((fore < 0.75 && side < 0.75) || z < s.hood + 0.35) return 'paint';
-    // dark glass with a streak of sky across it
-    const k = (((x + y * 0.5 + z * 1.4) % 5) + 5) % 5;
-    return k < 0.6 ? 'glasshi' : 'glass';
+    // dark glass
+    return 'glass';
   };
 }

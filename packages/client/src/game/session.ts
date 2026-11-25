@@ -117,8 +117,8 @@ export class Session {
     // (fire, smoke and sparks in fat cubes on a toy venue)
     setFxCell(toy ? 1.5 : 0);
     setFireStyle(toy);
-    sunReach.k = toy ? 1.25 : 1;
-    shadeDepth.k = toy ? 1.35 : 1;
+    sunReach.k = toy ? 1.8 : 1;
+    shadeDepth.k = toy ? 1.5 : 1;
     o.art.chunky(toy);
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);

@@ -1076,6 +1076,6 @@
     "pickup.scrap-jaws",
     "pickup.roll-cage"
   ],
-  "cars": 1.6,
+  "cars": 1.9,
   "paints": ["#2468dc", "#d8342c", "#f0861c", "#2f7a3a", "#f2c81e", "#8a4cc8"]
 }

@@ -548,9 +548,15 @@ void main() {
     // read between the fine cells too, so the edge fades instead of stepping
     vec2 sm = v_uv * u_size;
     sm.y += at.y - (cell.y + 0.5) / u_fine;
-    a = texture(u_tex, sm / u_size).r;
+    // and round about, so a shadow has a wide soft edge, as under a hazy sun
+    a = texture(u_tex, sm / u_size).r * 0.2;
+    for (int k = 0; k < 8; k++) {
+      float an = float(k) * 0.7853982;
+      float r = (k & 1) == 0 ? 3.2 : 1.7;
+      a += texture(u_tex, (sm + vec2(cos(an), sin(an)) * r) / u_size).r * 0.1;
+    }
     if (a < 0.02) discard;
-    o = vec4(0.0, 0.0, 0.0, u_alpha * smoothstep(0.0, 0.8, a) * (1.0 + 1.2 * texture(u_deep, at / u_size).r));
+    o = vec4(0.0, 0.0, 0.0, u_alpha * smoothstep(0.08, 0.92, a) * (1.0 + 1.2 * texture(u_deep, at / u_size).r));
     return;
   }
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
