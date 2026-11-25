@@ -70,7 +70,7 @@ export class BeamHaze {
     gl.uniform1f(u.u_thick!, thick);
     gl.uniform4fv(u.u_cone!, lights.cones);
     gl.uniform1i(u.u_ccount!, lights.coneCount);
-    gl.uniform3fv(u.u_coneh!, lights.coneh);
+    gl.uniform4fv(u.u_coneh!, lights.coneh);
     gl.uniform1f(u.u_hk!, v.ys / (v.zk / v.scale));
     gl.uniform1f(u.u_lmk!, block ? 1 : 0);
     if (relief.map) {
@@ -119,7 +119,7 @@ void main() {
 #endif
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
-    float f = beam(at, u_cone[n]);
+    float f = beam(at, u_cone[n], u_coneh[n].w);
     if (f <= 0.0) continue;
     // (a lamp well off the ground, a car in the air, throws no shaft along it)
     float far = distance(at, u_cone[n].xy);

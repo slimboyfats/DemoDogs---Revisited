@@ -152,7 +152,7 @@ float puddle(vec2 wp) {
 // A headlamp's beam on the ground at wp: 0 outside it, brightest near the lamp.
 uniform vec4 u_cone[${MAX_CONES}];  // x, y, unit direction
 uniform int u_ccount;
-uniform vec3 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, that ground's, the beam's climb a px
+uniform vec4 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, that ground's, the beam's climb a px, half the gap between its two lamps
 uniform float u_lgz[${MAX_LIGHTS}]; // how high the ground stands under each point light
 // How much of a light that stands \`from\` high reaches a spot \`at\` high and \`d\` away: all of
 // it along a slope or a ramp, none of it over a sheer edge either way (the side of a raised
@@ -160,12 +160,19 @@ uniform float u_lgz[${MAX_LIGHTS}]; // how high the ground stands under each poi
 float level(float from, float at, float d) {
   return 1.0 - clamp((abs(from - at) - 4.0 - min(d * 0.3, 9.0)) / 4.0, 0.0, 1.0);
 }
-float beam(vec2 wp, vec4 c) {
+// (\`gap\`: how far to each side of c.xy its two lamps are: a beam from each, that run into one
+// further out; 0 for one lamp)
+float beam(vec2 wp, vec4 c, float gap) {
   vec2 d = wp - c.xy;
   float along = dot(d, c.zw);
   if (along <= 0.0 || along >= ${CONE_REACH.toFixed(1)}) return 0.0;
+  float across = abs(d.x * c.w - d.y * c.z);
   float wide = 2.5 + along * 0.34;
-  float side = abs(d.x * c.w - d.y * c.z) / wide;
+  if (gap > 0.0) {
+    across = abs(across - gap);
+    wide = 1.4 + along * 0.2;
+  }
+  float side = across / wide;
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
   return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.15;
@@ -356,7 +363,7 @@ void main() {
   for (int i = 0; i < ${MAX_CONES}; i++) {
     if (i >= u_ccount) break;
     vec4 p = u_cone[i];
-    float f = beam(v_world.xy, p);
+    float f = beam(v_world.xy, p, u_coneh[i].w);
     if (f <= 0.0) continue;
     // (what is as high as the lamp or higher is level with it: a deck under a car on it)
     float far = distance(v_world.xy, p.xy);
@@ -624,7 +631,7 @@ void main() {
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
-    float f = beam(wp, u_cone[n]);
+    float f = beam(wp, u_cone[n], u_coneh[n].w);
     if (f <= 0.0) continue;
     float far = distance(wp, u_cone[n].xy);
     f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);

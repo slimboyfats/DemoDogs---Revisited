@@ -253,6 +253,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    // the flame behind a car that is boosting (blue off a boost tile) lights what is round its tail
+    for (const c of w.cars) {
+      if (c.wrecked || !(c.boosting || c.surge > 0) || !this.visible(c.x, c.y, 60)) continue;
+      const back = (c.def.body.halfLength + 5) * c.size;
+      L.add(
+        c.x - Math.cos(c.h) * back,
+        c.y - Math.sin(c.h) * back,
+        38 * c.size,
+        0.95 + Math.sin(t * 41 + c.index * 2) * 0.2,
+        c.boosting ? 0xff9a40 : 0x60c8ff,
+      );
+    }
     armsLights(L, w);
     arsenalLights(L, w);
     for (const f of fx.fires)
@@ -285,6 +297,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         c.h - c.bank * 0.9,
         c.z,
         c.pitch * 1.5,
+        // (two lamps, a beam from each, unless one of them is out)
+        out === 0 ? c.def.body.halfWidth * 0.6 * c.size : 0,
       );
     };
     lamp(w.player);
@@ -459,7 +473,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       } else {
         for (let i = 0; i < L.count; i++) L.gz[i] = this.rise(L.pos[i * 4]!, L.pos[i * 4 + 1]!);
         for (let i = 0; i < L.coneCount; i++)
-          L.coneh[i * 3 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
+          L.coneh[i * 4 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
       }
     }
     const lit = this.lights.count + this.lights.coneCount > 0;
