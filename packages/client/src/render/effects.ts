@@ -112,6 +112,8 @@ const BIG_STRIP = 120_000;
 const big = (s: Strip): boolean => s.cw * s.ch * s.n >= BIG_STRIP;
 /** mudders' soot tones: what a blast's smoke is made of. */
 const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
+/** What a toy venue's blast leaves in the air: warm tan dust. */
+const TOY_DUST_TONES = [0xb89f78, 0xcbb48c, 0xdccba6, 0xe6d8b8] as const;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -399,7 +401,7 @@ export class Effects {
   ): void {
     // (on a toy venue every puff is pale: a little cloud, never grit on the clean road)
     const toy = coloursOf(this.w.venue.colors).style === 'toy';
-    const rgb = tint ?? (toy ? 0xe8e2d2 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
+    const rgb = tint ?? (toy ? 0xdccba6 : kind === 'smoke' ? 0x8a8680 : 0x9a8460);
     const dust = kind === 'dust';
     const n = Math.max(1, Math.round(4 * this.quality));
     for (let i = 0; i < n; i++)
@@ -438,6 +440,9 @@ export class Effects {
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
+    // (a toy venue has no black smoke: a wreck smokes warm grey, in the same soft balls as dust)
+    if (coloursOf(this.w.venue.colors).style === 'toy')
+      rgb = rgb === SOOT ? 0x8c8076 : rgb === HAZE ? 0xb9b0a4 : rgb;
     const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
     const r = size * 0.5;
     for (let i = 0; i < n; i++)
@@ -531,7 +536,13 @@ export class Effects {
       ticks: FIRE_FEED,
       high,
       age: 0,
-      tones: high ? SMOKE_TONES : this.dustTones(x, y),
+      // (a toy blast leaves tan dust, never soot)
+      tones:
+        coloursOf(this.w.venue.colors).style === 'toy'
+          ? TOY_DUST_TONES
+          : high
+            ? SMOKE_TONES
+            : this.dustTones(x, y),
     });
     // the shock front: a ring of sparks racing out along the ground
     if (!high)

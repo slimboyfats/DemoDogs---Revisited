@@ -32,10 +32,11 @@ const look: LookModule = {
         const top = 11.7 + lump - edge - Math.floor(hash3(qx, qy, 1) * 2.4) * 1.3;
         if (z > top) return null;
         const qz = Math.floor(z / 1.3);
+        // clean bands: a sunlit top, plain green sides, a darker foot, a lighter leaf now and then
         const t = hash3(qx, qy, qz + 3);
-        if (z > top - 1.3) return t > 0.25 ? 'hedge2' : 'hedge';
-        if (z < 2.6) return t > 0.5 ? 'hedge4' : 'hedge3';
-        return t > 0.86 ? 'hedge2' : t > 0.5 ? 'hedge' : 'hedge3';
+        if (z > top - 1.3) return 'hedge2';
+        if (z < 2.6) return 'hedge3';
+        return t > 0.93 ? 'hedge2' : 'hedge';
       },
     },
   },

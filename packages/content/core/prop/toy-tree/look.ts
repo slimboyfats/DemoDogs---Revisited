@@ -51,9 +51,7 @@ export function toyTree(
           Math.max(ax, ay) < flare + cube * (cz < cube ? 2.6 : 1.2);
         if ((ax < flare && ay < flare) || root)
           // (grooves run up the bark)
-          return hash3(qx + 9, qy + 9, 1) > 0.55 || hash3(qx + 9, qy + 9, qz) > 0.8
-            ? 'toybark2'
-            : 'toybark';
+          return hash3(qx + 9, qy + 9, 1) > 0.6 ? 'toybark2' : 'toybark';
       }
       // the crown: a cube belongs to the lump it is deepest inside, if its middle is in one
       let deep = 1;
@@ -68,8 +66,9 @@ export function toyTree(
       }
       if (deep === 1) return null;
       // (each lump sunlit on top and dark underneath, so the crown reads as many of them)
-      const t = lit + (hash3(qx + 40, qy + 40, qz) - 0.5) * 0.5;
-      return t > 0.55 ? 'toyleaf2' : t > 0.15 ? 'toyleaf' : t > -0.3 ? 'toyleaf3' : 'toyleaf4';
+      // (in clean bands with only a little give: the light does the rest of the shading)
+      const t = lit + (hash3(qx + 40, qy + 40, qz) - 0.5) * 0.14;
+      return t > 0.5 ? 'toyleaf2' : t > -0.05 ? 'toyleaf' : t > -0.6 ? 'toyleaf3' : 'toyleaf4';
     },
   };
 }

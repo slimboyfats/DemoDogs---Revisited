@@ -225,7 +225,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     L.clear();
     const t = w.time;
     // (a toy venue is bright already: a flash there only warms the ground)
-    const flash = FX_CELL > 0 ? 0.6 : 1.6;
+    const flash = FX_CELL > 0 ? 0.25 : 1.6;
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, flash * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {

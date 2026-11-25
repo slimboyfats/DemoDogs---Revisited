@@ -1,3 +1,4 @@
+import { FX_CELL } from '../scene';
 import { Shape } from './batch';
 import { shade, WIND, type Put } from './particles';
 import type { GasGpu } from './gas-gpu';
@@ -90,7 +91,9 @@ const PALE: V3 = [0.64, 0.61, 0.64];
 export const HOT = rgbOf(1, 0.816, 0.376);
 
 // a toy venue's fire: no white heat and no soot, and its smoke is soft tan dust
-const TOY_HOT: V3 = [1, 0.93, 0.5];
+const TOY_HOT: V3 = [1, 0.86, 0.2];
+const TOY_AMBER: V3 = [1, 0.64, 0.1];
+const TOY_DEEP: V3 = [0.58, 0.14, 0.06];
 const TOY_RED: V3 = [0.92, 0.3, 0.1];
 const TOY_TAN: V3 = [0.62, 0.52, 0.4];
 const TOY_DUST: V3 = [0.76, 0.68, 0.55];
@@ -100,8 +103,8 @@ const bangAt = (f: number, toy: boolean): number =>
   rgbOf(
     ...(toy
       ? f < 0.5
-        ? ramp3(TOY_HOT, YELLOW, ORANGE, f * 2)
-        : ramp3(ORANGE, TOY_RED, TOY_TAN, f * 2 - 1)
+        ? ramp3(TOY_HOT, TOY_AMBER, ORANGE, f * 2)
+        : ramp3(ORANGE, TOY_RED, TOY_DEEP, f * 2 - 1)
       : f < 0.5
         ? ramp3(WHITE, YELLOW, ORANGE, f * 2)
         : ramp3(ORANGE, RED, DEEP, f * 2 - 1)),
@@ -117,7 +120,7 @@ const fireAt = (x: number, toy: boolean): number => {
   return rgbOf(
     ...(toy
       ? f < 0.5
-        ? ramp3(TOY_HOT, YELLOW, ORANGE, f * 2)
+        ? ramp3(TOY_HOT, TOY_AMBER, ORANGE, f * 2)
         : ramp3(ORANGE, TOY_RED, TOY_TAN, f * 2 - 1)
       : f < 0.5
         ? ramp3(WHITE, YELLOW, ORANGE, f * 2)
@@ -574,6 +577,11 @@ export class Cells {
           const s = stepT(t, th, 6);
           const c = this.rgb[i]!;
           // fresh smoke is thick: two cells across until it starts to thin
+          // (a toy venue's dust is soft balls that swell as they drift)
+          if (FX_CELL > 0) {
+            normal(x, y, z, t < 0.4 ? 2 : 3, shade(c, s < 0.34 ? 0.94 : 1), 1, Shape.Disc);
+            continue;
+          }
           normal(
             x,
             y,

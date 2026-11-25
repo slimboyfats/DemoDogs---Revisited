@@ -11,6 +11,7 @@ import {
   type World,
 } from '@demodogs/sim';
 import type { Art } from './art';
+import { FX_CELL } from './scene';
 import { queueToppling } from './collapse';
 import type { Effects } from './effects';
 import { queueRig, rigTall, tickBones } from './bones';
@@ -367,6 +368,18 @@ function over(s: StaticProp, strip: Strip, lift: number, P: Car): boolean {
   );
 }
 
+/** Toy wheels: the same wheel drawn this much bigger, set this far further out (art px). */
+const TOY_WHEEL = 1.55;
+const TOY_TRACK = 1.1;
+/** How far a toy car's body rides up on its big wheels (art px). */
+const TOY_RIDE = 1.7;
+const bigWheels = new WeakMap<Strip, Strip>();
+function bigWheel(s: Strip): Strip {
+  let b = bigWheels.get(s);
+  if (!b) bigWheels.set(s, (b = { ...s, res: s.res / TOY_WHEEL }));
+  return b;
+}
+
 function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   // a swollen or shrunk car is the same car drawn with bigger or smaller pixels: everything about
   // it is laid out `k` times as far from its middle. One flattened by a bigger car is a little
@@ -397,21 +410,27 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 3.5;
   const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
   const lurch = c.lurch + (c.sunkTip?.[0] ?? 0) * tip;
-  const wheel = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
-  const z = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
+  // on a toy venue every car is a toy truck: fat wheels that stand out from its sides, and the
+  // body (with all that is fixed to it) riding high on them
+  const toy = FX_CELL > 0;
+  const turned = art.wheels[((Math.floor(c.wheelDist / 2.2 / k) % 3) + 3) % 3]!;
+  const wheel = toy ? bigWheel(turned) : turned;
+  const out = toy ? TOY_TRACK : 0;
+  const zw = c.z + Math.sin(Math.min(1, fall * 2) * Math.PI) * 4;
+  const z = zw + (toy ? TOY_RIDE * k * flat : 0);
   // the wheels go some of the way with a body that is tipping in
   const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.3;
   const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.3;
   for (const wh of D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];
-      const wy = wh[1] * sg;
+      const wy = (wh[1] + out) * sg;
       const steer = wx > 0 && !c.wrecked ? c.steer * 0.45 : 0;
       R.stack(
         wheel,
         c.x + cs * wx - sn * wy + wtx,
         c.y + sn * wx + cs * wy + wty,
-        z,
+        zw,
         c.h + steer,
         alpha,
       );

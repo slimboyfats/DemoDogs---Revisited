@@ -174,6 +174,7 @@ uniform float u_glow;    // how far lamps stand out, 0 to 1
 uniform float u_snow;    // how much snow lies, 0 to 1
 uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
+uniform float u_smooth;  // 1: light falls in smooth tones, no dither (a toy venue)
 out vec4 o;${SKY_GLSL}
 void main() {
   if (u_mirror > 0.5) {
@@ -204,6 +205,8 @@ void main() {
   // the dither and the light bands step on a grid three to the art pixel, as fine as the art
   ivec2 cell = ivec2(floor(v_world.xy * 3.0)) + ivec2(0, int(floor(v_world.z * 3.0)));
   float b = bayer(cell);
+  bool smooth_ = u_smooth > 0.5;
+  if (smooth_) b = 0.5;
   // see-through in screen space, on cells as fine as the art: every slice of a stack leaves the
   // same holes, so a faded deck or crown shows what is under it instead of filling in its gaps
   if (v_alpha < 1.0 && bayer(ivec2(floor(gl_FragCoord.xy * 3.0 / u_scale))) >= v_alpha) discard;
@@ -245,7 +248,11 @@ void main() {
   // the sun: full on what is square to it, none on what faces away, in hard dithered steps
   float ndl = dot(n, u_sdir);
   float q = clamp(floor(ndl * 5.0 + 0.02 + b * 0.96) / 5.0, 0.0, 1.0);
+  // (smooth: every face takes its own even tone, and what stands on the ground is a little
+  // darker at its foot, as if the ground shaded it)
+  if (smooth_) q = clamp(ndl * 1.05, 0.0, 1.0);
   vec3 base = u_amb + u_sun * q;
+  if (smooth_ && stack) base *= 0.84 + 0.16 * clamp(v_world.z / 5.0, 0.0, 1.0);
   // what is square to the sun catches a bright edge; what faces away takes a little of the
   // sky's blue instead, so shade is cool and never dead
   if (known > 0.5) {
@@ -262,7 +269,8 @@ void main() {
     float f = 1.0 - d / p.z;
     // a light falls hardest on what is turned towards it
     float face = mix(1.0, 0.55 + 0.7 * max(0.0, dot(n, normalize(to))), known);
-    float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    float e0 = f * (0.4 + 0.6 * f) * p.w * face;
+    float e = clamp(smooth_ ? e0 : floor(e0 * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
   }
   for (int i = 0; i < ${MAX_CONES}; i++) {
@@ -451,7 +459,9 @@ void main() {
     float dist = length(wp - lp.xy);
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
-    l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
+    float e0 = e * (0.4 + 0.6 * e) * lp.w;
+    // (a toy venue's light fades evenly, with no dither)
+    l += u_lcol[n] * clamp(u_calm > 0.5 ? e0 : floor(e0 * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
@@ -476,6 +486,7 @@ uniform vec2 u_size;
 uniform float u_alpha;
 uniform float u_fine;
 uniform sampler2D u_deep;
+uniform float u_smooth;  // 1: a soft edge instead of a dithered one (a toy venue)
 #ifdef RELIEF
 uniform sampler2D u_map;
 #endif
@@ -493,6 +504,15 @@ void main() {
   at.y += floor(texelFetch(u_map, ivec2(clamp(floor(at), vec2(0.0), u_size - 1.0)), 0).r * 255.0 + 0.5);
 #endif
   float a = texture(u_tex, at / u_size).r;
+  if (u_smooth > 0.5) {
+    // read between the fine cells too, so the edge fades instead of stepping
+    vec2 sm = v_uv * u_size;
+    sm.y += at.y - (cell.y + 0.5) / u_fine;
+    a = texture(u_tex, sm / u_size).r;
+    if (a < 0.02) discard;
+    o = vec4(0.0, 0.0, 0.0, u_alpha * smoothstep(0.0, 0.8, a) * (1.0 + 1.2 * texture(u_deep, at / u_size).r));
+    return;
+  }
   if (a < 0.05 || a < bayer(ivec2(cell))) discard;
   // the far side of a deck is in deeper shade than a thrown shadow, deepest at its foot
   o = vec4(0.0, 0.0, 0.0, u_alpha * (1.0 + 1.2 * texture(u_deep, at / u_size).r));

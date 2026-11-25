@@ -278,11 +278,13 @@ uniform int u_pass;
 uniform vec3 u_fire[13];
 uniform vec3 u_bang[9];
 uniform vec3 u_hot;
+uniform float u_toy; // 1 on a toy venue: fat round lumps, and no glow
 uniform int u_lcount;
 uniform vec4 u_lpos[${MAX_LIGHTS}];
 uniform vec3 u_lcol[${MAX_LIGHTS}];
 uniform vec3 u_amb; // the sky's light on smoke and fog (1 by day)
 out vec4 v_color;
+out float v_round; // 0 a square cell, 1 a ball of dust lit from above, 2 a lump of fire
 float stepT(float t, float th, float n) { return min(1.0, floor(t * n + th) / n); }
 vec3 rgbOf(float c) {
   float r = floor(c / 65536.0);
@@ -294,6 +296,7 @@ void main() {
   gl_Position = vec4(2.0, 2.0, 2.0, 1.0); // off screen unless drawn
   gl_PointSize = 0.0;
   v_color = vec4(0.0);
+  v_round = 0.0;
   float life = a1.w;
   float age = a1.z;
   if (age >= life) return;
@@ -311,6 +314,12 @@ void main() {
     // (a pale puff stays pale: its deep cells would read as grit on a clean road)
     vec3 own = rgbOf(a2.z);
     c = min(vec3(1.0), own * (s < 0.34 ? (own.r > 0.815 ? 0.9 : 0.55) : s < 0.67 ? 1.0 : 1.45));
+    if (u_toy > 0.5) {
+      // a toy venue's dust is a heap of soft balls that swell as they drift
+      c = min(vec3(1.0), own * (s < 0.34 ? 0.94 : s < 0.67 ? 1.0 : 1.07));
+      n = 2.0 + floor(min(1.0, t * 2.5) * 2.0 + th);
+      v_round = 1.0;
+    }
     lit = true;
   } else if (k == ${CKind.Fog}) {
     if (u_pass != 0) return;
@@ -324,22 +333,36 @@ void main() {
     bool hot = s < 0.42;
     if (th >= (t < 0.45 ? 1.0 : (1.0 - t) / 0.55)) return;
     if (u_pass == 2) {
-      if (s >= 0.2) return;
+      if (s >= 0.2 || u_toy > 0.5) return;
       c = u_hot;
       a = 0.4;
     } else {
       if (hot != (u_pass == 1)) return;
       c = u_fire[int(floor(s * 12.0 + 0.5))];
+      if (u_toy > 0.5) {
+        n = hot ? 2.0 : 2.0 + floor(th * 2.0);
+        v_round = hot ? 2.0 : 1.0;
+      }
     }
   } else if (k == ${CKind.Bang}) {
     if (u_pass == 0) return;
     if (th >= (t < 0.7 ? 1.0 : (1.0 - t) / 0.3)) return;
     float f = stepT(max(0.0, t - 0.3) / 0.7, th, 8.0);
     if (u_pass == 2) {
-      if (f >= 0.5) return;
+      if (f >= 0.5 || u_toy > 0.5) return;
       c = u_hot;
       a = 0.4;
-    } else c = u_bang[int(floor(f * 8.0 + 0.5))];
+    } else {
+      c = u_bang[int(floor(f * 8.0 + 0.5))];
+      if (u_toy > 0.5) {
+        // every lump its own heat, so the ball is yellow, orange and red at once
+        float fv = clamp(f + (fract(th * 7.31) - 0.3) * 0.75, 0.0, 1.0);
+        c = u_bang[int(floor(fv * 8.0 + 0.5))];
+        // fat lumps, the hot ones in the middle the fattest
+        n = f < 0.4 ? 3.0 : 2.0;
+        v_round = 2.0;
+      }
+    }
   } else return;
   if (lit) c *= u_amb;
   if (lit && u_lcount > 0) {
@@ -367,8 +390,19 @@ void main() {
 const DRAW_FS = `#version 300 es
 precision mediump float;
 in vec4 v_color;
+in float v_round;
 out vec4 o;
-void main() { o = v_color; }`;
+void main() {
+  if (v_round < 0.5) { o = v_color; return; }
+  vec2 q = gl_PointCoord - 0.5;
+  float d = dot(q, q);
+  if (d > 0.25) discard;
+  // a ball in hard bands: dust is lit from above with shade beneath, fire is darker at its rim
+  float k = v_round < 1.5
+    ? (q.y < -0.14 ? 1.1 : q.y > 0.2 ? 0.84 : 1.0)
+    : (d > 0.13 ? 0.86 : 1.0);
+  o = vec4(min(vec3(1.0), v_color.rgb * k), v_color.a);
+}`;
 
 const UPDATE_U = [
   'u_dt',
@@ -401,6 +435,7 @@ const DRAW_U = [
   'u_fire',
   'u_bang',
   'u_hot',
+  'u_toy',
   'u_lcount',
   'u_lpos',
   'u_lcol',
@@ -706,6 +741,7 @@ export class GasGpu {
     const hot = rgb3(HOT);
     const dim = FX_CELL > 0 ? 0.25 : 1;
     gl.uniform3f(u.u_hot, hot[0]! * dim, hot[1]! * dim, hot[2]! * dim);
+    gl.uniform1f(u.u_toy, FX_CELL > 0 ? 1 : 0);
     gl.uniform1i(u.u_lcount, lights.count);
     gl.uniform4fv(u.u_lpos, lights.pos);
     gl.uniform3fv(u.u_lcol, lights.col);
