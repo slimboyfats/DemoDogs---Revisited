@@ -121,7 +121,7 @@ export function makeGround(w: World): Ground {
       if (s.def.pad?.kind !== 'boost') continue;
       const rad = s.def.radius * 2.1;
       const sh = g.createRadialGradient(s.x, s.y, s.def.radius * 0.3, s.x, s.y, rad);
-      sh.addColorStop(0, 'rgba(70,150,255,0.5)');
+      sh.addColorStop(0, 'rgba(60,140,255,0.75)');
       sh.addColorStop(1, 'rgba(70,150,255,0)');
       g.fillStyle = sh;
       g.fillRect(s.x - rad, s.y - rad, rad * 2, rad * 2);

@@ -317,7 +317,8 @@ export class World {
     // the field: the player and rivals in other cars and paint
     const types = [...C.car.keys()].sort();
     const aiDef = C.ai.get(mode.ai)!;
-    const paints = this.rng.shuffle(RIVAL_PAINTS);
+    const shuffled = this.rng.shuffle(RIVAL_PAINTS);
+    const paints = venue.paints ?? shuffled;
     const names = this.rng.shuffle(RIVAL_NAMES);
     const player = makeCar(
       this,

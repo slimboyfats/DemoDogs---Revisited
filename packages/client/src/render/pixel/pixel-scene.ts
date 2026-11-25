@@ -398,8 +398,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.grains) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
     for (const v of fx.wreck.homing) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
-    // what is thrown shows its path through the air and the spot it will land on
-    for (const v of arcDots(w, this.arc)) this.stacks.voxel(v.rgb, v.x, v.y, v.z, 0, v.s);
+    arcDots(w, this.arc);
     this.stacks.ready();
     if (sky.wet > 0.02 && this.reflections && fx.quality > 0.5) {
       // wet ground: the stacks upside down under their feet first, then the depth buffer afresh
@@ -539,6 +538,20 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       this.quads.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, shape);
     const cellG: Put = (x, y, z, n, rgb, a) =>
       this.glow.push(at(x, n), at(this.my(y, z + this.rise(x, y)), n), n, n, rgb, a, Shape.Rect);
+    // what is thrown shows its path over everything: round dots through the air, and a soft
+    // shadow in a ring of dashes on the spot it will land on
+    for (const v of this.arc)
+      if (v.shade)
+        this.quads.push(
+          v.x * G,
+          this.my(v.y, this.rise(v.x, v.y)) * G,
+          v.s * G,
+          v.s * G * this.ys,
+          v.rgb,
+          v.a,
+          Shape.Disc,
+        );
+    for (const v of this.arc) if (!v.shade) normal(v.x, v.y, v.z, v.s, v.rgb, v.a, Shape.Disc);
     const one = 1 / G;
     for (const f of fx.fx)
       if (!overSmoke(f) && this.visible(f.x, f.y, 40, f.z)) drawParticle(f, normal, glow, one);

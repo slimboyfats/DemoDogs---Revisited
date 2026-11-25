@@ -395,6 +395,8 @@ export const VenueSchema = z.strictObject({
   seed: z.number().int(),
   /** How many times their usual size cars are here (absent: 1): a toy track has big cars. */
   cars: z.number().min(0.5).max(2).optional(),
+  /** The rivals' paint here, in grid order (absent: the game's own, shuffled). */
+  paints: z.array(hex).min(1).optional(),
   size: z.strictObject({
     w: z.number().int().min(400).max(4000),
     h: z.number().int().min(400).max(4000),

@@ -21,11 +21,11 @@ describe('arcDots', () => {
     const dots = arcDots(w);
     expect(dots.length).toBeGreaterThan(12);
     // the ring lies on the ground round the landing spot
-    const ring = dots.filter((d) => d.z > 0.3 && d.z < 1);
-    expect(ring.length).toBe(18);
+    const ring = dots.filter((d) => !d.shade && d.z < 1);
+    expect(ring.length).toBe(24);
     for (const d of ring) expect(Math.abs(d.x - tx)).toBeLessThan(26);
-    // with a dark shadow inside it
-    expect(dots.filter((d) => d.z < 0.3).length).toBeGreaterThan(10);
+    // with one soft shadow inside it
+    expect(dots.filter((d) => d.shade).length).toBe(1);
     // and the rest hang in the air
     expect(dots.some((d) => d.z > 20)).toBe(true);
   });

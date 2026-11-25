@@ -13,19 +13,22 @@ const tile = (pose: number): Part => ({
     const x = px / 1.8;
     const y = py / 1.8;
     const lit = (n: number): string => LIT[(((n - pose) % 3) + 3) % 3]!;
-    // the paw at the back: a big pad and four toes, pointing along +x
-    if (Math.hypot((x + 9.3) / 2.9, y / 3.9) < 1) return lit(0);
+    // the paw at the back, pointing along +x: a big pad and four toes, always lit, each with a
+    // rim of deep blue so it stands out crisp on the road
+    let paw = Math.hypot((x + 9.3) / 2.9, y / 3.9) - 1;
     for (const [tx, ty] of [
       [-5, -5.9],
       [-2.6, -2.2],
       [-2.6, 2.2],
       [-5, 5.9],
     ] as const)
-      if (Math.hypot((x - tx) / 1.7, (y - ty) / 1.45) < 1) return lit(0);
+      paw = Math.min(paw, (Math.hypot((x - tx) / 1.7, (y - ty) / 1.45) - 1) * 0.55);
+    if (paw < 0) return 'turbohot';
+    if (paw < 0.2) return 'pawrim';
     // two arrows ahead of it: the tip leads, the arms sweep back
     for (let n = 0; n < 2; n++) {
       const u = x - 4.5 - n * 5.5 + Math.abs(y) * 0.75;
-      if (u > 0 && u < 2.9 && Math.abs(y) < 7.6) return lit(n + 1);
+      if (u > 0 && u < 2.9 && Math.abs(y) < 7.6) return lit(n);
     }
     return null;
   },
@@ -38,6 +41,7 @@ const look: LookModule = {
     kind: 'prop',
     // (brighter than the game's other boost tiles: pale blue all over, the lit part near white)
     materials: {
+      pawrim: ['#1456d8', '#1e6cf0', '#3a86ff'],
       turbodim: ['#2f92ff', '#4aaaff', '#74c2ff'],
       turbowarm: ['#5cbcff', '#84d2ff', '#b0e6ff'],
       turbohot: ['#b4eaff', '#d8f6ff', '#fcfcf4'],
