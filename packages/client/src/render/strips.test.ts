@@ -187,6 +187,14 @@ describe('a material with a finish of its own', () => {
     expect(shineOf('light@paint', glows, glosses)).toEqual([0, 1]);
   });
 
+  it('gives light off when it is named for fire or light, listed or not', () => {
+    expect(shineOf('campfire', glows, glosses)[0]).toBeGreaterThan(0);
+    expect(shineOf('flame2', glows, glosses)[0]).toBeGreaterThan(0);
+    expect(shineOf('streetlamp', glows, glosses)[0]).toBeGreaterThan(0);
+    // (a finish still wins: a lamp made dull is dark)
+    expect(shineOf('flame@matte', glows, glosses)[0]).toBe(0);
+  });
+
   it("glows when told to, and keeps its colour's shine", () => {
     expect(shineOf('paint@glow', glows, glosses)).toEqual([7, 1]);
     expect(shineOf('wood@glow', glows, glosses)).toEqual([7, 0]);

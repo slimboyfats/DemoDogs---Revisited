@@ -61,6 +61,8 @@ const NAMES = [
   'u_lmbox',
   'u_lmk',
   'u_ccount',
+  'u_coneh',
+  'u_lgz',
   'u_grow',
   'u_relief',
   'u_rgrid',
@@ -71,6 +73,7 @@ const NAMES = [
   'u_shear',
   'u_gi',
   'u_gik',
+  'u_lc',
 ] as const;
 type Uniforms = Record<(typeof NAMES)[number], WebGLUniformLocation | null>;
 
@@ -620,6 +623,8 @@ export class StackBatch {
     gl.uniform3f(u.u_grow, g?.[0] ?? 0, g?.[1] ?? 0, g?.[2] ?? -1);
     gl.uniform4fv(u.u_cone, lights.cones);
     gl.uniform1i(u.u_ccount, lights.coneCount);
+    gl.uniform4fv(u.u_coneh, lights.coneh);
+    gl.uniform1fv(u.u_lgz, lights.gz);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, lit ? this.atlas.auxTex : tex);
     gl.uniform1i(u.u_aux, 1);
@@ -657,6 +662,13 @@ export class StackBatch {
       gl.activeTexture(gl.TEXTURE6);
       gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.uniform1i(u.u_gi, 6);
+    }
+    // (the colours of what stands round about, for what is polished enough to show them)
+    if (traced && sky.block) sky.block.bindColour(7, u.u_lc);
+    else {
+      gl.activeTexture(gl.TEXTURE7);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.uniform1i(u.u_lc, 7);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);

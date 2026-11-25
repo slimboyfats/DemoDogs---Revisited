@@ -97,6 +97,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
    * is round them, and shade where the sky is shut out. Off: the sun's one bounce, as before.
    */
   traced = true;
+  /** Lights keep to their own level: none over a raised road's edge or under a car in the air. */
+  lightLevels = true;
   /** Flames are light of their own in the traced light (FLAME LIGHT when paused, `?flames=0`). */
   flames = true;
   /** Show the traced light's field itself in place of the ground (to look at it). */
@@ -251,6 +253,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    // the flame behind a car that is boosting (blue off a boost tile) lights what is round its tail
+    for (const c of w.cars) {
+      if (c.wrecked || !(c.boosting || c.surge > 0) || !this.visible(c.x, c.y, 60)) continue;
+      const back = (c.def.body.halfLength + 5) * c.size;
+      L.add(
+        c.x - Math.cos(c.h) * back,
+        c.y - Math.sin(c.h) * back,
+        38 * c.size,
+        0.95 + Math.sin(t * 41 + c.index * 2) * 0.2,
+        c.boosting ? 0xff9a40 : 0x60c8ff,
+      );
+    }
     armsLights(L, w);
     arsenalLights(L, w);
     for (const f of fx.fires)
@@ -278,7 +292,13 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side,
-        c.h,
+        // (the beam lies as the car does: tipped to a side, it swings towards the low one; nose
+        // up, it leaves the ground; nose down, it falls short)
+        c.h - c.bank * 0.35,
+        c.z,
+        c.pitch * 1.5,
+        // (two lamps, a beam from each, unless one of them is out)
+        out === 0 ? c.def.body.halfWidth * 0.6 * c.size : 0,
       );
     };
     lamp(w.player);
@@ -444,6 +464,18 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
 
     this.gatherLights(w, fx);
+    // (how high the ground stands under each light: none of it goes over a raised road's edge)
+    {
+      const L = this.lights;
+      if (!this.lightLevels) {
+        L.gz.fill(0);
+        L.coneh.fill(0);
+      } else {
+        for (let i = 0; i < L.count; i++) L.gz[i] = this.rise(L.pos[i * 4]!, L.pos[i * 4 + 1]!);
+        for (let i = 0; i < L.coneCount; i++)
+          L.coneh[i * 4 + 1] = this.rise(L.cones[i * 4]!, L.cones[i * 4 + 1]!);
+      }
+    }
     const lit = this.lights.count + this.lights.coneCount > 0;
     // (by day it is wanted for the light things throw back on the ground beside them)
     const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;

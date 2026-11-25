@@ -152,12 +152,27 @@ float puddle(vec2 wp) {
 // A headlamp's beam on the ground at wp: 0 outside it, brightest near the lamp.
 uniform vec4 u_cone[${MAX_CONES}];  // x, y, unit direction
 uniform int u_ccount;
-float beam(vec2 wp, vec4 c) {
+uniform vec4 u_coneh[${MAX_CONES}]; // a lamp's height over the ground under it, that ground's, the beam's climb a px, half the gap between its two lamps
+uniform float u_lgz[${MAX_LIGHTS}]; // how high the ground stands under each point light
+// How much of a light that stands \`from\` high reaches a spot \`at\` high and \`d\` away: all of
+// it along a slope or a ramp, none of it over a sheer edge either way (the side of a raised
+// road, the ground under a car in the air or up on a deck).
+float level(float from, float at, float d) {
+  return 1.0 - clamp((abs(from - at) - 4.0 - min(d * 0.3, 9.0)) / 4.0, 0.0, 1.0);
+}
+// (\`gap\`: how far to each side of c.xy its two lamps are: a beam from each, that run into one
+// further out; 0 for one lamp)
+float beam(vec2 wp, vec4 c, float gap) {
   vec2 d = wp - c.xy;
   float along = dot(d, c.zw);
   if (along <= 0.0 || along >= ${CONE_REACH.toFixed(1)}) return 0.0;
+  float across = abs(d.x * c.w - d.y * c.z);
   float wide = 2.5 + along * 0.34;
-  float side = abs(d.x * c.w - d.y * c.z) / wide;
+  if (gap > 0.0) {
+    across = abs(across - gap);
+    wide = 1.4 + along * 0.2;
+  }
+  float side = across / wide;
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
   return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.15;
@@ -194,6 +209,7 @@ uniform float u_wet;     // how wet the ground is, 0 to 1
 uniform float u_mirror;
 uniform float u_shk;     // how strong the sun's cast shadows are (0: none are read)
 uniform vec2 u_dir;      // cos and sin of the camera's pitch
+uniform sampler2D u_lc;  // the light map's colours: what stands where, seen from above
 out vec4 o;${SKY_GLSL}${SUN_GLSL}${TRACED_GLSL}
 void main() {
   if (u_mirror > 0.5) {
@@ -337,6 +353,7 @@ void main() {
     // (and none of it reaches what something stands in front of)
     float open = lightOpen(v_world.xy, v_world.z, p.xy, 3.0, clamp(p.z * 0.35, 4.0, 12.0), b);
     if (open <= 0.0) continue;
+    f *= level(u_lgz[i], v_gz, length(to.xy));
     float e = clamp(floor(f * (0.4 + 0.6 * f) * p.w * face * 4.0 + b - 0.5) / 4.0, 0.0, 1.5);
     l += u_lcol[i] * e;
     // (and metal throws a fire's or a blast's light back in a hard glint)
@@ -346,7 +363,12 @@ void main() {
   for (int i = 0; i < ${MAX_CONES}; i++) {
     if (i >= u_ccount) break;
     vec4 p = u_cone[i];
-    float f = beam(v_world.xy, p);
+    float f = beam(v_world.xy, p, u_coneh[i].w);
+    if (f <= 0.0) continue;
+    // (what is as high as the lamp or higher is level with it: a deck under a car on it)
+    float far = distance(v_world.xy, p.xy);
+    float up = u_coneh[i].x + u_coneh[i].z * far;
+    f *= level(u_coneh[i].y + up, v_gz + min(v_world.z, max(up, 0.0)), far);
     if (f <= 0.0) continue;
     if (lightOpen(v_world.xy, v_world.z, p.xy, 5.0, 4.0, b) <= 0.0) continue;
     vec3 to = vec3(p.xy - v_world.xy, 5.0 - v_world.z);
@@ -355,6 +377,34 @@ void main() {
   }
   vec3 k = min(vec3(1.1), l);
   vec3 rgb = c.rgb * (base * v_shade + k * 1.1 + back) + k * (30.0 / 255.0) + back * 0.05;
+  // what is polished shows what stands round it, as a bulging mirror does: a texel looks out
+  // from the middle of its slice, further the nearer the edge it is (and the way its own face
+  // leans), at the light map's colours (every thing in the frame, from above). The first thing
+  // tall enough to be seen there is laid over the metal in the light that falls on it; and the
+  // light that comes from that way (a blast, a fire, a lamp) glints in it
+  if (gloss > 1 && u_gik > 0.0) {
+    vec2 loc = (v_tex / v_uv.zw - 0.5) * 2.0;
+    vec2 way = vec2(loc.x * v_cs.x - loc.y * v_cs.y, loc.x * v_cs.y + loc.y * v_cs.x) + n.xy * 0.7 * known;
+    float out_ = length(way);
+    if (out_ > 0.3) {
+      float much = (gloss == 3 ? 0.75 : 0.42) * smoothstep(0.3, 0.7, out_);
+      vec3 seen = vec3(0.0);
+      float hit = 0.0;
+      for (int i = 0; i < 3; i++) {
+        vec2 at = v_world.xy + way * (11.0 + float(i) * 8.0);
+        vec4 m = textureLod(u_lc, (at - u_lmbox.xy) / u_lmbox.zw, 0.0);
+        if (m.a * 255.0 >= 4.0) {
+          seen = m.rgb * (u_amb + u_sun * 0.6 + traced(at - way * 3.0).rgb * 2.2 + k * 0.5);
+          hit = 1.0 - float(i) * 0.2;
+          break;
+        }
+      }
+      seen = floor(min(vec3(1.0), seen) * 6.0 + b) / 6.0;
+      rgb = mix(rgb, seen, much * hit);
+      vec3 far = traced(v_world.xy + way / out_ * 16.0).rgb;
+      gleam += floor(min(vec3(1.0), far * 2.4 * (1.0 - 0.6 * hit)) * 5.0 + b) / 5.0 * much;
+    }
+  }
   // the gleam is the light's own colour laid over the paint, most on what is pale already
   rgb = shoulder(rgb + min(vec3(1.0), gleam) * v_shade * (0.45 + 0.55 * max(c.r, max(c.g, c.b))));
   // a lamp shows its own colour however dark it is round it
@@ -563,6 +613,11 @@ void main() {
   }
   // Fire and lamps light the ground, in the same hard dithered bands as they light the stacks.
   vec3 l = vec3(0.0);
+  // (how high this ground stands: a light does not reach over a sheer edge)
+  float gh = 0.0;
+#ifdef RELIEF
+  gh = shift * u_hk;
+#endif
   float b = bayer(ci);
   for (int n = 0; n < ${MAX_LIGHTS}; n++) {
     if (n >= u_lcount) break;
@@ -570,13 +625,16 @@ void main() {
     float dist = length(wp - lp.xy);
     if (dist >= lp.z) continue;
     float e = 1.0 - dist / lp.z;
+    e *= level(u_lgz[n], gh, dist);
     l += u_lcol[n] * clamp(floor(e * (0.4 + 0.6 * e) * lp.w * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, lp.xy, 3.0, clamp(lp.z * 0.35, 4.0, 12.0), b);
   }
   for (int n = 0; n < ${MAX_CONES}; n++) {
     if (n >= u_ccount) break;
-    float f = beam(wp, u_cone[n]);
+    float f = beam(wp, u_cone[n], u_coneh[n].w);
     if (f <= 0.0) continue;
+    float far = distance(wp, u_cone[n].xy);
+    f *= level(u_coneh[n].y + u_coneh[n].x + u_coneh[n].z * far, gh, far);
     l += vec3(1.0, 0.93, 0.74) * clamp(floor(f * 4.0 + b - 0.5) / 4.0, 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy, 5.0, 4.0, b);
   }
