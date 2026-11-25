@@ -253,18 +253,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
-    // the flame behind a car that is boosting (blue off a boost tile) lights what is round its tail
-    for (const c of w.cars) {
-      if (c.wrecked || !(c.boosting || c.surge > 0) || !this.visible(c.x, c.y, 60)) continue;
-      const back = (c.def.body.halfLength + 5) * c.size;
-      L.add(
-        c.x - Math.cos(c.h) * back,
-        c.y - Math.sin(c.h) * back,
-        38 * c.size,
-        0.95 + Math.sin(t * 41 + c.index * 2) * 0.2,
-        c.boosting ? 0xff9a40 : 0x60c8ff,
-      );
-    }
     armsLights(L, w);
     arsenalLights(L, w);
     for (const f of fx.fires)
