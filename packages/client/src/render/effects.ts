@@ -17,6 +17,7 @@ import {
   stripOf,
   blowApart,
   dropLoose,
+  pale,
   restore,
   stripCrown,
   voxelsOf,
@@ -2088,6 +2089,24 @@ export class Effects {
         case 'trick':
           this.tricks.handle(this, w, e, S, this.art);
           break;
+        case 'haunt':
+          if (e.on) {
+            // the wreck gets up whole: its body is painted back into the same strip, as for a
+            // car towed back, and put together where it stands
+            const c = w.cars[e.car]!;
+            const body = this.bodies[e.car]!;
+            this.heavy.settle(body);
+            restore(body, this.carArt(c).body);
+            pale(body);
+            this.changed.add(body);
+            this.smokeT[e.car] = 0;
+            this.slices.start(c, c.z);
+          }
+          this.tricks.haunt(this, w, e, S);
+          break;
+        case 'spook':
+          this.tricks.haunt(this, w, e, S);
+          break;
         case 'catch':
         case 'leash':
         case 'snap':
@@ -2371,7 +2390,7 @@ export class Effects {
       if (!wet && c.sliding && roll() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (!wet && c.offroad && Math.abs(c.vf) > 50 && roll() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
-      if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
+      if (!c.buried && !c.haunt && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;
         if (t <= 0) {

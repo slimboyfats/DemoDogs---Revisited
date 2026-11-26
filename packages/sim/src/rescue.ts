@@ -2,7 +2,7 @@ import { DT } from '@demodogs/shared';
 import { freshen } from './catchup';
 import type { Car, Spill } from './entities';
 import { waterAt } from './damage';
-import { leapGaps, leapPieces } from './leaps';
+import { jumpGaps } from './leaps';
 import { pathAt } from './pads';
 import type { World } from './world';
 
@@ -15,7 +15,7 @@ export const PLUNGE_TIME = 0.8;
  */
 export function pitsOf(w: World): Spill[] {
   const out: Spill[] = [];
-  for (const [x0, y0, x1, y1] of leapGaps(leapPieces(w.venue, w.content))) {
+  for (const [x0, y0, x1, y1] of jumpGaps(w.venue, w.content)) {
     const mx = (x0 + x1) / 2;
     const my = (y0 + y1) / 2;
     let best: Spill | null = null;

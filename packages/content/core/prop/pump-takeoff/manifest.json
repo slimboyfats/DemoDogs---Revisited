@@ -1,0 +1,31 @@
+{
+  "id": "prop.pump-takeoff",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pump takeoff",
+    "description": "A jump takeoff whose lip pumps: a striped flap across it stands up for a while and lies flat for a while. Up, it throws a car over the gap; flat, the car falls short. Watch the flap, or a signal lamp.",
+    "since": "core@0.11.0"
+  },
+  "body": "static",
+  "radius": 40,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 128,
+    "wide": 64
+  },
+  "leap": {
+    "way": "up",
+    "long": 128,
+    "wide": 64,
+    "high": 26,
+    "lift": 195,
+    "min": 80,
+    "pump": {
+      "period": 4.4,
+      "up": 2.6,
+      "low": 0.5,
+      "plate": "prop.pump-flap"
+    }
+  }
+}

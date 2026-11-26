@@ -3,6 +3,7 @@ import { armsWants } from './arms';
 import { arsenalWants } from './arsenal';
 import { dropsBehind } from './drops';
 import type { Car } from './entities';
+import { away } from './haunt';
 import { howlWants } from './howl';
 import { angDiff, clamp } from './math';
 import { onPad } from './pads';
@@ -125,7 +126,7 @@ export function thingsAhead(w: World, c: Car, reach: number, rivals = true): Thi
   const level = (z: number) => Math.abs(z - c.deck) <= 8;
   const mean = ai.aggro > 0.55 && c.hp > 40;
   for (const o of w.cars) {
-    if (o === c || o.buried || !level(o.deck) || o.z - o.deck > 10) continue;
+    if (o === c || o.buried || away(o) || !level(o.deck) || o.z - o.deck > 10) continue;
     const f = fwd(o.x, o.y);
     if (f < -14 || f > reach + 20) continue;
     const r = 12 * o.size;

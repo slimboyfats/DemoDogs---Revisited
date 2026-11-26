@@ -183,27 +183,27 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.blast-wall",
-          "x": 810,
-          "y": 459.1,
+          "prop": "prop.piston-block",
+          "x": 807.9,
+          "y": 456.9,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
-          "x": 797.6,
-          "y": 446,
+          "prop": "prop.piston-block",
+          "x": 796.9,
+          "y": 445.3,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
-          "x": 785.2,
-          "y": 433,
+          "prop": "prop.piston-block",
+          "x": 785.8,
+          "y": 433.7,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
-          "x": 772.7,
-          "y": 419.9,
+          "prop": "prop.piston-block",
+          "x": 774.8,
+          "y": 422.1,
           "rot": 2.3813
         }
       ]
