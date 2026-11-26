@@ -8,6 +8,10 @@
   },
   "body": "loose",
   "radius": 2.6,
+  "hit": {
+    "radius": 2.6,
+    "top": 7
+  },
   "mass": 0.12,
   "launch": 0.7
 }

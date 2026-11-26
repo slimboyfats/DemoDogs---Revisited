@@ -137,6 +137,34 @@ if (scene('cars')) {
   await shot('cars-gear-heights');
 }
 
+// 1b: a car off the big ramp over a row of barrels (they stand as high as they are drawn, so it
+// goes over), and one on the ground into the same row
+if (scene('jump')) {
+  for (const ramp of [true, false]) {
+    await range('&zoom=close');
+    await page.evaluate((ramp) => {
+      const dd = window.__dd;
+      const w = dd.session.world;
+      const P = dd.home;
+      w.player.h = 0;
+      if (ramp) dd.lay('big-ramp', P.x - 40, P.y);
+      for (let k = -2; k <= 2; k++) dd.lay('barrel', P.x + 16, P.y + k * 9);
+      Object.assign(w.player, { x: P.x - 80, y: P.y, h: 0, vx: 170, vy: 0, vf: 170 });
+    }, ramp);
+    await view('heights');
+    // (until its nose is over the row)
+    for (let i = 0; i < 60; i++) {
+      await step(1, { ...IDLE, throttle: 1 });
+      const over = await page.evaluate(() => {
+        const dd = window.__dd;
+        return dd.session.world.player.x > dd.home.x + 12;
+      });
+      if (over) break;
+    }
+    await shot(ramp ? 'jump-over-barrels' : 'ground-into-barrels');
+  }
+}
+
 // 2: scenery and loose props in rows, each with its hit shape, a car beside them for size
 if (scene('props')) {
   const sets = {
