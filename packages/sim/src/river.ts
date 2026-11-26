@@ -174,8 +174,7 @@ export function layRiver(w: World, rng: Rng, rule: RiverRule, add: Add): void {
     p.index = w.props.length;
     w.props.push(p);
   }
-  // the world's lookup of statics notices it has fewer and starts again
-  w.near(0, 0, 0);
+  w.restock();
 
   // the water: broad pools in open water; near the road, small ones that stop short of it
   for (let i = 0; i < n; i += 2) {

@@ -373,15 +373,24 @@ export function buildRelief(
     for (let i = 0; i < track.n; i += 2) {
       const cx = Math.round(track.x[i]! / C);
       const cy = Math.round(track.y[i]! / C);
-      for (let gy = Math.max(0, cy - rc); gy <= Math.min(R.gh - 1, cy + rc); gy++)
-        for (let gx = Math.max(0, cx - rc); gx <= Math.min(R.gw - 1, cx + rc); gx++) {
-          const d = Math.hypot(gx * C - track.x[i]!, gy * C - track.y[i]!);
+      const tx = track.x[i]!;
+      const ty = track.y[i]!;
+      const gx0 = Math.max(0, cx - rc);
+      const gx1 = Math.min(R.gw - 1, cx + rc);
+      const gy1 = Math.min(R.gh - 1, cy + rc);
+      for (let gy = Math.max(0, cy - rc); gy <= gy1; gy++) {
+        const dy = gy * C - ty;
+        for (let gx = gx0; gx <= gx1; gx++) {
+          // (a square root and not `Math.hypot`: see DistanceGrid)
+          const dx = gx * C - tx;
+          const d = Math.sqrt(dx * dx + dy * dy);
           const k = gy * R.gw + gx;
           if (d < dist[k]!) {
             dist[k] = d;
             if (near) near[k] = i;
           }
         }
+      }
     }
   }
   const steps = spec.banks > 0 ? Math.max(1, Math.round(spec.banks / spec.step)) : 0;

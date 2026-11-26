@@ -6,7 +6,7 @@ import {
   type PropManifest,
 } from '@demodogs/shared';
 import { damage } from './damage';
-import type { Car } from './entities';
+import type { Car, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { circles, hull } from './physics';
 import type { Rng } from './prng';
@@ -140,6 +140,9 @@ export function blastCritters(w: World, x: number, y: number, rad: number): void
   }
 }
 
+/** The list `near` fills for an animal on a walk. */
+const WALK_NEAR: StaticProp[] = [];
+
 export function updateCritters(w: World): void {
   for (const k of w.critters) {
     const D = k.def.critter!;
@@ -241,7 +244,7 @@ export function updateCritters(w: World): void {
       let nx = k.x + Math.cos(k.h) * go * DT;
       let ny = k.y + Math.sin(k.h) * go * DT;
       const rad = k.def.radius;
-      for (const s of w.near(nx, ny, rad + 2)) {
+      for (const s of w.near(nx, ny, rad + 2, WALK_NEAR)) {
         const r = s.def.radius + rad;
         if (s.down || !s.def.solid || Math.abs(s.x - nx) > r || Math.abs(s.y - ny) > r) continue;
         const d = Math.hypot(nx - s.x, ny - s.y) || 1;
