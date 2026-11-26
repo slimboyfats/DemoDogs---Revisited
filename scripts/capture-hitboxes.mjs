@@ -249,7 +249,7 @@ if (scene('lamps')) {
 }
 
 // 3b: the nose gun: a rival behind a wall (no round goes through it), a big one a little off the
-// line (the round lands on its bodywork), and two cars up on a flyover (the tracer is up there too)
+// line (the round lands on its bodywork)
 if (scene('guns')) {
   /** Step until the player's gun has just fired (or `max` ticks have gone), and stop there. */
   const fire = (max = 90) =>
@@ -270,8 +270,7 @@ if (scene('guns')) {
     const [a, b] = w.cars.filter((c) => c !== me);
     Object.assign(me, { x: P.x - 60, y: P.y - 30, h: 0, rounds: 50, gunCd: 0 });
     Object.assign(a, { x: P.x + 20, y: P.y - 30, h: Math.PI / 2 });
-    dd.lay('concrete-wall', P.x - 20, P.y - 38, Math.PI / 2);
-    dd.lay('concrete-wall', P.x - 20, P.y - 22, Math.PI / 2);
+    dd.lay('concrete-wall', P.x - 20, P.y - 30, Math.PI / 2);
     dd.second = () => {
       Object.assign(me, { x: P.x - 60, y: P.y + 30, h: 0, rounds: 50, gunCd: 0 });
       Object.assign(b, { x: P.x + 10, y: P.y + 38, h: Math.PI / 2, size: 1.5 });
@@ -285,46 +284,6 @@ if (scene('guns')) {
   await settle(8);
   console.log('off the line:', await fire(), 'rounds');
   await shot('guns-aside');
-
-  await page.goto(`${base}?start=knotwood&car=mutt&autoplay&seed=7&hitboxes=heights&zoom=close`);
-  await page.waitForFunction(() => window.__dd?.session, null, { timeout: 180000 });
-  await page.waitForTimeout(2500);
-  await page.evaluate(() => {
-    const s = window.__dd.session;
-    s.rate = 0;
-    s.fx.quality = 1;
-    for (let i = 0; i < 200; i++) s.step();
-    const w = s.world;
-    const T = w.track;
-    let hi = 0;
-    for (let i = 0; i < T.n; i++) if (w.deckH[i] > w.deckH[hi]) hi = i;
-    const park = (c, i) =>
-      Object.assign(c, {
-        x: T.x[i],
-        y: T.y[i],
-        h: T.a[i],
-        vx: 0,
-        vy: 0,
-        idx: i,
-        z: w.deckH[i],
-        deck: w.deckH[i],
-        ai: null,
-        rounds: 0,
-      });
-    w.cars.forEach((c, k) => park(c, (hi + 400 + k * 30) % T.n));
-    const ahead = Math.round(60 / T.step);
-    park(w.player, hi - ahead);
-    park(
-      w.cars.find((c) => c !== w.player),
-      hi,
-    );
-    Object.assign(w.player, { rounds: 50, gunCd: 0 });
-    s.o.input.read = () => ({ steer: 0, throttle: 0, brake: true, boost: false, fire: false });
-    s.follow = false;
-    Object.assign(s.cam, { x: T.x[hi - (ahead >> 1)], y: T.y[hi - (ahead >> 1)] });
-  });
-  console.log('on the deck:', await fire(), 'rounds');
-  await shot('guns-deck');
 }
 
 // 4: race frames with everything on
