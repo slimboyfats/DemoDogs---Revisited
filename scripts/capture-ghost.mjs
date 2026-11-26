@@ -1,7 +1,7 @@
 // A derby in which the player is scrapped and comes back as a ghost car: the WATCHING bar with its
 // GHOST CAR button, the ghost getting up out of the wreck, driving, and shoving a running car.
 // `pnpm ghost [out-dir] [venue] [--frames] [--sky=night]` (default captures/ghost/, the-pit):
-// stills, and with --frames f0000.png ... for ffmpeg.
+// stills, and with --frames f0000.jpg ... for ffmpeg (15 a second).
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -41,7 +41,8 @@ const page = await browser.newPage({
   viewport: { width: 844, height: 390 },
   isMobile: true,
   hasTouch: true,
-  deviceScaleFactor: 2,
+  // (a clip is shot at one device pixel to the CSS pixel, or a frame takes seconds)
+  deviceScaleFactor: frames ? 1 : 2,
 });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
@@ -85,9 +86,14 @@ async function run(ticks) {
       s.step();
       s.step();
     });
-    await page.waitForTimeout(frames ? 40 : 10);
-    if (frames)
-      await page.screenshot({ path: `${out}/f${String(n++).padStart(4, '0')}.png`, scale: 'css' });
+    await page.waitForTimeout(frames ? 30 : 10);
+    // (a frame for every four ticks: 15 a second, which is all a headless browser has time for)
+    if (frames && i % 4 === 0)
+      await page.screenshot({
+        path: `${out}/f${String(n++).padStart(4, '0')}.jpg`,
+        scale: 'css',
+        quality: 90,
+      });
   }
 }
 const shot = async (name) => {
