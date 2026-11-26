@@ -158,8 +158,8 @@ const scenes = {
       await roll(90, GO);
     },
   },
-  greyhound: {
-    caption: 'GREYHOUND: a comet that steers itself and throws rivals aside',
+  comet: {
+    caption: 'COMET: a comet that steers itself and throws rivals aside',
     stage: () => {
       const dd = window.__dd;
       dd.put(0, -110, 0, 0, 40);
@@ -168,11 +168,11 @@ const scenes = {
     },
     play: async () => {
       await roll(16, IDLE);
-      await page.evaluate(() => window.__dd.give(0, 'greyhound'));
+      await page.evaluate(() => window.__dd.give(0, 'comet'));
       await roll(30, IDLE);
-      await shot('greyhound');
+      await shot('comet');
       await roll(40, IDLE);
-      await shot('greyhound-wham');
+      await shot('comet-wham');
       await roll(140, IDLE);
     },
   },

@@ -272,7 +272,7 @@ export class Hud {
     if (!w.player.wrecked) {
       if (T.dizzy) text('DIZZY: STEERING SWAPPED', W / 2, H * 0.2, font(24), '#ffe870', 'center');
       else if (T.balloons) text('UP IN THE AIR', W / 2, H * 0.2, font(24), '#ff8a96', 'center');
-      else if (T.dash) text('GREYHOUND', W / 2, H * 0.2, font(24), '#ffc040', 'center');
+      else if (T.dash) text('COMET', W / 2, H * 0.2, font(24), '#ffc040', 'center');
     }
     if (this.dial.on) this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
@@ -402,7 +402,7 @@ function trickLabels(c: Car): string[] {
   const s = (t: number) => `${Math.ceil(t)}s`;
   return [
     T.balloons ? `BALLOONS ${s(T.balloons.t)}` : '',
-    T.dash ? `GREYHOUND ${s(T.dash.t)}` : '',
+    T.dash ? `COMET ${s(T.dash.t)}` : '',
     T.splat ? `MUDDY ${s(T.splat.t)}` : '',
     T.dizzy ? `DIZZY ${s(T.dizzy.t)}` : '',
     T.pair ? `MAGNET ${s(T.pair.t)}` : '',

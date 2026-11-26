@@ -40,7 +40,7 @@ describe('pickup.bag-of-tricks', () => {
     expect(roll(3)).toEqual(a);
   });
 
-  it('leans towards the car at the back: the leader seldom gets the door or the greyhound', () => {
+  it('leans towards the car at the back: the leader seldom gets the door or the comet', () => {
     const C = loadContent();
     const kits = bag().kits!.map((id) => C.pickup.get(id)!);
     const share = (at: number) => {

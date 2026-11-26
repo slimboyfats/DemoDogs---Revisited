@@ -4,15 +4,15 @@ import { grant } from '@demodogs/sim';
 import { bench, tricked } from '../../../src/testing';
 import { loadContent } from '../../../src/index';
 
-const def = () => loadContent().pickup.get('pickup.greyhound')!;
+const def = () => loadContent().pickup.get('pickup.comet')!;
 
-describe('pickup.greyhound', () => {
+describe('pickup.comet', () => {
   it('drives itself down the road, faster than the car can go, with nobody at the wheel', () => {
     const w = bench();
     const c = w.player;
     for (let i = 0; i < 20; i++) w.step();
     const p0 = c.progress;
-    expect(grant(w, c, def())).toBe('GREYHOUND 4s');
+    expect(grant(w, c, def())).toBe('COMET 4s');
     let top = 0;
     for (let i = 0; i < 60 * def().seconds!; i++) {
       w.step();
@@ -27,7 +27,7 @@ describe('pickup.greyhound', () => {
   });
 
   it('throws what it strikes out of its way, and is not hurt doing it', () => {
-    const { me, rivals, give, run, said } = tricked('pickup.greyhound', 1);
+    const { me, rivals, give, run, said } = tricked('pickup.comet', 1);
     const o = rivals[0]!;
     o.x = me.x + 120;
     give();

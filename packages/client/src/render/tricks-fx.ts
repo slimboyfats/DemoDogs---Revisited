@@ -275,7 +275,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 160, 100, FIRE, 2.4);
           flash(0xffa030, 130, 0.5);
-          fx.text(e.x, e.y - 12, mine ? 'GREYHOUND!' : `${c.name}: GREYHOUND!`, '#ffc040', true);
+          fx.text(e.x, e.y - 12, mine ? 'COMET!' : `${c.name}: COMET!`, '#ffc040', true);
           shake(12, 6);
           if (v > 0) {
             S.howl(v);
