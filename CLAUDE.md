@@ -17,6 +17,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm speed [out-dir] [--frames] [--only=scene]`                | what slows a car (off road, hill, mud road, damage) and the speedometer naming it (`captures/speed/`)         |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
+| `/?sky=mist` (`dawn`, `fog-night`), `?mods=pea-soup`, `?fog=0`  | ground fog; `pnpm chase out knotwood dawn` films cars ploughing through it, `pnpm sky out venue mist` a frame |
 | `pnpm chase [out-dir] [venue] [sky] [--seconds=8]`              | a night chase to judge the feel by: beams, tail lamps, tracks and spray in one clip (`captures/chase/`)       |
 | `pnpm traced [out-dir] [venue ...]`; `?gi=0`, `?flames=0`       | the traced light on, off and as a field by day, dusk and night, and its cost (`captures/traced/`)             |
 | `pnpm ground [out-dir] [venue ...] [--maps]`                    | every venue's painted ground as one picture, a close-up and a race frame (`captures/ground/`)                 |
@@ -191,6 +192,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.
   Sights stand close beside the road (about 50 px off its edge), since that is all a phone shows. Every built-in
   track opens in the track creator as a copy (`trackFromVenue` in sim/custom.ts, COPY THIS TRACK on the tracks screen).
+- **Ground fog is sheets and a small fluid** (client `render/pixel/fog.ts`; `Atmosphere.fog`, the skies `mist`,
+  `dawn`, `fog-night`, a modifier's `sky.fog`). `FogPass` draws a few flat sheets a little over the ground after the
+  stacks, each tested against their depth, so things stand in it; `FogFluid` is stable fluids on a coarse grid over
+  the whole map, stepped to the race's clock, stirred by cars, rockets and blasts. Looks only: the sim never knows,
+  and a new thing that should push the fog is one more `put` in `PixelScene.stir`.
 - **Rule numbers tuned by hand are in one list** (`TUNABLES` in shared/tuning.ts): the DEV SETTINGS pane (menu and
   pause menu) draws a slider for each, a `World` takes them as `tuning`, and a rule reads `world.tuning`. A new one is
   an entry in that list and a read in its rule. They are saved on the device and never used in an online race, so
