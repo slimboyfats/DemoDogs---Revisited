@@ -43,6 +43,12 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
+/**
+ * A thing is taken to stand at least this high when its shadow is looked for (art px): for
+ * callers that give no height.
+ */
+const SHADOW_OVER = 12;
+
 /** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
 const GAS_CAP = 131072;
 
@@ -229,8 +235,21 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // (raised ground lifts things up the screen: allow for the highest it stands)
     ht += this.relief?.top ?? 0;
     const m = rad * this.scale;
-    return sx > -m && sx < this.vw + m && sy > -m && sy < this.vh + m + ht * this.scale * this.cosP;
+    // (and what stands off the screen on the sun's side still throws its shadow onto it: a
+    // thing is in view for as long as its shadow is, or the shadow goes out while it is watched)
+    const tall = ht + SHADOW_OVER;
+    const ex = this.throwX * tall * this.scale;
+    const ey = this.throwY * tall * this.scale * this.ys;
+    return (
+      sx > -m - Math.max(0, ex) &&
+      sx < this.vw + m + Math.max(0, -ex) &&
+      sy > -m - Math.max(0, ey) &&
+      sy < this.vh + m + ht * this.scale * this.cosP + Math.max(0, -ey)
+    );
   }
+  /** How far the sun throws a shadow this frame, ground px per px of height (0 when it casts none). */
+  private throwX = 0;
+  private throwY = 0;
   group(): void {}
   slice(
     s: Strip,
@@ -570,6 +589,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       queueStacks(this, this.art, w, fx);
       this.atlas.pack();
       this.everything = false;
+    }
+    {
+      const casts = this.sunCast && sky.lit && A.shade > 0.03 && fx.quality > 0.3;
+      this.throwX = casts ? A.reach[0]! : 0;
+      this.throwY = casts ? A.reach[1]! : 0;
     }
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
