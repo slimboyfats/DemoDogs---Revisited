@@ -140,7 +140,9 @@ export class CatchupFx {
         this.ring(fx, e.x, e.y, c.z, 20, 90, ICE);
         this.ring(fx, e.x, e.y, c.z + 8, 10, 40, ICE);
         fx.flashes.push({ x: e.x, y: e.y, r: 90, life: 0.45, max: 0.45, rgb: 0x7fd4ff });
-        fx.text(e.x, e.y, mine ? 'ZAPPED!' : `${c.name} ZAPPED!`, '#7fd4ff', true);
+        // (a ray that takes the whole field says so once, over this screen's car: not seven times)
+        if (mine || e.by !== w.player.index)
+          fx.text(e.x, e.y, mine ? 'ZAPPED!' : 'ZAP!', '#7fd4ff', mine);
         fx.shake = Math.max(fx.shake, mine ? 10 : 6 * v);
         break;
       case 'back':
