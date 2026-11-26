@@ -62,7 +62,19 @@ const sayEach = (list, say, gap = 60) =>
 const KNOCKS = ['car', 'metal', 'wood', 'stone', 'rubber', 'glass', 'soft'];
 const JINGLES = ['final-lap', 'win', 'podium', 'finish', 'lost', 'last-standing'];
 const SHOP = ['buy', 'denied', 'cash', 'unlock', 'cup', 'cup-lost'];
-const CARS = ['terrier', 'pug', 'mutt', 'bruiser', 'whippet', 'wolfhound'];
+const CARS = [
+  'terrier',
+  'pug',
+  'corgi',
+  'mutt',
+  'bruiser',
+  'dalmatian',
+  'whippet',
+  'husky',
+  'mastiff',
+  'greyhound',
+  'wolfhound',
+];
 
 const scenes = [
   // each car's engine from a standing start, the same road for all of them
