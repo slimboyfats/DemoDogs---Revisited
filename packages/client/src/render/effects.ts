@@ -49,6 +49,7 @@ import { ShockFx } from './shock-fx';
 import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { GuardState, guardEvent, guardTick } from './guards-fx';
 import { CatchupFx } from './catchup-fx';
+import { TrickFx } from './tricks-fx';
 import { LifeFx } from './life-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
@@ -260,6 +261,8 @@ export class Effects {
   readonly guards = new GuardState();
   /** Catch-up items: size bursts, the gale, the lead ball. */
   readonly catchup = new CatchupFx();
+  /** The tricks out of the Bag of Tricks: their bursts, their steady signs, doors and paws. */
+  readonly tricks = new TrickFx();
   /** Things going up slice by slice, and tall scenery seen through to your car (slice-fx.ts). */
   readonly slices = new SliceFx();
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
@@ -1756,6 +1759,9 @@ export class Effects {
         case 'catchup':
           this.catchup.handle(this, w, e, S, this.art);
           break;
+        case 'trick':
+          this.tricks.handle(this, w, e, S, this.art);
+          break;
         case 'catch':
         case 'leash':
         case 'snap':
@@ -2122,6 +2128,7 @@ export class Effects {
     howlTick(this, w);
     guardTick(this, w, this.sound);
     this.catchup.step(this, w);
+    this.tricks.step(this, w);
     this.life.step(this, w);
     // hollows in the road are light and shade on the ground: each painted once, as it is laid
     for (; this.hollows < w.mounds.length; this.hollows++) {

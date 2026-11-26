@@ -747,6 +747,35 @@ export const ADDON_KINDS = [
 ] as const;
 export type AddonKind = (typeof ADDON_KINDS)[number];
 
+/**
+ * Tricks: ten toys out of the Bag of Tricks crate (sim/tricks.ts), all at work the moment they
+ * are picked up.
+ *
+ * - balloons  every rival ahead is hung from balloons `lift` high for `seconds`, then dropped
+ * - door      a dog door: the car goes in and comes out `reach` up the road
+ * - dash      `seconds` as a comet: it steers itself, nothing hurts it, and what it strikes flies
+ * - splat     mud in the face of every rival ahead for `seconds`
+ * - steal     the weapon of the nearest armed rival changes hands
+ * - dizzy     every rival ahead steers back to front for `seconds`
+ * - pair      two rivals are pulled together like magnets for `seconds`
+ * - bumper    `seconds` as a pinball bumper: whatever touches the car is flung off it
+ * - flop      the car leaps and comes down as a blast on the nearest rival
+ * - ghost     `seconds` as a ghost: cars pass through it and nothing hurts it
+ */
+export const TRICK_KINDS = [
+  'balloons',
+  'door',
+  'dash',
+  'splat',
+  'steal',
+  'dizzy',
+  'pair',
+  'bumper',
+  'flop',
+  'ghost',
+] as const;
+export type TrickKind = (typeof TRICK_KINDS)[number];
+
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
@@ -768,6 +797,8 @@ export const PickupSchema = z.strictObject({
     'collar',
     'bones',
     ...ADDON_KINDS,
+    'tricks',
+    ...TRICK_KINDS,
   ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
@@ -818,6 +849,18 @@ export const PickupSchema = z.strictObject({
    * the car for good, or on the black market (`sold: 'market'`), fitted for the next race only.
    */
   factor: z.number().positive().optional(),
+  /**
+   * Tricks (the TRICK_KINDS, sim/tricks.ts), on the fields above. A `tricks` crate holds the
+   * pickups in `kits` and rolls one by their own odds. Those that last run `seconds`; those that
+   * go for rivals take every one ahead in a race, or within `radius`. Balloons: `lift` is how
+   * high they carry a car, `amount` what the drop costs it. Door: `reach` up the road (more the
+   * further back the car is running); with no road, out behind the nearest rival within `radius`.
+   * Dash: `pace` on its top speed; what it strikes takes `amount` and is thrown at `factor`.
+   * Steal: `amount` gun rounds change hands when no rival within `radius` holds a weapon. Pair:
+   * `factor` is the pull, art px per second squared. Bumper: what touches it is flung at `factor`
+   * and takes `amount`. Flop: the car is thrown up at `lift` onto a rival within `radius`, and
+   * lands as a blast of power `factor`.
+   */
   price: z.number().int().positive().optional(),
   sold: z.enum(['garage', 'market']).optional(),
 });

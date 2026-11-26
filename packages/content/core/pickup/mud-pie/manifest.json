@@ -1,0 +1,16 @@
+{
+  "id": "pickup.mud-pie",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mud Pie",
+    "description": "A mud pie in the face of every rival ahead: they cannot see the road until it has run off.",
+    "since": "core@0.10.0"
+  },
+  "kind": "splat",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lead": 0.5,
+  "trail": 1.5,
+  "seconds": 4.5,
+  "radius": 300
+}

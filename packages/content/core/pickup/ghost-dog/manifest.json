@@ -1,0 +1,13 @@
+{
+  "id": "pickup.ghost-dog",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ghost Dog",
+    "description": "A few seconds as a ghost: rivals drive straight through the car, and nothing can hurt it.",
+    "since": "core@0.10.0"
+  },
+  "kind": "ghost",
+  "weight": 1,
+  "hurtWeight": 1,
+  "seconds": 6
+}
