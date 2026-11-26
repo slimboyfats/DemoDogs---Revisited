@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { propTest } from '../../../src/testing';
+import { rangeProp, stand } from '@demodogs/sim';
+import { loadContent } from '../../../src';
+import { flatBench, propTest, put } from '../../../src/testing';
 
 describe('prop.barrel', () => {
   it('gets shoved by a slow car', () => {
@@ -47,5 +49,41 @@ describe('prop.barrel', () => {
     }
     expect(seen).toContain('launch');
     expect(c.hp).toBeLessThan(hp);
+  });
+
+  /** A car at `speed` towards a row of barrels 56 px on, with a big ramp before them or not. */
+  function row(speed: number, ramp: boolean) {
+    const C = loadContent();
+    const w = flatBench();
+    const c = w.player;
+    const x = w.oval!.cx - 120;
+    const y = w.oval!.cy;
+    if (ramp) stand(w, C.prop.get('prop.big-ramp')!, x, y, 0, 0);
+    for (let k = -2; k <= 2; k++) rangeProp(w, C.prop.get('prop.barrel')!, x + 56, y + k * 9);
+    const at = w.props.map((p) => [p.x, p.y]);
+    put(c, x - 40, y, 0, speed);
+    const events: string[] = [];
+    let over = 0;
+    for (let i = 0; i < 90; i++) {
+      w.step({ steer: 0, throttle: 1, brake: false, boost: false, fire: false });
+      for (const e of w.takeEvents()) events.push(e.t);
+      if (Math.abs(c.x - (x + 56)) < 6) over = Math.max(over, c.z);
+    }
+    const moved = w.props.some(
+      (p, i) => !p.alive || Math.hypot(p.x - at[i]![0]!, p.y - at[i]![1]!) > 0.5,
+    );
+    return { events, over, moved, car: c };
+  }
+
+  it('is flown over by a car off a ramp, as the big jumps are laid out', () => {
+    // on the ground it ploughs into them
+    expect(row(160, false).moved).toBe(true);
+    // off the ramp it is over them: nothing is touched, nothing goes off
+    for (const speed of [160, 265]) {
+      const r = row(speed, true);
+      expect(r.over, `${speed}`).toBeGreaterThan(8);
+      expect(r.moved, `${speed}`).toBe(false);
+      expect(r.events).not.toContain('explode');
+    }
   });
 });

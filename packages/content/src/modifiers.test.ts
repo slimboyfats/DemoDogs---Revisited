@@ -9,9 +9,9 @@ const humans = [{ car: 'car.pug', name: 'TWO', paint: '#3fa9f5' }];
 const go: Controls = { ...NO_CONTROLS, throttle: 1 };
 
 describe('world modifiers: every one at once', () => {
-  it('ships ten', () => {
-    expect(ALL).toHaveLength(10);
-    expect(new Set(ALL.map((id) => content.modifier.get(id)!.kind)).size).toBe(10);
+  it('ships eleven', () => {
+    expect(ALL).toHaveLength(11);
+    expect(new Set(ALL.map((id) => content.modifier.get(id)!.kind)).size).toBe(11);
   });
 
   it('two screens of one online race stay in step, whatever order the list came in', () => {
@@ -33,7 +33,7 @@ describe('world modifiers: every one at once', () => {
         for (const w of ws) w.stepSeats(seats);
         if (t % 300 === 299) expect(ws[0]!.hash()).toBe(ws[1]!.hash());
       }
-      expect(ws[0]!.mods).toHaveLength(10);
+      expect(ws[0]!.mods).toHaveLength(11);
     }
   });
 

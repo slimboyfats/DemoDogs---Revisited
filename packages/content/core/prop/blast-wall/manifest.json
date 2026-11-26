@@ -8,6 +8,12 @@
   },
   "body": "static",
   "radius": 9,
+  "hit": {
+    "halfLength": 9,
+    "halfWidth": 9,
+    "round": 2,
+    "top": 19
+  },
   "made": "material.cracked-rock",
   "integrity": 24,
   "rebuild": 30
