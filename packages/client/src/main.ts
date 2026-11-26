@@ -9,7 +9,8 @@ import {
 import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
-import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
+import './theme.css';
+import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
 import {
@@ -23,8 +24,9 @@ import {
   type Outcome,
   type RaceId,
 } from './game/career';
+import { MEDALS, clock, cupRound, settleCup } from './game/cups';
 import { Session, type SessionOptions } from './game/session';
-import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
+import { CameraZoom, VIEWS, zoomSides, zoomStops } from './game/zoom';
 import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
 import { TuningStore } from './game/tuning';
 import { devSettings } from './ui/dev-settings';
@@ -42,18 +44,30 @@ import { PITCH, Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
+import { Settings } from './ui/settings';
+import { venueThumb } from './ui/venue-thumb';
 import { KeyHints } from './ui/key-hints';
 import { volumeSliders } from './ui/volume';
 import { NameTags } from './ui/name-tags';
+import { Rivals } from './ui/rivals';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
+import { Tutor } from './ui/tutor';
+import { LESSON_KEY, STEPS, offerLesson } from './game/lesson';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
 import { BackgroundClock } from './game/bg-clock';
 import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
 import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
-import { LocalTrackStore, type KeyValue } from './game/tracks';
+import {
+  linkedTrack,
+  LocalTrackStore,
+  newTrackId,
+  sameTrack,
+  unpackTrack,
+  type KeyValue,
+} from './game/tracks';
 import { TrackEditor } from './ui/track-editor';
 import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
@@ -64,7 +78,7 @@ import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
  * and the test range. ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
  * player's car with the rivals' AI, &ghosts=<n> adds idle drivers so there is a race left to watch
  * once your car is scrapped); ?career opens the career, ?career=<easy|medium|hard|final>
- * enters that race; ?dev opens the test range; ?edit opens the track creator on a new track.
+ * enters that race; ?lesson gives the driving lesson; ?dev opens the test range; ?edit opens the track creator on a new track.
  * window.__dd exposes the running session, the
  * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
@@ -79,6 +93,8 @@ if (params.get('tape')) sound.record(Number(params.get('tape')) || 30);
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
+// how hard the rival drivers are (EASY, NORMAL, HARD): ?rivals=hard picks one for a visit
+const rivals = new Rivals(params.get('rivals'));
 // how sharp the game is drawn: steps down by itself on a device that keeps falling behind. A
 // driven browser (the capture scripts) stays at full unless the address says otherwise, so a slow
 // headless frame never changes what a screenshot shows.
@@ -134,6 +150,9 @@ let lastVenue = venues[0]!.id;
 let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' | 'tracks' = 'menu';
 /** The game on screen is the test range. */
 let devMode = false;
+/** The game on screen is the driving lesson, and its last card is up. */
+let lessonMode = false;
+let lessonEnd = false;
 /** The game on screen is the track creator. */
 let editMode = false;
 /** The custom track in hand: being built, or being test driven from the editor. */
@@ -145,7 +164,7 @@ let lastCustom: Installed | null = null;
 const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
-let careerRace: RaceId | null = null;
+let careerRace: RaceId | 'cup' | null = null;
 
 /** World modifiers picked for quick races: ?mods= wins, otherwise what was picked last time. */
 const MODS = 'dd-mods-v1';
@@ -178,6 +197,7 @@ function loadCareer(): Career {
 const careerScreen = new CareerScreen($('careerPanel'), content, art, {
   change: saveCareer,
   race: startCareerRace,
+  cup: startCupRound,
   back: () => setScreen('menu'),
   reset: () => {
     saveCareer(newCareer(content, Math.floor(Math.random() * 2 ** 31)));
@@ -264,8 +284,9 @@ const editor = new TrackEditor(
     zoomRange: () => {
       const w = session!.world;
       // from the whole map with room to spare, to twice as close as a race is shown
+      // (the bars and the tray of a small phone leave about half of it clear)
       const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
-      return [Math.min(fit * 0.8, scale / 2), scale * 2];
+      return [Math.min(fit * 0.55, scale / 2), scale * 2];
     },
     save: (t) => {
       editing = t;
@@ -273,6 +294,16 @@ const editor = new TrackEditor(
     },
     drive: (t) => raceTrack(t),
     exit: () => openTracks(),
+    snap: {
+      get: () => storage()?.getItem('dd-edit-snap') !== '0',
+      set: (on) => {
+        try {
+          storage()?.setItem('dd-edit-snap', on ? '1' : '0');
+        } catch {
+          /* it lasts as long as the page */
+        }
+      },
+    },
   },
 );
 const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
@@ -477,8 +508,7 @@ function resize(): void {
   overK = Math.min(2, device) / DPR;
   overlay.width = Math.round(W * overK);
   overlay.height = Math.round(H * overK);
-  const short = Math.min(W, H);
-  const long = Math.max(W, H);
+  const [short, long] = zoomSides(W, H);
   // at NORMAL about 175 art pixels up the short side: far enough out that the cells read as fine
   // grain (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
   scale = camZoom.scale(short, long);
@@ -506,8 +536,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.resBtn'))
 
 /** The CAMERA button and slider say which zoom is on, and what this screen can do. */
 function showZoom(): void {
-  const short = Math.min(W, H);
-  const long = Math.max(W, H);
+  const [short, long] = zoomSides(W, H);
   // between the names: which side of NORMAL it is on
   const name =
     camZoom.name(short, long)?.toUpperCase() ?? (camZoom.view < VIEWS.normal ? 'CLOSER' : 'WIDER');
@@ -527,7 +556,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.zoomBtn'))
 // the slider: the race behind the pause menu zooms as it is dragged
 for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
   r.oninput = () => {
-    camZoom.setStop(Number(r.value), Math.min(W, H), Math.max(W, H));
+    camZoom.setStop(Number(r.value), ...zoomSides(W, H));
     resize();
   };
 
@@ -627,7 +656,9 @@ function show(id: string | null): void {
     'menu',
     'results',
     'pauseMenu',
-    'tuneMenu',
+    'settings',
+    'tutAsk',
+    'tutEnd',
     'career',
     'loader',
     'online',
@@ -639,10 +670,17 @@ function show(id: string | null): void {
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
+  // a track being driven from the track creator shows the way straight back to it
+  document.body.classList.toggle('testdrive', editing !== null);
   if (s !== 'game') specBar.show(false);
   if (s !== 'game' && devMode) {
     devMode = false;
     dev.close();
+  }
+  if (s !== 'game' && lessonMode) {
+    lessonMode = lessonEnd = false;
+    tutor.close();
+    document.body.classList.remove('lessonEnd');
   }
   if (s !== 'game' && editMode) {
     editMode = false;
@@ -678,14 +716,8 @@ function updateFireButton(): void {
 function goFullscreen(): void {
   try {
     if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement)
-      document.documentElement
-        .requestFullscreen()
-        .then(() =>
-          (
-            window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }
-          ).lock?.('landscape'),
-        )
-        .catch(() => undefined);
+      // (held either way up: the race is laid out for a phone on its side and for an upright one)
+      document.documentElement.requestFullscreen().catch(() => undefined);
   } catch {
     /* not allowed */
   }
@@ -700,6 +732,7 @@ let launching = 0;
  */
 async function launch(o: Launch, title: string, ready?: (s: Session) => void): Promise<void> {
   const mine = ++launching;
+  hud.aim = null;
   sound.init();
   goFullscreen();
   $('loadTitle').textContent = title;
@@ -708,7 +741,16 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
   const t0 = performance.now();
   const built0 = art.built;
   const made = await Session.load(
-    { content, art, sound, input, autopilot: params.has('autoplay'), tuning: tune.values, ...o },
+    {
+      content,
+      art,
+      sound,
+      input,
+      autopilot: params.has('autoplay'),
+      tuning: tune.values,
+      difficulty: rivals.level,
+      ...o,
+    },
     (text, done, of) => {
       $('loadLine').textContent = `${text}…`;
       $('loadFill').style.width = `${Math.round((done / of) * 100)}%`;
@@ -738,12 +780,57 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
 
 function startCareerRace(race: RaceId): void {
   const k = loadCareer();
+  // a tournament is finished or left before the ladder is raced again
+  if (k.cup) return openCareer();
   const s = raceSetup(content, k, race);
   careerRace = race;
   const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
   void launch(
     { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
     venue,
+  );
+}
+
+/** The next round of the tournament the career is entered in. */
+function startCupRound(): void {
+  const k = loadCareer();
+  const r = cupRound(content, k);
+  if (!r) return openCareer();
+  careerRace = 'cup';
+  const d = r.def;
+  const venue = content.venue.get(r.venue)!.meta.name.toUpperCase();
+  const par = r.par;
+  const mark = r.mark;
+  void launch(
+    {
+      venue: r.venue,
+      car: k.car,
+      seed: r.seed,
+      field: r.field,
+      player: r.player,
+      knockout: true,
+      modifiers: r.modifiers,
+      ...(r.laps ? { laps: r.laps } : {}),
+    },
+    `${d.name} ${r.round + 1}/${d.rounds} · ${venue}${modLine(content, r.modifiers)}`,
+    () => {
+      // beside the clock: the medal still to be had, the wanted car, or what the round is for
+      hud.aim = par
+        ? (w) => {
+            const at = par.findIndex((t) => w.raceTime <= t);
+            return at < 0
+              ? { text: 'NO MEDAL', colour: '#ff7a6a' }
+              : {
+                  text: `${MEDALS[3 - at]} ${clock(par[at]!)}`,
+                  colour: ['#ffd24a', '#dfe6ee', '#e09a5a'][at]!,
+                };
+          }
+        : mark
+          ? () => ({ text: `WANTED: ${mark}`, colour: '#ff6a7a' })
+          : d.kind === 'last'
+            ? () => ({ text: 'LAST HOME IS OUT', colour: '#c58cff' })
+            : null;
+    },
   );
 }
 
@@ -807,6 +894,66 @@ function startDev(car: string): void {
   );
 }
 
+/** The driving lesson was taken or turned down on this device: it is not offered again. */
+function lessonSeen(): void {
+  try {
+    safeStore()?.setItem(LESSON_KEY, '1');
+  } catch {
+    // (a full or locked store: it is offered again next visit)
+  }
+}
+
+const tutor = new Tutor(sound, {
+  skip: () => {
+    paused = false;
+    setScreen('menu');
+  },
+  finished: endLesson,
+});
+
+/**
+ * The driving lesson: a fenced lawn of its own, a test range like the dev panel's with two parked
+ * cars for targets, and the tutor saying what to do (`from`: begin at that step, for pictures).
+ */
+function startLesson(from = 0): void {
+  careerRace = null;
+  lessonSeen();
+  const car = cars[carIdx]!;
+  void launch(
+    {
+      venue: SCHOOL,
+      content: withSchool(content),
+      car: car.id,
+      seed: 1,
+      autopilot: false,
+      sandbox: true,
+      // (no rounds: the gun fires by itself, and the lesson's targets are for the rockets)
+      player: { rounds: 0 },
+      field: [1, 2].map((i) => {
+        const c = cars[(carIdx + i) % cars.length]!;
+        return { car: c.id, name: 'TARGET', paint: c.paint, rounds: 0 };
+      }),
+    },
+    'DRIVING LESSON',
+    (s) => {
+      lessonMode = true;
+      lessonEnd = false;
+      tutor.open(s, input, from);
+    },
+  );
+}
+
+/** The lesson's last card, over the lawn: the two kinds of event, and straight into one. */
+function endLesson(): void {
+  if (!lessonMode) return;
+  lessonEnd = paused = true;
+  tutor.close();
+  document.body.classList.add('lessonEnd');
+  show('tutEnd');
+  sound.engineStop();
+  sound.musicMuffle(true);
+}
+
 function finish(gaveUp = false): void {
   if (!session) return;
   const w = session.world;
@@ -825,13 +972,28 @@ function finish(gaveUp = false): void {
   if (careerRace) {
     // settle once: the race is spent, so leaving the results cannot pay twice
     const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
-    const { career: next, payout } = settle(loadCareer(), careerRace, o);
+    const k = loadCareer();
+    const cup = careerRace === 'cup' ? settleCup(content, k, o) : null;
+    const { career: next, payout } =
+      cup ?? settle(k, careerRace === 'cup' ? 'easy' : careerRace, o);
     saveCareer(next);
     careerRace = null;
     lastCareer = true;
+    const rep = cup?.payout.cup;
     if (payout.champion) $('resTitle').textContent = 'TOP DOG!';
+    else if (rep?.place)
+      $('resTitle').textContent =
+        rep.place === 1
+          ? `${rep.name} WON!`
+          : rep.place <= 3
+            ? `${placeName(rep.place)} IN THE ${rep.name}`
+            : rep.kind === 'last'
+              ? 'ELIMINATED'
+              : `${rep.name}: NO TROPHY`;
     else if (gaveUp) $('resTitle').textContent = 'GAVE UP';
-    else if (o.wrecked) $('resTitle').textContent = 'WRECKED';
+    else if (o.wrecked && rep?.kind !== 'derby') $('resTitle').textContent = 'WRECKED';
+    else if (rep?.medal !== undefined) $('resTitle').textContent = MEDALS[rep.medal]!;
+    if (rep) sub = `${rep.name} · ROUND ${rep.round} OF ${rep.rounds} · ${sub}`;
     const line = (label: string, cash: string, cls = '') => {
       const d = document.createElement('div');
       d.className = cls;
@@ -845,6 +1007,25 @@ function finish(gaveUp = false): void {
     if (payout.lines.length === 0)
       line(o.wrecked ? 'A WRECK EARNS NOTHING' : 'OUT OF THE MONEY', money(0));
     line(`CASH ${money(next.cash)} · +${payout.points} PTS`, money(payout.total), 'sum');
+    if (rep) {
+      // the tournament's table under the money: who leads, who went home
+      line(rep.place ? 'FINAL TABLE' : `AFTER ROUND ${rep.round} OF ${rep.rounds}`, '', 'cupHead');
+      if (rep.kind === 'trial')
+        line(
+          rep.time === undefined ? 'NO TIME' : `YOUR TIME ${clock(rep.time)}`,
+          MEDALS[rep.medal ?? 0]!,
+          `cupRow m${rep.medal ?? 0}`,
+        );
+      else
+        rep.table.forEach((s, i) =>
+          line(
+            `${i + 1}  ${s.name}`,
+            rep.kind === 'last' ? (s.out ? 'OUT' : 'IN') : `${s.points} PTS`,
+            `cupRow ${s.me ? 'me' : ''} ${s.out ? 'gone' : ''}`,
+          ),
+        );
+      if (rep.cut) line(`${rep.cut} GOES HOME`, '', 'cupRow');
+    }
   } else lastCareer = false;
   if (!lastCareer)
     try {
@@ -879,7 +1060,7 @@ function finish(gaveUp = false): void {
 }
 
 function togglePause(): void {
-  if (screen !== 'game' || editMode) return;
+  if (screen !== 'game' || editMode || lessonEnd) return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
   $('restart').classList.toggle('hidden', careerRace !== null || devMode || online.room !== null);
@@ -931,12 +1112,23 @@ function buildMenu(): void {
     const mode = content.mode.get(v.mode)!;
     const b = document.createElement('button');
     b.dataset.venue = v.id;
-    const what =
-      mode.kind === 'race' ? `Race · ${mode.laps} laps` : 'Derby · last car running wins';
+    b.className = `venue ${mode.kind}`;
+    const about = v.meta.description.replace(/^(Race|Derby)\.\s*/, '');
+    b.title = about;
+    let best = 0;
+    try {
+      best = Number(localStorage.getItem(`dd-best-${v.id}`)) || 0;
+    } catch {
+      /* private mode */
+    }
     b.append(
+      venueThumb(v),
+      Object.assign(document.createElement('em'), {
+        textContent: mode.kind === 'race' ? `RACE · ${mode.laps} LAPS` : 'DERBY',
+      }),
       Object.assign(document.createElement('b'), { textContent: v.meta.name.toUpperCase() }),
       Object.assign(document.createElement('small'), {
-        textContent: `${what} · ${v.meta.description.replace(/^(Race|Derby)\.\s*/, '')}`,
+        textContent: best ? `Best ${best} · ${about}` : about,
       }),
     );
     b.onclick = () => startGame(v.id);
@@ -1103,12 +1295,13 @@ function frame(t: number): void {
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, overlay.width, overlay.height);
     octx.setTransform(overK, 0, 0, overK, 0, 0);
-    drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
+    drawOverlay(octx, scene, session.world, session.fx, W, H, DPR, !lessonMode);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
-    else if (nameTags.shown && !devMode)
+    else if (nameTags.shown && !devMode && !lessonMode)
       drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (editMode) editor.draw(octx, dt);
     else if (devMode) dev.frame(dt);
+    else if (lessonMode) tutor.frame(octx, scene, W, H, DPR, paused ? 0 : dt);
     else if (overview === null)
       hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
@@ -1225,9 +1418,13 @@ function boot(): void {
     if (editing) startEditor(editing);
     else setScreen('menu');
   };
+  $('backToEdit').onclick = () => {
+    paused = false;
+    if (editing) startEditor(editing);
+  };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
-  $('restart').onclick = () => startGame(lastVenue, lastCustom);
+  $('restart').onclick = () => (lessonMode ? startLesson() : startGame(lastVenue, lastCustom));
   $('quit').onclick = () => {
     paused = false;
     if (online.room) {
@@ -1242,26 +1439,20 @@ function boot(): void {
   // DEV SETTINGS: from the menu or the pause menu, and back to whichever it was
   const tuneBtns = document.querySelectorAll<HTMLButtonElement>('.tuneBtn');
   const tuneLabel = (): void =>
-    tuneBtns.forEach(
-      (b) =>
-        (b.textContent = tune.changed ? `DEV SETTINGS (${tune.changed} CHANGED)` : 'DEV SETTINGS'),
-    );
+    tuneBtns.forEach((b) => (b.textContent = tune.changed ? `DEV · ${tune.changed}` : 'DEV'));
   const tuneSync = devSettings($('tuneRows'), tune, () => {
     // a race under way on this device takes the numbers at once (the ground keeps its shape)
     if (session && !online.room) session.world.tuning = { ...tune.values };
     tuneLabel();
   });
-  let tuneFrom: 'menu' | 'pauseMenu' = 'menu';
-  tuneBtns.forEach(
-    (b) =>
-      (b.onclick = () => {
-        tuneFrom = screen === 'game' ? 'pauseMenu' : 'menu';
-        tuneSync();
-        show('tuneMenu');
-      }),
-  );
-  $('tuneBack').onclick = () => show(tuneFrom);
   tuneLabel();
+  // SETTINGS: one sheet from the menu or the pause menu, and back to whichever it was
+  new Settings({
+    opened: tuneSync,
+    closed: (fromPause) => {
+      if (fromPause && paused && screen === 'game') show('pauseMenu');
+    },
+  });
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () => muteBtns.forEach((b) => (b.textContent = sound.label));
   const sliders = volumeSliders($('volume'), sound, label);
@@ -1299,7 +1490,56 @@ function boot(): void {
     const c = params.get('car');
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
+  // the driving lesson: from the menu at any time, and offered once to somebody new. The two
+  // cards it ends on start a first race and a first derby.
+  const first = (kind: 'race' | 'derby') =>
+    // (the gentlest of each, if it is still in the game)
+    venues.find((v) => v.id === (kind === 'race' ? 'venue.kennel-loop' : 'venue.the-pit')) ??
+    venues.find((v) => content.mode.get(v.mode)?.kind === kind) ??
+    venues[0]!;
+  const leave = (go: () => void) => () => {
+    paused = false;
+    go();
+  };
+  $('tutRace').prepend(venueThumb(first('race')));
+  $('tutDerby').prepend(venueThumb(first('derby')));
+  $('tutRace').onclick = leave(() => startGame(first('race').id));
+  $('tutDerby').onclick = leave(() => startGame(first('derby').id));
+  $('tutMenu').onclick = leave(() => setScreen('menu'));
+  $('toLesson').onclick = () => startLesson();
+  $('tutYes').onclick = () => startLesson();
+  $('tutNo').onclick = () => {
+    lessonSeen();
+    show('menu');
+  };
+  // ?lesson opens it (?lesson=3 at that step, ?lesson=ask shows the offer). A driven browser
+  // (the capture scripts) and an address that asks for something else are never offered it.
+  const lesson = params.get('lesson');
+  const busy = ['start', 'dev', 'edit', 'room', 'career'].some((k) => params.has(k));
+  if (lesson === 'ask' || (lesson === null && !busy && !navigator.webdriver && !location.hash))
+    if (lesson === 'ask' || offerLesson(safeStore())) show('tutAsk');
+  if (lesson !== null && lesson !== 'ask')
+    startLesson(Math.max(0, Math.min(STEPS.length - 1, Number(lesson) || 0)));
   if (params.has('edit')) void tracksScreen.create();
+  // a track somebody sent as a link: kept with your tracks, ready to race or to change
+  const linked = linkedTrack(location.hash);
+  if (linked) {
+    history.replaceState(null, '', location.pathname + location.search);
+    void unpackTrack(linked).then(async (r) => {
+      if (!r.ok) {
+        openTracks();
+        tracksScreen.say(r.error);
+        return;
+      }
+      // never over a track of your own that has since gone its own way
+      const mine = await trackStore.get(r.track.id);
+      const t =
+        mine && !sameTrack(mine, r.track) ? { ...r.track, id: newTrackId(Math.random) } : r.track;
+      await trackStore.put(t);
+      openTracks();
+      tracksScreen.say(`${t.name} came in from a link. RACE it, or EDIT it into your own.`);
+    });
+  }
   if (params.has('room')) openOnline(params.get('room') ?? '');
   // a reload (or a tab the phone threw out and brought back) mid-race goes back to its seat
   else if (savedRoom() && !st && !params.has('dev') && !params.has('edit'))
@@ -1308,6 +1548,7 @@ function boot(): void {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
       startCareerRace(race);
+    else if (race === 'cup' && loadCareer().cup) startCupRound();
     else openCareer();
   }
   Object.assign(window, {
@@ -1332,6 +1573,16 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** The driving lesson for scripts: `step` is the one that is on, `state` where its things are, `end()` jumps to its last card. */
+      lesson: {
+        get step() {
+          return tutor.step;
+        },
+        get state() {
+          return tutor.state;
+        },
+        end: endLesson,
+      },
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
       /** Draw the race at k device px to an art px with no HUD, for pictures (null: as it was). */

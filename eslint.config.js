@@ -20,6 +20,32 @@ const determinism = {
     'error',
     { object: 'Math', property: 'random', message: 'Use the world PRNG (world.rng).' },
     { object: 'Date', property: 'now', message: 'No wall-clock time in sim/content.' },
+    // Online play swaps sin, cos, atan2, exp and hypot for versions that give the same bits on
+    // every engine (sim/src/dmath.ts). The rest of the transcendental functions differ in the
+    // last bit between Safari and Chrome, which splits a lockstep race: port one to dmath first.
+    ...[
+      'pow',
+      'log',
+      'log2',
+      'log10',
+      'log1p',
+      'expm1',
+      'tan',
+      'tanh',
+      'sinh',
+      'cosh',
+      'acos',
+      'asin',
+      'atan',
+      'acosh',
+      'asinh',
+      'atanh',
+      'cbrt',
+    ].map((property) => ({
+      object: 'Math',
+      property,
+      message: `Math.${property} is not the same on every engine: online races would split. Add a deterministic one to sim/src/dmath.ts.`,
+    })),
   ],
   'no-restricted-imports': [
     'error',

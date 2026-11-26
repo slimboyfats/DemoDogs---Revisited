@@ -22,11 +22,17 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm bridge [out-dir] [--only=scene] [--frames]`               | knocks the legs out from under the overpass and the flyover and shoots the collapse (`captures/bridge/`)      |
 | `pnpm res [out-dir] [venue ...]`, RESOLUTION when paused        | frame time at each resolution step (`captures/resolution/`); `?res=auto`, `full`, `low`                       |
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
-| menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
+| menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, shares and races a track by touch (`PORTRAIT=1` puts the phone upright) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
+| `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
+| `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
+| `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
+| `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
+| `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -108,6 +114,15 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
   `GLOSS` and `GLOWS` lists say. A material named for fire or light (fire, flame, ember, lava, lamp, light, glow,
   neon, torch in its name) gives light off without being listed, so do not name a dull colour that way. Looks only: the client reads it when it builds the strip (`shineOf`).
+- **Rival drivers are built from the AI kit** (sim/ai-kit.ts): `thingsAhead` gathers what is in the way and what is
+  worth having as plain `Thing`s (a place, a size, a weight), `pickPath` / `pickHeading` weigh a fan of ways past
+  them, `cornerSpeed` reads the racing line (sim/line.ts, `world.line`), `recover` backs out of trouble, and
+  `wantsFire` / `wantsBoost` decide about what a car carries. They read kinds and numbers off manifests and never a
+  content id, so a new car, weapon, prop or venue needs nothing there; a new kind of thing left lying on the ground
+  is one more loop in `thingsAhead`, and a new kind of weapon says when to fire in its own `...Wants`. What kind of
+  driver a rival is (`styles` in the AI manifest: ACE, BULLY, HOARDER, BLOCKER, WILD) goes by its name, and how
+  hard the field is (`DIFFICULTY` in shared/constants.ts, the RIVALS button) is a `World` option, normal online.
+  Judge a change to the drivers with `pnpm bots` before and after.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.
@@ -147,4 +162,16 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
   `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
   built-in track can be rebuilt without touching tests. A test about a real venue names it.
+- **The menus wear one look** (client `theme.css`, loaded after `styles.css`): paper cards and sunny buttons with
+  an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
+  `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
+  drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
+  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, DEV), wired by class, and it sits beside a paused race so a
+  slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
+  in `theme.css`); nothing forces landscape.
+- **The driving lesson is a test range, not a mode.** It runs on a lawn of its own (`withSchool` in content, like
+  `withRange`) as a sandbox world; the steps and what each waits for are `game/lesson.ts` (pure, tested), and
+  `ui/tutor.ts` shows them and puts the crate and the targets down with the range's own tools. The sim knows nothing
+  of it. It is offered once to a device that has never played (`offerLesson`), never to a driven browser, and SKIP
+  is always on screen. A new control is taught by adding a step there.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.
