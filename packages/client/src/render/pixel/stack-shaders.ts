@@ -639,9 +639,9 @@ void main() {
       // whatever lies at its foot and whichever way it runs (beds drawn by height come out as
       // a checker on a wall seen end on)
 #ifdef BRIGHT
-      c = vec3(0.46, 0.47, 0.51);
+      c = vec3(0.38, 0.39, 0.44);
 #else
-      c = vec3(0.31, 0.32, 0.35);
+      c = vec3(0.27, 0.28, 0.31);
 #endif
     } else if (sk > 0.5) {
       // along the wall, whichever of the piece's sides it is, and up it
