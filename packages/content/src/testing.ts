@@ -1,6 +1,7 @@
 import { NO_CONTROLS, VenueSchema, type Controls, type SimEvent } from '@demodogs/shared';
 import {
   World,
+  grant,
   putProp,
   stand,
   type Content,
@@ -282,4 +283,37 @@ export function critterTest(
     (k, i) => Math.hypot(k.x - from[i]![0], k.y - from[i]![1]) > 12,
   ).length;
   return { world: w, car: c, critters, events, maxZ, blocked, slowest, flung, bumped, fled };
+}
+
+/**
+ * The flat bench with `n` rivals nobody drives standing in a row in front of the player, 60 art
+ * px off and 40 apart, and the pickup `id` to hand out. A place to try a trick.
+ */
+export function tricked(id: string, n = 2) {
+  const w = flatBench({ rivals: n + 1 });
+  const me = w.player;
+  const far = w.cars.find((c) => !c.isPlayer)!;
+  const rivals = w.cars.filter((c) => c !== me && c !== far);
+  const cx = w.oval!.cx - 100;
+  const cy = w.oval!.cy;
+  put(me, cx, cy, 0);
+  rivals.forEach((c, i) => {
+    c.ai = null;
+    put(c, cx + 60 + i * 40, cy, 0);
+  });
+  const def = loadContent().pickup.get(id)!;
+  w.takeEvents();
+  /** Step `ticks` ticks (pressing `ctl`) and gather the events. */
+  const run = (ticks: number, ctl: Controls = NO_CONTROLS): SimEvent[] => {
+    const out: SimEvent[] = [];
+    for (let i = 0; i < ticks; i++) {
+      w.step(ctl);
+      out.push(...w.takeEvents());
+    }
+    return out;
+  };
+  /** What the trick events in `ev` said. */
+  const said = (ev: SimEvent[]): string[] =>
+    ev.flatMap((e) => (e.t === 'trick' && e.id === id ? [e.what] : []));
+  return { w, me, rivals, far, def, run, said, give: (c = me) => grant(w, c, def) };
 }

@@ -1,0 +1,15 @@
+{
+  "id": "pickup.best-friends",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Best Friends",
+    "description": "Two rivals are clamped to a pair of magnets and hauled together, whichever way either of them was trying to go.",
+    "since": "core@0.10.0"
+  },
+  "kind": "pair",
+  "weight": 1,
+  "hurtWeight": 1,
+  "seconds": 5,
+  "radius": 320,
+  "factor": 300
+}

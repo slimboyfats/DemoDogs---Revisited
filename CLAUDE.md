@@ -29,6 +29,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
@@ -115,6 +116,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
   `GLOSS` and `GLOWS` lists say. A material named for fire or light (fire, flame, ember, lava, lamp, light, glow,
   neon, torch in its name) gives light off without being listed, so do not name a dull colour that way. Looks only: the client reads it when it builds the strip (`shineOf`).
+- **Tricks are pickups that go off when picked up** (`TRICK_KINDS` in shared/manifests.ts, sim/tricks.ts,
+  `Car.tricks`): they come out of one crate, `pickup.bag-of-tricks`, which rolls its `kits` by their own odds, so a
+  new trick is a pickup folder and a line in that list, not a line in every venue. The client's side is
+  render/tricks-fx.ts (one `trick` SimEvent: on, off, use).
 - **Rival drivers are built from the AI kit** (sim/ai-kit.ts): `thingsAhead` gathers what is in the way and what is
   worth having as plain `Thing`s (a place, a size, a weight), `pickPath` / `pickHeading` weigh a fan of ways past
   them, `cornerSpeed` reads the racing line (sim/line.ts, `world.line`), `recover` backs out of trouble, and

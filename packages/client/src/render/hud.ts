@@ -250,6 +250,8 @@ export class Hud {
       P.morph ? `${P.morph.def.kind === 'grow' ? 'BIG' : 'RUNT'} ${Math.ceil(P.morph.t)}s` : '',
       P.wind ? `WIND ${Math.ceil(P.wind.t)}s` : '',
       P.collar ? `COLLARED ${Math.ceil(P.collar.t)}s` : '',
+      // tricks at work on the car, its own or a rival's doing
+      ...trickLabels(P),
       // add-ons that run down or get used up; the rest can be seen on the car
       ...ADDON_KINDS.map((k) => {
         const f = P.fit[k];
@@ -342,6 +344,13 @@ export class Hud {
     if (back > 0 && !w.player.wrecked) {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
       text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), SUN, 'center');
+    }
+    // a trick that takes the wheel out of your hands says so for as long as it lasts
+    const T = w.player.tricks;
+    if (!w.player.wrecked) {
+      if (T.dizzy) text('DIZZY: STEERING SWAPPED', W / 2, H * 0.2, font(24), '#ffe870', 'center');
+      else if (T.balloons) text('UP IN THE AIR', W / 2, H * 0.2, font(24), '#ff8a96', 'center');
+      else if (T.dash) text('COMET', W / 2, H * 0.2, font(24), '#ffc040', 'center');
     }
     if (this.dial.on) this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
@@ -470,4 +479,19 @@ export class Hud {
     }
     ctx.textBaseline = 'top';
   }
+}
+
+/** What the tricks at work on a car are called on the status line. */
+function trickLabels(c: Car): string[] {
+  const T = c.tricks;
+  const s = (t: number) => `${Math.ceil(t)}s`;
+  return [
+    T.balloons ? `BALLOONS ${s(T.balloons.t)}` : '',
+    T.dash ? `COMET ${s(T.dash.t)}` : '',
+    T.splat ? `MUDDY ${s(T.splat.t)}` : '',
+    T.dizzy ? `DIZZY ${s(T.dizzy.t)}` : '',
+    T.pair ? `MAGNET ${s(T.pair.t)}` : '',
+    T.bumper ? `BOUNCY ${s(T.bumper.t)}` : '',
+    T.ghost ? `GHOST ${s(T.ghost.t)}` : '',
+  ];
 }

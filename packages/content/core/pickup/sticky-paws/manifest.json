@@ -1,0 +1,14 @@
+{
+  "id": "pickup.sticky-paws",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sticky Paws",
+    "description": "Lifts the weapon off the nearest armed rival, rounds and all. If nobody is holding one, it takes a rival's boost and some of its ammo instead.",
+    "since": "core@0.10.0"
+  },
+  "kind": "steal",
+  "weight": 1,
+  "hurtWeight": 1,
+  "radius": 420,
+  "amount": 20
+}
