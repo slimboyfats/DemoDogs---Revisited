@@ -116,7 +116,8 @@ export type LeapManifest = z.infer<typeof LeapSchema>;
 /**
  * A gate: a solid static prop that sinks into the ground to let cars by and rises again. With a
  * `period` it keeps a beat, down for `open` seconds of every `period` (`shift`, 0 to 1, is how far
- * into the beat it starts, the same for every gate with the same numbers, so a row moves as one).
+ * into the beat it starts, the same for every gate with the same numbers, so a row moves as one;
+ * `wave` makes a row move as a wave instead).
  * With none it stands until a `switch` plate within reach is driven over, then is down for `open`
  * seconds. It never rises onto a car: it waits for the car to clear it.
  */
@@ -124,6 +125,12 @@ export const GateSchema = z.strictObject({
   period: z.number().min(0).default(0),
   open: z.number().positive().default(3),
   shift: unit.default(0),
+  /**
+   * With a `period`: art px across a row for one whole beat. Each gate's beat is then shifted by
+   * where it stands across its own turn, so a row of them sinks and rises as a wave that runs
+   * along it, and the way through is a gap that moves. 0: they all move as one.
+   */
+  wave: z.number().min(0).default(0),
 });
 export type GateManifest = z.infer<typeof GateSchema>;
 

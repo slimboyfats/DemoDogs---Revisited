@@ -183,25 +183,25 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.blast-wall",
+          "prop": "prop.piston-block",
           "x": 810,
           "y": 459.1,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
+          "prop": "prop.piston-block",
           "x": 797.6,
           "y": 446,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
+          "prop": "prop.piston-block",
           "x": 785.2,
           "y": 433,
           "rot": 2.3813
         },
         {
-          "prop": "prop.blast-wall",
+          "prop": "prop.piston-block",
           "x": 772.7,
           "y": 419.9,
           "rot": 2.3813

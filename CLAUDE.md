@@ -185,7 +185,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   ground's shader, in the look of the way each joins (a path's skin, the road's tarmac or dirt, else rock;
   render/leaps.ts paints the top on the ground canvas only for a piece on no way). A way can be shut by a `gate` (`prop.pop-bollard` keeps a
   beat; `prop.switch-bollard` sinks for a few seconds when a `switch` pad near it, `prop.floor-switch`, is driven
-  over; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
+  over; `prop.piston-block` has a `wave`, so a row rises one after another and its gap moves; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
   `prop.secret-crate` (`gives`) is a yellow crate that hands over all it lists (a boost refill and rockets). A
   secret way is medium hard: its gate stands across the takeoff, up where the ramp's sides are too high to climb,
   so there is no way round it, and a pool is laid under the gap (`pools`, the smallest one the gap's middle lies
