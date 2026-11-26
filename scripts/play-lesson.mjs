@@ -48,8 +48,13 @@ const context = await browser.newContext({
   viewport: size,
   isMobile: true,
   hasTouch: true,
-  deviceScaleFactor: 2,
+  // (the film is taken at one device pixel to the CSS pixel: the recorder films nothing finer)
+  deviceScaleFactor: video ? 1 : 2,
   ...(video ? { recordVideo: { dir: out, size } } : {}),
+});
+// (going fullscreen, as the game does on a phone, would film a bigger screen than the phone's)
+await context.addInitScript(() => {
+  Element.prototype.requestFullscreen = () => Promise.reject(new Error('not in a script'));
 });
 const page = await context.newPage();
 const errors = [];
