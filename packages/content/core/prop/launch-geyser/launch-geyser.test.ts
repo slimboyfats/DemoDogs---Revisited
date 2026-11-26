@@ -36,7 +36,8 @@ describe('prop.launch-geyser', () => {
     const w = flatBench();
     const s = stand(w, def, w.oval!.cx, w.oval!.cy, 0, 3);
     let on = 0;
-    const n = Math.round(def.pad!.kind === 'vent' ? def.pad.period * 60 : 0);
+    const pad = def.pad!;
+    const n = Math.round(pad.kind === 'vent' ? pad.period * 60 : 0);
     for (let i = 0; i < n; i++) {
       w.step();
       if (ventOpen(w, s)) on++;
