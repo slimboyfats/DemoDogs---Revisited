@@ -9,6 +9,7 @@ import {
 import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
+import { keepGame } from './keep';
 import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
@@ -1360,3 +1361,4 @@ function boot(): void {
 }
 
 boot();
+keepGame();
