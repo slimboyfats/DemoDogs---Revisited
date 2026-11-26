@@ -140,3 +140,132 @@ export function pickTrackFile(): Promise<
     input.click();
   });
 }
+
+/** A track in a link: after this in the address's hash. */
+export const LINK_KEY = 'track=';
+/** No link holds more than this (characters), and no track in one unpacks to more (bytes). */
+const LINK_MAX = 120_000;
+const UNPACKED_MAX = 1_500_000;
+
+async function through(
+  bytes: Uint8Array<ArrayBuffer>,
+  by: CompressionStream | DecompressionStream,
+  most: number,
+): Promise<Uint8Array> {
+  const reader = new Blob([bytes]).stream().pipeThrough(by).getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > most) {
+      await reader.cancel();
+      throw new Error('too big');
+    }
+    parts.push(value);
+  }
+  const out = new Uint8Array(size);
+  let at = 0;
+  for (const p of parts) {
+    out.set(p, at);
+    at += p.length;
+  }
+  return out;
+}
+
+/** A track as a link carries it: without when it was saved, its turns rounded. */
+function leanTrack(t: TrackFile): TrackFile {
+  const rest = { ...t };
+  delete rest.created;
+  delete rest.updated;
+  return {
+    ...rest,
+    items: t.items.map((i) => ({ ...i, rot: Math.round(i.rot * 1000) / 1000 })),
+  };
+}
+
+/** Are two tracks the same to race, whenever each was saved and however it was written down? */
+export function sameTrack(a: TrackFile, b: TrackFile): boolean {
+  const text = (v: unknown): string =>
+    JSON.stringify(v, (_k, o: unknown) =>
+      o && typeof o === 'object' && !Array.isArray(o)
+        ? Object.fromEntries(Object.entries(o).sort(([p], [q]) => (p < q ? -1 : 1)))
+        : o,
+    );
+  return text(leanTrack(a)) === text(leanTrack(b));
+}
+
+/**
+ * A track packed into text that can ride in a link: its JSON, squeezed, in letters an address
+ * may hold. When it was saved is left out, and turns are rounded: neither changes the race.
+ */
+export async function packTrack(t: TrackFile): Promise<string> {
+  const lean = leanTrack(t);
+  const bytes = await through(
+    new TextEncoder().encode(JSON.stringify(lean)),
+    new CompressionStream('deflate-raw'),
+    UNPACKED_MAX,
+  );
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/** The track packed by `packTrack`, or what is wrong with it. */
+export async function unpackTrack(
+  text: string,
+): Promise<{ ok: true; track: TrackFile } | { ok: false; error: string }> {
+  const bad = { ok: false as const, error: 'The link does not hold a track that can be read.' };
+  if (text.length > LINK_MAX || !/^[A-Za-z0-9_-]+$/.test(text)) return bad;
+  try {
+    const bin = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const json = await through(bytes, new DecompressionStream('deflate-raw'), UNPACKED_MAX);
+    return parseTrackFile(new TextDecoder().decode(json));
+  } catch {
+    return bad;
+  }
+}
+
+/** The link that opens the game with this track in hand. `page` is the game's own address. */
+export async function trackLink(t: TrackFile, page: string): Promise<string> {
+  return `${page.replace(/[#?].*$/, '')}#${LINK_KEY}${await packTrack(t)}`;
+}
+
+/** The packed track in an address's hash ("#track=..."), or null if it holds none. */
+export function linkedTrack(hash: string): string | null {
+  const h = hash.replace(/^#/, '');
+  return h.startsWith(LINK_KEY) ? h.slice(LINK_KEY.length) : null;
+}
+
+/**
+ * Hand a track over as a link: the phone's share sheet where there is one, the clipboard
+ * otherwise. Resolves with what was done, for the screen to say.
+ */
+export async function shareTrackLink(t: TrackFile): Promise<'shared' | 'copied' | 'failed'> {
+  const url = await trackLink(t, location.href);
+  if (matchMedia('(pointer: coarse)').matches && navigator.share)
+    try {
+      await navigator.share({ title: t.name, text: `Race my DemoDogs track: ${t.name}`, url });
+      return 'shared';
+    } catch (e) {
+      // the sheet was closed: that is an answer, not a failure
+      if (e instanceof DOMException && e.name === 'AbortError') return 'shared';
+    }
+  try {
+    await navigator.clipboard.writeText(url);
+    return 'copied';
+  } catch {
+    return 'failed';
+  }
+}
+
+/** A copy of a track under a new id and name, to change without losing the first. */
+export function copyTrack(t: TrackFile, id: string): TrackFile {
+  const rest = structuredClone(t);
+  delete rest.created;
+  delete rest.updated;
+  return { ...rest, id, name: `${t.name} copy`.slice(0, 32) };
+}

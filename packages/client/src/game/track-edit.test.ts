@@ -20,6 +20,9 @@ import {
   reverse,
   roadAt,
   snapBridges,
+  snapThing,
+  snapTo,
+  SNAP_GRID,
   startAt,
 } from './track-edit';
 
@@ -139,6 +142,49 @@ describe('editing a track', () => {
     expect(h.undo()?.name).toBe('Changed');
     expect(h.undo()?.name).toBe('Test');
     expect(h.undo()).toBeNull();
+  });
+
+  it('steps forward again, until something new is done', () => {
+    const t = track();
+    const h = new History();
+    h.remember(t);
+    t.name = 'Second';
+    const back = h.undo(t)!;
+    expect(back.name).toBe('Test');
+    expect(h.ahead).toBe(1);
+    const again = h.redo(back)!;
+    expect(again.name).toBe('Second');
+    expect(h.size).toBe(1);
+    expect(h.redo(again)).toBeNull();
+    // a new change after stepping back leaves nothing to step forward to
+    const undone = h.undo(again)!;
+    h.remember(undone);
+    undone.name = 'Third';
+    h.remember(undone);
+    expect(h.ahead).toBe(0);
+  });
+
+  it('snaps a thing to a lane on the road and to the grid off it', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    expect(snapTo(37, 16)).toBe(32);
+    // far from the road: the grid
+    const [gx, gy] = snapThing(T, t.road.width, 707, 493);
+    expect(gx % SNAP_GRID).toBe(0);
+    expect(gy % SNAP_GRID).toBe(0);
+    // a little off the middle of the road: the middle, as far along as it was
+    const i = 40;
+    const a = T.a[i]!;
+    const off = (d: number): [number, number] => [
+      T.x[i]! - d * Math.sin(a),
+      T.y[i]! + d * Math.cos(a),
+    ];
+    const mid = snapThing(T, t.road.width, ...off(6));
+    expect(Math.hypot(mid[0] - T.x[i]!, mid[1] - T.y[i]!)).toBeLessThan(3);
+    // well to one side: that side's lane
+    const side = snapThing(T, t.road.width, ...off(26));
+    const want = off(t.road.width * 0.3);
+    expect(Math.hypot(side[0] - want[0], side[1] - want[1])).toBeLessThan(3);
   });
 
   it('a stretch of road runs the shorter way round, in the direction of the race', () => {

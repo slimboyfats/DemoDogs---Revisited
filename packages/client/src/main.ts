@@ -51,7 +51,14 @@ import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
 import type { TrackFile } from '@demodogs/shared';
 import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
-import { LocalTrackStore, type KeyValue } from './game/tracks';
+import {
+  linkedTrack,
+  LocalTrackStore,
+  newTrackId,
+  sameTrack,
+  unpackTrack,
+  type KeyValue,
+} from './game/tracks';
 import { TrackEditor } from './ui/track-editor';
 import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
@@ -262,8 +269,9 @@ const editor = new TrackEditor(
     zoomRange: () => {
       const w = session!.world;
       // from the whole map with room to spare, to twice as close as a race is shown
+      // (the bars and the tray of a small phone leave about half of it clear)
       const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
-      return [Math.min(fit * 0.8, scale / 2), scale * 2];
+      return [Math.min(fit * 0.55, scale / 2), scale * 2];
     },
     save: (t) => {
       editing = t;
@@ -271,6 +279,16 @@ const editor = new TrackEditor(
     },
     drive: (t) => raceTrack(t),
     exit: () => openTracks(),
+    snap: {
+      get: () => storage()?.getItem('dd-edit-snap') !== '0',
+      set: (on) => {
+        try {
+          storage()?.setItem('dd-edit-snap', on ? '1' : '0');
+        } catch {
+          /* it lasts as long as the page */
+        }
+      },
+    },
   },
 );
 const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
@@ -637,6 +655,8 @@ function show(id: string | null): void {
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
+  // a track being driven from the track creator shows the way straight back to it
+  document.body.classList.toggle('testdrive', editing !== null);
   if (s !== 'game') specBar.show(false);
   if (s !== 'game' && devMode) {
     devMode = false;
@@ -1193,6 +1213,10 @@ function boot(): void {
     if (editing) startEditor(editing);
     else setScreen('menu');
   };
+  $('backToEdit').onclick = () => {
+    paused = false;
+    if (editing) startEditor(editing);
+  };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
   $('restart').onclick = () => startGame(lastVenue, lastCustom);
@@ -1256,6 +1280,25 @@ function boot(): void {
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
   if (params.has('edit')) void tracksScreen.create();
+  // a track somebody sent as a link: kept with your tracks, ready to race or to change
+  const linked = linkedTrack(location.hash);
+  if (linked) {
+    history.replaceState(null, '', location.pathname + location.search);
+    void unpackTrack(linked).then(async (r) => {
+      if (!r.ok) {
+        openTracks();
+        tracksScreen.say(r.error);
+        return;
+      }
+      // never over a track of your own that has since gone its own way
+      const mine = await trackStore.get(r.track.id);
+      const t =
+        mine && !sameTrack(mine, r.track) ? { ...r.track, id: newTrackId(Math.random) } : r.track;
+      await trackStore.put(t);
+      openTracks();
+      tracksScreen.say(`${t.name} came in from a link. RACE it, or EDIT it into your own.`);
+    });
+  }
   if (params.has('room')) openOnline(params.get('room') ?? '');
   if (params.has('career')) {
     const race = params.get('career');
