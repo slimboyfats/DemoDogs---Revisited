@@ -1,28 +1,25 @@
 import { describe, expect, it } from 'vitest';
-import {
-  PLUNGE_TIME,
-  inPit,
-  leapGaps,
-  leapPieces,
-  type StaticProp,
-  type World,
-} from '@demodogs/sim';
+import { PLUNGE_TIME, inPit, jumpGaps, ventOpen, type StaticProp, type World } from '@demodogs/sim';
 import { loadContent } from './index';
 import { makeWorld, put } from './testing';
 
 const C = loadContent();
 /** The race venues with a secret way: a takeoff, a gap and a landing across it. */
-const VENUES = [...C.venue.values()].filter((v) => leapGaps(leapPieces(v, C)).length > 0);
+const VENUES = [...C.venue.values()].filter((v) => jumpGaps(v, C).length > 0);
 
 /** What shuts venue `w`'s secret way: its cracked walls or its bollards. */
 const gateOf = (w: World): StaticProp[] =>
   w.statics.filter((s) => s.def.gate || s.def.made === 'material.cracked-rock');
 
+/** The geyser that throws cars over venue `w`'s gap, where it has one in place of a ramp. */
+const ventOf = (w: World): StaticProp | undefined =>
+  w.statics.find((s) => s.def.pad?.kind === 'vent' && s.def.radius > 20);
+
 /** A race on venue `id` with nobody else in it, and the first jump on it: lip, far side, heading, gap. */
 function jump(id: string) {
   const w: World = makeWorld({ venue: id, rivals: 0 } as never);
   w.phase = 'race';
-  const [x0, y0, x1, y1] = leapGaps(leapPieces(w.venue, C))[0]!;
+  const [x0, y0, x1, y1] = jumpGaps(w.venue, C)[0]!;
   const a = Math.atan2(y1 - y0, x1 - x0);
   return { w, x0, y0, a, gap: Math.hypot(x1 - x0, y1 - y0) };
 }
@@ -39,6 +36,13 @@ function leap(id: string, boost: boolean, open = true, after = 0): { made: boole
     for (const s of gateOf(w)) {
       s.down = true;
       s.openT = 99;
+    }
+  // (where a geyser throws the car and not a ramp, "boost" is the geyser blowing as it comes)
+  const vent = ventOf(w);
+  if (vent)
+    for (let t = 0; t < 600; t++) {
+      if ([0.9, 1.1, 1.3].every((s) => ventOpen(w, vent, 0, w.time + s) === boost)) break;
+      w.step();
     }
   const c = w.player;
   // a run-up as long as the straight before the lip: the takeoff and 60 px of path
@@ -59,6 +63,8 @@ function leap(id: string, boost: boolean, open = true, after = 0): { made: boole
       boost: boost && past < 0,
       fire: false,
     });
+    // (down in the pool it goes no further)
+    if (c.plunge > 0) break;
     if (past > 24 && c.z < 0.5) {
       made = past > gap && R.at(c.x, c.y) > 6;
       break;
@@ -71,47 +77,56 @@ function leap(id: string, boost: boolean, open = true, after = 0): { made: boole
 describe('secret ways', () => {
   it('every big course has one', () => expect(VENUES.length).toBe(5));
   for (const v of VENUES) {
-    it(`${v.id}: the gap is cleared with boost and not without`, () => {
+    it(`${v.id}: the gap is cleared with boost (or on the geyser's blow) and not without`, () => {
       expect(leap(v.id, true).made).toBe(true);
       expect(leap(v.id, false).made).toBe(false);
     });
 
-    it(`${v.id}: the gate stands across the takeoff where its sides are too high to climb`, () => {
-      const { w, x0, y0, a } = jump(v.id);
-      const R = w.relief!;
-      const gate = gateOf(w);
-      expect(gate.length).toBeGreaterThan(3);
-      // every post up on the ramp, and no room for a car between them or past the last
-      const across = gate
-        .map((s) => -(s.x - x0) * Math.sin(a) + (s.y - y0) * Math.cos(a))
-        .sort((p, q) => p - q);
-      for (const s of gate) expect(R.platAt(s.x, s.y)).toBeGreaterThan(12);
-      const r = gate[0]!.def.radius;
-      expect(across[0]! - r).toBeLessThan(-32 + 8);
-      expect(across[across.length - 1]! + r).toBeGreaterThan(32 - 8);
-      for (let k = 1; k < across.length; k++)
-        expect(across[k]! - across[k - 1]! - 2 * r).toBeLessThan(8);
-      // shut, it stops a car that comes flat out with boost (one on a beat is not shut for long)
-      if (!gate[0]!.def.gate?.period) expect(leap(v.id, true, false).made).toBe(false);
-    });
-
-    it(`${v.id}: there is no way onto the takeoff from beside it past the gate`, () => {
-      for (const side of [-1, 1]) {
+    const ramp = v.scenery.some(
+      (r) => r.rule === 'place' && r.items.some((i) => C.prop.get(i.prop)?.leap?.way === 'up'),
+    );
+    it.skipIf(!ramp)(
+      `${v.id}: the gate stands across the takeoff where its sides are too high to climb`,
+      () => {
         const { w, x0, y0, a } = jump(v.id);
-        const c = w.player;
-        // beside the ramp, 30 px short of its lip, driven straight at its side
-        const bx = x0 - Math.cos(a) * 30 - Math.sin(a) * side * 70;
-        const by = y0 - Math.sin(a) * 30 + Math.cos(a) * side * 70;
-        put(c, bx, by, a - (side * Math.PI) / 2, 150);
-        // (the ramp is 64 px across: its middle is never reached)
-        let near = 99;
-        for (let t = 0; t < 90; t++) {
-          w.step({ steer: 0, throttle: 1, brake: false, boost: true, fire: false });
-          near = Math.min(near, Math.abs(-(c.x - x0) * Math.sin(a) + (c.y - y0) * Math.cos(a)));
+        const R = w.relief!;
+        const gate = gateOf(w);
+        expect(gate.length).toBeGreaterThan(3);
+        // every post up on the ramp, and no room for a car between them or past the last
+        const across = gate
+          .map((s) => -(s.x - x0) * Math.sin(a) + (s.y - y0) * Math.cos(a))
+          .sort((p, q) => p - q);
+        for (const s of gate) expect(R.platAt(s.x, s.y)).toBeGreaterThan(12);
+        const r = gate[0]!.def.radius;
+        expect(across[0]! - r).toBeLessThan(-32 + 8);
+        expect(across[across.length - 1]! + r).toBeGreaterThan(32 - 8);
+        for (let k = 1; k < across.length; k++)
+          expect(across[k]! - across[k - 1]! - 2 * r).toBeLessThan(8);
+        // shut, it stops a car that comes flat out with boost (one on a beat is not shut for long)
+        if (!gate[0]!.def.gate?.period) expect(leap(v.id, true, false).made).toBe(false);
+      },
+    );
+
+    it.skipIf(!ramp)(
+      `${v.id}: there is no way onto the takeoff from beside it past the gate`,
+      () => {
+        for (const side of [-1, 1]) {
+          const { w, x0, y0, a } = jump(v.id);
+          const c = w.player;
+          // beside the ramp, 30 px short of its lip, driven straight at its side
+          const bx = x0 - Math.cos(a) * 30 - Math.sin(a) * side * 70;
+          const by = y0 - Math.sin(a) * 30 + Math.cos(a) * side * 70;
+          put(c, bx, by, a - (side * Math.PI) / 2, 150);
+          // (the ramp is 64 px across: its middle is never reached)
+          let near = 99;
+          for (let t = 0; t < 90; t++) {
+            w.step({ steer: 0, throttle: 1, brake: false, boost: true, fire: false });
+            near = Math.min(near, Math.abs(-(c.x - x0) * Math.sin(a) + (c.y - y0) * Math.cos(a)));
+          }
+          expect(near).toBeGreaterThan(30);
         }
-        expect(near).toBeGreaterThan(30);
-      }
-    });
+      },
+    );
 
     it(`${v.id}: a car that falls short lies in the pool under the jump and is put back on the road`, () => {
       const { w } = leap(v.id, false);
@@ -128,7 +143,9 @@ describe('secret ways', () => {
           if (e.t === 'rescue' && e.fell) back++;
         }
       }
-      expect(fell + back).toBe(2);
+      // (the splash may have been heard already, as it stopped)
+      expect(back).toBe(1);
+      expect(fell).toBeLessThan(2);
       expect(w.grid!.at(c.x, c.y)).toBeLessThan(w.road / 2);
       expect(Math.abs(c.idx - left)).toBeLessThan(30);
     });
