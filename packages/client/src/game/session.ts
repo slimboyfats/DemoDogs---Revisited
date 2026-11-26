@@ -3,6 +3,7 @@ import {
   DT,
   NO_CONTROLS,
   type Controls,
+  type SimEvent,
   type Difficulty,
   type Tuning,
 } from '@demodogs/shared';
@@ -17,6 +18,7 @@ import { Effects } from '../render/effects';
 import { makeGround, type Ground } from '../render/ground';
 import { PITCH, type Camera } from '../render/scene';
 import { terrainOf } from '../render/terrain';
+import { cuesOf, hitStop, Shaker, STOP_REST, type Feel } from './feel';
 
 /** How far off another car's engine can be heard, in art pixels. */
 const EARSHOT = 240;
@@ -52,6 +54,8 @@ export interface SessionOptions {
   difficulty?: Difficulty;
   /** Rule numbers from the DEV SETTINGS pane (never for an online race). */
   tuning?: Partial<Tuning>;
+  /** How it feels: shake, hit-stop and buzz, as set on this device. */
+  feel?: Feel;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
@@ -133,7 +137,7 @@ export class Session {
     this.ground = made?.ground ?? makeGround(this.world);
     this.fx = new Effects(this.world, o.art, this.ground, o.sound);
     const P = this.world.player;
-    this.cam = { x: P.x, y: P.y, shake: 0 };
+    this.cam = { x: P.x, y: P.y, ox: 0, oy: 0 };
     const v = this.world.venue;
     this.looseRoad = v.colors.road === 'dirt';
     this.tune = tuneFor({
@@ -243,7 +247,12 @@ export class Session {
     const t0 = performance.now();
     run();
     const t1 = performance.now();
-    this.fx.handle(w.takeEvents());
+    const events = w.takeEvents();
+    const before = this.fx.shake;
+    this.fx.handle(events);
+    this.blow(before, P.vx - this.pvx, P.vy - this.pvy, events);
+    this.pvx = P.vx;
+    this.pvy = P.vy;
     this.fx.afterStep();
     this.simMs += t1 - t0;
     this.stepMs += performance.now() - t1;
@@ -264,7 +273,55 @@ export class Session {
       this.cam.x += (tx - this.cam.x) * k;
       this.cam.y += (ty - this.cam.y) * k;
     }
-    this.cam.shake = this.fx.shake;
+    if (!this.advancing) this.sway(DT);
+  }
+
+  /** The player's car's speed a tick ago, to tell which way a blow threw it. */
+  private pvx = 0;
+  private pvy = 0;
+  private readonly shaker = new Shaker();
+  /** Real seconds the world is still held for (hit-stop), and game seconds until it may be again. */
+  private hold = 0;
+  private rest = 0;
+  private advancing = false;
+
+  /**
+   * A tick's blows: where the effects asked for more shake than was already going, the picture
+   * is kicked (the way the car was thrown, if it was), the phone buzzes, and a big one stops the
+   * clock for a moment. Offline only for the stop: an online race keeps every screen's time.
+   */
+  private blow(before: number, dvx: number, dvy: number, events: readonly SimEvent[]): void {
+    const feel = this.o.feel;
+    this.rest -= DT;
+    const amount = this.fx.shake;
+    if (amount > before + 0.75) {
+      const thrown = Math.hypot(dvx, dvy) > 12;
+      this.shaker.kick(amount, thrown ? dvx : 0, thrown ? dvy : 0);
+      feel?.thump(amount);
+      const stop = hitStop(amount) * (feel?.setup.stop ?? 1);
+      if (stop > 0 && this.rest <= 0 && !this.net) {
+        this.hold = stop;
+        this.rest = STOP_REST;
+      }
+    }
+    if (feel) for (const c of cuesOf(events, this.world.player.index)) feel.cue(c);
+  }
+
+  /** Swing the picture on by `dt` real seconds. */
+  private sway(dt: number): void {
+    this.shaker.step(dt, this.fx.shake, this.o.feel?.setup.shake ?? 1);
+    this.cam.ox = this.shaker.x;
+    this.cam.oy = this.shaker.y;
+  }
+
+  /** Kick the picture as a blow of `amount` would (the SCREEN SHAKE slider shows itself so). */
+  nudge(amount: number): void {
+    this.shaker.kick(amount);
+  }
+
+  /** While paused: only the picture's swing runs on. */
+  idle(dt: number): void {
+    this.sway(dt);
   }
 
   /** Since they were last taken: ticks run, ms in the world alone, ms taking them into effects. */
@@ -274,20 +331,34 @@ export class Session {
 
   /** Advance by dt seconds of real time. Returns true once the race is over (the first time). */
   advance(dt: number): boolean {
-    if (this.net) {
-      this.net.local(this.controls());
-      this.net.pump(dt, { step: (seats) => this.stepSeats(seats), hash: () => this.world.hash() });
+    this.advancing = true;
+    try {
+      this.sway(dt);
+      if (this.net) {
+        this.net.local(this.controls());
+        this.net.pump(dt, {
+          step: (seats) => this.stepSeats(seats),
+          hash: () => this.world.hash(),
+        });
+        return this.over();
+      }
+      // a big blow holds the world still for a few frames; the picture goes on shaking
+      if (this.hold > 0) {
+        this.hold -= dt;
+        return this.over();
+      }
+      this.acc += dt * this.rate;
+      let n = 0;
+      while (this.acc >= DT && n < MAX_STEPS && this.hold <= 0) {
+        this.step();
+        this.acc -= DT;
+        n++;
+      }
+      if (n === MAX_STEPS) this.acc = 0;
       return this.over();
+    } finally {
+      this.advancing = false;
     }
-    this.acc += dt * this.rate;
-    let n = 0;
-    while (this.acc >= DT && n < MAX_STEPS) {
-      this.step();
-      this.acc -= DT;
-      n++;
-    }
-    if (n === MAX_STEPS) this.acc = 0;
-    return this.over();
   }
 
   /** The engine and tyres of the car on screen, and the engine of the car nearest it. */

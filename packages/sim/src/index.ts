@@ -11,20 +11,21 @@ export * from './leaps';
 export * from './gates';
 export { CLIFF, heft, toLocal, zoneFactor } from './physics';
 export * from './shapes';
-export { fitCatchup, odds, place } from './catchup';
+export { fitCatchup, freshen, odds, place } from './catchup';
+export { HUNT_HIGH } from './hunt';
 export { FINISH_GRACE } from './race';
 export { World, ahead, type Oval, type Phase, type WorldOptions } from './world';
 export * from './range';
 export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
-export { rescueIn } from './rescue';
+export { PLUNGE_TIME, SINK_TIME, inPit, rescueIn, wading } from './rescue';
 export { away, canHaunt, haunting, HAUNT_AFTER, HAUNT_REST, type Haunt } from './haunt';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';
 export { OVERHANG, SAG, SAG_STEP } from './spans';
-export { batter, dig, shed, explode, fall, footing, ignite, spill } from './damage';
+export { batter, dig, shed, explode, fall, footing, ignite, spill, waterAt } from './damage';
 export {
   blinded,
   cloudReach,

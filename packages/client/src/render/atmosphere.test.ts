@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Atmosphere, LAMPS_AT, SKIES } from './atmosphere';
+import { Atmosphere, LAMPS_AT, SKIES, skyOver } from './atmosphere';
 import { SUN } from './cast';
 
 const sky = (name: string): Atmosphere => {
@@ -52,6 +52,24 @@ describe('Atmosphere', () => {
     expect(a.now.snow).toBe(1);
   });
 
+  it('lets fog in and lifts it slowly, for a sky or for a modifier that asks', () => {
+    const a = sky('day');
+    expect(a.now.fog).toBe(0);
+    a.fog = SKIES.dawn!.fog;
+    a.update(0.1);
+    expect(a.now.fog).toBeGreaterThan(0);
+    expect(a.now.fog).toBeLessThan(0.2);
+    for (let i = 0; i < 400; i++) a.update(0.1);
+    expect(a.now.fog).toBe(1);
+    // a sky without fog clears it; a modifier's ask holds it there
+    Object.assign(a, SKIES.day);
+    a.ask.fog = 0.6;
+    for (let i = 0; i < 400; i++) a.update(0.1);
+    expect(a.now.fog).toBeCloseTo(0.6, 5);
+    // every sky says how much fog, so changing sky always sets it
+    for (const k of Object.values(SKIES)) expect(k.fog).toBeGreaterThanOrEqual(0);
+  });
+
   it('is flat on request: every texel its painted colour, no lamps', () => {
     const a = sky('night');
     a.flat = true;
@@ -74,5 +92,15 @@ describe('Atmosphere', () => {
     a.sunLong = null;
     a.update(0);
     expect(Math.hypot(a.reach[0]!, a.reach[1]!)).toBeCloseTo(len, 5);
+  });
+});
+
+describe('a weather area', () => {
+  it('lays its weather over the sky the race has and never takes the dark away', () => {
+    expect(skyOver(SKIES.night!, SKIES.snow!)).toEqual(SKIES['snow-night']);
+    expect(skyOver(SKIES['snow-night']!, SKIES.snow!)).toEqual(SKIES['snow-night']);
+    expect(skyOver(SKIES.day!, SKIES.snow!)).toEqual(SKIES.snow);
+    expect(skyOver(SKIES.day!, SKIES.storm!)).toEqual(SKIES.storm);
+    expect(skyOver(SKIES.night!, SKIES.rain!)).toEqual({ dark: 1, wet: 1, snow: 0, fog: 0 });
   });
 });

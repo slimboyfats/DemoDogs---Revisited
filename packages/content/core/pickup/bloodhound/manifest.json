@@ -1,0 +1,17 @@
+{
+  "id": "pickup.bloodhound",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bloodhound",
+    "description": "A rocket with a nose for whoever is winning: it flies up the road over the whole pack and comes down on the car in front, blowing it off its wheels and killing its engine.",
+    "since": "core@0.11.0"
+  },
+  "kind": "hunt",
+  "weight": 0.09,
+  "hurtWeight": 0.07,
+  "lead": 0,
+  "trail": 3,
+  "seconds": 1.3,
+  "factor": 1.05,
+  "speed": 500
+}

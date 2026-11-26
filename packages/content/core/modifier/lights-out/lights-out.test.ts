@@ -14,6 +14,8 @@ function pace(modifiers: string[], nose: boolean): number {
   for (let i = 0; i < 60 * 12; i++) {
     // (and no boost bottle: whether it opens one off the line is a roll of the dice)
     r.nitro = 0;
+    // (nor the rubber band: as far as it knows the human is alongside)
+    w.player.progress = r.progress;
     w.step();
     top = Math.max(top, r.vf);
   }

@@ -13,11 +13,11 @@ import {
   reach,
 } from './shapes';
 import { grantDefence } from './defence';
-import type { Bot, Car, StaticProp } from './entities';
+import type { Bot, Car, Rocket, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import { fitMover } from './movers';
-import { burst, lockOn, lockedOn } from './payloads';
+import { aimAt, burst, lockOn, lockedOn } from './payloads';
 import { smash } from './docks';
 import type { World } from './world';
 import { drop, inSmoke } from './drops';
@@ -177,6 +177,8 @@ export function smashBot(w: World, b: Bot, c: Car): void {
 
 /** A piece of scenery's shape and where a prop touches it: filled again for each pair. */
 const AT = newTouch();
+/** Where a rocket that follows the road is steering. */
+const AIM = { x: 0, y: 0 };
 
 export function updateProps(w: World): void {
   for (const p of w.props) {
@@ -386,7 +388,7 @@ export function fire(w: World, c: Car): void {
   const fore = reach(c) + 3 * c.size;
   const aft = reach(c) + 3 * c.size;
   if (wpn.kind === 'rocket') {
-    const r = {
+    const r: Rocket = {
       x: c.x + cs * fore,
       y: c.y + sn * fore,
       z: c.deck,
@@ -397,6 +399,7 @@ export function fire(w: World, c: Car): void {
       def: wpn,
     };
     lockOn(w, r);
+    if (wpn.lock?.road && w.kind === 'race' && w.track && r.target !== undefined) r.idx = c.idx;
     w.rockets.push(r);
   } else if (wpn.kind === 'slick')
     spill(
@@ -529,7 +532,9 @@ export function updateRockets(w: World): void {
     // homing: chase the car it locked onto, or else lean towards a car in front
     // (a decoy that has its attention comes before anything else)
     const bait = lured(w, r);
-    let best: { x: number; y: number } | null = bait ?? lockedOn(w, r);
+    const locked = bait ? null : lockedOn(w, r);
+    let best: { x: number; y: number } | null = bait ?? locked;
+    if (locked && r.idx !== undefined) aimAt(w, r, locked, (best = AIM));
     let bd = 160;
     if (!best)
       for (const c of w.cars) {
