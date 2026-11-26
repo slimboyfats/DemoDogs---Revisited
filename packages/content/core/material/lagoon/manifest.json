@@ -3,12 +3,13 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Lagoon",
-    "description": "Clear shallow sea over sand. A car wades through it slowly and slides about; nothing burns on it.",
+    "description": "Clear sea over sand. A car wades its pale shallows slowly, splashing; the dark water further out is too deep, and a racing car that goes in is put back on the road. Nothing burns on it.",
     "since": "core@0.10.0"
   },
   "grip": 0.6,
-  "drag": 2.2,
+  "drag": 7,
   "quenches": true,
+  "water": { "deep": 60 },
   "colour": "#36b4d2",
   "alpha": 0.86
 }

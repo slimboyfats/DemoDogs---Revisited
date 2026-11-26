@@ -52,7 +52,7 @@ export function recover(c: Car, out: Controls, d: number): Controls {
   }
   ai.jamT = 0;
   // (down a pit, stalled or flattened it is not stuck: there is nothing to back out of)
-  const held = (c.stall ?? 0) > 0 || (c.sunk ?? 0) > 0 || c.squashT > 0;
+  const held = (c.stall ?? 0) > 0 || (c.sunk ?? 0) > 0 || (c.drown ?? 0) > 0 || c.squashT > 0;
   if (out.throttle > 0.5 && !out.brake && Math.abs(c.vf) < 12 && !held) {
     ai.stuckT += DT;
     if (ai.stuckT > 0.7) {

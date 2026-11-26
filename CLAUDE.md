@@ -33,12 +33,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
+| `pnpm feel [out-dir] [--frames] [--only=scene]`                 | a ram and a blast through the game's own loop: shake, hit-stop, buzzes; a made-up gamepad (`captures/feel/`)  |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm hitboxes [dir]`; `?hitboxes=heights`; `hitboxes:bake`     | hit shapes drawn over cars, scenery, guns and roads (`captures/hitboxes/`); bake them from the looks          |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
+| `pnpm water [out-dir] [--clip] [--spots] [--only=venue]`        | a car wading the lagoon and going under in the deep, and a still of every water (`captures/water/`)           |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -155,6 +157,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it, so a change to how the ground looks is made in both. A venue's `colors.terrain` (grass, dirt, sand, snow,
   gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are optional and looks only, so the sim never
   reads them. Light is smooth and shadows soft-edged; `?light=bands` is the older dithered look.
+- **Water is a material with `water`** (lagoon, river, brine, water): the sim's pools of it are the water, and
+  nothing else is. A car in it wades (`wading` in sim/rescue.ts: slow by the material's own `drag`, no tyre tracks);
+  `water.deep` px in from the shore it is too deep, dark water, and a racing car that goes in sinks and is put back
+  on the road it left (`drown`, the `sink` event; where nobody is put back it is waded). The client draws it from
+  one map of those same pools (`render/water.ts`: how far in from the shore, what colour, what stands in it), read
+  by the ground's painter (`waterOver`): the moving surface, the foam along the shore and round what stands in it
+  are all worked out there from the race's clock, so water costs nothing where there is none. Wakes and splashes
+  are effects (`wade`, `splash` in effects.ts, the `foam` particle). The canvas fallback still blots it on.
 - **The look is bright and plain** (`groundMode.bright`, `#define BRIGHT` in the painter): sunny colours, a mown
   lawn, one flat pale tarmac with whole white lines, bold kerbs, no grit or specks, lighter shadows. The worn, gritty
   look it replaced is `?look=classic`; a change to the ground is made for both.
@@ -234,9 +244,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
   `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
   drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
-  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, DEV), wired by class, and it sits beside a paused race so a
+  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused race so a
   slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
   in `theme.css`); nothing forces landscape.
+- **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
+  else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
+  in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never
+  online). All three are sliders on the FEEL tab. A gamepad (input/gamepad.ts, `Pads`) drives through `Input` and
+  works every menu through `ui/pad-menu.ts`, which finds buttons by itself: a new screen needs nothing for it.
 - **The driving lesson is a test range, not a mode.** It runs on a lawn of its own (`withSchool` in content, like
   `withRange`) as a sandbox world; the steps and what each waits for are `game/lesson.ts` (pure, tested), and
   `ui/tutor.ts` shows them and puts the crate and the targets down with the range's own tools. The sim knows nothing

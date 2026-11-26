@@ -21,6 +21,7 @@ import {
 } from './terrain';
 import { bakePaint, toneAt, type GroundPaint } from './ground-paint';
 import { paintLeaps } from './leaps';
+import { WaterMap } from './water';
 
 const TAU = Math.PI * 2;
 
@@ -63,6 +64,12 @@ export interface Ground {
    * them (clear where there are none).
    */
   paint: GroundPaint | null;
+  /**
+   * The water lying on a ground the renderer paints: its painter draws it, moving, from this
+   * (water.ts). Null where the ground is all on the canvas: there water is a still blot like any
+   * other pool.
+   */
+  water: WaterMap | null;
   /** About what colour the ground is at (x, y), marks aside. */
   tone(x: number, y: number): Rgb;
 }
@@ -314,7 +321,14 @@ export function makeGround(w: World): Ground {
   paintLeaps(g, w);
   if (paint) {
     const P = paint;
-    return { cv, g, dirty: null, paint, tone: (x, y) => toneAt(w, P, F, x, y) };
+    return {
+      cv,
+      g,
+      dirty: null,
+      paint,
+      water: WaterMap.of(w),
+      tone: (x, y) => toneAt(w, P, F, x, y),
+    };
   }
   // a little grain per art pixel; the fine grain (blades, gravel, pebbles) is the shader's
   const id = g.getImageData(0, 0, w.w, w.h);
@@ -334,7 +348,7 @@ export function makeGround(w: World): Ground {
     for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) out[c]! += d[i + c]! / 16;
     return out;
   };
-  return { cv, g, dirty: null, paint: null, tone };
+  return { cv, g, dirty: null, paint: null, water: null, tone };
 }
 
 /**

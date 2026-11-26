@@ -8,6 +8,7 @@
   },
   "grip": 0.55,
   "drag": 2.4,
+  "water": {},
   "colour": "#1d3a44",
   "alpha": 0.88
 }

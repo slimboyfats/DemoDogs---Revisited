@@ -1,5 +1,6 @@
 import { DT } from '@demodogs/shared';
 import type { Car, Spill } from './entities';
+import { waterAt } from './damage';
 import { jumpGaps } from './leaps';
 import { pathAt } from './pads';
 import type { World } from './world';
@@ -39,7 +40,8 @@ const HIGH = 8;
 /** Seconds left of the count before `c` is put back on the road, or 0 while none is running. */
 export function rescueIn(w: World, c: Car): number {
   const { rescueGrace: grace, rescueCount: count } = w.tuning;
-  return count > 0 && c.downT > grace ? grace + count - c.downT : 0;
+  // (one going under in deep water is put back without a count)
+  return count > 0 && c.downT > grace && !((c.drown ?? 0) > 0) ? grace + count - c.downT : 0;
 }
 
 /**
@@ -61,6 +63,7 @@ export function updateRescue(w: World, c: Car): void {
     w.phase !== 'race'
   ) {
     c.downT = c.plunge = 0;
+    c.drown = 0;
     return;
   }
   const i = c.idx;
@@ -78,6 +81,7 @@ export function updateRescue(w: World, c: Car): void {
     putBack(w, c, c.onIdx);
     return;
   }
+  if (drowning(w, c)) return;
   const top = R?.plat ? R.platAt(T.x[i]!, T.y[i]!) : 0;
   const below = top >= HIGH && top - R!.platAt(c.x, c.y) > HIGH * 0.75;
   // (a way up the side is the way back: on one it is not off the course)
@@ -126,6 +130,45 @@ function putBack(w: World, c: Car, i: number): void {
   c.z = c.deck + 6;
   c.downT = 0;
   c.plunge = 0;
+  c.drown = 0;
   c.invuln = Math.max(c.invuln, 1);
   w.emit(fell ? { t: 'rescue', car: c.index, x, y, fell } : { t: 'rescue', car: c.index, x, y });
+}
+
+/** Seconds a car in water too deep to wade takes to go under before it is put back. */
+export const SINK_TIME = 1.3;
+
+const DRY: [number, boolean] = [0, false];
+
+/**
+ * The water car c stands in: how far in from the shore it is (art px; 0 when it is dry: in the
+ * air, up on a deck, on a path laid over the water or on ground raised out of it), and whether
+ * that is too deep to wade.
+ */
+export function wading(w: World, c: Car): [number, boolean] {
+  if (w.spills.length === 0 || c.deck > 0 || c.z > 2 || c.buried) return DRY;
+  if ((w.relief?.platAt(c.x, c.y) ?? 0) > 1 || (w.paths.length && pathAt(w, c.x, c.y))) return DRY;
+  return waterAt(w, c.x, c.y);
+}
+
+/**
+ * Dark water is too deep to wade. A racing car that drives or falls into it goes under where it
+ * is, engine dead, and is put back on the road it left: no count, nothing to find a way out of.
+ * Where no car is ever put back (a derby, a track with no road) deep water is waded like the rest.
+ */
+function drowning(w: World, c: Car): boolean {
+  const under = c.drown ?? 0;
+  if (under <= 0 && !wading(w, c)[1]) return false;
+  if (under <= 0) w.emit({ t: 'sink', car: c.index, x: c.x, y: c.y });
+  c.drown = under + DT;
+  c.stall = Math.max(c.stall ?? 0, 2 * DT);
+  c.vx *= 0.92;
+  c.vy *= 0.92;
+  c.spin *= 0.9;
+  c.invuln = Math.max(c.invuln, 2 * DT);
+  if (c.drown >= SINK_TIME) {
+    c.lap = c.onLap;
+    putBack(w, c, c.onIdx);
+  }
+  return true;
 }

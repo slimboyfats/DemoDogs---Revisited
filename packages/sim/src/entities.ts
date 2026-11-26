@@ -201,6 +201,8 @@ export interface Car {
   blind?: number;
   /** Seconds its engine stays dead after a shock; absent or 0 when it runs. */
   stall?: number;
+  /** In water too deep to wade: seconds it has been going under (see rescue.ts); else 0 or absent. */
+  drown?: number;
   /** Down a pit: seconds until it is thrown back out, and how long it went down for. */
   sunk?: number;
   sunkFrom?: number;

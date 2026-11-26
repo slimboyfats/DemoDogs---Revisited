@@ -1230,6 +1230,13 @@ export const MaterialSchema = z.strictObject({
       drift: 0,
       sparks: false,
     }),
+  /**
+   * Standing water: drawn as water (a surface that moves, foam along its shore and round what
+   * stands in it), and a car in it wades, with a wake and small splashes, instead of leaving
+   * tyre tracks. `deep`: this many art px in from the shore it is too deep to wade: dark water,
+   * where a car in a race sinks and is put back on the road it left (sim/rescue.ts).
+   */
+  water: z.strictObject({ deep: z.number().positive().optional() }).optional(),
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),
