@@ -309,7 +309,8 @@ export class Session {
           }
         : null,
     });
-    if (this.ticks % 12 === 0) this.air = this.listen(C);
+    // (its own count: `ticks` is taken and zeroed by whoever reads the frame's cost)
+    if (this.heardT++ % 12 === 0) this.air = this.listen(C);
     this.o.sound.ambience(this.air, DT);
   }
 
@@ -317,6 +318,7 @@ export class Session {
   night = false;
   private readonly notes = new Map<string, EngineNote>();
   private air: Air = STILL;
+  private heardT = 0;
 
   /** A car's engine: its manifest's say, and its stats for whatever that leaves out. */
   private noteOf(c: Car): EngineNote {

@@ -174,11 +174,11 @@ export class Ambience {
     band('wind', 'bandpass', 1500, 0.8, 0.22, 0.31, 0.5);
     band('crowd', 'bandpass', 650, 0.9, 0.2, 0.21, 0.3);
     band('crowd', 'bandpass', 1500, 1.2, 0.2, 0.37, 0.4);
-    band('water', 'lowpass', 520, 0.7, 0.2, 0.45, 0.6);
+    band('water', 'lowpass', 520, 0.7, 0.35, 0.45, 0.6);
     band('fire', 'lowpass', 300, 0.5, 0.3, 2.3, 0.3);
     // the sea: a slow wash in and out
-    band('surf', 'lowpass', 700, 0.5, 0.3, 0.11, 0.85);
-    band('surf', 'bandpass', 2400, 0.6, 0.3, 0.11, 0.9);
+    band('surf', 'lowpass', 700, 0.5, 0.1, 0.11, 0.85);
+    band('surf', 'bandpass', 2400, 0.6, 0.1, 0.11, 0.9);
     // a hum: mains at two pitches, kept dull
     const hum = ac.createGain();
     hum.gain.value = 0;
@@ -199,7 +199,7 @@ export class Ambience {
       o.connect(g).connect(dull);
       this.sources.push(o);
     }
-    this.beds.set('hum', { gain: hum, full: 0.07 });
+    this.beds.set('hum', { gain: hum, full: 0.16 });
     for (const s of this.sources) s.start();
   }
 
@@ -232,18 +232,17 @@ export class Ambience {
     };
     turn('birds', 1.5, (v) => {
       for (const [f, at, dur, slide] of birdCall(R(), R()))
-        K.tone(f, dur, 0.035 * v, 'sine', slide, at);
+        K.tone(f, dur, 0.1 * v, 'sine', slide, at);
     });
     turn('flap', 0.5, (v) => {
       // cloth cracking in the wind: two or three soft slaps
       const n = 2 + Math.floor(R() * 2);
-      for (let i = 0; i < n; i++)
-        K.noise(0.07, 380 + R() * 200, 0.8, 0.16 * v, 'lowpass', i * 0.09);
+      for (let i = 0; i < n; i++) K.noise(0.07, 380 + R() * 200, 0.8, 0.4 * v, 'lowpass', i * 0.09);
     });
     turn('creak', 1.1, (v) => {
       // a sail going by, and the shaft groaning under it
-      K.noise(0.5, 260, 0.9, 0.2 * v, 'bandpass', 0);
-      K.tone(82 + R() * 14, 0.35, 0.05 * v, 'sawtooth', 0.86, 0.1);
+      K.noise(0.5, 260, 0.9, 0.45 * v, 'bandpass', 0);
+      K.tone(82 + R() * 14, 0.35, 0.12 * v, 'sawtooth', 0.86, 0.1);
     });
     turn('crowd', 3.2, (v) => {
       // a cheer goes up, with a horn in it now and then
@@ -258,26 +257,26 @@ export class Ambience {
     turn('water', 1.3, (v) => K.noise(0.3, 900 + R() * 500, 1.5, 0.07 * v, 'bandpass', 0));
     turn('surf', 4.5, (v) => {
       // a wave breaking, now and then, over the wash
-      K.noise(1.4, 1100, 0.5, 0.18 * v, 'bandpass', 0);
-      K.noise(0.9, 300, 0.6, 0.12 * v, 'lowpass', 0.15);
+      K.noise(1.4, 1100, 0.5, 0.08 * v, 'bandpass', 0);
+      K.noise(0.9, 300, 0.6, 0.06 * v, 'lowpass', 0.15);
     });
     turn('bubble', 0.35, (v) => {
       // a blister of something hot bursting: a low blip that climbs
       const f = 90 + R() * 140;
-      K.tone(f, 0.09, 0.12 * v, 'sine', 1.9, 0);
+      K.tone(f, 0.09, 0.28 * v, 'sine', 1.9, 0);
       if (R() < 0.3) K.noise(0.12, 600, 1, 0.05 * v, 'bandpass', 0.06);
     });
     turn('drip', 0.9, (v) => {
       // a drop falling in a cave, and the crystal ringing back at it now and then
-      K.tone(900 + R() * 1400, 0.07, 0.06 * v, 'sine', 1.7, 0);
+      K.tone(900 + R() * 1400, 0.07, 0.16 * v, 'sine', 1.7, 0);
       if (R() < 0.35)
         for (let i = 0; i < 3; i++)
-          K.tone(2600 + R() * 2200, 0.5, 0.012 * v, 'sine', 1, 0.05 + i * 0.07);
+          K.tone(2600 + R() * 2200, 0.5, 0.035 * v, 'sine', 1, 0.05 + i * 0.07);
     });
     turn('horn', 8, (v) => {
       // a lighthouse's horn: two low notes leaning on each other
-      K.tone(98, 1.7, 0.09 * v, 'sawtooth', 0.97, 0);
-      K.tone(123, 1.7, 0.06 * v, 'sawtooth', 0.97, 0);
+      K.tone(98, 1.7, 0.22 * v, 'sawtooth', 0.97, 0);
+      K.tone(123, 1.7, 0.15 * v, 'sawtooth', 0.97, 0);
       K.noise(1.6, 220, 1.2, 0.05 * v, 'bandpass', 0);
     });
     this.organ(dt);
@@ -299,12 +298,12 @@ export class Ambience {
     const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
     const K = this.kit;
     // the pipes: a reedy square with a flute an octave up, the bass on one, the chord on two, three
-    K.tone(hz(tune), beat * 2.6, 0.05 * v, 'square', 1, 0);
-    K.tone(hz(tune + 12), beat * 2.6, 0.025 * v, 'triangle', 1, 0);
-    K.tone(hz(bass), beat * 0.9, 0.09 * v, 'triangle', 1, 0);
+    K.tone(hz(tune), beat * 2.6, 0.11 * v, 'square', 1, 0);
+    K.tone(hz(tune + 12), beat * 2.6, 0.06 * v, 'triangle', 1, 0);
+    K.tone(hz(bass), beat * 0.9, 0.2 * v, 'triangle', 1, 0);
     for (const b of [1, 2]) {
-      K.tone(hz(chord), beat * 0.6, 0.03 * v, 'square', 1, b * beat);
-      K.tone(hz(chord + 4), beat * 0.6, 0.025 * v, 'square', 1, b * beat);
+      K.tone(hz(chord), beat * 0.6, 0.07 * v, 'square', 1, b * beat);
+      K.tone(hz(chord + 4), beat * 0.6, 0.055 * v, 'square', 1, b * beat);
     }
   }
 

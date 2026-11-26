@@ -59,6 +59,21 @@ const sayEach = (list, say, gap = 60) =>
     const at = (tick - ${WAIT * 60 + 20}) / ${gap};
     if (Number.isInteger(at) && list[at] !== undefined) (${say})(dd.sound, list[at]);
   }`;
+const PLACES = [
+  'birds',
+  'crowd',
+  'flap',
+  'creak',
+  'hum',
+  'water',
+  'fire',
+  'surf',
+  'fair',
+  'bubble',
+  'drip',
+  'horn',
+  'wind',
+];
 const KNOCKS = ['car', 'metal', 'wood', 'stone', 'rubber', 'glass', 'soft'];
 const JINGLES = ['final-lap', 'win', 'podium', 'finish', 'lost', 'last-standing'];
 const SHOP = ['buy', 'denied', 'cash', 'unlock', 'cup', 'cup-lost'];
@@ -91,6 +106,24 @@ const scenes = [
     seconds: 12,
     noTune: true,
   })),
+  // each noise of the place on its own, three seconds apart, as if the thing stood by the car
+  {
+    name: 'places',
+    url: '?dev&car=mutt',
+    seconds: 3 * PLACES.length + 1,
+    act: `(tick) => {
+      const s = window.__dd.session;
+      const list = ${JSON.stringify(PLACES)};
+      const at = Math.floor((tick - ${WAIT * 60}) / 180);
+      if (tick === 0) window.__dd.sound.music(null);
+      const air = { wind: 0 };
+      for (const k of list) air[k] = 0;
+      if (at >= 0 && list[at]) air[list[at]] = list[at] === 'wind' ? 0.8 : 0.9;
+      s.listen = () => air;
+    }`,
+    hide: 'devPanel',
+    skip: WAIT,
+  },
   // what a crash sounds like by what was hit, the tunes for moments, and the shop's
   {
     name: 'knocks',
