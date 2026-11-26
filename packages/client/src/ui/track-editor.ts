@@ -21,13 +21,19 @@ import {
 } from '@demodogs/sim';
 import type { Session } from '../game/session';
 import {
+  bridgeEnds,
+  bridgeSpan,
   drawRoad,
   History,
   insertPoint,
+  liftTo,
+  moveEnd,
   nearest,
   nearestSample,
+  RAISE_LEAST,
   raisedAt,
   raisedBetween,
+  stretchEnds,
   removePoint,
   resize,
   reverse,
@@ -76,8 +82,14 @@ const TOOLS: Record<EditTool, [string, string]> = {
   ],
   road: ['SHAPE', 'Drag a point to bend the road. Tap the road for a new point.'],
   surface: ['SURFACE', 'Pick a surface, then drag along the road to lay it.'],
-  raise: ['RAISE', 'Drag along the road to raise it into a platform.'],
-  bridge: ['BRIDGE', 'Tap the road to put a bridge there. Drag one along the road.'],
+  raise: [
+    'RAISE',
+    'Drag along the road to raise it. Hold a finger on it, then drag up or down, to set how high.',
+  ],
+  bridge: [
+    'BRIDGE',
+    'Tap the road to put a bridge there. Drag one along the road, or by its ends.',
+  ],
   area: ['TERRAIN', 'Pick the ground and the weather, then tap the map to lay an area.'],
   pool: ['POOLS', 'Pick what it is made of, then tap the map to lay a pool.'],
   place: ['THINGS', 'Drag a thing out of the tray, or tap the map to put one down.'],
@@ -136,6 +148,15 @@ type Pick = {
   kind: 'point' | 'item' | 'pool' | 'bridge' | 'surface' | 'raised' | 'area';
   index: number;
 };
+
+/**
+ * A handle on what is chosen, to drag it into shape by: an end of a stretch of road or of a
+ * bridge, the edge of an area or a pool, or the tab a raised road is pulled up and down by.
+ */
+type Grip = 'from' | 'to' | 'lift' | 'edge';
+
+/** The shortest stretch of surface that can be left when its ends are dragged together (px). */
+const SURFACE_LEAST = 16;
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -249,7 +270,9 @@ export class TrackEditor {
     cy: number;
     moved: boolean;
     /** What the drag does: slides the map, moves what was grabbed, draws, lays a surface. */
-    mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size';
+    mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size' | 'grip';
+    /** The handle in hand, when it is one of the chosen thing's. */
+    grip?: Grip;
     /** Resizing: the thing's size and the finger's distance from it when the drag began. */
     k0?: number;
     dist0?: number;
@@ -902,6 +925,81 @@ export class TrackEditor {
     return { x, y, r, turn, size };
   }
 
+  /**
+   * The handles of whatever is chosen, where they are on the screen (device px): the two ends of
+   * a stretch of surface, of raised road or of a bridge, the tab a raised road is lifted by, the
+   * edge of an area or a pool. `dx`, `dy` is the way an end's arrows point (for the tab: the
+   * place on the road it is tied to).
+   */
+  private grips(): { grip: Grip; x: number; y: number; dx: number; dy: number }[] {
+    const t = this.track;
+    const sel = this.sel;
+    if (!t || !sel || !this.s || this.tool === 'erase') return [];
+    const v = this.hooks.view();
+    const k = v.dpr;
+    const sq = Math.sin(PITCH);
+    const out: { grip: Grip; x: number; y: number; dx: number; dy: number }[] = [];
+    if (sel.kind === 'area' || sel.kind === 'pool') {
+      const o = sel.kind === 'area' ? t.areas[sel.index] : t.pools[sel.index];
+      if (!o) return [];
+      const [x, y] = this.toScreen(o.x, o.y);
+      // (a small pool's handle stands clear of its middle, which is what moves it)
+      out.push({ grip: 'edge', x: x + Math.max(o.r * v.scale, 34 * k), y, dx: 1, dy: 0 });
+      return out;
+    }
+    if (sel.kind !== 'raised' && sel.kind !== 'surface' && sel.kind !== 'bridge') return [];
+    const T = this.road();
+    const s =
+      sel.kind === 'raised'
+        ? t.raised[sel.index]
+        : sel.kind === 'surface'
+          ? t.surfaces[sel.index]
+          : undefined;
+    const b = sel.kind === 'bridge' ? t.bridges[sel.index] : undefined;
+    const ends = s ? stretchEnds(T, s) : b ? bridgeEnds(T, b) : null;
+    if (!ends) return [];
+    const along = (i: number): [number, number] => {
+      const ax = Math.cos(T.a[i]!);
+      const ay = Math.sin(T.a[i]!) * sq;
+      const al = Math.hypot(ax, ay) || 1;
+      return [ax / al, ay / al];
+    };
+    ends.forEach((i, e) => {
+      const [x, y] = this.toScreen(T.x[i]!, T.y[i]!);
+      const [dx, dy] = along(i);
+      out.push({ grip: e === 0 ? 'from' : 'to', x, y, dx, dy });
+    });
+    if (sel.kind === 'raised') {
+      // the tab stands beside the road at the middle of the stretch, on the side up the screen
+      const m = (ends[0] + Math.floor(((ends[1] - ends[0] + T.n) % T.n) / 2)) % T.n;
+      const [x, y] = this.toScreen(T.x[m]!, T.y[m]!);
+      let nx = -Math.sin(T.a[m]!);
+      let ny = Math.cos(T.a[m]!) * sq;
+      const nl = Math.hypot(nx, ny) || 1;
+      if (ny > 0 || (ny === 0 && nx < 0)) [nx, ny] = [-nx, -ny];
+      const off = (t.road.width / 2) * v.scale * nl + 34 * k;
+      out.push({ grip: 'lift', x: x + (nx / nl) * off, y: y + (ny / nl) * off, dx: x, dy: y });
+    }
+    return out;
+  }
+
+  /** The handle under a point of the screen (CSS px), if one of the chosen thing's is there. */
+  private gripAt(cx: number, cy: number): Grip | null {
+    const k = this.hooks.view().dpr;
+    let best: Grip | null = null;
+    let bd = 26 * k;
+    for (const h of this.grips()) {
+      // the tab is a wide pill: a finger anywhere on it has it
+      const wide = h.grip === 'lift' ? 14 * k : 0;
+      const d = Math.hypot(Math.max(0, Math.abs(cx * k - h.x) - wide), cy * k - h.y);
+      if (d < bd) {
+        bd = d;
+        best = h.grip;
+      }
+    }
+    return best;
+  }
+
   private erase(p: Pick | null): void {
     const t = this.track;
     if (!t || !p) return;
@@ -1128,16 +1226,46 @@ export class TrackEditor {
   private held(id: number): void {
     this.hold = null;
     const d = this.drag;
-    if (!d || d.id !== id || d.moved || this.pinch || d.mode === 'turn' || d.mode === 'size')
-      return;
+    if (!d || d.id !== id || d.moved || this.pinch) return;
+    if (d.mode !== 'pan' && d.mode !== 'lay') return;
     const [x, y] = d.from;
-    const p = this.hit(x, y, ANY);
-    if (!p || p.kind === 'surface' || p.kind === 'raised') return;
+    const p = d.mode === 'lay' ? null : this.hit(x, y, ANY);
+    if (!p || p.kind === 'surface' || p.kind === 'raised') {
+      this.heldRoad(x, y);
+      return;
+    }
     if (TOOL_OF[p.kind] !== this.tool && this.tool !== 'hand') this.pick('hand');
     this.stroke = null;
     this.sel = p;
     Object.assign(d, { mode: 'grab', grab: p, off: this.offTo(p, x, y) });
     this.showRow2();
+    navigator.vibrate?.(12);
+  }
+
+  /**
+   * A finger has rested on raised road: it has hold of it, and up or down the screen from there
+   * lifts or lowers it. With RAISE out, a finger resting on plain road raises a stretch to lift.
+   */
+  private heldRoad(x: number, y: number): void {
+    const t = this.track;
+    const d = this.drag;
+    if (!t || !d) return;
+    const T = this.road();
+    const reach = t.road.width / 2 + this.reach('item');
+    let index = raisedAt(T, t, x, y, reach);
+    if (index < 0) {
+      const near = nearestSample(T, x, y);
+      if (this.tool !== 'raise' || near.d > reach || t.raised.length >= 12) return;
+      this.history.remember(t);
+      t.raised.push(raisedBetween(T, this.height, [x, y], [x, y]));
+      d.changed = true;
+      index = t.raised.length - 1;
+    }
+    if (this.tool !== 'raise' && this.tool !== 'hand') this.pick('raise');
+    this.sel = { kind: 'raised', index };
+    Object.assign(d, { mode: 'grip', grip: 'lift', grab: this.sel, k0: t.raised[index]!.height });
+    this.showRow2();
+    this.say('Drag up to lift it, down to lower it.');
     navigator.vibrate?.(12);
   }
 
@@ -1156,7 +1284,7 @@ export class TrackEditor {
     if (this.touches.size > 2 || this.drag) return;
     const at = this.toWorld(e.clientX, e.clientY);
     const [x, y] = at;
-    let mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size' = 'pan';
+    let mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size' | 'grip' = 'pan';
     let grab: Pick | null = null;
     const drag = {
       id: e.pointerId,
@@ -1173,6 +1301,15 @@ export class TrackEditor {
     };
     // the middle and right buttons of a mouse always slide the map
     if (e.button !== 1 && e.button !== 2) {
+      // a handle of what is chosen comes before anything under it
+      const grip = this.pencil ? null : this.gripAt(e.clientX, e.clientY);
+      if (grip && this.sel) {
+        const sel = this.sel;
+        const k0 = sel.kind === 'raised' ? (t.raised[sel.index]?.height ?? 0) : 0;
+        this.drag = { ...drag, mode: 'grip', grip, grab: sel, k0 };
+        this.tap.style.cursor = 'grabbing';
+        return;
+      }
       if (this.tool === 'road' && this.pencil) {
         mode = 'pencil';
         this.stroke = [at];
@@ -1211,8 +1348,9 @@ export class TrackEditor {
     if (grab) {
       this.sel = grab;
       this.showRow2();
-    } else if (mode === 'pan') {
-      // (a finger laying a surface or drawing is already at work: it is never taken for a hold)
+    } else if (mode === 'pan' || (mode === 'lay' && this.tool === 'raise')) {
+      // (a finger laying a surface or drawing is already at work: it is never taken for a hold;
+      // one resting on the road with RAISE out lifts it)
       this.unhold();
       this.hold = setTimeout(() => this.held(e.pointerId), HOLD);
     }
@@ -1235,7 +1373,11 @@ export class TrackEditor {
     const d = this.drag;
     if (!d) {
       // a mouse over the map shows what a click would put down
-      if (e.pointerType === 'mouse') this.hover = this.toWorld(e.clientX, e.clientY);
+      if (e.pointerType === 'mouse') {
+        this.hover = this.toWorld(e.clientX, e.clientY);
+        const grip = this.gripAt(e.clientX, e.clientY);
+        this.tap.style.cursor = grip === 'lift' ? 'ns-resize' : grip ? 'grab' : '';
+      }
       return;
     }
     if (d.id !== e.pointerId) return;
@@ -1270,6 +1412,10 @@ export class TrackEditor {
       return;
     }
     if (d.mode === 'lay' || d.mode === 'pan' || !d.grab) return;
+    if (d.mode === 'grip') {
+      this.gripTo(fx, fy, cy - d.y);
+      return;
+    }
     if (!d.changed) {
       this.history.remember(t);
       d.changed = true;
@@ -1313,6 +1459,60 @@ export class TrackEditor {
     }
   }
 
+  /**
+   * The handle in hand follows the finger: to (x, y) on the ground, `dy` CSS px down the screen
+   * from where it was taken. The world is built again when it is let go, not on the way.
+   */
+  private gripTo(x: number, y: number, dy: number): void {
+    const d = this.drag;
+    const t = this.track;
+    const g = d?.grab;
+    if (!d || !t || !g) return;
+    const T = this.road();
+    const before = (): void => {
+      if (!d.changed) this.history.remember(t);
+      d.changed = true;
+    };
+    if (g.kind === 'raised' || g.kind === 'surface') {
+      const s = g.kind === 'raised' ? t.raised[g.index] : t.surfaces[g.index];
+      if (!s) return;
+      if (d.grip === 'lift' && g.kind === 'raised') {
+        const up = t.raised[g.index]!;
+        const h = liftTo(d.k0 ?? up.height, dy);
+        if (h === up.height) return;
+        before();
+        up.height = h;
+        this.height = h;
+        this.showRow2();
+        return;
+      }
+      // (the track as it was is remembered before the end is moved, so a copy is tried first)
+      const tried = { ...s };
+      const least = g.kind === 'raised' ? RAISE_LEAST : SURFACE_LEAST;
+      if (!moveEnd(T, tried, d.grip === 'from' ? 0 : 1, x, y, least)) return;
+      before();
+      Object.assign(s, tried);
+    } else if (g.kind === 'bridge') {
+      const b = t.bridges[g.index];
+      if (!b) return;
+      const length = bridgeSpan(T, b, x, y);
+      if (length === b.length) return;
+      before();
+      b.length = length;
+      this.lengthIn.value = String(length);
+    } else if (g.kind === 'area' || g.kind === 'pool') {
+      const o = g.kind === 'area' ? t.areas[g.index] : t.pools[g.index];
+      if (!o) return;
+      // the edge goes where the finger is: as far from the middle as it is
+      const [lo, hi, step] = g.kind === 'area' ? [40, 700, 10] : [4, 80, 2];
+      const r = Math.max(lo, Math.min(hi, snapTo(Math.hypot(x - o.x, y - o.y), step)));
+      if (r === o.r) return;
+      before();
+      o.r = r;
+      (g.kind === 'area' ? this.areaIn : this.sizeIn).value = String(r);
+    }
+  }
+
   /** Where something let go at (x, y) comes to rest: on the grid or in a lane, if snap is on. */
   private settle(kind: Pick['kind'], x: number, y: number): [number, number] {
     if (!this.snap) return [x, y];
@@ -1329,6 +1529,8 @@ export class TrackEditor {
     const d = this.drag;
     if (!d?.moved || this.pinch || d.mode === 'pan' || d.mode === 'turn' || d.mode === 'size')
       return;
+    // (lifting goes by how far the finger has moved on the screen: the map must stay put)
+    if (d.grip === 'lift') return;
     const f = this.free();
     const edge = 30;
     const vx = d.cx < f.x0 + edge ? 1 : d.cx > f.x1 - edge ? -1 : 0;
@@ -1357,7 +1559,8 @@ export class TrackEditor {
       if (stroke) this.drawn(stroke);
     } else if (d.mode === 'lay' && d.moved) this.lay(d.from, d.to);
     else if (d.changed) this.commit();
-    else if (!d.moved) this.use(...d.from);
+    else if (!d.moved && d.mode !== 'grip') this.use(...d.from);
+    if (d.mode === 'grip') this.tap.style.cursor = '';
   }
 
   private cancel(): void {
@@ -1846,12 +2049,12 @@ export class TrackEditor {
     if (this.tool === 'surface' || this.tool === 'raise' || all) {
       // stretches of surface: a band along the road in the material's colour
       const T = this.road();
-      const band = (a: number, b: number, color: string, on: boolean): void => {
+      const band = (a: number, b: number, color: string, on: boolean, up = 0): void => {
         g.beginPath();
         for (let i = a, first = true; ; i = (i + 1) % T.n, first = false) {
           const [x, y] = this.toScreen(T.x[i]!, T.y[i]!);
-          if (first) g.moveTo(x, y);
-          else g.lineTo(x, y);
+          if (first) g.moveTo(x, y - up);
+          else g.lineTo(x, y - up);
           if (i === b) break;
         }
         g.lineCap = 'butt';
@@ -1869,7 +2072,13 @@ export class TrackEditor {
           const a = nearestSample(T, up.x0, up.y0).i;
           const b = nearestSample(T, up.x1, up.y1).i;
           const on = this.sel?.kind === 'raised' && this.sel.index === i;
-          band(a, b, '#ffd23d', on);
+          if (on && this.drag?.grip === 'lift') {
+            // in hand: its shadow where it lies, and itself as high above it as it will stand
+            band(a, b, 'rgba(22,20,28,0.45)', false);
+            band(a, b, '#ffd23d', true, up.height * v.scale * Math.cos(PITCH));
+          } else band(a, b, '#ffd23d', on);
+          // (the chosen one's height is written on the tab it is lifted by)
+          if (on && this.tool !== 'erase') return;
           const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
           const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
           this.label(g, `↑ ${up.height}`, x, y + 4 * k, k);
@@ -1990,6 +2199,7 @@ export class TrackEditor {
       });
 
     this.ghost(g, v);
+    this.drawGrips(g, k);
 
     // what is in hand under a fingertip: a ring wide enough to be seen round it
     const d = this.drag;
@@ -2089,6 +2299,67 @@ export class TrackEditor {
       g.fillStyle = this.content.material.get(this.palette.pool)?.colour ?? '#888';
       g.fill();
       g.globalAlpha = 1;
+    }
+  }
+
+  /** The handles of what is chosen: round ones with arrows at ends and edges, a tab to lift by. */
+  private drawGrips(g: CanvasRenderingContext2D, k: number): void {
+    const t = this.track;
+    const sel = this.sel;
+    if (!t || !sel) return;
+    const held = this.drag?.mode === 'grip' ? this.drag.grip : null;
+    const ink = '#16141c';
+    // a little arrowhead at (x, y) pointing along (dx, dy)
+    const head = (x: number, y: number, dx: number, dy: number, r: number): void => {
+      g.beginPath();
+      g.moveTo(x + dx * r, y + dy * r);
+      g.lineTo(x - dy * r * 0.8, y + dx * r * 0.8);
+      g.lineTo(x + dy * r * 0.8, y - dx * r * 0.8);
+      g.closePath();
+      g.fillStyle = ink;
+      g.fill();
+    };
+    for (const h of this.grips()) {
+      const on = held === h.grip;
+      if (h.grip === 'lift') {
+        const up = sel.kind === 'raised' ? t.raised[sel.index] : undefined;
+        if (!up) continue;
+        // a stem from the road to the tab, so it is plain what the tab belongs to
+        g.beginPath();
+        g.moveTo(h.dx, h.dy);
+        g.lineTo(h.x, h.y);
+        g.strokeStyle = ink;
+        g.lineWidth = 5 * k;
+        g.stroke();
+        g.strokeStyle = '#fff';
+        g.lineWidth = 2 * k;
+        g.stroke();
+        const w = 66 * k;
+        const hh = 32 * k;
+        g.beginPath();
+        g.roundRect(h.x - w / 2, h.y - hh / 2, w, hh, hh / 2);
+        g.fillStyle = on ? '#ff6a3d' : '#ffd23d';
+        g.fill();
+        g.strokeStyle = ink;
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        head(h.x - 20 * k, h.y - 4 * k, 0, -1, 6 * k);
+        head(h.x - 20 * k, h.y + 4 * k, 0, 1, 6 * k);
+        g.font = `800 ${14 * k}px system-ui, sans-serif`;
+        g.textAlign = 'center';
+        g.fillStyle = ink;
+        g.fillText(String(up.height), h.x + 8 * k, h.y + 5 * k);
+        continue;
+      }
+      g.beginPath();
+      g.arc(h.x, h.y, (on ? 17 : 15) * k, 0, Math.PI * 2);
+      g.fillStyle = on ? '#ff6a3d' : '#fff';
+      g.fill();
+      g.strokeStyle = ink;
+      g.lineWidth = 2.5 * k;
+      g.stroke();
+      head(h.x + h.dx * 4 * k, h.y + h.dy * 4 * k, h.dx, h.dy, 6 * k);
+      head(h.x - h.dx * 4 * k, h.y - h.dy * 4 * k, -h.dx, -h.dy, 6 * k);
     }
   }
 
