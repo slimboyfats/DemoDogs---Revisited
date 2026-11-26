@@ -4,6 +4,10 @@ import type { Effects } from './effects';
 import { DIAL_DEFAULT, dialSpot, type DialSetup } from '../game/speedo';
 
 const TAU = Math.PI * 2;
+/** The HUD's colours, the menus' own (theme.css): an ink line round everything, paper and sun. */
+const INK = '#1b2233';
+const PAPER = '#fff8e6';
+const SUN = '#ffd23f';
 
 /** The guards a car carries, as the HUD names them: seconds left, or uses left. */
 export function guardLabels(c: Car): string[] {
@@ -72,8 +76,15 @@ export class Hud {
     cv.width = Math.ceil(w.w * k) + 8;
     cv.height = Math.ceil(w.h * k) + 8;
     const g = cv.getContext('2d')!;
-    g.fillStyle = 'rgba(10,12,16,0.55)';
-    g.fillRect(0, 0, cv.width, cv.height);
+    // a plate with round corners and an ink line round it
+    const e = 1.5 * dpr;
+    g.beginPath();
+    g.roundRect(e, e, cv.width - e * 2, cv.height - e * 2, 9 * dpr);
+    g.fillStyle = 'rgba(27,34,51,0.5)';
+    g.fill();
+    g.lineWidth = e * 2;
+    g.strokeStyle = INK;
+    g.stroke();
     g.translate(4, 4);
     const T = w.track;
     if (T) {
@@ -83,19 +94,23 @@ export class Hud {
         else g.moveTo(T.x[i]! * k, T.y[i]! * k);
       }
       g.closePath();
-      g.strokeStyle = 'rgba(230,230,230,0.85)';
-      g.lineWidth = Math.max(2, w.road * k * 0.6);
       g.lineJoin = 'round';
+      const lw = Math.max(2 * dpr, w.road * k * 0.6);
+      g.strokeStyle = INK;
+      g.lineWidth = lw + 2 * dpr;
+      g.stroke();
+      g.strokeStyle = PAPER;
+      g.lineWidth = lw;
       g.stroke();
     }
     const O = w.oval;
     if (O) {
       g.beginPath();
       g.ellipse(O.cx * k, O.cy * k, O.rx * k, O.ry * k, 0, 0, TAU);
-      g.fillStyle = 'rgba(150,120,80,0.6)';
+      g.fillStyle = 'rgba(255,248,230,0.55)';
       g.fill();
-      g.strokeStyle = 'rgba(230,230,230,0.8)';
-      g.lineWidth = 2;
+      g.strokeStyle = INK;
+      g.lineWidth = 1.5 * dpr;
       g.stroke();
     }
     this.mini = { cv, k };
@@ -106,7 +121,7 @@ export class Hud {
     const ctx = this.ctx;
     const P = focus;
     const pad = 12 * u;
-    const left = pad + 46 * u;
+    const left = pad + 56 * u;
     const font = (px: number) => `900 ${Math.round(px * u)}px system-ui, sans-serif`;
     const small = `800 ${Math.round(12 * u)}px system-ui, sans-serif`;
     const text = (
@@ -119,60 +134,113 @@ export class Hud {
     ) => {
       ctx.font = f;
       ctx.textAlign = align;
-      ctx.lineWidth = 4 * u;
-      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      // an ink line round every letter, with round corners, and a hard shadow under the big ones
+      let px = parseFloat(f.slice(f.indexOf(' ') + 1));
+      if (align === 'center') {
+        // words across the middle are made to fit a narrow (upright) screen
+        const over = ctx.measureText(t).width / (W - 28 * u);
+        if (over > 1) {
+          px = Math.floor(px / over);
+          ctx.font = `900 ${px}px system-ui, sans-serif`;
+        }
+      }
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = Math.max(3.5 * u, px * 0.24);
+      ctx.strokeStyle = INK;
+      if (px >= 18 * u) ctx.strokeText(t, x, y + px * 0.09);
       ctx.strokeText(t, x, y);
       ctx.fillStyle = col;
       ctx.fillText(t, x, y);
     };
+    /** A pill: round ends, an ink line, filled. */
+    const pill = (x: number, y: number, bw: number, bh: number, fill: string, line = 2 * u) => {
+      ctx.beginPath();
+      ctx.roundRect(x, y, bw, bh, bh / 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.lineWidth = line;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+    };
     const bar = (y: number, v: number, col: string, label: string) => {
-      const bw = 110 * u;
-      const bh = 13 * u;
-      ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      ctx.fillRect(left, y, bw, bh);
-      ctx.fillStyle = col;
-      ctx.fillRect(left + 2 * u, y + 2 * u, Math.max(0, (bw - 4 * u) * v), bh - 4 * u);
-      ctx.font = `800 ${Math.round(9 * u)}px system-ui, sans-serif`;
-      ctx.fillStyle = '#fff';
-      ctx.textAlign = 'left';
+      const bw = 124 * u;
+      const bh = 15 * u;
+      pill(left, y, bw, bh, 'rgba(27,34,51,0.55)');
+      const k = Math.min(1, Math.max(0, v));
+      if (k > 0) {
+        // the fill keeps the pill's round end
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(left + u, y + u, bw - 2 * u, bh - 2 * u, bh / 2);
+        ctx.clip();
+        ctx.fillStyle = col;
+        ctx.fillRect(left, y, bw * k, bh);
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.fillRect(left, y + u, bw * k, 4 * u);
+        ctx.restore();
+      }
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, left + 5 * u, y + bh / 2 + 0.5);
+      text(
+        label,
+        left + 8 * u,
+        y + bh / 2 + 0.5,
+        `900 ${Math.round(9 * u)}px system-ui, sans-serif`,
+      );
       ctx.textBaseline = 'top';
     };
 
     ctx.textBaseline = 'top';
     const st = w.standings();
+    // the place (or how many are left) on a badge of its own, the lap and the clock beside it
+    const badge = (t: string): number => {
+      ctx.font = font(22);
+      const bw = ctx.measureText(t).width + 20 * u;
+      const bh = 32 * u;
+      ctx.beginPath();
+      ctx.roundRect(left, pad + 3 * u, bw, bh, 10 * u);
+      ctx.fillStyle = INK;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.roundRect(left, pad, bw, bh, 10 * u);
+      ctx.fillStyle = SUN;
+      ctx.fill();
+      ctx.lineWidth = 3 * u;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      ctx.fillStyle = INK;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(t, left + bw / 2, pad + bh / 2 + u);
+      ctx.textBaseline = 'top';
+      return left + bw + 9 * u;
+    };
     if (w.kind === 'race') {
-      text(placeName(st.indexOf(P) + 1), left, pad, font(20), '#ffd24a');
-      text(
-        `LAP ${Math.min(Math.max(P.lap, 1), w.laps)}/${w.laps}`,
-        left + 62 * u,
-        pad + 4 * u,
-        small,
-      );
-      text(fmtTime(w.raceTime), left + 62 * u, pad + 19 * u, small, '#cfd6e0');
+      const x = badge(placeName(st.indexOf(P) + 1));
+      text(`LAP ${Math.min(Math.max(P.lap, 1), w.laps)}/${w.laps}`, x, pad + 2 * u, small);
+      text(fmtTime(w.raceTime), x, pad + 18 * u, small, '#e3ecf7');
+      // a tournament's aim for this round, beside the lap
       const aim = this.aim?.(w);
-      if (aim) text(aim.text, left + 124 * u, pad + 4 * u, small, aim.colour);
+      if (aim) text(aim.text, x + 64 * u, pad + 2 * u, small, aim.colour);
     } else {
-      text(`${w.cars.filter((c) => !c.wrecked).length} LEFT`, left, pad, font(20), '#ffd24a');
+      const x = badge(`${w.cars.filter((c) => !c.wrecked).length} LEFT`);
       text(
         fmtTime(Math.max(0, w.timeLeft)),
-        left + 92 * u,
-        pad + 4 * u,
+        x,
+        pad + 2 * u,
         small,
-        w.timeLeft < 20 ? '#ff7a6a' : '#fff',
+        w.timeLeft < 20 ? '#ff8f80' : '#fff',
       );
     }
-    text(`SCORE ${P.score}`, left, pad + 38 * u, small);
+    text(`SCORE ${P.score}`, left, pad + 42 * u, small);
     bar(
-      pad + 56 * u,
+      pad + 60 * u,
       P.hp / 100,
-      P.hp > 50 ? '#5fd35a' : P.hp > 25 ? '#f0b52c' : '#e8442e',
+      P.hp > 50 ? '#5fd35a' : P.hp > 25 ? '#f0b52c' : '#ff5b4a',
       'ARMOR',
     );
-    bar(pad + 72 * u, P.nitro, '#4fb8ff', 'BOOST');
+    bar(pad + 79 * u, P.nitro, '#4fb8ff', 'BOOST');
     if (P.gun)
-      text(`AMMO ${P.rounds}`, left, pad + 90 * u, small, P.rounds > 0 ? '#fff' : '#ff7a6a');
+      text(`AMMO ${P.rounds}`, left, pad + 99 * u, small, P.rounds > 0 ? '#fff' : '#ff8f80');
     // what is bolted on: the blade's seconds left, the leaps left in the springs
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
@@ -192,7 +260,7 @@ export class Hud {
     ]
       .filter(Boolean)
       .join('  ');
-    if (fitted) text(fitted, left, pad + (P.gun ? 106 : 90) * u, small, '#ffd84a');
+    if (fitted) text(fitted, left, pad + (P.gun ? 115 : 99) * u, small, SUN);
 
     const m = this.mini;
     if (m) {
@@ -201,33 +269,45 @@ export class Hud {
       ctx.drawImage(m.cv, mx, my);
       for (const c of w.cars) {
         if (c.wrecked && w.kind === 'derby') continue;
+        // round dots with an ink line; this screen's own car bigger and white
+        const s = (c === w.player ? 7 : 5) * u;
+        ctx.beginPath();
+        ctx.arc(mx + 4 + c.x * m.k, my + 4 + c.y * m.k, s / 2, 0, TAU);
         ctx.fillStyle = c === w.player ? '#fff' : c.paint;
-        const s = (c === w.player ? 6 : 4.5) * u;
-        ctx.fillRect(mx + 4 + c.x * m.k - s / 2, my + 4 + c.y * m.k - s / 2, s, s);
+        ctx.fill();
+        ctx.lineWidth = 1.2 * u;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
         if (c === focus && c !== w.player) {
           // the car being watched wears a ring
-          ctx.strokeStyle = '#ffd24a';
+          ctx.strokeStyle = SUN;
           ctx.lineWidth = 1.5 * u;
-          const r = s / 2 + 2.5 * u;
-          ctx.strokeRect(mx + 4 + c.x * m.k - r, my + 4 + c.y * m.k - r, r * 2, r * 2);
+          ctx.beginPath();
+          ctx.arc(mx + 4 + c.x * m.k, my + 4 + c.y * m.k, s / 2 + 2.5 * u, 0, TAU);
+          ctx.stroke();
         }
       }
       // standings under the minimap
       let y = pad + m.cv.height + 6 * u;
       for (let i = 0; i < Math.min(6, st.length); i++) {
         const c = st[i]!;
+        ctx.beginPath();
+        ctx.roundRect(W - pad - 9 * u, y + 1.5 * u, 8 * u, 9 * u, 2.5 * u);
         ctx.fillStyle = c.paint;
-        ctx.fillRect(W - pad - 8 * u, y + 2 * u, 7 * u, 9 * u);
+        ctx.fill();
+        ctx.lineWidth = 1.2 * u;
+        ctx.strokeStyle = INK;
+        ctx.stroke();
         const out = c.wrecked && w.kind === 'derby';
         text(
           `${i + 1} ${c.name}${out ? ' ✕' : ''}`,
-          W - pad - 12 * u,
+          W - pad - 13 * u,
           y,
-          `800 ${Math.round(10 * u)}px system-ui, sans-serif`,
-          c === w.player ? '#ffd24a' : c === focus ? '#7fe0ff' : c.wrecked ? '#999' : '#fff',
+          `900 ${Math.round(10.5 * u)}px system-ui, sans-serif`,
+          c === w.player ? SUN : c === focus ? '#7fe0ff' : c.wrecked ? '#b9bfcc' : '#fff',
           'right',
         );
-        y += 13 * u;
+        y += 14 * u;
       }
     }
 
@@ -235,17 +315,15 @@ export class Hud {
     if (w.mods.length) {
       ctx.font = `900 ${Math.round(10 * u)}px system-ui, sans-serif`;
       const gap = 6 * u;
-      const widths = w.mods.map((m) => ctx.measureText(m.def.label).width + 12 * u);
+      const widths = w.mods.map((m) => ctx.measureText(m.def.label).width + 16 * u);
       let x = W / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (widths.length - 1)) / 2;
       ctx.textBaseline = 'middle';
       ctx.textAlign = 'center';
       w.mods.forEach((m, i) => {
         const bw = widths[i]!;
-        ctx.fillStyle = 'rgba(0,0,0,0.55)';
-        ctx.fillRect(x, pad, bw, 16 * u);
-        ctx.fillStyle = m.def.colour;
-        ctx.fillRect(x, pad + 14 * u, bw, 2 * u);
-        ctx.fillText(m.def.label, x + bw / 2, pad + 7.5 * u);
+        pill(x, pad, bw, 17 * u, m.def.colour);
+        ctx.fillStyle = INK;
+        ctx.fillText(m.def.label, x + bw / 2, pad + 9 * u);
         x += bw + gap;
       });
       ctx.textBaseline = 'top';
@@ -255,15 +333,15 @@ export class Hud {
     ctx.textBaseline = 'middle';
     if (w.phase === 'countdown') {
       const n = Math.ceil(w.countdown);
-      if (n <= 3) text(String(n), W / 2, H * 0.36, font(64), '#ffd24a', 'center');
+      if (n <= 3) text(String(n), W / 2, H * 0.36, font(72), SUN, 'center');
       else text(w.venue.meta.name.toUpperCase(), W / 2, H * 0.36, font(30), '#fff', 'center');
     }
-    if (fx.msgT > 0 && fx.msg) text(fx.msg, W / 2, H * 0.3, font(34), '#ffd24a', 'center');
+    if (fx.msgT > 0 && fx.msg) text(fx.msg, W / 2, H * 0.3, font(34), SUN, 'center');
     // off the course in a race: how long there is to get back before the car is put back
     const back = rescueIn(w, w.player);
     if (back > 0 && !w.player.wrecked) {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
-      text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), '#ffd24a', 'center');
+      text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), SUN, 'center');
     }
     if (this.dial.on) this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
@@ -318,18 +396,24 @@ export class Hud {
     }
     const shown = HELD_SAYS.filter(([bit]) => (this.heldT.get(bit) ?? 0) > 0.25);
     const slowed = shown.length > 0;
-    ctx.lineCap = 'butt';
-    // the plate behind it, so it reads on snow and on tarmac alike
+    // the plate behind it, so it reads on snow and on tarmac alike, with an ink line round it
     ctx.beginPath();
-    ctx.arc(cx, cy, r + 9 * u, Math.PI * 0.75, Math.PI * 2.25);
-    ctx.fillStyle = 'rgba(8,10,14,0.62)';
+    ctx.arc(cx, cy, r + 10 * u, Math.PI * 0.75, Math.PI * 2.25);
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(27,34,51,0.62)';
     ctx.fill();
-    // the empty track of the arc, then the speed in it
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3 * u;
+    ctx.strokeStyle = INK;
+    ctx.stroke();
+    // the empty track of the arc with round ends, then the speed in it
+    ctx.lineCap = 'round';
     ctx.lineWidth = 10 * u;
     ctx.beginPath();
     ctx.arc(cx, cy, r, a0, a1);
-    ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
     ctx.stroke();
+    ctx.lineCap = 'butt';
     // the car's own top speed, a tick on the arc
     const at = a0 + (a1 - a0) * (top / full);
     ctx.beginPath();
@@ -341,15 +425,11 @@ export class Hud {
     if (k > 0.005) {
       ctx.beginPath();
       ctx.arc(cx, cy, r, a0, a0 + (a1 - a0) * k);
+      ctx.lineCap = 'round';
       ctx.lineWidth = 10 * u;
-      ctx.strokeStyle = P.boosting
-        ? '#4fb8ff'
-        : slowed
-          ? '#ff5a3c'
-          : k > 0.6
-            ? '#ffd24a'
-            : '#5fd35a';
+      ctx.strokeStyle = P.boosting ? '#4fb8ff' : slowed ? '#ff5a3c' : k > 0.6 ? SUN : '#5fd35a';
       ctx.stroke();
+      ctx.lineCap = 'butt';
     }
     ctx.textBaseline = 'middle';
     text(
@@ -375,10 +455,15 @@ export class Hud {
       const bw = ctx.measureText(say).width + 16 * u;
       const by = spot.below ? cy + r * 0.75 + 4 * u : cy - r - 32 * u;
       const pulse = 0.75 + 0.25 * Math.sin(now * 8);
-      ctx.fillStyle = `rgba(200,34,20,${(0.85 * pulse).toFixed(3)})`;
       // (kept on the screen when the dial is in a corner)
       const bx = Math.min(W - bw / 2 - 4 * ui, Math.max(bw / 2 + 4 * ui, cx));
-      ctx.fillRect(bx - bw / 2, by, bw, 19 * u);
+      ctx.beginPath();
+      ctx.roundRect(bx - bw / 2, by, bw, 19 * u, 9.5 * u);
+      ctx.fillStyle = `rgba(232,52,34,${(0.95 * pulse).toFixed(3)})`;
+      ctx.fill();
+      ctx.lineWidth = 2 * u;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
       ctx.fillStyle = '#fff';
       ctx.textAlign = 'center';
       ctx.fillText(say, bx, by + 10 * u);

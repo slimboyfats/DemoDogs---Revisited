@@ -10,6 +10,21 @@ export const VIEWS: Record<ZoomMode, number> = { close: 130, normal: 175, wide: 
 /** Art pixels along the long side for each one up the short side. */
 const LONG = 310 / 175;
 
+/**
+ * A phone held upright shows this much more of the world across its short side than the same
+ * zoom does up the short side of one held on its side: the road is the picture's width there, and
+ * what matters is to either side of the car.
+ */
+export const UPRIGHT = 1.35;
+
+/**
+ * The short and long side to zoom a W by H canvas by: its own, or for an upright one a short side
+ * that counts for less, so every zoom shows more across.
+ */
+export function zoomSides(W: number, H: number): [short: number, long: number] {
+  return H > W ? [W / UPRIGHT, H] : [H, W];
+}
+
 /** The short side of a canvas, or what its long side allows if that is less. */
 const room = (short: number, long: number): number => Math.min(short, long / LONG);
 

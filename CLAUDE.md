@@ -28,6 +28,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
@@ -160,4 +161,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
   `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
   built-in track can be rebuilt without touching tests. A test about a real venue names it.
+- **The menus wear one look** (client `theme.css`, loaded after `styles.css`): paper cards and sunny buttons with
+  an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
+  `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
+  drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
+  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, DEV), wired by class, and it sits beside a paused race so a
+  slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
+  in `theme.css`); nothing forces landscape.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.
