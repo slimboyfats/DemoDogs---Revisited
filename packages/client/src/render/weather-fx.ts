@@ -135,6 +135,7 @@ export class WeatherFx {
   /** The least darkness and wet the modifiers ask of the sky (see Atmosphere). */
   dark = 0;
   wet = 0;
+  fog = 0;
   /** How hard it is raining, 0 to 1 (eased, so rain comes on and dies away). */
   rain = 0;
   /** How dry and hot it is, 0 to 1: embers ride the air. */
@@ -304,6 +305,7 @@ export class WeatherFx {
     let heat = 0;
     let dark = 0;
     let wet = 0;
+    let fog = 0;
     for (const m of w.mods) {
       const [r, g, b] = hexRgb(m.def.tint);
       tr *= r;
@@ -313,6 +315,7 @@ export class WeatherFx {
       if (m.def.kind === 'tinder') heat = 1;
       dark = Math.max(dark, m.def.sky?.dark ?? 0);
       wet = Math.max(wet, m.def.sky?.wet ?? 0);
+      fog = Math.max(fog, m.def.sky?.fog ?? 0);
     }
     const k = Math.min(1, 1.6 * DT);
     const T = this.tint;
@@ -323,6 +326,7 @@ export class WeatherFx {
     this.heat += (heat - this.heat) * k;
     this.dark = dark;
     this.wet = wet;
+    this.fog = fog;
     this.flash = Math.max(0, this.flash - DT * 3.2);
     WIND[0] = BREEZE[0] + w.wind[0] * 0.9;
     WIND[1] = BREEZE[1] + w.wind[1] * 0.9;

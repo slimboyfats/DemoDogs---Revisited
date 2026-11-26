@@ -86,7 +86,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -457.0,
+          "x": -457,
           "y": 640.2,
           "rot": -3.0146
         },
@@ -116,13 +116,13 @@
         },
         {
           "prop": "prop.boardwalk",
-          "x": -588.0,
+          "x": -588,
           "y": 620.7,
           "rot": -2.9576
         },
         {
           "prop": "prop.boardwalk",
-          "x": -614.0,
+          "x": -614,
           "y": 615.7,
           "rot": -3.0129
         },
@@ -159,7 +159,7 @@
         {
           "prop": "prop.boardwalk",
           "x": -758.7,
-          "y": 562.0,
+          "y": 562,
           "rot": -2.5252
         },
         {
@@ -171,7 +171,7 @@
         {
           "prop": "prop.boardwalk",
           "x": -1135.2,
-          "y": 285.0,
+          "y": 285,
           "rot": -2.1706
         },
         {
@@ -242,7 +242,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1369.0,
+          "x": -1369,
           "y": 87.4,
           "rot": -2.3291
         },
@@ -289,7 +289,7 @@
         {
           "prop": "prop.secret-crate",
           "x": -253.7,
-          "y": 477.0,
+          "y": 477,
           "rot": 0
         }
       ]
@@ -299,45 +299,33 @@
       "items": [
         {
           "prop": "prop.switch-bollard",
-          "x": -521.2,
-          "y": 671.0,
-          "rot": -2.9997
+          "x": -848.8,
+          "y": 530,
+          "rot": -2.5252
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -519.4,
-          "y": 658.2,
-          "rot": -2.9997
+          "x": -841.3,
+          "y": 519.4,
+          "rot": -2.5252
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -517.5,
-          "y": 645.3,
-          "rot": -2.9997
+          "x": -833.8,
+          "y": 508.8,
+          "rot": -2.5252
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -515.7,
-          "y": 632.4,
-          "rot": -2.9997
+          "x": -826.2,
+          "y": 498.2,
+          "rot": -2.5252
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -513.8,
-          "y": 619.6,
-          "rot": -2.9997
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -512.0,
-          "y": 606.7,
-          "rot": -2.9997
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -510.2,
-          "y": 593.8,
-          "rot": -2.9997
+          "x": -818.7,
+          "y": 487.6,
+          "rot": -2.5252
         }
       ]
     },
@@ -346,9 +334,9 @@
       "items": [
         {
           "prop": "prop.floor-switch",
-          "x": -296.6,
-          "y": 550.0,
-          "rot": 2.0284
+          "x": -559.6,
+          "y": 611.5,
+          "rot": -2.9755
         }
       ]
     },
@@ -468,6 +456,12 @@
           "x": 890,
           "y": 2650,
           "r": 260
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1011,
+          "y": 1734,
+          "r": 120
         }
       ]
     },
@@ -534,80 +528,80 @@
       "items": [
         {
           "prop": "prop.lighthouse",
-          "x": 1170.0,
-          "y": -260.0,
+          "x": 1170,
+          "y": -260,
           "rot": 0
         },
         {
           "prop": "prop.lighthouse",
-          "x": 670.0,
-          "y": 830.0,
+          "x": 670,
+          "y": 830,
           "rot": 0
         },
         {
           "prop": "prop.sandcastle",
-          "x": 430.0,
-          "y": 630.0,
+          "x": 430,
+          "y": 630,
           "rot": 0.3
         },
         {
           "prop": "prop.sandcastle",
-          "x": 490.0,
-          "y": 675.0,
+          "x": 490,
+          "y": 675,
           "rot": 1.1
         },
         {
           "prop": "prop.sandcastle",
-          "x": -50.0,
-          "y": 880.0,
+          "x": -50,
+          "y": 880,
           "rot": 0.2
         },
         {
           "prop": "prop.parasol",
-          "x": 250.0,
-          "y": 600.0,
+          "x": 250,
+          "y": 600,
           "rot": 0
         },
         {
           "prop": "prop.parasol",
-          "x": 340.0,
-          "y": 690.0,
+          "x": 340,
+          "y": 690,
           "rot": 0
         },
         {
           "prop": "prop.parasol",
-          "x": 810.0,
-          "y": 600.0,
+          "x": 810,
+          "y": 600,
           "rot": 0
         },
         {
           "prop": "prop.parasol",
-          "x": 950.0,
-          "y": 690.0,
+          "x": 950,
+          "y": 690,
           "rot": 0
         },
         {
           "prop": "prop.parasol",
-          "x": 1300.0,
-          "y": 530.0,
+          "x": 1300,
+          "y": 530,
           "rot": 0
         },
         {
           "prop": "prop.beach-ball",
-          "x": 300.0,
-          "y": 640.0,
+          "x": 300,
+          "y": 640,
           "rot": 0
         },
         {
           "prop": "prop.beach-ball",
-          "x": 870.0,
-          "y": 650.0,
+          "x": 870,
+          "y": 650,
           "rot": 0
         },
         {
           "prop": "prop.beach-ball",
-          "x": 1230.0,
-          "y": 600.0,
+          "x": 1230,
+          "y": 600,
           "rot": 0
         }
       ]
@@ -830,7 +824,7 @@
       "items": [
         {
           "prop": "prop.palm",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "prop": "prop.bush",
@@ -844,7 +838,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 4e-5,
+      "perArea": 0.00004,
       "clear": 40,
       "items": [
         {
@@ -859,7 +853,7 @@
     },
     {
       "rule": "scatter",
-      "perArea": 3e-5,
+      "perArea": 0.00003,
       "clear": 10,
       "items": [
         {

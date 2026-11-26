@@ -1248,6 +1248,13 @@ export const MaterialSchema = z.strictObject({
       drift: 0,
       sparks: false,
     }),
+  /**
+   * Standing water: drawn as water (a surface that moves, foam along its shore and round what
+   * stands in it), and a car in it wades, with a wake and small splashes, instead of leaving
+   * tyre tracks. `deep`: this many art px in from the shore it is too deep to wade: dark water,
+   * where a car in a race sinks and is put back on the road it left (sim/rescue.ts).
+   */
+  water: z.strictObject({ deep: z.number().positive().optional() }).optional(),
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),
@@ -1266,6 +1273,7 @@ export const MODIFIER_KINDS = [
   'meteors',
   'slick',
   'tinder',
+  'fog',
 ] as const;
 export type ModifierKind = (typeof MODIFIER_KINDS)[number];
 
@@ -1326,13 +1334,15 @@ export const ModifierSchema = z.strictObject({
   /**
    * How the client shows it; nothing in the race depends on these. `tint` multiplies the whole
    * picture (dust is yellow), and `sky` asks the client's sky for at least this much darkness
-   * (0 day, 0.5 dusk, 1 night: headlamps come on) and wet (rain on the ground, reflections).
+   * (0 day, 0.5 dusk, 1 night: headlamps come on), wet (rain on the ground, reflections) and fog
+   * (a low blanket of it on the ground, that the cars push about).
    */
   tint: hex.default('#ffffff'),
   sky: z
     .strictObject({
       dark: z.number().min(0).max(1).default(0),
       wet: z.number().min(0).max(1).default(0),
+      fog: z.number().min(0).max(1).default(0),
     })
     .optional(),
 });

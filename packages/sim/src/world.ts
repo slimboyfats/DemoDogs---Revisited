@@ -61,7 +61,7 @@ import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
 import { updateHunters } from './hunt';
 import { phased, trickControls, updateTricks } from './tricks';
-import { updateRescue } from './rescue';
+import { pitsOf, updateRescue } from './rescue';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -235,6 +235,8 @@ export class World {
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
   readonly spills: Spill[] = [];
+  /** The pools jumps are made over: a car that comes down in one has fallen short (rescue.ts). */
+  pits: Spill[] = [];
   /** Smoke clouds and spikes dropped behind cars. */
   readonly clouds: Cloud[] = [];
   readonly spikes: Spike[] = [];
@@ -345,6 +347,7 @@ export class World {
       );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
+    if (leaps.length) this.pits = pitsOf(this);
     // a secret way's crates float over their stands
     for (const s of this.statics)
       if (s.def.gives)

@@ -10,6 +10,7 @@
   "drag": 1.7,
   "quenches": true,
   "conducts": true,
+  "water": {},
   "colour": "#3b4a52",
   "alpha": 0.5
 }

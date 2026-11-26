@@ -10,7 +10,7 @@ describe('venue.tailspin-funfair', () => {
     for (const c of w.cars) expect(c.lap).toBeGreaterThanOrEqual(1);
   });
 
-  it('crosses itself on a flyover, and has a way through the bumpers', () => {
+  it('crosses itself on a flyover, and has a way over a pond ringed with bumpers', () => {
     const w = makeWorld({ venue: 'venue.tailspin-funfair' });
     expect(w.deckH?.some((h) => h > 20)).toBe(true);
     expect(w.statics.filter((s) => s.def.bounce).length).toBeGreaterThan(10);
