@@ -10,6 +10,7 @@ import {
 } from '@demodogs/shared';
 import { GLOSS, GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { RigArt } from './bones';
+import { findLamp, type LampSpot } from './lamps';
 import type { Strip } from './stack';
 import { build, CAR_DETAIL, hexRgb, tones } from './strips';
 
@@ -55,6 +56,7 @@ export class Art {
   private readonly props = new Map<string, Strip>();
   private readonly rigs = new Map<string, RigArt | null>();
   private readonly cars = new Map<string, CarArt>();
+  private readonly lamps = new Map<string, LampSpot | null>();
   private readonly bots = new Map<string, BotArt>();
   /** How many pixels (voxels of art) have been built so far, for the loader's readout. */
   built = 0;
@@ -71,6 +73,13 @@ export class Art {
     this.plank = this.make(kit.PLANK, PALETTE);
     this.squeaky = this.make(kit.SQUEAKY, PALETTE);
     this.link = this.make({ w: 2, h: 2, layers: 1, fn: () => 'bumper' }, PALETTE);
+  }
+
+  /** Where car `id`'s head lamps are in its look (see `findLamp`), or null if it has none. */
+  headLamp(id: string): LampSpot | null {
+    let L = this.lamps.get(id);
+    if (L === undefined) this.lamps.set(id, (L = findLamp(this.look(id, 'car').body)));
+    return L;
   }
 
   private look<K extends 'car' | 'prop' | 'bot'>(

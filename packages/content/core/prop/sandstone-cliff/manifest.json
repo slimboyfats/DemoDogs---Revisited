@@ -8,6 +8,7 @@
   },
   "body": "static",
   "radius": 11,
+  "hit": { "halfLength": 10, "halfWidth": 10, "round": 3 },
   "made": "material.sandstone",
   "integrity": 130,
   "rubble": {

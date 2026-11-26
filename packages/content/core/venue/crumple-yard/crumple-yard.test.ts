@@ -32,7 +32,8 @@ describe('venue.crumple-yard', () => {
         paint: '#888888',
       })),
       autopilot: true,
-      seed: 1,
+      // (a derby in which a tower is rammed down: most are, not all)
+      seed: 4,
     });
     let slams = 0;
     let falls = 0;

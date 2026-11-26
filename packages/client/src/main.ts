@@ -35,6 +35,7 @@ import { Input } from './input/input';
 import { isKey } from './input/keys';
 import { Art } from './render/art';
 import { Hud, placeName } from './render/hud';
+import { HITBOX_MODES, HitboxView, type HitboxMode } from './render/hitbox-view';
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { groundMode } from './render/ground';
@@ -202,6 +203,16 @@ function openCareer(): void {
   careerScreen.open(loadCareer());
   setScreen('career');
 }
+/**
+ * The hitbox view (`?hitboxes`, `?hitboxes=heights`, or HITBOXES on the test range): every shape
+ * the rules use, drawn over whatever is on the screen, in a race as on the range.
+ */
+const hitboxes = new HitboxView();
+{
+  const want = params.get('hitboxes');
+  if (want !== null)
+    hitboxes.mode = HITBOX_MODES.includes(want as HitboxMode) ? (want as HitboxMode) : 'boxes';
+}
 const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   view: () => ({ w: W, h: H, scale, dpr: DPR }),
   restart: startDev,
@@ -228,6 +239,10 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
     const next = order[i + 1] ?? null;
     scene.setHeat(next);
     return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
+  },
+  hitboxes: () => {
+    hitboxes.next();
+    return hitboxes.label;
   },
   sky: () => {
     const names = Object.keys(SKIES);
@@ -1191,6 +1206,7 @@ function frame(t: number): void {
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, overlay.width, overlay.height);
     octx.setTransform(overK, 0, 0, overK, 0, 0);
+    hitboxes.draw(octx, scene, art, session.world, W, H, DPR);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
     else if (nameTags.shown && !devMode)
@@ -1423,6 +1439,8 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** The hitbox view for scripts: `hitboxes.mode = 'off' | 'boxes' | 'heights'`. */
+      hitboxes,
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
       /** Draw the race at k device px to an art px with no HUD, for pictures (null: as it was). */

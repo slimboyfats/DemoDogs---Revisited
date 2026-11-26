@@ -8,6 +8,7 @@
   },
   "body": "static",
   "radius": 4.6,
+  "hit": { "halfLength": 4.5, "halfWidth": 3, "round": 0.8 },
   "hardness": 1.2,
   "made": "material.concrete",
   "integrity": 95,

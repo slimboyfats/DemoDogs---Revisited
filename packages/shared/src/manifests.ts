@@ -599,7 +599,10 @@ export const WeaponSchema = z.strictObject({
   /** Slicks: a pool of `material` of this `radius` poured out behind the car. */
   material: id('material').optional(),
   radius: z.number().positive().optional(),
-  /** Mines: seconds before it arms; trigger radius. Rockets: seconds before contact sets it off. */
+  /**
+   * Mines: seconds before it arms, and how near it a car's hull has to come to set it off (art
+   * px). Rockets: seconds before contact sets it off.
+   */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
   /**
@@ -829,6 +832,24 @@ export const PropSchema = z.strictObject({
   /** static: never moves, cars bounce off. loose: pushed around, can fly. */
   body: z.enum(['static', 'loose']),
   radius: z.number().positive(),
+  /**
+   * Its hit shape, where that is not a circle of `radius`: a box lying the way the prop is turned,
+   * `halfLength` along it and `halfWidth` across (art px, as its look is drawn at the height of a
+   * car), its corners rounded by `round`; or a circle of a `radius` of its own (a tree's trunk).
+   * Cars, rounds and other props meet this shape. `radius` stays its size for everything that
+   * only asks how big it is: the room it is given when scenery is laid, a blast's reach, how a
+   * driver steers round it.
+   */
+  hit: z
+    .union([
+      z.strictObject({ radius: z.number().positive() }),
+      z.strictObject({
+        halfLength: z.number().positive(),
+        halfWidth: z.number().positive(),
+        round: z.number().min(0).optional(),
+      }),
+    ])
+    .optional(),
   /** Static props: false for looks-only props (fences, the oval wall). */
   solid: z.boolean().default(true),
   mass: z.number().positive().optional(),

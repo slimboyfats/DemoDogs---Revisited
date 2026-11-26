@@ -8,6 +8,7 @@
   },
   "body": "static",
   "radius": 6,
+  "hit": { "halfLength": 7, "halfWidth": 5, "round": 2 },
   "made": "material.wood",
   "integrity": 110
 }

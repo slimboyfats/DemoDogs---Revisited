@@ -8,6 +8,7 @@
   },
   "body": "static",
   "radius": 1.8,
+  "hit": { "radius": 1.4 },
   "hardness": 0.5,
   "made": "material.steel",
   "integrity": 8

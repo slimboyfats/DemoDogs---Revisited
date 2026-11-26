@@ -8,6 +8,7 @@
   },
   "body": "static",
   "radius": 7,
+  "hit": { "radius": 6.2 },
   "made": "material.sandstone",
   "integrity": 42,
   "points": 15
