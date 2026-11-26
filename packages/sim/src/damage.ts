@@ -483,7 +483,7 @@ export function footing(w: World, x: number, y: number): [number, number, boolea
     drag = 0.9;
   }
   for (const s of w.spills) {
-    if (Math.hypot(s.x - x, s.y - y) > s.r) continue;
+    if (Math.abs(s.x - x) > s.r || Math.hypot(s.x - x, s.y - y) > s.r) continue;
     grip = Math.min(grip, s.def.grip);
     drag = Math.max(drag, s.def.drag);
   }
@@ -608,6 +608,7 @@ export function updateMending(w: World): void {
     if (!wouldHold(w, s)) continue;
     w.mending.splice(i, 1);
     s.down = false;
+    w.stood++;
     s.mending = false;
     delete s.mendT;
     if (s.def.integrity !== undefined) s.hp = s.def.integrity;

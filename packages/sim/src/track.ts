@@ -96,9 +96,18 @@ export class DistanceGrid {
     for (let i = 0; i < T.n; i++) {
       const cx = Math.floor(T.x[i]! / cell);
       const cy = Math.floor(T.y[i]! / cell);
-      for (let gy = Math.max(0, cy - rc); gy <= Math.min(this.gh - 1, cy + rc); gy++) {
-        for (let gx = Math.max(0, cx - rc); gx <= Math.min(this.gw - 1, cx + rc); gx++) {
-          const d = Math.hypot((gx + 0.5) * cell - T.x[i]!, (gy + 0.5) * cell - T.y[i]!);
+      const tx = T.x[i]!;
+      const ty = T.y[i]!;
+      const gx0 = Math.max(0, cx - rc);
+      const gx1 = Math.min(this.gw - 1, cx + rc);
+      const gy1 = Math.min(this.gh - 1, cy + rc);
+      for (let gy = Math.max(0, cy - rc); gy <= gy1; gy++) {
+        const dy = (gy + 0.5) * cell - ty;
+        for (let gx = gx0; gx <= gx1; gx++) {
+          // (a square root and not `Math.hypot`: this runs a few million times as a track is
+          // built, and hypot is many times slower for the same answer)
+          const dx = (gx + 0.5) * cell - tx;
+          const d = Math.sqrt(dx * dx + dy * dy);
           const k = gy * this.gw + gx;
           if (d < this.dist[k]!) {
             this.dist[k] = d;

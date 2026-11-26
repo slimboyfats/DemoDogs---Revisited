@@ -22,12 +22,19 @@ import { crest, groundAt, moundAt } from './mounds';
 import type { World } from './world';
 import { pace } from './modifiers';
 
+/** What `footing` gives for firm, dry ground. */
+const FIRM: readonly [number, number, boolean] = [1, 0, false];
+
 /** Ground steeper than this (height per px) is a face: a car on the ground cannot drive up it. */
 const CLIFF = 1.1;
 /** Ground that falls away faster than this in a tick leaves the car in the air. */
 const DROP = 2;
 /** A shape in the road that steps up more than this in one tick's travel has a sheer side (px). */
 const LIP = 3;
+/** How hard a car on the side of a raised road is pulled down off it, px a second squared. */
+const SLIDE = 420;
+/** A car that goes further than this in a tick has the way looked at in steps this long (px). */
+const STRIDE = 4;
 
 export function makeCar(
   w: World,
@@ -259,7 +266,10 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
   // the deck is clean: pools and pits are on the ground below it
-  const foot = airborne || floor > 0 ? ([1, 0, false] as const) : footing(w, c.x, c.y);
+  const foot =
+    airborne || floor > 0 || (w.craters.length === 0 && w.spills.length === 0)
+      ? FIRM
+      : footing(w, c.x, c.y);
   let dry: number = 1 - (1 - foot[0]) * rough;
   let bog: number = foot[1] * rough;
   const pit = foot[2];
@@ -339,6 +349,17 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     const gy = clamp(land.dy(c.x, c.y), -0.5, 0.5);
     c.vx -= gx * T.hillPull * DT;
     c.vy -= gy * T.hillPull * DT;
+    if (land.plat) {
+      // the side of a raised road is no place to stand: a car that has come down on it (driven
+      // slowly off the top, or dropped there out of the air) slides off it to the ground
+      const sx = (land.platAt(c.x + 2, c.y) - land.platAt(c.x - 2, c.y)) / 4;
+      const sy = (land.platAt(c.x, c.y + 2) - land.platAt(c.x, c.y - 2)) / 4;
+      const steep = Math.hypot(sx, sy);
+      if (steep > CLIFF) {
+        c.vx -= (sx / steep) * SLIDE * DT;
+        c.vy -= (sy / steep) * SLIDE * DT;
+      }
+    }
     vf = c.vx * cs + c.vy * sn;
     uphill = (gx * cs + gy * sn) * Math.sign(vf || 1);
   }
@@ -370,7 +391,8 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     const ly = sn * f * L + cs * l * W;
     const face =
       faced(w, c, land, x0, y0, c.x, c.y) ??
-      (v > 1 ? faced(w, c, land, x0 + lx, y0 + ly, c.x + lx, c.y + ly) : null);
+      (v > 1 ? faced(w, c, land, x0 + lx, y0 + ly, c.x + lx, c.y + ly) : null) ??
+      (land?.plat && c.z < 2 ? walled(land, x0, y0, c.x, c.y) : null);
     if (face) {
       c.x = x0;
       c.y = y0;
@@ -438,9 +460,10 @@ function faced(
     if (rise > 0) {
       const [ex, ey] = land.edge(bx, by);
       const steep = Math.hypot(ex, ey);
-      // (the side of a raised road is a wall to anything not well clear of the ground: there
-      // is no crawling up it, the way up is the ramp)
-      const wall = land.plat && c.z < 2 && land.platAt(bx, by) > land.platAt(ax, ay);
+      // (the side of a raised road is a wall to anything that would not be well clear of it
+      // there: there is no crawling up it and no coming down on it from a hop, the way up is
+      // the ramp)
+      const wall = land.plat && c.z - rise < 2 && land.platAt(bx, by) > land.platAt(ax, ay);
       if (steep > CLIFF && (wall || c.z < rise - 1)) return [-ex / steep, -ey / steep];
     }
   }
@@ -450,6 +473,53 @@ function faced(
     if (step > LIP && c.z < step - 1 && d > 0) return [(ax - bx) / d, (ay - by) / d];
   }
   return null;
+}
+
+/**
+ * Whether the way from (ax, ay) to (bx, by) goes up through the side of a raised road. The side
+ * is only a few px through, and a car fast enough (lit rocket, boost tile, a blast behind it)
+ * goes further than that in a tick: looking only at where it ends up would let it through. The
+ * way back out of the wall, or null. (For a car on the ground: `faced` has looked at the end.)
+ */
+function walled(
+  land: NonNullable<World['relief']>,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number,
+): [number, number] | null {
+  const d = Math.hypot(bx - ax, by - ay);
+  if (d <= STRIDE) return null;
+  const n = Math.ceil(d / STRIDE);
+  let low = land.platAt(ax, ay);
+  for (let k = 1; k < n; k++) {
+    const x = ax + ((bx - ax) * k) / n;
+    const y = ay + ((by - ay) * k) / n;
+    const p = land.platAt(x, y);
+    if (p > low) {
+      const [ex, ey] = land.edge(x, y);
+      const steep = Math.hypot(ex, ey);
+      if (steep > CLIFF) return [-ex / steep, -ey / steep];
+    }
+    low = p;
+  }
+  return null;
+}
+
+/**
+ * After the tick's collisions: a car on the ground that another car, or what it bounced off, has
+ * pushed up into the side of a raised road goes back to (x, y), where its own driving left it.
+ * The side is a wall to a shove as much as to an engine.
+ */
+export function hemmed(w: World, c: Car, x: number, y: number): void {
+  const land = w.relief;
+  if (!land?.plat || c.deck > 0 || (c.x === x && c.y === y)) return;
+  const rise = land.platAt(c.x, c.y) - land.platAt(x, y);
+  if (rise <= 0 || c.z - rise >= 2) return;
+  const [ex, ey] = land.edge(c.x, c.y);
+  if (Math.hypot(ex, ey) <= CLIFF && !walled(land, x, y, c.x, c.y)) return;
+  c.x = x;
+  c.y = y;
 }
 
 /** A car against something that does not move, along normal (nx, ny) by depth. */
@@ -484,20 +554,31 @@ function bump(
   }
 }
 
+/** The list `near` fills for `collideWorld`. */
+const WORLD_NEAR: StaticProp[] = [];
+
 export function collideWorld(w: World, c: Car): void {
   const R = hull(c);
   // a swollen car hits scenery like the lorry it has become
   const big = Math.max(1, c.size);
-  for (const p of circles(c)) {
-    const O = w.oval;
+  // its two hull circles lie this far either side of its middle (as `circles` has them)
+  const ox = Math.cos(c.h) * CAR_OFFSET * c.size;
+  const oy = Math.sin(c.h) * CAR_OFFSET * c.size;
+  const O = w.oval;
+  // (both are taken from where the car stood before either was pushed back)
+  const x0 = c.x;
+  const y0 = c.y;
+  for (let e = 0; e < 2; e++) {
+    const px = e === 0 ? x0 + ox : x0 - ox;
+    const py = e === 0 ? y0 + oy : y0 - oy;
     if (!O) {
-      if (p[0] < 10 + R) bump(w, c, p[0] - R, p[1], 1, 0, 10 + R - p[0], 1);
-      if (p[0] > w.w - 10 - R) bump(w, c, p[0] + R, p[1], -1, 0, p[0] - (w.w - 10 - R), 1);
-      if (p[1] < 10 + R) bump(w, c, p[0], p[1] - R, 0, 1, 10 + R - p[1], 1);
-      if (p[1] > w.h - 10 - R) bump(w, c, p[0], p[1] + R, 0, -1, p[1] - (w.h - 10 - R), 1);
+      if (px < 10 + R) bump(w, c, px - R, py, 1, 0, 10 + R - px, 1);
+      if (px > w.w - 10 - R) bump(w, c, px + R, py, -1, 0, px - (w.w - 10 - R), 1);
+      if (py < 10 + R) bump(w, c, px, py - R, 0, 1, 10 + R - py, 1);
+      if (py > w.h - 10 - R) bump(w, c, px, py + R, 0, -1, py - (w.h - 10 - R), 1);
     } else {
-      const ex = (p[0] - O.cx) / O.rx;
-      const ey = (p[1] - O.cy) / O.ry;
+      const ex = (px - O.cx) / O.rx;
+      const ey = (py - O.cy) / O.ry;
       const q = Math.hypot(ex, ey);
       const lim = 1 - R / ((O.rx + O.ry) / 2);
       if (q > lim) {
@@ -506,7 +587,7 @@ export function collideWorld(w: World, c: Car): void {
         const nl = Math.hypot(nx, ny);
         nx /= nl;
         ny /= nl;
-        bump(w, c, p[0] - nx * R, p[1] - ny * R, nx, ny, ((q - lim) * (O.rx + O.ry)) / 2, 1.1);
+        bump(w, c, px - nx * R, py - ny * R, nx, ny, ((q - lim) * (O.rx + O.ry)) / 2, 1.1);
       }
     }
   }
@@ -514,7 +595,7 @@ export function collideWorld(w: World, c: Car): void {
     if (!w.deckOpen?.[c.idx]) rails(w, c);
     return;
   }
-  for (const s of w.near(c.x, c.y, 20 * big)) {
+  for (const s of w.near(c.x, c.y, 20 * big, WORLD_NEAR)) {
     const r = s.def.radius;
     const far = r + 16 * big;
     if (s.down || Math.abs(s.x - c.x) > far || Math.abs(s.y - c.y) > far) continue;
@@ -524,11 +605,14 @@ export function collideWorld(w: World, c: Car): void {
     }
     // high enough in the air, a car sails over what is low
     if (s.def.low !== undefined && c.z > s.def.low) continue;
-    for (const p of circles(c)) {
-      const dx = p[0] - s.x;
-      const dy = p[1] - s.y;
-      const d = Math.hypot(dx, dy);
+    const cx = c.x;
+    const cy = c.y;
+    for (let e = 0; e < 2; e++) {
+      const dx = (e === 0 ? cx + ox : cx - ox) - s.x;
+      const dy = (e === 0 ? cy + oy : cy - oy) - s.y;
       const m = r + R;
+      if (dx >= m || dx <= -m || dy >= m || dy <= -m) continue;
+      const d = Math.hypot(dx, dy);
       if (d >= m || d <= 0.001) continue;
       // a hard enough ram knocks pieces off it, and may bring it down: then the car ploughs
       // on through, slower, instead of bouncing off

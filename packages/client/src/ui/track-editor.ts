@@ -33,56 +33,76 @@ import {
   reverse,
   roadAt,
   snapBridges,
+  SNAP_GRID,
+  SNAP_POINT,
+  snapThing,
+  snapTo,
   startAt,
   surfaceAt,
   surfaceBetween,
 } from '../game/track-edit';
-import { pickTrackFile, saveTrackFile } from '../game/tracks';
+import { pickTrackFile, saveTrackFile, shareTrackLink } from '../game/tracks';
 import type { Art } from '../render/art';
 import { SKIES } from '../render/atmosphere';
 import { PITCH } from '../render/scene';
 import { StackRenderer } from '../render/stack';
 import { EditPalette } from './edit-palette';
+import { icon } from './edit-icons';
 
 export type EditTool =
-  'road' | 'surface' | 'raise' | 'area' | 'place' | 'pool' | 'bridge' | 'erase';
+  'hand' | 'road' | 'surface' | 'raise' | 'bridge' | 'area' | 'pool' | 'place' | 'erase';
+
+/** The big buttons of the mode bar: each is a tool, or a few that go together. */
+export type EditMode = 'hand' | 'road' | 'place' | 'ground' | 'erase';
 
 /** How high a stretch of road stands when it is first raised (art px). */
 const RAISE_FIRST = 20;
 
-const TOOLS: [EditTool, string, string][] = [
-  ['road', 'ROAD', 'Drag a point to bend the road. Tap the road to add a point.'],
-  [
-    'surface',
-    'ROAD TYPE',
-    'Pick a surface, then drag along the road to lay it. Tap for a short stretch.',
-  ],
-  [
-    'raise',
-    'ELEVATE',
-    'Drag along the road to raise that stretch into a platform. Tap one to choose it.',
-  ],
-  [
-    'area',
-    'TERRAIN',
-    'Pick the ground and the weather, then tap to lay an area of it. Drag its middle to move it.',
-  ],
-  [
-    'place',
-    'THINGS',
-    'Drag a thing from the tray onto the map, or tap the map. Drag one to move it.',
-  ],
-  ['pool', 'POOLS', 'Pick what it is made of, then tap to lay a pool. Drag one to move it.'],
-  ['bridge', 'BRIDGE', 'Tap the road to raise a bridge there. Drag one along the road.'],
-  [
-    'erase',
-    'ERASE',
-    'Tap a thing, a pool, a bridge, a stretch of surface, a raised stretch or a road point to take it away.',
-  ],
+const MODES: [EditMode, string, string, EditTool[]][] = [
+  ['hand', 'move', 'MOVE', ['hand']],
+  ['road', 'road', 'ROAD', ['road', 'surface', 'raise', 'bridge']],
+  ['place', 'cone', 'THINGS', ['place']],
+  ['ground', 'hills', 'GROUND', ['area', 'pool']],
+  ['erase', 'trash', 'ERASE', ['erase']],
 ];
 
+const modeOf = (t: EditTool): EditMode => MODES.find((m) => m[3].includes(t))![0];
+
+/** Each tool: its name where a mode has several, and what to do with it, said once it is picked. */
+const TOOLS: Record<EditTool, [string, string]> = {
+  hand: [
+    'MOVE',
+    'Tap anything to choose it, drag it to move it. Drag the ground to slide the map.',
+  ],
+  road: ['SHAPE', 'Drag a point to bend the road. Tap the road for a new point.'],
+  surface: ['SURFACE', 'Pick a surface, then drag along the road to lay it.'],
+  raise: ['RAISE', 'Drag along the road to raise it into a platform.'],
+  bridge: ['BRIDGE', 'Tap the road to put a bridge there. Drag one along the road.'],
+  area: ['TERRAIN', 'Pick the ground and the weather, then tap the map to lay an area.'],
+  pool: ['POOLS', 'Pick what it is made of, then tap the map to lay a pool.'],
+  place: ['THINGS', 'Drag a thing out of the tray, or tap the map to put one down.'],
+  erase: ['ERASE', 'Tap anything you put down, or a road point, to take it away.'],
+};
+
+/** The tool that works on each kind of thing. */
+const TOOL_OF: Record<Pick['kind'], EditTool> = {
+  point: 'road',
+  item: 'place',
+  pool: 'pool',
+  bridge: 'bridge',
+  surface: 'surface',
+  raised: 'raise',
+  area: 'area',
+};
+
+/** Whatever a finger can take hold of, the smallest first. */
+const ANY: Pick['kind'][] = ['item', 'pool', 'bridge', 'point', 'area', 'surface', 'raised'];
+
+/** A finger held still this long on a thing takes hold of it, whatever tool is out (ms). */
+const HOLD = 420;
+
 const PENCIL_HINT =
-  'Draw with a finger: a whole loop for a new road, or from the road to the road for a new way round.';
+  'Draw with a finger: a whole loop for a new road, or from the road to the road for a new way.';
 
 const SIZES: [string, number, number][] = [
   ['SMALL', 1200, 840],
@@ -108,6 +128,8 @@ export interface EditHooks {
   /** Race the track as it stands, then come back. */
   drive(t: TrackFile): void;
   exit(): void;
+  /** Whether things settle on the grid and the road's lanes, as last chosen on this device. */
+  snap?: { get(): boolean; set(on: boolean): void };
 }
 
 type Pick = {
@@ -166,6 +188,23 @@ function ruleLabel(content: Content, r: unknown): string {
       return 'Fields beside the road';
     case 'kerb':
       return 'Things along the kerb';
+    case 'gantry':
+      return 'Start line gantry';
+    case 'trackside':
+      return 'Fences and stands by the road';
+    case 'along':
+      return 'Track pieces along the road';
+    case 'ring':
+      return 'A ring of things';
+    case 'river':
+      return 'A river';
+    case 'harbour':
+      return 'The harbour';
+    case 'stacks':
+      return 'Stacks of scrap';
+    case 'overpass':
+    case 'flyover':
+      return 'A bridge over the road';
     default:
       return String(rule.rule ?? 'Scenery');
   }
@@ -194,14 +233,20 @@ export class TrackEditor {
   private sel: Pick | null = null;
   private history = new History();
   private line: Track | null = null;
-  private note = '';
   private noteT = 0;
   /** The pencil is out: a drag on the map draws the road. */
   pencil = false;
+  /** Things settle on a grid, and on the road in its lanes. */
+  snap = true;
+  /** The whole map is in view as `fit` left it: it is fitted again when the tray comes or goes. */
+  private fitted = false;
   private drag: {
     id: number;
     x: number;
     y: number;
+    /** Where the finger is now (CSS px). */
+    cx: number;
+    cy: number;
     moved: boolean;
     /** What the drag does: slides the map, moves what was grabbed, draws, lays a surface. */
     mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size';
@@ -209,11 +254,15 @@ export class TrackEditor {
     k0?: number;
     dist0?: number;
     grab: Pick | null;
+    /** From the finger to the middle of what it holds, so a thing never jumps when taken. */
+    off: [number, number];
     changed: boolean;
+    touch: boolean;
     /** Where on the ground it began, and where it is now. */
     from: [number, number];
     to: [number, number];
   } | null = null;
+  private hold: ReturnType<typeof setTimeout> | null = null;
   /** The fingers on the map, and the two-finger pinch they make. */
   private readonly touches = new Map<number, { x: number; y: number }>();
   private pinch: { d: number; cx: number; cy: number } | null = null;
@@ -224,9 +273,21 @@ export class TrackEditor {
   private stacks: StackRenderer | null = null;
   readonly palette: EditPalette;
 
-  private readonly toolBtns = new Map<EditTool, HTMLButtonElement>();
-  private readonly row2 = el('div', { className: 'row2' });
-  private readonly hint = el('span', { className: 'hint' });
+  /** The tool each mode was last left on. */
+  private readonly last: Record<EditMode, EditTool> = {
+    hand: 'hand',
+    road: 'road',
+    place: 'place',
+    ground: 'area',
+    erase: 'erase',
+  };
+  private readonly modeBtns = new Map<EditMode, HTMLButtonElement>();
+  private readonly top = el('div', { className: 'top' });
+  private readonly modes = el('div', { className: 'modes' });
+  private readonly dock = el('div', { className: 'dock' });
+  private readonly row2 = el('div', { className: 'ctx' });
+  private readonly coach = el('div', { className: 'coach' });
+  private readonly nameBtn = el('button', { className: 'name' });
   private readonly sizeIn = el('input', { type: 'range', min: '8', max: '60', value: '22' });
   private readonly lengthIn = el('input', {
     type: 'range',
@@ -243,9 +304,10 @@ export class TrackEditor {
     value: '260',
   });
   private readonly skySel = el('select');
-  private readonly mapSel = el('select');
   private readonly undoBtn: HTMLButtonElement;
+  private readonly redoBtn: HTMLButtonElement;
   private readonly driveBtn: HTMLButtonElement;
+  private readonly snapBtn: HTMLButtonElement;
 
   constructor(
     private readonly root: HTMLElement,
@@ -268,35 +330,93 @@ export class TrackEditor {
         if (on && this.s) this.put(id, ...this.toWorld(cx, cy));
       },
     });
-    const row1 = el('div', { className: 'row1' });
-    const btn = (label: string, title: string, on: () => void, cls = ''): HTMLButtonElement => {
-      const b = el('button', { textContent: label, title, className: cls });
+    /** A button with a picture, and a word under or beside it if it has one. */
+    const btn = (
+      pic: string,
+      label: string,
+      title: string,
+      on: () => void,
+      act: string,
+    ): HTMLButtonElement => {
+      const b = el('button', { title }, icon(pic));
+      if (label) b.append(el('span', { textContent: label }));
+      b.dataset.act = act;
+      b.setAttribute('aria-label', label || title);
       b.onclick = on;
       return b;
     };
-    for (const [t, label, title] of TOOLS) {
-      const b = btn(label, title, () => this.pick(t));
-      this.toolBtns.set(t, b);
-      row1.append(b);
-    }
-    row1.append(el('span', { className: 'gap' }));
-    this.undoBtn = btn('UNDO', 'Step back', () => this.undo());
-    this.driveBtn = btn('TEST DRIVE', 'Race it now, then come back', () => this.testDrive(), 'go');
-    row1.append(
-      this.undoBtn,
-      btn('−', 'Further out (or the wheel, or pinch)', () => this.zoomBy(1 / 1.5)),
-      btn('+', 'Closer (or the wheel, or pinch)', () => this.zoomBy(1.5)),
-      btn('FIT', 'The whole map', () => this.fit()),
-      btn('SETUP', 'Name, look, road width, laps, map size, scenery', () => this.openSetup()),
-      btn('FILE', 'Save the track as a file, or load one', () => this.openFile()),
-      this.driveBtn,
-      btn('EXIT', 'Back to your tracks', () => hooks.exit()),
+    this.snap = hooks.snap?.get() ?? true;
+    this.nameBtn.title = 'Name, look, laps, map size, sharing';
+    this.nameBtn.dataset.act = 'setup';
+    this.nameBtn.onclick = () => this.openSetup();
+    this.undoBtn = btn('undo', '', 'Step back', () => this.undo(), 'undo');
+    this.redoBtn = btn('redo', '', 'Step forward again', () => this.redo(), 'redo');
+    this.driveBtn = btn(
+      'play',
+      'DRIVE',
+      'Drive it now, then come straight back',
+      () => this.testDrive(),
+      'drive',
     );
-    root.append(row1, this.row2);
+    this.driveBtn.classList.add('go');
+    this.top.append(
+      btn('back', '', 'Back to your tracks', () => hooks.exit(), 'exit'),
+      this.nameBtn,
+      this.undoBtn,
+      this.redoBtn,
+      btn('share', '', 'Share it as a link', () => void this.share(), 'share'),
+      this.driveBtn,
+    );
+    for (const [m, pic, label] of MODES) {
+      const b = btn(pic, label, TOOLS[this.last[m]][1], () => this.pick(this.last[m]), m);
+      this.modeBtns.set(m, b);
+      this.modes.append(b);
+    }
+    this.snapBtn = btn(
+      'grid',
+      '',
+      'Snap: things settle on a grid, and on the road in its lanes',
+      () => {
+        this.snap = !this.snap;
+        hooks.snap?.set(this.snap);
+        this.snapBtn.classList.toggle('on', this.snap);
+        this.say(this.snap ? 'Snap is on: things line up.' : 'Snap is off: things go anywhere.');
+      },
+      'snap',
+    );
+    this.snapBtn.classList.toggle('on', this.snap);
+    const float = el(
+      'div',
+      { className: 'float' },
+      btn('plus', '', 'Closer (or pinch)', () => this.zoomBy(1.5), 'in'),
+      btn('minus', '', 'Further out (or pinch)', () => this.zoomBy(1 / 1.5), 'out'),
+      btn('fit', '', 'The whole map', () => this.fit(), 'fit'),
+      this.snapBtn,
+    );
+    // the tray sits in the dock with the tool's own row and the mode bar: along the bottom of a
+    // phone held upright, round the edges of one on its side
+    this.dock.append(this.row2, tray, this.modes);
+    root.append(this.top, this.coach, float, this.dock);
+    // the phone was turned: the bars have moved round, so the whole map is found again
+    addEventListener('resize', () => {
+      if (this.s) setTimeout(() => this.s && this.fit(), 0);
+    });
+    // a keyboard, where there is one
+    addEventListener('keydown', (e) => {
+      if (!this.s || !this.setup.classList.contains('hidden')) return;
+      if ((e.target as HTMLElement | null)?.matches?.('input, select, textarea')) return;
+      const z = e.key.toLowerCase() === 'z' && (e.ctrlKey || e.metaKey);
+      if (z && e.shiftKey) this.redo();
+      else if (z) this.undo();
+      else if (e.key.toLowerCase() === 'y' && (e.ctrlKey || e.metaKey)) this.redo();
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && this.sel) this.erase(this.sel);
+      else if (e.key === 'Escape' && this.sel) {
+        this.sel = null;
+        this.showRow2();
+      } else return;
+      e.preventDefault();
+    });
 
-    for (const [label, w, h] of SIZES)
-      this.mapSel.append(new Option(`MAP ${label} ${w} × ${h}`, `${w}x${h}`));
-    this.mapSel.onchange = () => this.setSize(this.mapSel.value);
     this.skySel.append(new Option('WEATHER AS IT IS', ''));
     for (const name of Object.keys(SKIES)) this.skySel.append(new Option(skyLabel(name), name));
     // the weather and the size are the chosen area's, and the next one's
@@ -308,6 +428,12 @@ export class TrackEditor {
     this.areaIn.onchange = () => {
       const a = area();
       if (a) this.change(() => (a.r = Number(this.areaIn.value)));
+    };
+    // the slider sets the chosen pool's size, and the next one's
+    this.sizeIn.onchange = () => {
+      const sel = this.sel;
+      const p = sel?.kind === 'pool' ? this.track?.pools[sel.index] : undefined;
+      if (p) this.change(() => (p.r = Number(this.sizeIn.value)));
     };
     // the slider sets the chosen bridge's length, and the next one's
     this.lengthIn.onchange = () => {
@@ -322,6 +448,10 @@ export class TrackEditor {
       this.touches.delete(e.pointerId);
       if (this.touches.size < 2) this.pinch = null;
       this.cancel();
+    });
+    // a finger that slips off the map onto a bar still ends its drag
+    tap.addEventListener('lostpointercapture', (e) => {
+      if (this.drag?.id === e.pointerId) this.up(e);
     });
     tap.addEventListener('pointerleave', () => (this.hover = null));
     tap.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -359,18 +489,20 @@ export class TrackEditor {
     const fresh = this.track?.id !== t.id;
     this.track = t;
     this.adopt(s);
-    if (fresh) {
-      this.history = new History();
-      this.sel = null;
-      const [x, y] = t.road.points[0]!;
-      s.cam.x = x;
-      s.cam.y = y;
-    }
     this.line = null;
     this.problems = trackProblems(t);
     this.root.classList.remove('hidden');
     this.tap.classList.remove('hidden');
+    if (fresh) {
+      this.history = new History();
+      this.sel = null;
+      // a track new to the editor opens on the tool that shapes its road
+      this.tool = 'road';
+      this.pencil = false;
+    }
     this.pick(this.tool);
+    // the whole map first: where everything is, then pinch in to work
+    if (fresh) this.fit();
   }
 
   close(): void {
@@ -380,6 +512,7 @@ export class TrackEditor {
     this.stroke = null;
     this.carried = null;
     this.hover = null;
+    this.unhold();
     this.touches.clear();
     this.palette.show(null);
     this.root.classList.add('hidden');
@@ -394,11 +527,13 @@ export class TrackEditor {
   }
 
   pick(t: EditTool): void {
+    const said = this.tool !== t || !this.coach.textContent;
     this.tool = t;
+    this.last[modeOf(t)] = t;
     if (t !== 'road') this.pencil = false;
-    for (const [k, b] of this.toolBtns) b.classList.toggle('on', k === t);
+    for (const [m, b] of this.modeBtns) b.classList.toggle('on', m === modeOf(t));
     if (this.sel && !this.fits(this.sel)) this.sel = null;
-    this.palette.show(
+    const tray =
       t === 'place'
         ? 'props'
         : t === 'pool'
@@ -407,23 +542,47 @@ export class TrackEditor {
             ? 'surfaces'
             : t === 'area'
               ? 'areas'
-              : null,
-    );
+              : null;
+    this.palette.show(tray);
+    this.root.classList.toggle('trayed', tray !== null);
     this.showRow2();
+    if (this.fitted) this.fit();
+    if (said) this.say(TOOLS[t][1]);
   }
 
   /** Is this kind of thing what the tool in hand works on? */
   private fits(p: Pick): boolean {
-    return (
-      this.tool === 'erase' ||
-      (this.tool === 'road' && p.kind === 'point') ||
-      (this.tool === 'surface' && p.kind === 'surface') ||
-      (this.tool === 'raise' && p.kind === 'raised') ||
-      (this.tool === 'area' && p.kind === 'area') ||
-      (this.tool === 'place' && p.kind === 'item') ||
-      (this.tool === 'pool' && p.kind === 'pool') ||
-      (this.tool === 'bridge' && p.kind === 'bridge')
+    return this.tool === 'erase' || this.tool === 'hand' || TOOL_OF[p.kind] === this.tool;
+  }
+
+  /** The tool whose row is shown: with MOVE, the one that works on what is chosen. */
+  private ctxTool(): EditTool {
+    return this.tool === 'hand' && this.sel ? TOOL_OF[this.sel.kind] : this.tool;
+  }
+
+  /** The chosen thing, if a thing is chosen and its handles are out. */
+  private chosenItem(): TrackFile['items'][number] | undefined {
+    const sel = this.sel;
+    return sel?.kind === 'item' && this.tool !== 'erase' ? this.track?.items[sel.index] : undefined;
+  }
+
+  /** The bar along the top: the track's name, and what can be stepped back or driven. */
+  private showTop(): void {
+    const t = this.track;
+    if (!t) return;
+    const bad = this.problems.length > 0;
+    this.nameBtn.replaceChildren(
+      el('b', { textContent: t.name.toUpperCase() }),
+      el('small', { textContent: bad ? 'ROAD NEEDS FIXING' : 'SAVED ON THIS DEVICE' }),
     );
+    this.nameBtn.classList.toggle('bad', bad);
+    this.undoBtn.disabled = this.history.size === 0;
+    this.redoBtn.disabled = this.history.ahead === 0;
+    this.driveBtn.disabled = bad;
+    this.coach.classList.toggle('bad', bad);
+    if (bad) this.coach.textContent = this.problems[0]!;
+    else if (this.noteT <= 0) this.coach.textContent = '';
+    this.coach.classList.toggle('show', bad || this.noteT > 0);
   }
 
   private showRow2(): void {
@@ -431,83 +590,123 @@ export class TrackEditor {
     const r = this.row2;
     r.replaceChildren();
     if (!t) return;
-    const btn = (label: string, title: string, on: () => void, off = false, lit = false): void => {
-      const b = el('button', { textContent: label, title, disabled: off });
+    const btn = (
+      label: string,
+      title: string,
+      on: () => void,
+      off = false,
+      lit = false,
+      pic = '',
+    ): void => {
+      const b = el('button', { title, disabled: off });
+      if (pic) b.append(icon(pic));
+      if (label) b.append(el('span', { textContent: label }));
+      b.setAttribute('aria-label', label || title);
       b.classList.toggle('on', lit);
       b.onclick = on;
       r.append(b);
     };
+    const del = (title: string, off: boolean): void =>
+      btn('DELETE', title, () => this.erase(this.sel), off, false, 'trash');
     const sel = this.sel;
-    if (this.tool === 'road') {
+    const tool = this.ctxTool();
+    // the tools of this mode, side by side
+    const kin = MODES.find((m) => m[0] === modeOf(this.tool))![3];
+    if (kin.length > 1) {
+      const seg = el('div', { className: 'seg' });
+      for (const k of kin) {
+        const b = el('button', { textContent: TOOLS[k][0], title: TOOLS[k][1] });
+        b.classList.toggle('on', k === this.tool);
+        b.dataset.tool = k;
+        b.onclick = () => this.pick(k);
+        seg.append(b);
+      }
+      r.append(seg);
+    }
+    if (tool === 'road') {
       const p = sel?.kind === 'point' ? sel.index : -1;
-      btn(
-        '✎ PENCIL',
-        'Draw the road with a finger',
-        () => {
-          this.pencil = !this.pencil;
-          this.showRow2();
-        },
-        false,
-        this.pencil,
-      );
-      btn('DELETE POINT', 'Take the chosen point out of the road', () => this.erase(sel!), p < 0);
-      btn('START HERE', 'Put the start line at the chosen point', () => this.setStart(p), p <= 0);
-      btn('REVERSE', 'Race the other way round', () =>
-        this.change(() => (reverse(t), (this.sel = null))),
-      );
-      const mine = `${t.size.w}x${t.size.h}`;
-      if (![...this.mapSel.options].some((o) => o.value === mine))
-        this.mapSel.append(new Option(`MAP ${t.size.w} × ${t.size.h}`, mine));
-      this.mapSel.value = mine;
-      r.append(this.mapSel);
-    } else if (this.tool === 'surface') {
-      const on = sel?.kind === 'surface';
-      btn('DELETE', 'Take the chosen stretch of surface away', () => this.erase(sel!), !on);
-    } else if (this.tool === 'raise') {
+      if (this.tool === 'road')
+        btn(
+          'DRAW',
+          'Draw the road with a finger',
+          () => {
+            this.pencil = !this.pencil;
+            this.showRow2();
+            this.say(this.pencil ? PENCIL_HINT : TOOLS.road[1]);
+          },
+          false,
+          this.pencil,
+          'pencil',
+        );
+      if (p >= 0) {
+        btn(
+          'START HERE',
+          'Put the start line at the chosen point',
+          () => this.setStart(p),
+          p === 0,
+        );
+        del('Take the chosen point out of the road', false);
+      } else if (this.tool === 'road')
+        btn('REVERSE', 'Race the other way round', () =>
+          this.change(() => (reverse(t), (this.sel = null))),
+        );
+    } else if (tool === 'surface') {
+      if (sel?.kind === 'surface') del('Take the chosen stretch of surface away', false);
+    } else if (tool === 'raise') {
       const up = sel?.kind === 'raised' ? t.raised[sel.index] : undefined;
       const h = up ? up.height : this.height;
-      btn('LOWER', 'Bring it down', () => this.raiseBy(-RAISE_STEP), h <= RAISE_MIN);
-      r.append(el('label', { textContent: `${up ? 'CHOSEN' : 'NEXT'}: ↑ ${h}` }));
-      btn('HIGHER', 'Lift it up', () => this.raiseBy(RAISE_STEP), h >= RAISE_MAX);
-      btn('DELETE', 'Put the chosen stretch back on the ground', () => this.erase(sel!), !up);
-    } else if (this.tool === 'area') {
+      btn('', 'Lower', () => this.raiseBy(-RAISE_STEP), h <= RAISE_MIN, false, 'minus');
+      r.append(el('label', { textContent: `${up ? 'CHOSEN' : 'NEXT'} ↑ ${h}` }));
+      btn('', 'Higher', () => this.raiseBy(RAISE_STEP), h >= RAISE_MAX, false, 'plus');
+      if (up) del('Put the chosen stretch back on the ground', false);
+    } else if (tool === 'area') {
       const a = sel?.kind === 'area' ? t.areas[sel.index] : undefined;
       if (a) {
         this.skySel.value = a.sky;
         this.areaIn.value = String(a.r);
       }
       r.append(this.skySel, el('label', { textContent: 'SIZE' }), this.areaIn);
-      btn('DELETE', 'Take the chosen area away', () => this.erase(sel!), !a);
-    } else if (this.tool === 'place') {
+      if (a) del('Take the chosen area away', false);
+    } else if (tool === 'place') {
       const it = sel?.kind === 'item' ? t.items[sel.index] : undefined;
-      const name = this.content.prop.get(it?.prop ?? this.palette.prop)?.meta.name ?? '';
-      r.append(el('label', { textContent: `${it ? 'CHOSEN' : 'NEXT'}: ${name.toUpperCase()}` }));
+      const def = this.content.prop.get(it?.prop ?? this.palette.prop);
+      const name = (def?.meta.name ?? '').toUpperCase();
+      r.append(el('label', { className: 'what', textContent: `${it ? '' : 'NEXT: '}${name}` }));
       const k = it ? (it.size ?? 1) : this.size;
-      const fixed = !!this.content.prop.get(it?.prop ?? this.palette.prop)?.critter;
-      btn('⟲', 'Turn it left', () => this.turn(-STEP));
-      btn('⟳', 'Turn it right', () => this.turn(STEP));
-      btn('SMALLER', 'Make it smaller', () => this.resizeBy(-SIZE_STEP), fixed || k <= sizeStep(0));
+      const fixed = !!def?.critter;
+      btn('', 'Turn it left', () => this.turn(-STEP), false, false, 'turnl');
+      btn('', 'Turn it right', () => this.turn(STEP), false, false, 'turnr');
+      btn(
+        '',
+        'Smaller',
+        () => this.resizeBy(-SIZE_STEP),
+        fixed || k <= sizeStep(0),
+        false,
+        'minus',
+      );
       r.append(el('label', { textContent: `× ${k}` }));
-      btn('BIGGER', 'Make it bigger', () => this.resizeBy(SIZE_STEP), fixed || k >= sizeStep(99));
-      btn('DELETE', 'Take the chosen thing away', () => this.erase(sel!), !it);
+      btn('', 'Bigger', () => this.resizeBy(SIZE_STEP), fixed || k >= sizeStep(99), false, 'plus');
       if (it) {
-        btn('DONE', 'Let go of it', () => {
-          this.sel = null;
-          this.showRow2();
-        });
-        this.hint.textContent =
-          'Drag it to move it, the round handle to turn it, the square one to resize it. ' +
-          'Tap a thing in the tray to change it into that.';
-        r.append(this.hint);
-        this.undoBtn.disabled = this.history.size === 0;
-        this.driveBtn.disabled = this.problems.length > 0;
-        return;
+        btn('COPY', 'Another one beside it', () => this.copy(), false, false, 'copy');
+        del('Take the chosen thing away', false);
+        btn(
+          'DONE',
+          'Let go of it',
+          () => {
+            this.sel = null;
+            this.showRow2();
+          },
+          false,
+          false,
+          'check',
+        );
       }
-    } else if (this.tool === 'pool') {
+    } else if (tool === 'pool') {
+      const p = sel?.kind === 'pool' ? t.pools[sel.index] : undefined;
+      if (p) this.sizeIn.value = String(p.r);
       r.append(el('label', { textContent: 'SIZE' }), this.sizeIn);
-      btn('DELETE', 'Take the chosen pool away', () => this.erase(sel!), sel?.kind !== 'pool');
-    }
-    if (this.tool === 'bridge') {
+      if (p) del('Take the chosen pool away', false);
+    } else if (tool === 'bridge') {
       const b = sel?.kind === 'bridge' ? t.bridges[sel.index] : undefined;
       if (b) this.lengthIn.value = String(b.length);
       r.append(el('label', { textContent: 'LENGTH' }), this.lengthIn);
@@ -529,18 +728,49 @@ export class TrackEditor {
         false,
         railed,
       );
-      btn('DELETE', 'Take the chosen bridge away', () => this.erase(sel!), !b);
+      if (b) del('Take the chosen bridge away', false);
     }
-    this.hint.textContent = this.pencil ? PENCIL_HINT : TOOLS.find(([k]) => k === this.tool)![2];
-    r.append(this.hint);
-    this.undoBtn.disabled = this.history.size === 0;
-    this.driveBtn.disabled = this.problems.length > 0;
+    this.showTop();
   }
 
-  /** Say something for a moment (it is drawn over the map). */
+  /** Another of the chosen thing, a little to one side, chosen in its place. */
+  private copy(): void {
+    const t = this.track;
+    const it = this.chosenItem();
+    if (!t || !it) return;
+    if (t.items.length >= 1200) {
+      this.say('That is as many things as a track can hold.');
+      return;
+    }
+    const step = Math.max(
+      SNAP_GRID,
+      (this.content.prop.get(it.prop)?.radius ?? 6) * (it.size ?? 1) * 2 + 4,
+    );
+    // along the way it faces is where a row of them goes; back inside the map if that is off it
+    let x = it.x + Math.cos(it.rot + Math.PI / 2) * step;
+    let y = it.y + Math.sin(it.rot + Math.PI / 2) * step;
+    x = Math.round(Math.max(14, Math.min(t.size.w - 14, x)));
+    y = Math.round(Math.max(14, Math.min(t.size.h - 14, y)));
+    this.change(() => {
+      t.items.push({ ...it, x, y });
+      this.sel = { kind: 'item', index: t.items.length - 1 };
+    });
+  }
+
+  /** Hand the track over as a link. */
+  private async share(): Promise<void> {
+    if (!this.track) return;
+    const did = await shareTrackLink(this.track);
+    if (did === 'copied') this.say('A link to this track is copied: paste it to a friend.');
+    else if (did === 'failed') this.say('The link could not be shared here. Try SAVE AS A FILE.');
+  }
+
+  /** Say something for a moment, under the top bar. */
   say(text: string): void {
-    this.note = text;
-    this.noteT = 3.5;
+    this.noteT = 4.5;
+    if (this.problems.length) return;
+    this.coach.textContent = text;
+    this.coach.classList.add('show');
   }
 
   // ---- changing the track
@@ -584,9 +814,17 @@ export class TrackEditor {
   }
 
   undo(): void {
-    const back = this.history.undo();
+    const back = this.track && this.history.undo(this.track);
     if (!back) return;
     this.track = back;
+    this.sel = null;
+    this.commit();
+  }
+
+  redo(): void {
+    const on = this.track && this.history.redo(this.track);
+    if (!on) return;
+    this.track = on;
     this.sel = null;
     this.commit();
   }
@@ -650,7 +888,7 @@ export class TrackEditor {
     const v = this.hooks.view();
     const [x, y] = this.toScreen(it.x, it.y);
     const radius = (this.content.prop.get(it.prop)?.radius ?? 6) * (it.size ?? 1);
-    const r = Math.max(30 * v.dpr, radius * v.scale + 18 * v.dpr);
+    const r = Math.max(42 * v.dpr, radius * v.scale + 24 * v.dpr);
     const ax = Math.cos(it.rot);
     const ay = Math.sin(it.rot) * Math.sin(PITCH);
     const al = Math.hypot(ax, ay) || 1;
@@ -658,7 +896,7 @@ export class TrackEditor {
     // the square one keeps out of the round one's way
     const d = r * Math.SQRT1_2;
     const size: [number, number] =
-      Math.hypot(turn[0] - (x + d), turn[1] - (y + d)) > 30 * v.dpr
+      Math.hypot(turn[0] - (x + d), turn[1] - (y + d)) > 44 * v.dpr
         ? [x + d, y + d]
         : [x - d, y + d];
     return { x, y, r, turn, size };
@@ -726,28 +964,14 @@ export class TrackEditor {
   private reach(kind: Pick['kind'] = 'point'): number {
     const v = this.hooks.view();
     const few = kind === 'point' || kind === 'bridge' || kind === 'area';
-    return Math.max(8, ((few ? 24 : 13) * v.dpr) / v.scale);
+    return Math.max(8, ((few ? 28 : 16) * v.dpr) / v.scale);
   }
 
-  /** What of the track is under (x, y) that the tool in hand works on. */
-  private hit(x: number, y: number): Pick | null {
+  /** What of the track is under (x, y) that the tool in hand works on (or of these kinds). */
+  private hit(x: number, y: number, kinds?: Pick['kind'][]): Pick | null {
     const t = this.track!;
-    const tries: Pick['kind'][] =
-      this.tool === 'road'
-        ? ['point']
-        : this.tool === 'place'
-          ? ['item']
-          : this.tool === 'pool'
-            ? ['pool']
-            : this.tool === 'bridge'
-              ? ['bridge']
-              : this.tool === 'surface'
-                ? ['surface']
-                : this.tool === 'raise'
-                  ? ['raised']
-                  : this.tool === 'area'
-                    ? ['area']
-                    : ['item', 'pool', 'bridge', 'point', 'area', 'surface', 'raised'];
+    const mine = (Object.keys(TOOL_OF) as Pick['kind'][]).filter((k) => TOOL_OF[k] === this.tool);
+    const tries = kinds ?? (this.tool === 'erase' || this.tool === 'hand' ? ANY : mine);
     for (const kind of tries) {
       if (kind === 'surface') {
         const index = surfaceAt(this.road(), t, x, y, t.road.width / 2 + this.reach('item'));
@@ -802,6 +1026,7 @@ export class TrackEditor {
     const v = this.hooks.view();
     s.cam.x = Math.max(0, Math.min(t.size.w, s.cam.x - (dx * v.dpr) / v.scale));
     s.cam.y = Math.max(0, Math.min(t.size.h, s.cam.y - (dy * v.dpr) / (v.scale * Math.sin(PITCH))));
+    if (dx || dy) this.fitted = false;
   }
 
   /** Zoom by a factor, keeping the ground under a point of the screen (CSS px) where it is. */
@@ -811,6 +1036,7 @@ export class TrackEditor {
     const now = this.hooks.view().scale;
     const k = Math.max(lo, Math.min(hi, now * by));
     if (k === now) return;
+    this.fitted = false;
     const [x, y] = this.toWorld(cx, cy);
     this.hooks.setZoom(k);
     const [nx, ny] = this.toWorld(cx, cy);
@@ -819,20 +1045,50 @@ export class TrackEditor {
     this.slide(0, 0);
   }
 
-  private zoomBy(by: number): void {
-    const v = this.hooks.view();
-    this.zoomAt(v.w / v.dpr / 2, v.h / v.dpr / 2, by);
+  /**
+   * The part of the screen the map shows through, clear of the bars and the tray (CSS px). A
+   * phone held upright has them above and below; one on its side, round three edges.
+   */
+  private free(): { x0: number; y0: number; x1: number; y1: number } {
+    const box = (e: Element): DOMRect => e.getBoundingClientRect();
+    const out = { x0: 0, y0: box(this.top).bottom, x1: innerWidth, y1: innerHeight };
+    if (innerWidth > innerHeight) {
+      out.x0 = box(this.modes).right;
+      const tray = box(this.palette.root);
+      if (tray.width > 0) out.x1 = tray.left;
+      if (this.row2.childElementCount) out.y1 = box(this.row2).top;
+    } else out.y1 = box(this.dock).top;
+    // a screen too small to leave anything clear: the middle of it will have to do
+    if (out.x1 - out.x0 < 80 || out.y1 - out.y0 < 80)
+      return { x0: 0, y0: 0, x1: innerWidth, y1: innerHeight };
+    return out;
   }
 
-  /** The whole map on the screen, between the bar and the tray. */
+  private zoomBy(by: number): void {
+    const f = this.free();
+    this.zoomAt((f.x0 + f.x1) / 2, (f.y0 + f.y1) / 2, by);
+  }
+
+  /** The whole map on the screen, in the part of it the bars and the tray leave clear. */
   fit(): void {
     const t = this.track;
-    if (!t || !this.s) return;
+    const s = this.s;
+    if (!t || !s) return;
     const v = this.hooks.view();
+    const f = this.free();
+    const sq = Math.sin(PITCH);
     const [lo, hi] = this.hooks.zoomRange();
-    const k = Math.min(v.w / t.size.w, (v.h * 0.6) / (t.size.h * Math.sin(PITCH)));
-    this.hooks.setZoom(Math.max(lo, Math.min(hi, k)));
-    Object.assign(this.s.cam, { x: t.size.w / 2, y: t.size.h / 2 });
+    const room = 0.94 * v.dpr;
+    const k = Math.max(
+      lo,
+      Math.min(hi, ((f.x1 - f.x0) * room) / t.size.w, ((f.y1 - f.y0) * room) / (t.size.h * sq)),
+    );
+    this.hooks.setZoom(k);
+    // the middle of the map in the middle of the clear part, which is not the screen's
+    s.cam.x = t.size.w / 2 - (((f.x0 + f.x1) / 2) * v.dpr - v.w / 2) / k;
+    s.cam.y = t.size.h / 2 - (((f.y0 + f.y1) / 2) * v.dpr - v.h / 2) / (k * sq);
+    this.slide(0, 0);
+    this.fitted = true;
   }
 
   /** How far apart the two fingers are, and the point midway between them (CSS px). */
@@ -842,6 +1098,47 @@ export class TrackEditor {
       { x: number; y: number },
     ];
     return { d: Math.hypot(b.x - a.x, b.y - a.y) || 1, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2 };
+  }
+
+  /** From a point on the ground to the middle of a thing, so it can be dragged by its edge. */
+  private offTo(p: Pick, x: number, y: number): [number, number] {
+    const t = this.track!;
+    if (p.kind === 'point') {
+      const q = t.road.points[p.index]!;
+      return [q[0] - x, q[1] - y];
+    }
+    const o =
+      p.kind === 'item'
+        ? t.items[p.index]
+        : p.kind === 'area'
+          ? t.areas[p.index]
+          : t.pools[p.index];
+    return o && p.kind !== 'bridge' ? [o.x - x, o.y - y] : [0, 0];
+  }
+
+  private unhold(): void {
+    if (this.hold !== null) clearTimeout(this.hold);
+    this.hold = null;
+  }
+
+  /**
+   * The finger has rested on one spot: whatever is under it is taken in hand, to be dragged off
+   * there and then, whichever tool was out. The quick way to move one thing while doing another.
+   */
+  private held(id: number): void {
+    this.hold = null;
+    const d = this.drag;
+    if (!d || d.id !== id || d.moved || this.pinch || d.mode === 'turn' || d.mode === 'size')
+      return;
+    const [x, y] = d.from;
+    const p = this.hit(x, y, ANY);
+    if (!p || p.kind === 'surface' || p.kind === 'raised') return;
+    if (TOOL_OF[p.kind] !== this.tool && this.tool !== 'hand') this.pick('hand');
+    this.stroke = null;
+    this.sel = p;
+    Object.assign(d, { mode: 'grab', grab: p, off: this.offTo(p, x, y) });
+    this.showRow2();
+    navigator.vibrate?.(12);
   }
 
   private down(e: PointerEvent): void {
@@ -861,6 +1158,19 @@ export class TrackEditor {
     const [x, y] = at;
     let mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size' = 'pan';
     let grab: Pick | null = null;
+    const drag = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      cx: e.clientX,
+      cy: e.clientY,
+      moved: false,
+      changed: false,
+      touch: e.pointerType !== 'mouse',
+      off: [0, 0] as [number, number],
+      from: at,
+      to: at,
+    };
     // the middle and right buttons of a mouse always slide the map
     if (e.button !== 1 && e.button !== 2) {
       if (this.tool === 'road' && this.pencil) {
@@ -871,27 +1181,20 @@ export class TrackEditor {
           mode = 'lay';
       } else if (this.tool !== 'erase') {
         // the chosen thing's handles come first: they stand out beyond it
-        const sel = this.sel;
-        const it = this.tool === 'place' && sel?.kind === 'item' ? t.items[sel.index] : undefined;
+        const it = this.chosenItem();
         if (it) {
           const v = this.hooks.view();
           const h = this.handles(it);
           const px = e.clientX * v.dpr;
           const py = e.clientY * v.dpr;
-          const on = (q: [number, number]) => Math.hypot(px - q[0], py - q[1]) < 20 * v.dpr;
+          const on = (q: [number, number]) => Math.hypot(px - q[0], py - q[1]) < 26 * v.dpr;
           if (on(h.turn)) mode = 'turn';
           else if (on(h.size) && !this.content.prop.get(it.prop)?.critter) mode = 'size';
           if (mode !== 'pan') {
             this.drag = {
-              id: e.pointerId,
-              x: e.clientX,
-              y: e.clientY,
-              moved: false,
+              ...drag,
               mode,
-              grab: sel,
-              changed: false,
-              from: at,
-              to: at,
+              grab: this.sel,
               k0: it.size ?? 1,
               dist0: Math.hypot(px - h.x, py - h.y) || 1,
             };
@@ -899,23 +1202,19 @@ export class TrackEditor {
           }
         }
         grab = this.hit(x, y);
+        // a stretch of road is chosen by a tap; a drag over it slides the map
+        if (grab?.kind === 'surface' || grab?.kind === 'raised') grab = null;
         if (grab) mode = 'grab';
       }
     }
-    this.drag = {
-      id: e.pointerId,
-      x: e.clientX,
-      y: e.clientY,
-      moved: false,
-      mode,
-      grab,
-      changed: false,
-      from: at,
-      to: at,
-    };
+    this.drag = { ...drag, mode, grab, off: grab ? this.offTo(grab, x, y) : [0, 0] };
     if (grab) {
       this.sel = grab;
       this.showRow2();
+    } else if (mode === 'pan') {
+      // (a finger laying a surface or drawing is already at work: it is never taken for a hold)
+      this.unhold();
+      this.hold = setTimeout(() => this.held(e.pointerId), HOLD);
     }
   }
 
@@ -942,10 +1241,12 @@ export class TrackEditor {
     if (d.id !== e.pointerId) return;
     const dx = e.clientX - d.x;
     const dy = e.clientY - d.y;
-    if (!d.moved && Math.hypot(dx, dy) < 7) return;
+    // a fingertip is never quite still: it has to mean it
+    if (!d.moved && Math.hypot(dx, dy) < (d.touch ? 10 : 6)) return;
     d.moved = true;
-    const [x, y] = this.toWorld(e.clientX, e.clientY);
-    d.to = [x, y];
+    this.unhold();
+    d.cx = e.clientX;
+    d.cy = e.clientY;
     if (d.mode === 'pan') {
       // nothing in hand: the map slides under the finger
       this.slide(dx, dy);
@@ -953,12 +1254,22 @@ export class TrackEditor {
       d.y = e.clientY;
       return;
     }
+    this.dragTo(e.clientX, e.clientY);
+  }
+
+  /** What is in hand follows the finger to a point of the screen (CSS px). */
+  private dragTo(cx: number, cy: number): void {
+    const d = this.drag;
+    const t = this.track;
+    if (!d || !t) return;
+    const [fx, fy] = this.toWorld(cx, cy);
+    d.to = [fx, fy];
     if (d.mode === 'pencil') {
       const last = this.stroke?.[this.stroke.length - 1];
-      if (last && Math.hypot(x - last[0], y - last[1]) >= 6) this.stroke!.push([x, y]);
+      if (last && Math.hypot(fx - last[0], fy - last[1]) >= 6) this.stroke!.push([fx, fy]);
       return;
     }
-    if (d.mode === 'lay' || !d.grab) return;
+    if (d.mode === 'lay' || d.mode === 'pan' || !d.grab) return;
     if (!d.changed) {
       this.history.remember(t);
       d.changed = true;
@@ -968,22 +1279,26 @@ export class TrackEditor {
       const it = t.items[g.index];
       if (!it) return;
       const v = this.hooks.view();
-      const [cx, cy] = this.toScreen(it.x, it.y);
-      const px = e.clientX * v.dpr - cx;
-      const py = e.clientY * v.dpr - cy;
+      const [ix, iy] = this.toScreen(it.x, it.y);
+      const px = cx * v.dpr - ix;
+      const py = cy * v.dpr - iy;
       if (d.mode === 'turn')
         // it faces the finger, in steps
         it.rot = Math.round(Math.atan2(py / Math.sin(PITCH), px) / STEP) * STEP;
       else setSize(it, (d.k0 ?? 1) * (Math.hypot(px, py) / (d.dist0 ?? 1)));
       return;
     }
+    const x = fx + d.off[0];
+    const y = fy + d.off[1];
     if (g.kind === 'point') {
-      t.road.points[g.index] = clampPoint(t, x, y);
+      t.road.points[g.index] = this.snap
+        ? clampPoint(t, snapTo(x, SNAP_POINT), snapTo(y, SNAP_POINT))
+        : clampPoint(t, x, y);
       this.line = null;
     } else if (g.kind === 'bridge') {
       // a bridge slides along the road, wherever the finger wanders
       const T = this.road();
-      const i = nearestSample(T, x, y).i;
+      const i = nearestSample(T, fx, fy).i;
       Object.assign(t.bridges[g.index]!, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) });
     } else if (g.kind !== 'surface' && g.kind !== 'raised') {
       const o =
@@ -992,13 +1307,41 @@ export class TrackEditor {
           : g.kind === 'area'
             ? t.areas[g.index]!
             : t.pools[g.index]!;
-      o.x = Math.round(Math.max(12, Math.min(t.size.w - 12, x)));
-      o.y = Math.round(Math.max(12, Math.min(t.size.h - 12, y)));
+      const [sx, sy] = this.settle(g.kind, x, y);
+      o.x = Math.round(Math.max(12, Math.min(t.size.w - 12, sx)));
+      o.y = Math.round(Math.max(12, Math.min(t.size.h - 12, sy)));
     }
+  }
+
+  /** Where something let go at (x, y) comes to rest: on the grid or in a lane, if snap is on. */
+  private settle(kind: Pick['kind'], x: number, y: number): [number, number] {
+    if (!this.snap) return [x, y];
+    return kind === 'item'
+      ? snapThing(this.road(), this.track!.road.width, x, y)
+      : [snapTo(x, SNAP_GRID), snapTo(y, SNAP_GRID)];
+  }
+
+  /**
+   * A thing dragged to the edge of the open map drags the map along with it, so a long move
+   * across a small screen is one drag and not three.
+   */
+  private creep(dt: number): void {
+    const d = this.drag;
+    if (!d?.moved || this.pinch || d.mode === 'pan' || d.mode === 'turn' || d.mode === 'size')
+      return;
+    const f = this.free();
+    const edge = 30;
+    const vx = d.cx < f.x0 + edge ? 1 : d.cx > f.x1 - edge ? -1 : 0;
+    const vy = d.cy < f.y0 + edge ? 1 : d.cy > f.y1 - edge ? -1 : 0;
+    if (!vx && !vy) return;
+    const by = 320 * Math.min(0.05, dt);
+    this.slide(vx * by, vy * by);
+    this.dragTo(d.cx, d.cy);
   }
 
   private up(e: PointerEvent): void {
     this.touches.delete(e.pointerId);
+    this.unhold();
     if (this.pinch) {
       // the pinch is over when either finger lifts; the one left does nothing more
       this.pinch = null;
@@ -1014,13 +1357,14 @@ export class TrackEditor {
       if (stroke) this.drawn(stroke);
     } else if (d.mode === 'lay' && d.moved) this.lay(d.from, d.to);
     else if (d.changed) this.commit();
-    else if (!d.moved) this.use(...this.toWorld(e.clientX, e.clientY));
+    else if (!d.moved) this.use(...d.from);
   }
 
   private cancel(): void {
     const d = this.drag;
     this.drag = null;
     this.stroke = null;
+    this.unhold();
     if (d?.changed) this.commit();
   }
 
@@ -1131,6 +1475,8 @@ export class TrackEditor {
       return;
     }
     if (this.tool !== 'place') this.pick('place');
+    [x, y] = this.settle('item', x, y);
+    this.palette.used(def.id);
     // on the road a thing lines up with it (an arrow points down the road); off it, as turned
     const item: TrackFile['items'][number] = {
       prop: def.id,
@@ -1166,7 +1512,7 @@ export class TrackEditor {
       this.showRow2();
       return;
     }
-    if (tool === 'place' && this.sel) {
+    if (tool === 'hand' || (tool === 'place' && this.sel)) {
       // a tap on open ground lets go of the chosen thing; the next one puts something down
       this.sel = null;
       this.showRow2();
@@ -1265,7 +1611,13 @@ export class TrackEditor {
     const panel = this.setup.firstElementChild as HTMLElement;
     const done = el('button', { textContent: 'DONE' });
     done.onclick = () => this.setup.classList.add('hidden');
-    panel.replaceChildren(el('h2', { textContent: title }), ...kids, done);
+    done.dataset.act = 'done';
+    // the way out stays in reach at the top, however long the sheet is
+    panel.replaceChildren(
+      el('div', { className: 'sheetHead' }, el('h2', { textContent: title }), done),
+      ...kids,
+    );
+    panel.scrollTop = 0;
     this.setup.classList.remove('hidden');
     return panel;
   }
@@ -1331,8 +1683,47 @@ export class TrackEditor {
     });
     const shuffle = el('button', { textContent: 'SHUFFLE THE SCENERY', className: 'small' });
     shuffle.onclick = () => this.change(() => (t.seed = (t.seed * 31 + 17) % 100000));
+    const row = el('div', { className: 'row files' });
+    const msg = el('p', { className: 'tag' });
+    const act = (label: string, id: string, on: () => void): void => {
+      const b = el('button', { textContent: label, className: 'small' });
+      b.dataset.act = id;
+      b.onclick = on;
+      row.append(b);
+    };
+    act('SHARE A LINK', 'link', () => {
+      void shareTrackLink(t).then((did) => {
+        msg.textContent =
+          did === 'copied'
+            ? 'A link to this track is copied: paste it to a friend.'
+            : did === 'failed'
+              ? 'The link could not be shared here. Save it as a file instead.'
+              : '';
+      });
+    });
+    act('SAVE AS A FILE', 'save', () => saveTrackFile(t));
+    act('LOAD A FILE', 'load', () => {
+      void pickTrackFile().then((r) => {
+        if (!r.ok) {
+          msg.textContent = r.error;
+          return;
+        }
+        // a loaded file takes this track's place in the editor, under its own id
+        this.load(r.track);
+        this.setup.classList.add('hidden');
+        this.say(`Loaded ${r.track.name}.`);
+      });
+    });
     this.sheet(
-      'TRACK SETUP',
+      'YOUR TRACK',
+      el('p', {
+        className: 'tag',
+        textContent:
+          'Every change is kept on this device as you make it. A link or a file sends the ' +
+          'track to a friend, or to another device.',
+      }),
+      row,
+      msg,
       field('NAME', name),
       field('LOOK', look),
       field(
@@ -1351,38 +1742,6 @@ export class TrackEditor {
       el('h3', { textContent: 'SCENERY THAT FILLS THE MAP' }),
       rules,
       shuffle,
-    );
-  }
-
-  private openFile(): void {
-    const t = this.track;
-    if (!t) return;
-    const save = el('button', { textContent: 'SAVE AS A FILE' });
-    save.onclick = () => saveTrackFile(t);
-    const load = el('button', { textContent: 'LOAD A FILE' });
-    const msg = el('p', { className: 'tag' });
-    load.onclick = () =>
-      void pickTrackFile().then((r) => {
-        if (!r.ok) {
-          msg.textContent = r.error;
-          return;
-        }
-        // a loaded file takes this track's place in the editor, under its own id
-        this.load(r.track);
-        this.setup.classList.add('hidden');
-        this.say(`Loaded ${r.track.name}.`);
-      });
-    this.sheet(
-      'TRACK FILE',
-      el('p', {
-        className: 'tag',
-        textContent:
-          'Every change is kept on this device as you make it. A file is for keeping a copy, ' +
-          'moving a track to another device, or sending it to somebody.',
-      }),
-      save,
-      load,
-      msg,
     );
   }
 
@@ -1407,7 +1766,9 @@ export class TrackEditor {
     g.strokeRect(mx0, my0, mx1 - mx0, my1 - my0);
     g.setLineDash([]);
 
-    const road = this.tool === 'road' || this.tool === 'erase';
+    this.creep(dt);
+    const all = this.tool === 'erase' || this.tool === 'hand';
+    const road = this.tool === 'road' || all;
     const bad = this.problems.length > 0;
     const moving = this.drag?.changed && this.drag.grab?.kind === 'point';
     if (road || bad) {
@@ -1445,7 +1806,7 @@ export class TrackEditor {
         const [x, y] = this.toScreen(px, py);
         const on = this.sel?.kind === 'point' && this.sel.index === i;
         g.beginPath();
-        g.arc(x, y, (on ? 11 : 8) * k, 0, Math.PI * 2);
+        g.arc(x, y, (on ? 13 : 10) * k, 0, Math.PI * 2);
         g.fillStyle = i === 0 ? '#fff' : on ? '#ff6a3d' : '#ffd24a';
         g.fill();
         g.strokeStyle = '#16141c';
@@ -1453,9 +1814,9 @@ export class TrackEditor {
         g.stroke();
       });
       const [x0, y0] = this.toScreen(t.road.points[0]![0], t.road.points[0]![1]);
-      this.label(g, 'START', x0, y0 - 16 * k, k);
+      this.label(g, 'START', x0, y0 - 18 * k, k);
     }
-    if (this.tool === 'area' || this.tool === 'erase')
+    if (this.tool === 'area' || all)
       t.areas.forEach((a, i) => {
         const [x, y] = this.toScreen(a.x, a.y);
         const on = this.sel?.kind === 'area' && this.sel.index === i;
@@ -1482,7 +1843,7 @@ export class TrackEditor {
         const what = [m?.meta.name.toUpperCase(), a.sky && skyLabel(a.sky)].filter(Boolean);
         this.label(g, what.join(' · '), x, y - 16 * k, k);
       });
-    if (this.tool === 'surface' || this.tool === 'raise' || this.tool === 'erase') {
+    if (this.tool === 'surface' || this.tool === 'raise' || all) {
       // stretches of surface: a band along the road in the material's colour
       const T = this.road();
       const band = (a: number, b: number, color: string, on: boolean): void => {
@@ -1555,7 +1916,7 @@ export class TrackEditor {
       g.lineWidth = 3 * k;
       g.stroke();
     }
-    if (this.tool === 'place' || this.tool === 'erase')
+    if (this.tool === 'place' || all)
       t.items.forEach((it, i) => {
         const [x, y] = this.toScreen(it.x, it.y);
         const on = this.sel?.kind === 'item' && this.sel.index === i;
@@ -1563,7 +1924,7 @@ export class TrackEditor {
           6 * k,
           (this.content.prop.get(it.prop)?.radius ?? 6) * (it.size ?? 1) * v.scale * 0.9,
         );
-        if (on && this.tool === 'place') {
+        if (on && this.tool !== 'erase') {
           // the chosen thing: a ring with a round handle to turn it and a square one to resize it
           const h = this.handles(it);
           g.beginPath();
@@ -1577,13 +1938,13 @@ export class TrackEditor {
           g.strokeStyle = '#16141c';
           g.lineWidth = 2.5 * k;
           g.beginPath();
-          g.arc(h.turn[0], h.turn[1], 10 * k, 0, Math.PI * 2);
+          g.arc(h.turn[0], h.turn[1], 14 * k, 0, Math.PI * 2);
           g.fill();
           g.stroke();
           if (!this.content.prop.get(it.prop)?.critter) {
             g.fillStyle = '#fff';
             g.beginPath();
-            g.rect(h.size[0] - 9 * k, h.size[1] - 9 * k, 18 * k, 18 * k);
+            g.rect(h.size[0] - 12 * k, h.size[1] - 12 * k, 24 * k, 24 * k);
             g.fill();
             g.stroke();
           }
@@ -1599,7 +1960,7 @@ export class TrackEditor {
         const al = Math.hypot(ax, ay) || 1;
         this.arrow(g, x, y, ax / al, ay / al, r + 10 * k, on ? '#ff6a3d' : '#fff', 2 * k);
       });
-    if (this.tool === 'pool' || this.tool === 'erase')
+    if (this.tool === 'pool' || all)
       t.pools.forEach((p, i) => {
         const [x, y] = this.toScreen(p.x, p.y);
         const on = this.sel?.kind === 'pool' && this.sel.index === i;
@@ -1614,7 +1975,7 @@ export class TrackEditor {
         if (on) this.label(g, this.content.material.get(p.material)?.meta.name ?? '', x, y, k);
       });
 
-    if (this.tool === 'bridge' || this.tool === 'erase')
+    if (this.tool === 'bridge' || all)
       t.bridges.forEach((b, i) => {
         const [x, y] = this.toScreen(b.x, b.y);
         const on = this.sel?.kind === 'bridge' && this.sel.index === i;
@@ -1630,18 +1991,32 @@ export class TrackEditor {
 
     this.ghost(g, v);
 
-    // what is wrong, or what was just said
-    this.noteT = Math.max(0, this.noteT - dt);
-    const text = this.problems[0] ?? (this.noteT > 0 ? this.note : '');
-    if (text) {
-      g.font = `700 ${13 * k}px system-ui, sans-serif`;
-      g.textAlign = 'center';
-      const w = g.measureText(text).width + 20 * k;
-      const y = 104 * k;
-      g.fillStyle = this.problems.length ? 'rgba(150,30,20,0.9)' : 'rgba(0,0,0,0.7)';
-      g.fillRect(v.w / 2 - w / 2, y - 16 * k, w, 24 * k);
-      g.fillStyle = '#fff';
-      g.fillText(text, v.w / 2, y);
+    // what is in hand under a fingertip: a ring wide enough to be seen round it
+    const d = this.drag;
+    if (d?.touch && d.changed && d.mode === 'grab' && d.grab) {
+      const o =
+        d.grab.kind === 'point'
+          ? t.road.points[d.grab.index]
+          : d.grab.kind === 'item'
+            ? [t.items[d.grab.index]?.x, t.items[d.grab.index]?.y]
+            : null;
+      if (o && o[0] !== undefined && o[1] !== undefined) {
+        const [x, y] = this.toScreen(o[0], o[1]);
+        g.beginPath();
+        g.arc(x, y, 34 * k, 0, Math.PI * 2);
+        g.strokeStyle = '#16141c';
+        g.lineWidth = 5 * k;
+        g.stroke();
+        g.strokeStyle = '#ff6a3d';
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+      }
+    }
+
+    // what was said fades after a moment
+    if (this.noteT > 0) {
+      this.noteT = Math.max(0, this.noteT - dt);
+      if (this.noteT === 0) this.showTop();
     }
     g.restore();
   }

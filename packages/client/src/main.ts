@@ -23,6 +23,7 @@ import {
   type Outcome,
   type RaceId,
 } from './game/career';
+import { MEDALS, clock, cupRound, settleCup } from './game/cups';
 import { Session, type SessionOptions } from './game/session';
 import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
 import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
@@ -52,7 +53,14 @@ import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
 import type { TrackFile } from '@demodogs/shared';
 import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
-import { LocalTrackStore, type KeyValue } from './game/tracks';
+import {
+  linkedTrack,
+  LocalTrackStore,
+  newTrackId,
+  sameTrack,
+  unpackTrack,
+  type KeyValue,
+} from './game/tracks';
 import { TrackEditor } from './ui/track-editor';
 import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
@@ -146,7 +154,7 @@ let lastCustom: Installed | null = null;
 const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
-let careerRace: RaceId | null = null;
+let careerRace: RaceId | 'cup' | null = null;
 
 /** World modifiers picked for quick races: ?mods= wins, otherwise what was picked last time. */
 const MODS = 'dd-mods-v1';
@@ -179,6 +187,7 @@ function loadCareer(): Career {
 const careerScreen = new CareerScreen($('careerPanel'), content, art, {
   change: saveCareer,
   race: startCareerRace,
+  cup: startCupRound,
   back: () => setScreen('menu'),
   reset: () => {
     saveCareer(newCareer(content, Math.floor(Math.random() * 2 ** 31)));
@@ -265,8 +274,9 @@ const editor = new TrackEditor(
     zoomRange: () => {
       const w = session!.world;
       // from the whole map with room to spare, to twice as close as a race is shown
+      // (the bars and the tray of a small phone leave about half of it clear)
       const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
-      return [Math.min(fit * 0.8, scale / 2), scale * 2];
+      return [Math.min(fit * 0.55, scale / 2), scale * 2];
     },
     save: (t) => {
       editing = t;
@@ -274,6 +284,16 @@ const editor = new TrackEditor(
     },
     drive: (t) => raceTrack(t),
     exit: () => openTracks(),
+    snap: {
+      get: () => storage()?.getItem('dd-edit-snap') !== '0',
+      set: (on) => {
+        try {
+          storage()?.setItem('dd-edit-snap', on ? '1' : '0');
+        } catch {
+          /* it lasts as long as the page */
+        }
+      },
+    },
   },
 );
 const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
@@ -640,6 +660,8 @@ function show(id: string | null): void {
 function setScreen(s: typeof screen): void {
   screen = s;
   document.body.dataset.screen = s;
+  // a track being driven from the track creator shows the way straight back to it
+  document.body.classList.toggle('testdrive', editing !== null);
   if (s !== 'game') specBar.show(false);
   if (s !== 'game' && devMode) {
     devMode = false;
@@ -701,6 +723,7 @@ let launching = 0;
  */
 async function launch(o: Launch, title: string, ready?: (s: Session) => void): Promise<void> {
   const mine = ++launching;
+  hud.aim = null;
   sound.init();
   goFullscreen();
   $('loadTitle').textContent = title;
@@ -748,12 +771,57 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
 
 function startCareerRace(race: RaceId): void {
   const k = loadCareer();
+  // a tournament is finished or left before the ladder is raced again
+  if (k.cup) return openCareer();
   const s = raceSetup(content, k, race);
   careerRace = race;
   const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
   void launch(
     { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
     venue,
+  );
+}
+
+/** The next round of the tournament the career is entered in. */
+function startCupRound(): void {
+  const k = loadCareer();
+  const r = cupRound(content, k);
+  if (!r) return openCareer();
+  careerRace = 'cup';
+  const d = r.def;
+  const venue = content.venue.get(r.venue)!.meta.name.toUpperCase();
+  const par = r.par;
+  const mark = r.mark;
+  void launch(
+    {
+      venue: r.venue,
+      car: k.car,
+      seed: r.seed,
+      field: r.field,
+      player: r.player,
+      knockout: true,
+      modifiers: r.modifiers,
+      ...(r.laps ? { laps: r.laps } : {}),
+    },
+    `${d.name} ${r.round + 1}/${d.rounds} · ${venue}${modLine(content, r.modifiers)}`,
+    () => {
+      // beside the clock: the medal still to be had, the wanted car, or what the round is for
+      hud.aim = par
+        ? (w) => {
+            const at = par.findIndex((t) => w.raceTime <= t);
+            return at < 0
+              ? { text: 'NO MEDAL', colour: '#ff7a6a' }
+              : {
+                  text: `${MEDALS[3 - at]} ${clock(par[at]!)}`,
+                  colour: ['#ffd24a', '#dfe6ee', '#e09a5a'][at]!,
+                };
+          }
+        : mark
+          ? () => ({ text: `WANTED: ${mark}`, colour: '#ff6a7a' })
+          : d.kind === 'last'
+            ? () => ({ text: 'LAST HOME IS OUT', colour: '#c58cff' })
+            : null;
+    },
   );
 }
 
@@ -835,13 +903,28 @@ function finish(gaveUp = false): void {
   if (careerRace) {
     // settle once: the race is spent, so leaving the results cannot pay twice
     const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
-    const { career: next, payout } = settle(loadCareer(), careerRace, o);
+    const k = loadCareer();
+    const cup = careerRace === 'cup' ? settleCup(content, k, o) : null;
+    const { career: next, payout } =
+      cup ?? settle(k, careerRace === 'cup' ? 'easy' : careerRace, o);
     saveCareer(next);
     careerRace = null;
     lastCareer = true;
+    const rep = cup?.payout.cup;
     if (payout.champion) $('resTitle').textContent = 'TOP DOG!';
+    else if (rep?.place)
+      $('resTitle').textContent =
+        rep.place === 1
+          ? `${rep.name} WON!`
+          : rep.place <= 3
+            ? `${placeName(rep.place)} IN THE ${rep.name}`
+            : rep.kind === 'last'
+              ? 'ELIMINATED'
+              : `${rep.name}: NO TROPHY`;
     else if (gaveUp) $('resTitle').textContent = 'GAVE UP';
-    else if (o.wrecked) $('resTitle').textContent = 'WRECKED';
+    else if (o.wrecked && rep?.kind !== 'derby') $('resTitle').textContent = 'WRECKED';
+    else if (rep?.medal !== undefined) $('resTitle').textContent = MEDALS[rep.medal]!;
+    if (rep) sub = `${rep.name} · ROUND ${rep.round} OF ${rep.rounds} · ${sub}`;
     const line = (label: string, cash: string, cls = '') => {
       const d = document.createElement('div');
       d.className = cls;
@@ -855,6 +938,25 @@ function finish(gaveUp = false): void {
     if (payout.lines.length === 0)
       line(o.wrecked ? 'A WRECK EARNS NOTHING' : 'OUT OF THE MONEY', money(0));
     line(`CASH ${money(next.cash)} · +${payout.points} PTS`, money(payout.total), 'sum');
+    if (rep) {
+      // the tournament's table under the money: who leads, who went home
+      line(rep.place ? 'FINAL TABLE' : `AFTER ROUND ${rep.round} OF ${rep.rounds}`, '', 'cupHead');
+      if (rep.kind === 'trial')
+        line(
+          rep.time === undefined ? 'NO TIME' : `YOUR TIME ${clock(rep.time)}`,
+          MEDALS[rep.medal ?? 0]!,
+          `cupRow m${rep.medal ?? 0}`,
+        );
+      else
+        rep.table.forEach((s, i) =>
+          line(
+            `${i + 1}  ${s.name}`,
+            rep.kind === 'last' ? (s.out ? 'OUT' : 'IN') : `${s.points} PTS`,
+            `cupRow ${s.me ? 'me' : ''} ${s.out ? 'gone' : ''}`,
+          ),
+        );
+      if (rep.cut) line(`${rep.cut} GOES HOME`, '', 'cupRow');
+    }
   } else lastCareer = false;
   if (!lastCareer)
     try {
@@ -1205,6 +1307,10 @@ function boot(): void {
     if (editing) startEditor(editing);
     else setScreen('menu');
   };
+  $('backToEdit').onclick = () => {
+    paused = false;
+    if (editing) startEditor(editing);
+  };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
   $('restart').onclick = () => startGame(lastVenue, lastCustom);
@@ -1268,11 +1374,31 @@ function boot(): void {
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
   if (params.has('edit')) void tracksScreen.create();
+  // a track somebody sent as a link: kept with your tracks, ready to race or to change
+  const linked = linkedTrack(location.hash);
+  if (linked) {
+    history.replaceState(null, '', location.pathname + location.search);
+    void unpackTrack(linked).then(async (r) => {
+      if (!r.ok) {
+        openTracks();
+        tracksScreen.say(r.error);
+        return;
+      }
+      // never over a track of your own that has since gone its own way
+      const mine = await trackStore.get(r.track.id);
+      const t =
+        mine && !sameTrack(mine, r.track) ? { ...r.track, id: newTrackId(Math.random) } : r.track;
+      await trackStore.put(t);
+      openTracks();
+      tracksScreen.say(`${t.name} came in from a link. RACE it, or EDIT it into your own.`);
+    });
+  }
   if (params.has('room')) openOnline(params.get('room') ?? '');
   if (params.has('career')) {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
       startCareerRace(race);
+    else if (race === 'cup' && loadCareer().cup) startCupRound();
     else openCareer();
   }
   Object.assign(window, {
