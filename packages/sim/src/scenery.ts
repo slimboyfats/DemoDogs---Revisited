@@ -73,6 +73,7 @@ function layRails(w: World, rng: Rng): void {
     for (const side of [-1, 1]) {
       let lx = -1e9;
       let ly = -1e9;
+      const run: number[] = [];
       for (let i = 0; i < T.n; i++) {
         const top = lift[i]!;
         if (top < RAIL_FROM || (w.deckH && w.deckH[i]! > 0)) continue;
@@ -90,10 +91,30 @@ function layRails(w: World, rng: Rng): void {
         const near = w.grid ? w.grid.nearest(x, y) : -1;
         if (near >= 0 && Math.min((near - i + T.n) % T.n, (i - near + T.n) % T.n) > 8) continue;
         if (x < 8 || y < 8 || x > w.w - 8 || y > w.h - 8) continue;
-        putProp(w, def, x, y, a, rng);
+        run.push(x, y, a);
         lx = x;
         ly = y;
       }
+      // each length points along the line of rails itself, not the road: where a lane widens or
+      // the road bends the line runs askew of it, and lengths laid square to the road would
+      // stand in steps instead of end to end
+      const near = def.radius * 3;
+      for (let j = 0; j < run.length; j += 3) {
+        const x = run[j]!;
+        const y = run[j + 1]!;
+        let ax = 0;
+        let ay = 0;
+        if (j >= 3 && Math.hypot(x - run[j - 3]!, y - run[j - 2]!) < near) {
+          ax += x - run[j - 3]!;
+          ay += y - run[j - 2]!;
+        }
+        if (j + 3 < run.length && Math.hypot(run[j + 3]! - x, run[j + 4]! - y) < near) {
+          ax += run[j + 3]! - x;
+          ay += run[j + 4]! - y;
+        }
+        putProp(w, def, x, y, ax || ay ? Math.atan2(ay, ax) : run[j + 2]!, rng);
+      }
+      run.length = 0;
     }
 }
 

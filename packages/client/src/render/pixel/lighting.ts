@@ -7,7 +7,7 @@
 export const MAX_LIGHTS = 12;
 /** Headlamp beams a frame, and how far one reaches (art px). */
 export const MAX_CONES = 8;
-export const CONE_REACH = 96;
+export const CONE_REACH = 128;
 /** Light bands per unit strength (hard steps, dithered between). */
 export const LIGHT_BANDS = 4;
 
@@ -29,6 +29,12 @@ export class Lights {
   readonly coneh = new Float32Array(MAX_CONES * 4);
   /** How high the ground stands under each point light. */
   readonly gz = new Float32Array(MAX_LIGHTS);
+
+  /**
+   * How far light carries tonight: every light added reaches this many times as far (1 by day).
+   * In the dark a lamp, a muzzle or a fire washes the whole road with its colour.
+   */
+  spread = 1;
 
   clear(): void {
     this.count = 0;
@@ -54,6 +60,9 @@ export class Lights {
   /** Add a light; when full, it replaces the weakest one if it is stronger. */
   add(x: number, y: number, r: number, strength: number, rgb: number): void {
     if (strength <= 0.01 || r < 1) return;
+    // (wider, and a little weaker with it, so its heart does not burn out to white)
+    r *= this.spread;
+    strength /= 1 + 0.3 * (this.spread - 1);
     let i = this.count;
     if (i >= MAX_LIGHTS) {
       let weak = 0;
