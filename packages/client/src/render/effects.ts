@@ -481,8 +481,8 @@ export class Effects {
    */
   spray(x: number, y: number, rgb: number, vx: number, vy: number, wide: number): void {
     const n = Math.max(1, Math.round(3 * this.quality));
-    // pale ground (snow, sand) flies as bright grains that arc and drop; dark ground as dust
-    const pale = ((rgb >> 16) & 255) + ((rgb >> 8) & 255) + (rgb & 255) > 480;
+    // snow flies as bright grains that arc and drop; any other ground as dust of its own colour
+    const pale = Math.min((rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255) > 170;
     for (let i = 0; i < n; i++)
       if (pale)
         this.emit(
