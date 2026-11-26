@@ -208,12 +208,6 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.glow-shroom",
-          "x": 905.6,
-          "y": 419.6,
-          "rot": 0
-        },
-        {
           "prop": "prop.crystal",
           "x": 842.7,
           "y": 347.0,
