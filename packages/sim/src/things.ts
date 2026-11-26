@@ -3,7 +3,7 @@ import { barrelOf, fitAddon, reachOf } from './addons';
 import { fitCatchup, odds, place } from './catchup';
 import { hull } from './physics';
 import { grantDefence } from './defence';
-import type { Bot, Car } from './entities';
+import type { Bot, Car, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { airburst, damage, explode, launch, light, pour, spill, throwOut } from './damage';
 import { fitMover } from './movers';
@@ -77,6 +77,10 @@ export function spawnBot(w: World, b: Bot, initial: boolean): void {
   w.emit({ t: 'bot-spawn', bot: b.index });
 }
 
+/** Lists `near` fills for the rules here that ask every tick. */
+const BOT_NEAR: StaticProp[] = [];
+const PROP_NEAR: StaticProp[] = [];
+
 export function updateBot(w: World, b: Bot): void {
   const D = b.def;
   if (!b.alive) {
@@ -111,7 +115,7 @@ export function updateBot(w: World, b: Bot): void {
   b.h += clamp(angDiff(want, b.h), -5 * DT, 5 * DT);
   let nx = b.x + Math.cos(b.h) * b.speed * DT;
   let ny = b.y + Math.sin(b.h) * b.speed * DT;
-  for (const s of w.near(nx, ny, 6)) {
+  for (const s of w.near(nx, ny, 6, BOT_NEAR)) {
     const r = s.def.radius;
     if (s.down || !s.def.solid || Math.abs(s.x - nx) > r + 4 || Math.abs(s.y - ny) > r + 4)
       continue;
@@ -122,7 +126,10 @@ export function updateBot(w: World, b: Bot): void {
       [b.tx, b.ty] = botSpot(w, false);
     }
   }
-  [b.x, b.y] = w.keepInside(nx, ny, 5);
+  if (w.inside(nx, ny, 5)) {
+    b.x = nx;
+    b.y = ny;
+  } else [b.x, b.y] = w.keepInside(nx, ny, 5);
   for (const c of w.cars) {
     const d = Math.hypot(b.x - c.x, b.y - c.y);
     if (d >= 12 || c.z >= 8) continue;
@@ -160,6 +167,19 @@ export function smashBot(w: World, b: Bot, c: Car): void {
 export function updateProps(w: World): void {
   for (const p of w.props) {
     if (!p.alive) continue;
+    // most props lie still all race: one the last tick left as it was, that nothing has moved
+    // since and no scenery has been stood beside, would be left as it is again
+    const still =
+      p.vx === 0 &&
+      p.vy === 0 &&
+      p.vz === 0 &&
+      p.spin === 0 &&
+      p.z <= 0 &&
+      p.fuse <= 0 &&
+      !p.flying;
+    if (still && p.restN === w.stood && p.restX === p.x && p.restY === p.y) continue;
+    const x0 = p.x;
+    const y0 = p.y;
     if (p.fuse > 0) {
       // lit: whatever it holds is already pouring out
       pour(w, p);
@@ -204,27 +224,35 @@ export function updateProps(w: World): void {
       p.vy *= f;
       p.spin *= f;
     }
-    const k = w.keepInside(p.x, p.y, p.def.radius);
-    if (k[0] !== p.x || k[1] !== p.y) {
-      [p.x, p.y] = k;
-      p.vx *= -0.4;
-      p.vy *= -0.4;
-    }
-    // something heavy still in the air comes down on top of scenery instead of bouncing off it
-    const over = p.def.crush !== undefined && p.z > 4;
-    for (const s of w.near(p.x, p.y, p.def.radius)) {
-      if (over || s.down || !s.def.solid) continue;
-      const m = s.def.radius + p.def.radius;
-      if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
-      const dx = p.x - s.x;
-      const dy = p.y - s.y;
-      const d = Math.hypot(dx, dy) || 1;
-      if (d < m) {
-        p.x = s.x + (dx / d) * m;
-        p.y = s.y + (dy / d) * m;
+    if (!w.inside(p.x, p.y, p.def.radius)) {
+      const k = w.keepInside(p.x, p.y, p.def.radius);
+      if (k[0] !== p.x || k[1] !== p.y) {
+        [p.x, p.y] = k;
         p.vx *= -0.4;
         p.vy *= -0.4;
       }
+    }
+    // something heavy still in the air comes down on top of scenery instead of bouncing off it
+    const over = p.def.crush !== undefined && p.z > 4;
+    if (!over)
+      for (const s of w.near(p.x, p.y, p.def.radius, PROP_NEAR)) {
+        if (s.down || !s.def.solid) continue;
+        const m = s.def.radius + p.def.radius;
+        if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
+        const dx = p.x - s.x;
+        const dy = p.y - s.y;
+        const d = Math.hypot(dx, dy) || 1;
+        if (d < m) {
+          p.x = s.x + (dx / d) * m;
+          p.y = s.y + (dy / d) * m;
+          p.vx *= -0.4;
+          p.vy *= -0.4;
+        }
+      }
+    if (still && p.x === x0 && p.y === y0) {
+      p.restX = x0;
+      p.restY = y0;
+      p.restN = w.stood;
     }
   }
 }
@@ -232,7 +260,6 @@ export function updateProps(w: World): void {
 // ---------------------------------------------------------------- pickups and weapons
 
 export function updatePickups(w: World): void {
-  const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
   const reach = 13 - CAR_RADIUS;
   for (const p of w.pickups) {
     p.t += DT;
@@ -253,6 +280,7 @@ export function updatePickups(w: World): void {
       p.on = false;
       p.t = 0;
       const hurt = c.hp < 70;
+      const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
       // where the car is running leans the odds: the back of the field rolls the strong ones
       const at = place(w, c);
       const total = kinds.reduce((s, k) => s + odds(k, hurt, at, w.mode.crates), 0);

@@ -1121,3 +1121,48 @@ body.driven #stickZone .hint {
     display: none;
   }
 }
+
+/* ---- tournaments: medals and the cup table on paper */
+.medal.m3,
+#payout div.m3 b {
+  color: #b07a00;
+}
+.medal.m2,
+#payout div.m2 b {
+  color: #6b7486;
+}
+.medal.m1,
+#payout div.m1 b {
+  color: #a8571c;
+}
+#payout div.cupHead {
+  color: #b4420d;
+}
+#payout div.cupRow.me {
+  color: #17803a;
+  font-weight: 900;
+}
+.banner small {
+  opacity: 0.85;
+}
+.events button.item.cup {
+  border-left-width: 10px;
+}
+.events button.item.cup.cup {
+  border-left-color: var(--sun);
+}
+.events button.item.cup.trial {
+  border-left-color: var(--sky);
+}
+.events button.item.cup.derby {
+  border-left-color: var(--orange);
+}
+.events button.item.cup.last {
+  border-left-color: #b57cff;
+}
+.events button.item.cup.bounty {
+  border-left-color: var(--red);
+}
+.events button.item.cup.iron {
+  border-left-color: #9aa3b2;
+}

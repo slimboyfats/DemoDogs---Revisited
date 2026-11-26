@@ -33,6 +33,7 @@ export function contentHash(c: Content): string {
     'material',
     'bot',
     'ai',
+    'modifier',
   ] as const)
     parts.push(JSON.stringify([...c[k].entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1))));
   for (const [id, b] of [...c.behaviours.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)))
