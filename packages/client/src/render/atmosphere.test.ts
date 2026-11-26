@@ -52,6 +52,24 @@ describe('Atmosphere', () => {
     expect(a.now.snow).toBe(1);
   });
 
+  it('lets fog in and lifts it slowly, for a sky or for a modifier that asks', () => {
+    const a = sky('day');
+    expect(a.now.fog).toBe(0);
+    a.fog = SKIES.dawn!.fog;
+    a.update(0.1);
+    expect(a.now.fog).toBeGreaterThan(0);
+    expect(a.now.fog).toBeLessThan(0.2);
+    for (let i = 0; i < 400; i++) a.update(0.1);
+    expect(a.now.fog).toBe(1);
+    // a sky without fog clears it; a modifier's ask holds it there
+    Object.assign(a, SKIES.day);
+    a.ask.fog = 0.6;
+    for (let i = 0; i < 400; i++) a.update(0.1);
+    expect(a.now.fog).toBeCloseTo(0.6, 5);
+    // every sky says how much fog, so changing sky always sets it
+    for (const k of Object.values(SKIES)) expect(k.fog).toBeGreaterThanOrEqual(0);
+  });
+
   it('is flat on request: every texel its painted colour, no lamps', () => {
     const a = sky('night');
     a.flat = true;

@@ -1,7 +1,37 @@
 import { DT } from '@demodogs/shared';
-import type { Car } from './entities';
+import type { Car, Spill } from './entities';
+import { leapGaps, leapPieces } from './leaps';
 import { pathAt } from './pads';
 import type { World } from './world';
+
+/** Seconds a car that has fallen short of a jump lies in the pool under it before it is put back. */
+export const PLUNGE_TIME = 0.8;
+
+/**
+ * The pools a jump is made over: for each gap between a takeoff and its landing, the smallest
+ * pool laid as part of the map that its middle lies in. What comes down in one has fallen short.
+ */
+export function pitsOf(w: World): Spill[] {
+  const out: Spill[] = [];
+  for (const [x0, y0, x1, y1] of leapGaps(leapPieces(w.venue, w.content))) {
+    const mx = (x0 + x1) / 2;
+    const my = (y0 + y1) / 2;
+    let best: Spill | null = null;
+    for (const s of w.spills)
+      if (s.fixed && Math.hypot(s.x - mx, s.y - my) < s.r && (!best || s.r < best.r)) best = s;
+    if (best && !out.includes(best)) out.push(best);
+  }
+  return out;
+}
+
+/** Is (x, y) in the pool under a jump, and not on the jump's own pieces or a path over it? */
+export function inPit(w: World, x: number, y: number): boolean {
+  for (const s of w.pits) {
+    if (Math.abs(s.x - x) > s.r || Math.hypot(s.x - x, s.y - y) > s.r) continue;
+    return !pathAt(w, x, y);
+  }
+  return false;
+}
 
 /** How high raised road must stand over a car beside it for the car to be off it. */
 const HIGH = 8;
@@ -21,7 +51,7 @@ export function rescueIn(w: World, c: Car): number {
  */
 export function updateRescue(w: World, c: Car): void {
   const T = w.track;
-  const { rescueGrace, rescueCount, verge, rescueSpeed } = w.tuning;
+  const { rescueGrace, rescueCount, verge } = w.tuning;
   if (
     !T ||
     rescueCount <= 0 ||
@@ -30,11 +60,24 @@ export function updateRescue(w: World, c: Car): void {
     c.finished ||
     w.phase !== 'race'
   ) {
-    c.downT = 0;
+    c.downT = c.plunge = 0;
     return;
   }
   const i = c.idx;
   const R = w.relief;
+  // short of a jump, down in the pool under it: it lies there a moment and is put back where it
+  // left the road, so a jump missed costs all of the way that led to it
+  if (c.plunge > 0 || (w.pits.length && c.z - c.deck < 1.5 && inPit(w, c.x, c.y))) {
+    if (c.plunge === 0) w.emit({ t: 'plunge', car: c.index, x: c.x, y: c.y });
+    c.plunge += DT;
+    c.vx *= 0.8;
+    c.vy *= 0.8;
+    c.spin *= 0.8;
+    if (c.plunge < PLUNGE_TIME) return;
+    c.lap = c.onLap;
+    putBack(w, c, c.onIdx);
+    return;
+  }
   const top = R?.plat ? R.platAt(T.x[i]!, T.y[i]!) : 0;
   const below = top >= HIGH && top - R!.platAt(c.x, c.y) > HIGH * 0.75;
   // (a way up the side is the way back: on one it is not off the course)
@@ -44,20 +87,30 @@ export function updateRescue(w: World, c: Car): void {
     (below || Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) > w.road / 2 + verge);
   if (!off) {
     c.downT = 0;
-    c.onIdx = i;
-    c.onLap = c.lap;
+    // (a path or a way up is part of the course, but the last road it was on is the road itself)
+    if (!below && Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) <= w.road / 2 + verge) {
+      c.onIdx = i;
+      c.onLap = c.lap;
+    }
     return;
   }
   // (in the air it is not yet waiting)
   if (c.z > 2) return;
   c.downT += DT;
   if (c.downT < rescueGrace + rescueCount) return;
-  const x = c.x;
-  const y = c.y;
   // the road beside it, unless that is further on than it has driven: then where it left
   const ahead = (c.lap - c.onLap) * T.n + i - c.onIdx > 2;
   if (ahead) c.lap = c.onLap;
-  w.placeOnTrack(c, ahead ? c.onIdx : i, 0);
+  putBack(w, c, ahead ? c.onIdx : i);
+}
+
+/** Put `c` on the road at sample `i`, rolling, clear of the others and safe for a moment. */
+function putBack(w: World, c: Car, i: number): void {
+  const x = c.x;
+  const y = c.y;
+  const fell = c.plunge > 0;
+  const { rescueSpeed } = w.tuning;
+  w.placeOnTrack(c, i, 0);
   for (
     let tries = 0;
     tries < 6 && w.cars.some((o) => o !== c && Math.hypot(o.x - c.x, o.y - c.y) < 18);
@@ -72,6 +125,7 @@ export function updateRescue(w: World, c: Car): void {
   c.deck = w.deckAt(c.idx);
   c.z = c.deck + 6;
   c.downT = 0;
+  c.plunge = 0;
   c.invuln = Math.max(c.invuln, 1);
-  w.emit({ t: 'rescue', car: c.index, x, y });
+  w.emit(fell ? { t: 'rescue', car: c.index, x, y, fell } : { t: 'rescue', car: c.index, x, y });
 }

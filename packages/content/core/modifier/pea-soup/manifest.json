@@ -1,0 +1,15 @@
+{
+  "id": "modifier.pea-soup",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pea Soup",
+    "description": "Fog lies low on the ground and rolls on the wind. Cars plough through it and leave a wake that curls shut behind them. Looks only: nobody drives any worse for it.",
+    "since": "core@0.9.0"
+  },
+  "kind": "fog",
+  "label": "FOG",
+  "colour": "#cfd8dc",
+  "sky": {
+    "fog": 1
+  }
+}

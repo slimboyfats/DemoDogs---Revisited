@@ -1,6 +1,6 @@
 /**
  * The sky over a race, as the renderer needs it: how dark it is, how wet the ground, how much snow
- * lies. Client only: nothing here is in the sim, so two screens of one online race may differ.
+ * lies, how much fog lies on the ground. Client only: nothing here is in the sim, so two screens of one online race may differ.
  * Whoever knows the weather (a venue, a world modifier, the test range) sets `dark`, `wet` and
  * `snow`; the picture follows over a second or so, and `update` works out the light from them.
  *
@@ -39,6 +39,8 @@ export class Atmosphere {
   dark = 0;
   wet = 0;
   snow = 0;
+  /** How much fog lies on the ground, 0 to 1 (see pixel/fog.ts). */
+  fog = 0;
   /**
    * The sun moved by hand: turned this far round the compass from where the art's own sun
    * stands (radians), and shadows this many times as long as things are tall (null: as the
@@ -49,9 +51,9 @@ export class Atmosphere {
   /** Light everything flat, as before there was a sky (weak phones, and to compare). */
   flat = false;
   /** The least darkness and wet the race itself asks for (world modifiers: night, rain). */
-  readonly ask = { dark: 0, wet: 0 };
+  readonly ask = { dark: 0, wet: 0, fog: 0 };
   /** Where it is now (these follow the three above). */
-  readonly now = { dark: 0, wet: 0, snow: 0 };
+  readonly now = { dark: 0, wet: 0, snow: 0, fog: 0 };
   /** What the shaders are given. */
   readonly amb = new Float32Array([1, 1, 1]);
   readonly sun = new Float32Array(3);
@@ -71,6 +73,7 @@ export class Atmosphere {
     this.now.dark = this.dark;
     this.now.wet = this.wet;
     this.now.snow = this.snow;
+    this.now.fog = Math.min(1, Math.max(this.ask.fog, this.fog));
     this.update(0);
   }
 
@@ -90,6 +93,8 @@ export class Atmosphere {
     n.wet = ease(n.wet, Math.min(1, Math.max(this.ask.wet, this.wet)), k);
     // snow settles slowly and goes slowly
     n.snow = ease(n.snow, Math.min(1, Math.max(0, this.snow)), Math.min(1, dt * 0.5));
+    // fog comes in and lifts slowly too
+    n.fog = ease(n.fog, Math.min(1, Math.max(this.ask.fog, this.fog)), Math.min(1, dt * 0.7));
     this.time += dt;
     if (this.flat) {
       this.amb.fill(1);
@@ -135,14 +140,18 @@ export class Atmosphere {
 }
 
 /** Named skies for the test range, the address bar (`?sky=`) and captures. */
-export const SKIES: Record<string, { dark: number; wet: number; snow: number }> = {
-  day: { dark: 0, wet: 0, snow: 0 },
-  dusk: { dark: 0.5, wet: 0, snow: 0 },
-  night: { dark: 1, wet: 0, snow: 0 },
-  rain: { dark: 0.18, wet: 1, snow: 0 },
-  storm: { dark: 0.72, wet: 1, snow: 0 },
-  snow: { dark: 0.15, wet: 0, snow: 1 },
-  'snow-night': { dark: 1, wet: 0, snow: 1 },
+export const SKIES: Record<string, { dark: number; wet: number; snow: number; fog: number }> = {
+  day: { dark: 0, wet: 0, snow: 0, fog: 0 },
+  dusk: { dark: 0.5, wet: 0, snow: 0, fog: 0 },
+  night: { dark: 1, wet: 0, snow: 0, fog: 0 },
+  rain: { dark: 0.18, wet: 1, snow: 0, fog: 0 },
+  storm: { dark: 0.72, wet: 1, snow: 0, fog: 0 },
+  snow: { dark: 0.15, wet: 0, snow: 1, fog: 0 },
+  'snow-night': { dark: 1, wet: 0, snow: 1, fog: 0 },
+  // ground fog: a morning's mist by day, thick at first light, and under the lamps at night
+  mist: { dark: 0, wet: 0, snow: 0, fog: 0.7 },
+  dawn: { dark: 0.3, wet: 0, snow: 0, fog: 1 },
+  'fog-night': { dark: 1, wet: 0, snow: 0, fog: 0.85 },
 };
 
 /**
