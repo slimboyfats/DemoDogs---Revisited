@@ -541,6 +541,8 @@ void main() {
   vec4 rl = texelFetch(u_map, ivec2(clamp(floor((cell + 0.5) / u_fine), vec2(0.0), u_size - 1.0)), 0);
   float shift = floor(rl.r * 255.0 + 0.5);
   p.y += shift;
+  // (on a slope, the part of a row the whole shift is out by: lines up a ramp come out straight)
+  if (rl.b <= 0.75 && rl.a > 0.0) p.y += (rl.a * 255.0 - 128.0) / 127.0;
 #endif
   ivec2 ci = ivec2(cell);
 #ifdef PAINT

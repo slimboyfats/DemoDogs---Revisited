@@ -58,6 +58,37 @@ export function leapFaces(w: World): ((x: number, y: number) => number) | null {
   };
 }
 
+/** How wide a jump piece's sides are drawn (art px): all but sheer, so its edges are straight. */
+const WALL = 3;
+
+/**
+ * How high the jump pieces stand at (x, y), worked out from their own shapes: a ramp from nothing
+ * at the low end to its height at the tall one, level across, its sides and its tall end all but
+ * sheer. -1 away from every piece. The sim's height map holds the same blocks on a grid too coarse
+ * to draw a straight edge from, so the picture of the ground takes these instead (relief-map.ts).
+ * Null for a venue with no jump pieces.
+ */
+export function leapHeights(w: World): ((x: number, y: number) => number) | null {
+  const all = w.statics.filter((s) => s.def.leap);
+  if (!all.length) return null;
+  // (as far out as the height map's own block reaches between its points)
+  const FAR = 22;
+  return (x, y) => {
+    let h = -1;
+    for (const s of all) {
+      const L = s.def.leap!;
+      if (Math.abs(s.x - x) > L.long + FAR || Math.abs(s.y - y) > L.long + FAR) continue;
+      const [a, v] = onPad(s, x, y);
+      const u = L.way === 'up' ? a : -a;
+      const e = Math.min(L.wide / 2 - Math.abs(v), L.long / 2 - u);
+      if (e < -FAR || u < -L.long / 2 - FAR) continue;
+      const top = L.high * Math.max(0, Math.min(1, (u + L.long / 2) / L.long));
+      h = Math.max(h, top * Math.max(0, Math.min(1, (e + WALL) / WALL)));
+    }
+    return h;
+  };
+}
+
 const hex = (c: string): [number, number, number] => {
   const n = parseInt(c.slice(1), 16);
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];

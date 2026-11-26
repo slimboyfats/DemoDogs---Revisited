@@ -16,7 +16,7 @@ import { TracedLight } from './traced-light';
 import { BeamHaze } from './beam-haze';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
-import { leapFaces } from '../leaps';
+import { leapFaces, leapHeights } from '../leaps';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights, MAX_CONES } from './lighting';
@@ -361,6 +361,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         w.h,
         this.cosP / this.ys,
         leapFaces(w),
+        leapHeights(w),
       );
       this.stacks.relief = this.relief;
       this.groundLayer = new GroundLayer(gl, ground, this.relief);

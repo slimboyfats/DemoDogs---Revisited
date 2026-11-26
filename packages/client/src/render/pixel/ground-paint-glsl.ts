@@ -259,6 +259,12 @@ void wayOver(inout vec3 c, vec2 wp, ivec2 gc) {
   if (d > half_) {
     // it stands a little proud of the ground: a line of shade along the side away from the light
     if (kind == 0 && d < half_ + 2.4) c *= lit < -0.15 ? 0.7 : lit > 0.15 ? 1.04 : 0.86;
+    // a jump's side: the top of the wall that holds it up, in the wall's own stuff
+    if (kind != 0 && d < half_ + 3.5) {
+      c = skin == 1 ? vec3(104.0, 78.0, 50.0) : skin == 0 ? vec3(120.0, 116.0, 110.0)
+        : skin == 2 ? WAYSUN(u_cD) * 0.6 : vec3(112.0, 112.0, 118.0);
+      g_way = 1.0 + float(skin);
+    }
     return;
   }
   float al = Q.a + la;
@@ -316,6 +322,10 @@ void wayOver(inout vec3 c, vec2 wp, ivec2 gc) {
     // the main road's own tarmac
     col = vec3(122.0, 126.0, 140.0);
     if (d > half_ - 5.6 && d < half_ - 2.6) col = vec3(250.0, 248.0, 238.0);
+  }
+  if (kind != 0 && skin == 2) {
+    // a ramp of packed earth is held between boards: a board on edge down each side
+    if (d > half_ - 5.0) col = d > half_ - 1.0 || d < half_ - 4.0 ? vec3(104.0, 78.0, 50.0) : vec3(160.0, 124.0, 80.0);
   }
   if (kind != 0) {
     // a jump: arrows up the takeoff, and a hazard band at the edge of the drop
