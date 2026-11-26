@@ -54,6 +54,11 @@ interface Mini {
 /** The race HUD drawn on the game canvas: place, laps or cars left, score, bars, the minimap. */
 export class Hud {
   private mini: Mini | null = null;
+  /**
+   * What this race is being run for, in a few words beside the clock (a tournament's target time,
+   * the car with the bounty on it), or null for none.
+   */
+  aim: ((w: World) => { text: string; colour: string } | null) | null = null;
 
   constructor(private readonly ctx: CanvasRenderingContext2D) {}
 
@@ -146,6 +151,8 @@ export class Hud {
         small,
       );
       text(fmtTime(w.raceTime), left + 62 * u, pad + 19 * u, small, '#cfd6e0');
+      const aim = this.aim?.(w);
+      if (aim) text(aim.text, left + 124 * u, pad + 4 * u, small, aim.colour);
     } else {
       text(`${w.cars.filter((c) => !c.wrecked).length} LEFT`, left, pad, font(20), '#ffd24a');
       text(

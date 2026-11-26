@@ -45,8 +45,12 @@ export class EditPalette {
   /** The ground of the next area of terrain: a material, or none (the weather alone). */
   area: string;
   private mode: PaletteMode = null;
-  private group: PropGroup | 'all' = 'pieces';
+  private group: PropGroup | 'all' | 'recent' = 'pieces';
+  /** The things put down last, the newest first. */
+  private recent: string[] = [];
   private shut = false;
+  private readonly head = el('div', { className: 'head' });
+  private readonly groups = el('select');
   private readonly chips = el('div', { className: 'chips' });
   private readonly tiles = el('div', { className: 'tiles' });
   private readonly props: PropManifest[];
@@ -56,7 +60,7 @@ export class EditPalette {
   private busy = false;
 
   constructor(
-    private readonly root: HTMLElement,
+    readonly root: HTMLElement,
     private readonly content: Content,
     private readonly art: Art,
     private readonly hooks: PaletteHooks,
@@ -69,12 +73,13 @@ export class EditPalette {
     this.surface = this.pool;
     this.area = this.pool;
     if (!this.props.some((p) => propGroup(p) === this.group)) this.group = 'all';
-    root.append(this.chips, this.tiles);
+    root.append(this.head, this.chips, this.tiles);
+    this.groups.onchange = () => this.setGroup(this.groups.value as typeof this.group);
     // a mouse wheel over the tray runs along it
     this.tiles.addEventListener(
       'wheel',
       (e) => {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        if (!this.side() && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
           this.tiles.scrollLeft += e.deltaY;
           e.preventDefault();
         }
@@ -90,12 +95,35 @@ export class EditPalette {
     if (mode) this.fill();
   }
 
+  /**
+   * Is the tray down the side of the screen (a phone on its side), not along the bottom? Then it
+   * runs up and down, and a thing is carried out of it sideways.
+   */
+  private side(): boolean {
+    return innerWidth > innerHeight;
+  }
+
+  private setGroup(g: PropGroup | 'all' | 'recent'): void {
+    this.group = g;
+    this.fill();
+    this.tiles.scrollLeft = 0;
+    this.tiles.scrollTop = 0;
+  }
+
+  /** A thing was put down: it is kept in the things used last. */
+  used(id: string): void {
+    if (this.recent[0] === id) return;
+    this.recent = [id, ...this.recent.filter((r) => r !== id)].slice(0, 12);
+    if (this.mode === 'props' && this.group === 'recent') this.fill();
+    else if (this.mode === 'props' && this.recent.length === 1) this.fill();
+  }
+
   /** Choose a thing or a material as if it had been tapped (a script, or the editor itself). */
   choose(id: string): void {
     const p = this.content.prop.get(id);
     if (p) {
       this.prop = id;
-      if (this.group !== 'all') this.group = propGroup(p);
+      if (this.group !== 'all' && this.group !== 'recent') this.group = propGroup(p);
     } else if (this.content.material.has(id)) {
       this.setMaterial(id);
     } else return;
@@ -115,26 +143,37 @@ export class EditPalette {
       b.onclick = tap;
       chips.push(b);
     };
-    chip(this.shut ? '▴ SHOW' : '▾ HIDE', false, () => {
+    const hide = el('button', { textContent: this.shut ? 'SHOW' : 'HIDE', className: 'hide' });
+    const shut = (): void => {
       this.shut = !this.shut;
       this.fill();
-    });
+    };
+    hide.onclick = shut;
+    // upright the tray's own bar is not shown: the first chip puts the tiles away
+    chip(this.shut ? '▴ SHOW' : '▾ HIDE', false, shut);
     this.root.classList.toggle('shut', this.shut);
+    this.groups.replaceChildren();
     const tiles: Node[] = [];
     if (this.mode === 'props') {
-      const groups: [PropGroup | 'all', string][] = [...PROP_GROUPS, ['all', 'EVERYTHING']];
+      const groups: [PropGroup | 'all' | 'recent', string][] = [
+        ['recent', 'USED LAST'],
+        ...PROP_GROUPS,
+        ['all', 'EVERYTHING'],
+      ];
+      const inGroup = (p: PropManifest, g: PropGroup | 'all' | 'recent'): boolean =>
+        g === 'all' || (g === 'recent' ? this.recent.includes(p.id) : propGroup(p) === g);
       for (const [g, label] of groups) {
-        const n = this.props.filter((p) => g === 'all' || propGroup(p) === g).length;
+        const n = this.props.filter((p) => inGroup(p, g)).length;
         if (n === 0) continue;
-        chip(`${label} ${n}`, g === this.group, () => {
-          this.group = g;
-          this.fill();
-          this.tiles.scrollLeft = 0;
-        });
+        chip(`${label} ${n}`, g === this.group, () => this.setGroup(g));
+        this.groups.append(new Option(`${label} (${n})`, g));
       }
+      this.groups.value = this.group;
       this.queue = [];
-      for (const p of this.props)
-        if (this.group === 'all' || propGroup(p) === this.group) tiles.push(this.propTile(p));
+      const shown = this.props.filter((p) => inGroup(p, this.group));
+      if (this.group === 'recent')
+        shown.sort((a, b) => this.recent.indexOf(a.id) - this.recent.indexOf(b.id));
+      for (const p of shown) tiles.push(this.propTile(p));
       this.work();
     } else {
       const mine =
@@ -169,10 +208,13 @@ export class EditPalette {
         tiles.push(b);
       }
     }
+    this.head.replaceChildren(hide, ...(this.mode === 'props' ? [this.groups] : []));
     this.chips.replaceChildren(...chips);
     const left = this.tiles.scrollLeft;
+    const top = this.tiles.scrollTop;
     this.tiles.replaceChildren(...tiles);
     this.tiles.scrollLeft = left;
+    this.tiles.scrollTop = top;
   }
 
   private propTile(p: PropManifest): HTMLElement {
@@ -190,8 +232,8 @@ export class EditPalette {
       el('small', { textContent: p.meta.name }),
     );
     b.dataset.id = p.id;
-    // a tap chooses it; a drag along the tray runs it along; a drag up off it carries the thing
-    // out over the map
+    // a tap chooses it; a drag along the tray runs it along; a drag off it (up from a tray along
+    // the bottom, sideways from one down the side) carries the thing out over the map
     let from: { id: number; x: number; y: number; does: 'tap' | 'scroll' | 'carry' } | null = null;
     b.addEventListener('pointerdown', (e) => {
       from = { id: e.pointerId, x: e.clientX, y: e.clientY, does: 'tap' };
@@ -203,12 +245,15 @@ export class EditPalette {
       const dy = e.clientY - from.y;
       if (from.does === 'tap') {
         if (Math.hypot(dx, dy) < 8) return;
+        const out = this.side() ? -dx > Math.abs(dy) * 0.6 : -dy > Math.abs(dx) * 0.4;
         // a mouse has its wheel for the tray: with it every drag is a carry
-        from.does = e.pointerType === 'mouse' || -dy > Math.abs(dx) * 0.4 ? 'carry' : 'scroll';
+        from.does = e.pointerType === 'mouse' || out ? 'carry' : 'scroll';
       }
       if (from.does === 'scroll') {
         this.tiles.scrollLeft -= dx;
+        this.tiles.scrollTop -= dy;
         from.x = e.clientX;
+        from.y = e.clientY;
       } else this.hooks.carry(p.id, e.clientX, e.clientY);
     });
     const end = (e: PointerEvent, on: boolean): void => {
@@ -217,9 +262,14 @@ export class EditPalette {
       from = null;
       if (does === 'scroll') return;
       if (does === 'carry') {
-        // let go over the tray or the bar: nothing is put down
+        // let go over the tray: nothing is put down
         const r = this.root.getBoundingClientRect();
-        this.hooks.drop(p.id, e.clientX, e.clientY, on && e.clientY < r.top);
+        const over =
+          e.clientX >= r.left &&
+          e.clientX <= r.right &&
+          e.clientY >= r.top &&
+          e.clientY <= r.bottom;
+        this.hooks.drop(p.id, e.clientX, e.clientY, on && !over);
         this.pick(p.id, false);
       } else if (on) this.pick(p.id, true);
     };

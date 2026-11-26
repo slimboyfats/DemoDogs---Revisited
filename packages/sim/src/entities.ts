@@ -293,6 +293,14 @@ export interface LooseProp {
   flying?: boolean;
   /** A falling heavy prop that has already come down on something (see `smash` in docks.ts). */
   crushed?: boolean;
+  /**
+   * Where it lay when a tick last left it exactly as it was, and what `World.stood` was then.
+   * While it still lies there, at rest, with no new scenery stood, a tick has nothing to do to
+   * it (see `updateProps`). No part of a race's result: only what lets most props be passed by.
+   */
+  restX?: number;
+  restY?: number;
+  restN?: number;
 }
 
 /** A burning bit thrown out of a burst: a star (pops where it lands) or a glob of fuel. */

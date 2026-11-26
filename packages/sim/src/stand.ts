@@ -26,6 +26,7 @@ export function stand(
   if (def.crown) s.leaves = 1;
   if (def.storeys) s.storeys = def.storeys;
   w.statics.push(s);
+  w.stood++;
   if (def.pad) w.pads.push(s);
   if (def.mound) w.mounds.push(s);
   return s;
