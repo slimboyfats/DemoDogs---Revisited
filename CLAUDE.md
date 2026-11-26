@@ -33,6 +33,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
+| `pnpm feel [out-dir] [--frames] [--only=scene]`                 | a ram and a blast through the game's own loop: shake, hit-stop, buzzes; a made-up gamepad (`captures/feel/`)  |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
@@ -230,9 +231,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
   `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
   drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
-  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, DEV), wired by class, and it sits beside a paused race so a
+  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused race so a
   slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
   in `theme.css`); nothing forces landscape.
+- **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
+  else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
+  in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never
+  online). All three are sliders on the FEEL tab. A gamepad (input/gamepad.ts, `Pads`) drives through `Input` and
+  works every menu through `ui/pad-menu.ts`, which finds buttons by itself: a new screen needs nothing for it.
 - **The driving lesson is a test range, not a mode.** It runs on a lawn of its own (`withSchool` in content, like
   `withRange`) as a sandbox world; the steps and what each waits for are `game/lesson.ts` (pure, tested), and
   `ui/tutor.ts` shows them and puts the crate and the targets down with the range's own tools. The sim knows nothing

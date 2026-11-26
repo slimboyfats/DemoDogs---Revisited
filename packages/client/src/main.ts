@@ -75,6 +75,9 @@ import {
   unpackTrack,
   type KeyValue,
 } from './game/tracks';
+import { Feel, FEEL_RANGE } from './game/feel';
+import { Pads } from './input/gamepad';
+import { PadMenu } from './ui/pad-menu';
 import { TrackEditor } from './ui/track-editor';
 import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
@@ -97,7 +100,19 @@ const art = new Art(loadLooks());
 const sound = new Sound();
 // ?tape=40 tapes that many seconds of sound, in step with the game's ticks (scripts/capture-audio.mjs)
 if (params.get('tape')) sound.record(Number(params.get('tape')) || 30);
-const input = new Input(() => sound.init());
+// a gamepad, where one is plugged in, and how the game feels in the hand: shake, hit-stop, buzz
+const pads = new Pads(
+  () => navigator.getGamepads?.() ?? [],
+  () => feel.setup.pad,
+);
+const canVibrate = typeof navigator.vibrate === 'function';
+const feel = new Feel(safeStore(), {
+  ...(canVibrate ? { vibrate: (p: number[]) => void navigator.vibrate(p) } : {}),
+  rumble: (ms, strong, weak) => pads.rumble(ms, strong, weak),
+  now: () => performance.now(),
+});
+const padMenu = new PadMenu();
+const input = new Input(() => sound.init(), pads);
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
 // how hard the rival drivers are (EASY, NORMAL, HARD): ?rivals=hard picks one for a visit
@@ -303,6 +318,7 @@ const editor = new TrackEditor(
         ...editOptions(made),
         autopilot: false,
         tuning: tune.values,
+        feel,
       });
       if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
       s.setView(W / shown, H / shown);
@@ -649,6 +665,48 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.flameBtn'))
     showFlames();
   };
 
+/** The FEEL sliders and the GAMEPAD switch say what is set. */
+function showFeel(): void {
+  const F = feel.setup;
+  const pct = (v: number): string => (v > 0 ? `${Math.round(v * 100)}%` : 'OFF');
+  const put = (range: string, name: string, v: number, text: string): void => {
+    for (const r of document.querySelectorAll<HTMLInputElement>(range)) r.value = String(v);
+    for (const o of document.querySelectorAll<HTMLElement>(name)) o.textContent = text;
+  };
+  put('.shakeRange', '.shakeName', F.shake, pct(F.shake));
+  put('.stopRange', '.stopName', F.stop, pct(F.stop));
+  // a phone that cannot vibrate (an iPhone's browser) says so; a gamepad may still rumble
+  put('.buzzRange', '.buzzName', F.buzz, canVibrate || pads.state ? pct(F.buzz) : 'GAMEPAD ONLY');
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.padBtn'))
+    b.textContent = `GAMEPAD ${F.pad ? 'ON' : 'OFF'}`;
+}
+for (const [cls, key] of [
+  ['.shakeRange', 'shake'],
+  ['.stopRange', 'stop'],
+  ['.buzzRange', 'buzz'],
+] as const)
+  for (const r of document.querySelectorAll<HTMLInputElement>(cls)) {
+    r.max = String(FEEL_RANGE[key].max);
+    r.step = String(FEEL_RANGE[key].step);
+    r.oninput = () => {
+      feel.set({ [key]: Number(r.value) });
+      showFeel();
+      // each is shown as it is set: the paused race shakes, the phone buzzes
+      if (key === 'shake') session?.nudge(9);
+    };
+    r.onchange = () => {
+      if (key === 'buzz') feel.thump(9);
+      r.blur();
+    };
+  }
+for (const b of document.querySelectorAll<HTMLButtonElement>('.padBtn'))
+  b.onclick = () => {
+    feel.set({ pad: !feel.setup.pad });
+    showFeel();
+  };
+showFeel();
+addEventListener('gamepadconnected', showFeel);
+
 /** The SPEEDOMETER buttons and size slider say what is picked; the HUD draws it so. */
 function showSpeedo(): void {
   const S = speedo.setup;
@@ -781,6 +839,7 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
       input,
       autopilot: params.has('autoplay'),
       tuning: tune.values,
+      feel,
       difficulty: rivals.level,
       ...o,
     },
@@ -1282,6 +1341,7 @@ document.addEventListener('visibilitychange', () =>
 
 let last = performance.now();
 let meterFrames = 0;
+let padShown = false;
 
 // the connection in an online race: bars and a ping in the corner, a banner when something is up
 let netShown = '';
@@ -1317,6 +1377,11 @@ function frame(t: number): void {
   const wall = t - last;
   const dt = Math.min(0.1, Math.max(0, wall / 1000));
   last = t;
+  // the gamepad: START pauses a race, and off the road it works the menus
+  const pf = pads.poll(dt);
+  if (pads.used !== padShown) document.body.classList.toggle('pad', (padShown = pads.used));
+  if (pf.start && screen === 'game') togglePause();
+  else padMenu.frame(pf);
   if (screen === 'game' && session) {
     const f0 = performance.now();
     if (input.takePause()) togglePause();
@@ -1326,6 +1391,8 @@ function frame(t: number): void {
       finish();
       return;
     }
+    // paused, the picture still swings: the SCREEN SHAKE slider is judged by eye
+    if (paused && !online.racing) session.idle(dt);
     spectate(dt);
     weatherAreas();
     // the slice effects run on the frame's clock: the track creator stops the sim, not them
