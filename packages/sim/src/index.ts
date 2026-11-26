@@ -46,3 +46,4 @@ export * from './dmath';
 export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';
 export * from './addons';
 export { dip, fitTrick, phased, type Spell, type Tricks } from './tricks';
+export * from './line';

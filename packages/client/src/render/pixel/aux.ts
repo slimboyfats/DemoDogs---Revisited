@@ -67,7 +67,17 @@ export class AuxBake {
   private readonly sx: number;
   private readonly sy: number;
   private z = 0;
+  /** The part of every slice that is baked (texels; the last two not included). */
+  private readonly x0: number;
+  private readonly y0: number;
+  private readonly x1: number;
+  private readonly y1: number;
 
+  /**
+   * `part` bakes only that box of every slice (and as far round it as a facing looks), over a
+   * copy of `from`, the strip's bytes from before whatever changed in the box: a dent in a car is
+   * a few hundredths of the work of the whole car.
+   */
   constructor(
     private readonly px: Uint8ClampedArray,
     private readonly W: number,
@@ -75,12 +85,25 @@ export class AuxBake {
     private readonly lay: AuxLayout,
     private readonly glow?: Uint8Array,
     private readonly gloss?: Uint8Array,
+    part?: readonly [number, number, number, number] | null,
+    from?: Uint8Array | null,
   ) {
     const { cw, ch, n, cols, res } = lay;
-    this.out = new Uint8Array(W * H * 2);
     // look the same distance round a texel however fine the strip is (as strips.ts shades it)
     const st = (this.st = Math.max(1, Math.round(res / 3)));
     const p = (this.pad = st * 2);
+    if (part && from && from.length === W * H * 2) {
+      this.out = new Uint8Array(from);
+      this.x0 = Math.max(0, part[0] - p);
+      this.y0 = Math.max(0, part[1] - p);
+      this.x1 = Math.min(cw, part[2] + p);
+      this.y1 = Math.min(ch, part[3] + p);
+    } else {
+      this.out = new Uint8Array(W * H * 2);
+      this.x0 = this.y0 = 0;
+      this.x1 = cw;
+      this.y1 = ch;
+    }
     const sx = (this.sx = cw + p * 2);
     const sy = (this.sy = ch + p * 2);
     // what is solid, with a margin all round so nothing below has to check its bounds: empty to
@@ -108,19 +131,24 @@ export class AuxBake {
   /** Bake slices until `enough()` says stop (it is asked after each one). True when all are done. */
   step(enough?: () => boolean): boolean {
     const { cw, ch, n, cols } = this.lay;
-    const { occ, top, out, W, glow, gloss, st, sx, sy } = this;
+    const { occ, top, out, W, glow, gloss, st, sx, sy, x0, y0, x1, y1 } = this;
     const p = this.pad;
     const layer = sx * sy;
     while (this.z < n) {
       const z = this.z++;
       const ox = (z % cols) * cw;
       const oy = Math.floor(z / cols) * ch;
-      for (let y = 0; y < ch; y++) {
+      for (let y = y0; y < y1; y++) {
         const row = (z + p) * layer + (y + p) * sx + p;
-        for (let x = 0; x < cw; x++) {
+        for (let x = x0; x < x1; x++) {
           const i = row + x;
-          if (!occ[i]) continue;
           const j = (oy + y) * W + ox + x;
+          // (over older bytes, when only a part is baked: what is gone or buried is cleared)
+          out[j * 2] = 0;
+          if (!occ[i]) {
+            out[j * 2 + 1] = 0;
+            continue;
+          }
           let b1 = top[y * cw + x] === z ? SKY : 0;
           if (glow) b1 |= Math.min(GLOW_MAX, glow[j]!);
           if (gloss) b1 |= (gloss[j]! & 3) << 3;

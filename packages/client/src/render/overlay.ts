@@ -27,6 +27,8 @@ export function drawOverlay(
   W: number,
   H: number,
   dpr: number,
+  /** Point at rivals who are off the screen (a derby's way of finding them). */
+  arrows = true,
 ): void {
   // a mud pie in the face goes on first, so that the words and the dials are read over it
   const K = fx.tricks;
@@ -48,7 +50,7 @@ export function drawOverlay(
   ctx.globalAlpha = 1;
 
   // off-screen rival arrows in the derby
-  if (w.kind === 'derby')
+  if (arrows && w.kind === 'derby')
     for (const c of w.cars) {
       if (c === w.player || c.wrecked) continue;
       const sx = P.sx(c.x);
@@ -107,5 +109,15 @@ export function drawNames(
     ctx.strokeText(label, sx, sy);
     ctx.fillStyle = on ? '#ffd24a' : c.paint;
     ctx.fillText(label, sx, sy);
+    // what kind of driver it is, small, over the name
+    const kind = c.isPlayer ? '' : (c.ai?.style ?? '');
+    if (kind) {
+      const up = Math.round((on ? 13 : 10) * dpr);
+      ctx.font = `900 ${Math.round(7 * dpr)}px system-ui, sans-serif`;
+      ctx.lineWidth = 2.5 * dpr;
+      ctx.strokeText(kind, sx, sy - up);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText(kind, sx, sy - up);
+    }
   }
 }

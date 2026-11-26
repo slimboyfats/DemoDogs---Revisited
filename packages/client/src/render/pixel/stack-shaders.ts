@@ -39,6 +39,7 @@ layout(location = 3) in float a_alpha;
 layout(location = 4) in float a_res;   // texels per art px
 layout(location = 5) in float a_tint;  // 0; 1 + 0xRRGGBB: drawn in that one colour, a shade behind; -1 - bits: a car, and its dark lamps
 layout(location = 6) in vec2 a_tilt;   // the slice lies sloped: height gained per art px east and south
+layout(location = 8) in vec4 a_trim;   // the part of the slice drawn: texel x0, y0, x1, y1 within it
 uniform vec2 u_view;
 uniform vec2 u_origin;   // device px of the world origin on the ground (whole pixels)
 uniform float u_scale;
@@ -76,7 +77,9 @@ float shadeAt(vec2 p, float g) {
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
-  vec2 local = (corner - 0.5) * a_uv.zw / a_res;
+  // (the quad is only the part of the slice that has anything in it)
+  vec2 cut = mix(a_trim.xy, a_trim.zw, corner);
+  vec2 local = (cut - 0.5 * a_uv.zw) / a_res;
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   vec2 anchor = floor(u_origin + vec2(a_pos.x * u_scale, a_pos.y * u_scale * u_ys) + 0.5);
@@ -117,7 +120,7 @@ void main() {
   // only what stands low is mirrored (cars, drums, the foot of a tree): the rest would land far
   // down the screen, and every slice mirrored is a slice drawn twice
   if (u_mirror > 0.5 && (zz > ${MIRROR_TALL.toFixed(1)} || a_tint > 0.5)) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-  v_tex = corner * a_uv.zw;
+  v_tex = cut;
   v_uv = a_uv;
   v_alpha = a_alpha;
   v_cs = vec2(c, s);
@@ -447,6 +450,7 @@ layout(location = 3) in float a_alpha;
 layout(location = 4) in float a_res;
 layout(location = 5) in float a_tint;
 layout(location = 6) in vec2 a_tilt;
+layout(location = 8) in vec4 a_trim;
 uniform vec4 u_shbox;
 uniform vec3 u_shear;${RELIEF_GLSL}
 out vec2 v_tex;
@@ -454,7 +458,9 @@ flat out vec4 v_uv;
 void main() {
   int id = gl_VertexID % 6;
   vec2 corner = vec2(id == 1 || id == 2 || id == 4 ? 1.0 : 0.0, id == 2 || id == 4 || id == 5 ? 1.0 : 0.0);
-  vec2 local = (corner - 0.5) * a_uv.zw / a_res;
+  // (the quad is only the part of the slice that has anything in it)
+  vec2 cut = mix(a_trim.xy, a_trim.zw, corner);
+  vec2 local = (cut - 0.5 * a_uv.zw) / a_res;
   float c = cos(a_rot), s = sin(a_rot);
   vec2 r = vec2(local.x * c - local.y * s, local.x * s + local.y * c);
   float high = max(0.0, groundAt(a_pos.xy) + a_pos.z + dot(r, a_tilt));
@@ -462,7 +468,7 @@ void main() {
   gl_Position = vec4(g * 2.0 - 1.0, 1.0 - 2.0 * min(1.0, high / u_shear.z), 1.0);
   // an outline copy throws nothing, nor does what has all but faded away
   if (a_tint > 0.5 || a_alpha < 0.15) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-  v_tex = corner * a_uv.zw;
+  v_tex = cut;
   v_uv = a_uv;
 }`;
 

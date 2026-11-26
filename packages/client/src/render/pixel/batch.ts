@@ -165,6 +165,5 @@ export class QuadBatch {
   dispose(): void {
     this.gl.deleteBuffer(this.buf);
     this.gl.deleteVertexArray(this.vao);
-    this.gl.deleteProgram(this.prog);
   }
 }

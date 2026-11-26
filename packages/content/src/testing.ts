@@ -162,8 +162,8 @@ export function flatBench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): Wo
  * The flat bench with `n` rivals nobody drives beside the one parked out of the way, the player
  * holding weapon `id` fully loaded, and the middle of the ground. A place to try a weapon.
  */
-export function armed(id: string, n = 1) {
-  const w = flatBench({ rivals: n + 1 });
+export function armed(id: string, n = 1, seed = 1) {
+  const w = flatBench({ rivals: n + 1, seed });
   const me = w.player;
   const far = w.cars.find((c) => !c.isPlayer)!;
   const rivals = w.cars.filter((c) => c !== me && c !== far);
@@ -245,8 +245,9 @@ export function critterTest(
   ticks = 150,
   gap = 150,
   throttle = 1,
+  seed = 1,
 ) {
-  const w = flatBench();
+  const w = flatBench({ seed });
   const c = w.player;
   const x = w.oval!.cx;
   const y = w.oval!.cy;

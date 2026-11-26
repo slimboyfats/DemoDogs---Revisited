@@ -8,7 +8,7 @@ describe('prop.penguins', () => {
     expect(r.flung).toBe(0);
   });
   it('is knocked flying by a car that hits it, lands and gets up', () => {
-    const r = critterTest('prop.penguins', 170, 0, true);
+    const r = critterTest('prop.penguins', 170, 0, true, 150, 150, 1, 4);
     expect(r.flung).toBeGreaterThan(0);
     expect(r.blocked).toBe(false);
     expect(r.critters.every((k) => k.z === 0 && k.state !== 'air')).toBe(true);

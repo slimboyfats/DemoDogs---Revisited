@@ -51,8 +51,11 @@ function mulberry(seed: number): () => number {
 export interface Ground {
   cv: HTMLCanvasElement;
   g: CanvasRenderingContext2D;
-  /** The box painted since a renderer last copied the ground (x0, y0, x1, y1), or null. */
-  dirty: [number, number, number, number] | null;
+  /**
+   * The boxes painted since a renderer last copied the ground (x0, y0, x1, y1 each), or null:
+   * what is close together shares a box (see `markGround`).
+   */
+  dirty: [number, number, number, number][] | null;
   /**
    * Set when the country and the road are not on the canvas at all: the renderer paints them
    * itself from this, as fine as the screen is, and the canvas holds only the marks laid over
@@ -75,20 +78,46 @@ export const groundMode = {
 /** The most samples a road's line may have for the shader to paint it (one texel a sample). */
 const MOST_SAMPLES = 4096;
 
-/** Note that the box around (x, y) with half-size r was painted. */
+/**
+ * How much unpainted ground (px) a mark may add to a dirty box before it gets a box of its own,
+ * and the most boxes kept.
+ */
+const DIRTY_SLACK = 48 * 48;
+const DIRTY_MOST = 24;
+
+/**
+ * Note that the box around (x, y) with half-size r was painted. Marks far apart keep boxes of
+ * their own: six cars laying skids all round a track are six small uploads a frame, where one box
+ * round them all was most of the map, read back and sent to the GPU every frame.
+ */
 export function markGround(g: Ground, x: number, y: number, r: number): void {
-  const d = g.dirty;
   const x0 = Math.floor(x - r);
   const y0 = Math.floor(y - r);
   const x1 = Math.ceil(x + r);
   const y1 = Math.ceil(y + r);
-  if (!d) g.dirty = [x0, y0, x1, y1];
-  else {
-    d[0] = Math.min(d[0], x0);
-    d[1] = Math.min(d[1], y0);
-    d[2] = Math.max(d[2], x1);
-    d[3] = Math.max(d[3], y1);
+  // into the box it adds least unpainted ground to; a box of its own if that is more than a little
+  const D = (g.dirty ??= []);
+  let best = -1;
+  let waste = Infinity;
+  for (let i = 0; i < D.length; i++) {
+    const d = D[i]!;
+    const w = Math.max(d[2], x1) - Math.min(d[0], x0);
+    const h = Math.max(d[3], y1) - Math.min(d[1], y0);
+    const over = w * h - (d[2] - d[0]) * (d[3] - d[1]);
+    if (over < waste) {
+      waste = over;
+      best = i;
+    }
   }
+  if (best < 0 || (waste > DIRTY_SLACK + (x1 - x0) * (y1 - y0) && D.length < DIRTY_MOST)) {
+    D.push([x0, y0, x1, y1]);
+    return;
+  }
+  const d = D[best]!;
+  d[0] = Math.min(d[0], x0);
+  d[1] = Math.min(d[1], y0);
+  d[2] = Math.max(d[2], x1);
+  d[3] = Math.max(d[3], y1);
 }
 
 /**

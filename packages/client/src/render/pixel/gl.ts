@@ -1,13 +1,37 @@
 // Copied from mudders: packages/client/src/render/pixel/gl.ts.
 /** Small WebGL2 helpers. Everything here must run on SwiftShader (headless capture, §2d). */
 
-export function compile(
+/** A program's sources: vertex shader, fragment shader, and what it feeds back (if anything). */
+export type Sources = readonly [vs: string, fs: string, feedback?: readonly string[]];
+
+/** A program on its way: handed to the driver, its outcome not yet asked for. */
+interface Kept {
+  prog: WebGLProgram;
+  shaders: WebGLShader[];
+  srcs: readonly string[];
+  checked: boolean;
+}
+
+const kept = new WeakMap<WebGL2RenderingContext, Map<string, Kept>>();
+
+/** Hand a program's shaders to the driver and link it, without waiting to hear how it went. */
+function start(
   gl: WebGL2RenderingContext,
   vs: string,
   fs: string,
   feedback?: readonly string[],
-): WebGLProgram {
+): Kept {
+  let map = kept.get(gl);
+  if (!map) {
+    kept.set(gl, (map = new Map()));
+    // with this the browser builds shaders on threads of its own while the page carries on
+    gl.getExtension('KHR_parallel_shader_compile');
+  }
+  const key = `${vs}\0${fs}\0${feedback?.join(',') ?? ''}`;
+  let k = map.get(key);
+  if (k) return k;
   const prog = gl.createProgram();
+  const shaders: WebGLShader[] = [];
   for (const [type, src] of [
     [gl.VERTEX_SHADER, vs],
     [gl.FRAGMENT_SHADER, fs],
@@ -16,42 +40,55 @@ export function compile(
     if (!sh) throw new Error('createShader failed');
     gl.shaderSource(sh, src);
     gl.compileShader(sh);
-    if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) {
-      throw new Error(`shader compile failed: ${gl.getShaderInfoLog(sh) ?? ''}\n${src}`);
-    }
     gl.attachShader(prog, sh);
-    gl.deleteShader(sh);
+    shaders.push(sh);
   }
   if (feedback) gl.transformFeedbackVaryings(prog, [...feedback], gl.INTERLEAVED_ATTRIBS);
   gl.linkProgram(prog);
-  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-    throw new Error(`program link failed: ${gl.getProgramInfoLog(prog) ?? ''}`);
-  }
-  return prog;
+  map.set(key, (k = { prog, shaders, srcs: [vs, fs], checked: false }));
+  return k;
 }
 
-const kept = new WeakMap<WebGL2RenderingContext, Map<string, WebGLProgram>>();
+/**
+ * Start building a program that will be wanted later, and come straight back: the driver builds
+ * it while the menu is up or the loader runs, and `compile` with the same sources then has it at
+ * once. Building one when it is first drawn with was a freeze of tenths of a second on a phone,
+ * in the first frames of a race.
+ */
+export function prelink(gl: WebGL2RenderingContext, ...programs: readonly Sources[]): void {
+  for (const [vs, fs, feedback] of programs) start(gl, vs, fs, feedback);
+}
 
 /**
- * `compile`, but the program is kept for the life of its context and handed out again for the
- * same sources: never delete one. For the parts that are built anew when the quality steps
- * (particles, smoke): compiling their shaders again was most of a 150 to 200 ms freeze at the
- * step on a phone. Whoever gets a program sets every uniform it relies on, as after a fresh
- * compile it could not rely on values either.
+ * The program for these sources: built once for the life of its context and handed out again
+ * for the same sources, so never delete one. Waits for the driver only here, and only once: a
+ * program started earlier (`prelink`) is usually ready. Whoever gets a program sets every uniform
+ * it relies on: it may have been used before, by another owner.
  */
-export function compileKept(
+export function compile(
   gl: WebGL2RenderingContext,
   vs: string,
   fs: string,
   feedback?: readonly string[],
 ): WebGLProgram {
-  let map = kept.get(gl);
-  if (!map) kept.set(gl, (map = new Map()));
-  const key = `${vs}\0${fs}\0${feedback?.join(',') ?? ''}`;
-  let prog = map.get(key);
-  if (!prog) map.set(key, (prog = compile(gl, vs, fs, feedback)));
-  return prog;
+  const k = start(gl, vs, fs, feedback);
+  if (k.checked) return k.prog;
+  // (asked of the program alone: one wait, and the shaders' own logs only when it failed)
+  if (!gl.getProgramParameter(k.prog, gl.LINK_STATUS)) {
+    k.shaders.forEach((sh, i) => {
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS))
+        throw new Error(`shader compile failed: ${gl.getShaderInfoLog(sh) ?? ''}\n${k.srcs[i]!}`);
+    });
+    throw new Error(`program link failed: ${gl.getProgramInfoLog(k.prog) ?? ''}`);
+  }
+  for (const sh of k.shaders) gl.deleteShader(sh);
+  k.shaders = [];
+  k.checked = true;
+  return k.prog;
 }
+
+/** `compile` under its older name: every program is kept now. */
+export const compileKept = compile;
 
 /** Uniform locations by name, looked up once. */
 export function uniforms<K extends string>(

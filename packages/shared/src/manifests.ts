@@ -1060,7 +1060,38 @@ export const AiSchema = z.strictObject({
   /** Each rival rolls a skill and an aggression in these ranges. */
   skill: z.tuple([unit, unit]),
   aggro: z.tuple([unit, unit]),
+  /**
+   * The kinds of driver in the field. Each rival is one of them: the one that lists its name, or
+   * else one picked by its name (always the same one). Left out, every rival is the same plain driver.
+   */
+  styles: z.array(z.lazy(() => DriverStyleSchema)).optional(),
 });
+
+/**
+ * A kind of driver: how it differs from the rest of the field. Every number is 0 to 1 and they
+ * are read by the behaviour, which may use them as it likes.
+ */
+export const DriverStyleSchema = z.strictObject({
+  /** A word for it, for the name tag and the results. */
+  name: z.string().min(1).max(12),
+  /** Rivals of these names are always this kind. */
+  drivers: z.array(z.string()).default([]),
+  /** Added to the skill it rolls (top speed). */
+  pace: z.number().min(-0.2).max(0.2).default(0),
+  /** Its aggression is rolled in this range instead of the AI's own. */
+  aggro: z.tuple([unit, unit]).optional(),
+  /** How late it brakes and how close to the edge it runs. */
+  nerve: unit.default(0.5),
+  /** How far it goes out of its way for crates, boost tiles and ramps. */
+  greed: unit.default(0.5),
+  /** How hard it shuts the door on a car coming up behind. */
+  block: unit.default(0.3),
+  /** How quick it is to fire what it holds. */
+  trigger: unit.default(0.5),
+  /** How much it wanders off its line. */
+  wobble: unit.default(0.3),
+});
+export type DriverStyle = z.infer<typeof DriverStyleSchema>;
 export type AiManifest = z.infer<typeof AiSchema>;
 
 /**

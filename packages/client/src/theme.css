@@ -1,0 +1,1490 @@
+/*
+ * The look of the menus, to go with the bright world: paper cards and sunny buttons with an ink
+ * line round them and a hard shadow under, dark words on light, everything a thumb can hit.
+ * Loaded after styles.css, which keeps the layout; a new screen built from the same pieces
+ * (.panel, .events button, .row button, .item, .tabs, .slide, .modChips) wears this by itself.
+ *
+ *   a card          .card, .panel.narrow, .garageBox, .trackRow
+ *   a button        .events button, .panel.narrow button, .row button   (yellow)
+ *     .go           the way forward (green)       .quiet / .small   a lesser one (paper)
+ *     .warn         cannot be undone (red)        .on               picked (tabs, chips)
+ *   a slider        label.slide > span + input[type=range]
+ *   a switch        button.tog (drawn off when its label ends in OFF)
+ */
+:root {
+  --ink: #1b2233;
+  --ink2: #55607a;
+  --paper: #fff8e6;
+  --paper2: #f1e6c6;
+  --sun: #ffd23f;
+  --orange: #ff8a3d;
+  --sky: #5cc0ff;
+  --grass: #6bd65a;
+  --red: #ff6b5b;
+  --line: 3px;
+  --drop: 0 4px 0 var(--ink);
+  --round: 16px;
+}
+
+/* ---- the backdrop: a sky over a lawn; a veil where a race shows behind */
+.screen {
+  color: var(--ink);
+  padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
+    calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  background:
+    radial-gradient(60px 22px at 14% 16%, #fff 98%, transparent),
+    radial-gradient(44px 18px at 19% 12%, #fff 98%, transparent),
+    radial-gradient(70px 24px at 78% 22%, #fff 98%, transparent),
+    radial-gradient(48px 18px at 73% 17%, #fff 98%, transparent),
+    radial-gradient(120% 38% at 50% 108%, #57c24a 99%, transparent),
+    radial-gradient(90% 30% at 12% 100%, #7ddb62 99%, transparent),
+    radial-gradient(80% 26% at 92% 100%, #7ddb62 99%, transparent),
+    linear-gradient(#5cc0ff, #c4ecff);
+}
+#pauseMenu,
+#results,
+#editSetup {
+  background: rgba(27, 34, 51, 0.42);
+}
+
+/* ---- cards */
+.card,
+.panel.narrow,
+.garageBox,
+.trackRow {
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--round);
+  box-shadow: var(--drop);
+}
+.panel.narrow {
+  width: min(340px, 100%);
+  padding: 14px;
+  gap: 10px;
+  max-height: none;
+  margin: auto 0;
+}
+.panel.card {
+  padding: 10px 14px 14px;
+  width: min(760px, 100%);
+  max-height: none;
+  margin: auto 0;
+}
+
+/* ---- words */
+h1 {
+  font-size: clamp(34px, 9vmin, 64px);
+  color: var(--sun);
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 5px 0 var(--ink);
+  letter-spacing: 0.03em;
+  padding: 2px 6px 6px 4px;
+}
+h1 span {
+  color: var(--orange);
+}
+h2 {
+  color: var(--ink);
+  font-size: clamp(24px, 6vmin, 38px);
+  line-height: 1;
+}
+.screen:not(#pauseMenu, #results, #editSetup, #settings) > .panel:not(.narrow) > h2,
+.careerHead h2 {
+  color: var(--sun);
+  -webkit-text-stroke: 4.5px var(--ink);
+  letter-spacing: 0.03em;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink);
+  padding: 2px 6px 4px 3px;
+}
+.tag {
+  opacity: 1;
+  font-weight: 700;
+  color: var(--ink);
+}
+.note {
+  color: #b4420d;
+  font-weight: 800;
+}
+.sect {
+  margin: 6px 0 0;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.sect small {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0;
+  opacity: 0.75;
+  margin-left: 6px;
+}
+
+/* ---- buttons */
+.events button,
+.panel.narrow button,
+.row button,
+.trackRow button,
+.sheet button,
+.careerHead .small,
+.list .small,
+.gear {
+  color: var(--ink);
+  background: var(--sun);
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  box-shadow: var(--drop);
+  min-height: 44px;
+  font-weight: 900;
+  transition:
+    transform 0.05s,
+    box-shadow 0.05s;
+}
+.events button:active,
+.panel.narrow button:active,
+.row button:active,
+.trackRow button:active,
+.sheet button:active,
+.careerHead .small:active,
+.list .small:active,
+.gear:active {
+  background: var(--sun);
+  filter: brightness(0.93);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.events button small {
+  opacity: 0.85;
+  font-weight: 700;
+}
+.screen button.go,
+#tracksPanel button.go,
+#onlinePanel button.go {
+  background: var(--grass);
+  border-color: var(--ink);
+}
+.screen button.warn,
+#tracksPanel button.warn {
+  background: var(--red);
+  border-color: var(--ink);
+}
+.screen button.quiet,
+.events .small,
+.careerHead .small,
+.list .small,
+#onlinePanel button.small,
+.gear {
+  background: var(--paper);
+  border-color: var(--ink);
+}
+.events .small {
+  padding: 8px 14px;
+}
+button:disabled,
+.events button.item:disabled {
+  opacity: 1;
+  color: var(--ink2);
+  background: var(--paper2);
+  border-color: var(--ink2);
+  box-shadow: 0 4px 0 var(--ink2);
+  cursor: default;
+}
+
+/* ---- the main menu */
+.menuTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.gear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.gear i {
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+}
+.menuSide {
+  flex: 1 1 260px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.menuSide .tag {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.garageBox {
+  flex: 0 1 auto;
+  padding: 8px 10px 10px;
+  background: linear-gradient(#d8f2ff, var(--paper) 62%);
+}
+.carPick b {
+  color: var(--ink);
+}
+.carPick small {
+  opacity: 0.85;
+  font-weight: 700;
+}
+.carPick button {
+  width: 48px;
+  height: 48px;
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background: var(--sun);
+  color: var(--ink);
+  box-shadow: var(--drop);
+}
+.carPick button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.stats label {
+  opacity: 1;
+  font-weight: 900;
+}
+.stats i {
+  height: 10px;
+  border-radius: 6px;
+  border: 2px solid var(--ink);
+  background: #fff;
+}
+.stats i b {
+  border-radius: 0;
+  background: linear-gradient(90deg, var(--orange), var(--sun));
+}
+.events {
+  gap: 10px;
+  min-width: 0;
+}
+.modes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+.events .modes button {
+  padding: 10px 12px;
+}
+.events .modes button b {
+  font-size: 17px;
+}
+.events button.career {
+  background: var(--orange);
+  border-color: var(--ink);
+}
+.events button.online {
+  background: var(--sky);
+  border-color: var(--ink);
+}
+.events button.career.tracks {
+  background: var(--grass);
+  border-color: var(--ink);
+}
+
+/* a venue's card: its little map, what it is, its name */
+#venues {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+  gap: 10px;
+}
+.events button.venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 8px;
+  overflow: hidden;
+  background: var(--paper);
+}
+.venue .thumb {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 150 / 84;
+  display: block;
+  border-bottom: var(--line) solid var(--ink);
+}
+.venue em {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  padding: 3px 7px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--sun);
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+.venue.derby em {
+  background: var(--red);
+}
+.events button.venue b {
+  font-size: 13px;
+  padding: 6px 9px 0;
+  line-height: 1.15;
+}
+.events button.venue small {
+  padding: 2px 9px 0;
+  font-size: 10.5px;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* the world's chips */
+#worldPick > b {
+  display: none;
+}
+#worldPick > small {
+  opacity: 0.8;
+  font-weight: 700;
+}
+.events .modChips button,
+.panel.narrow .modChips button {
+  min-height: 36px;
+  color: var(--ink);
+  font-weight: 900;
+  padding: 0 12px;
+  border: var(--line) solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0 3px 0 var(--ink);
+  opacity: 1;
+}
+.events .modChips button.on,
+.panel.narrow .modChips button.on {
+  background: var(--chip);
+  border-color: var(--ink);
+  color: var(--ink);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.events .modChips button.on::before {
+  content: '✓ ';
+}
+details.help {
+  opacity: 1;
+  margin: 0;
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  font-size: 12px;
+  font-weight: 600;
+}
+details.help summary {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  list-style: none;
+}
+details.help summary::after {
+  content: '+';
+  margin-left: auto;
+  font-size: 18px;
+}
+details.help[open] summary::after {
+  content: '–';
+}
+details.help p {
+  margin: 0;
+  padding: 0 14px 12px;
+  line-height: 1.5;
+}
+
+/* a phone on its side: the car stays put, the list of things to do scrolls beside it */
+@media (orientation: landscape) and (min-width: 600px) {
+  #menu {
+    overflow: hidden;
+    align-items: stretch;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    padding-bottom: 0;
+  }
+  #menu .panel {
+    width: min(980px, 100%);
+    height: 100%;
+    max-height: none;
+  }
+  #menu .cols {
+    height: 100%;
+    flex-wrap: nowrap;
+    gap: 14px;
+  }
+  .menuSide {
+    flex: 0 0 min(300px, 37%);
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  #menu .events {
+    flex: 1 1 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    /* (room for the buttons' shadows, and to scroll the last row clear of the edge) */
+    padding: 2px 4px calc(16px + env(safe-area-inset-bottom)) 2px;
+  }
+  #menu .events > * {
+    flex-shrink: 0;
+  }
+}
+@media (max-height: 520px) {
+  h1 {
+    font-size: 34px;
+  }
+  .menuSide .tag {
+    display: none;
+  }
+  .menuTop {
+    margin-bottom: 6px;
+  }
+  #garage {
+    height: clamp(84px, 30vh, 130px);
+  }
+  .carPick button {
+    width: 44px;
+    height: 44px;
+  }
+  .events .modes button {
+    padding: 7px 10px;
+  }
+  .events .modes button small {
+    display: none;
+  }
+  .events .modes button b {
+    font-size: 15px;
+    text-align: center;
+  }
+  .gear span {
+    display: none;
+  }
+  .gear {
+    width: 46px;
+    justify-content: center;
+    padding: 0;
+  }
+  /* the world's chips in one row that slides sideways */
+  #worldPick > small {
+    display: none;
+  }
+  #worldPick .modChips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    margin: 0 -4px;
+    padding: 0 4px 5px;
+  }
+  #worldPick .modChips button {
+    flex: none;
+  }
+  .sheet header h2 {
+    font-size: 20px;
+  }
+  .sheet header button,
+  .sheet .setTabs button {
+    min-height: 38px;
+  }
+  .setTabs {
+    margin-top: 6px;
+  }
+}
+
+/* ---- sliders: a fat track and a thumb to grab, the same everywhere */
+.panel.narrow .slide,
+.sheet .slide,
+#volume,
+.tune {
+  color: var(--ink);
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background: #fff;
+}
+.sheet .slide {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 14px 2px;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.sheet .slide span,
+.tune span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.panel.narrow .slide b,
+.sheet .slide b,
+.tune span b {
+  color: #b4420d;
+  font-variant-numeric: tabular-nums;
+}
+.tune.changed {
+  border-color: var(--ink);
+  background: #fff1b8;
+}
+.tune small {
+  opacity: 0.8;
+}
+.sheet input[type='range'],
+.panel.narrow .slide input[type='range'],
+.vol input,
+.tune input[type='range'] {
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: pan-y;
+}
+.sheet .slide input[type='range'] {
+  --fill: 0%;
+}
+.sheet input[type='range']::-webkit-slider-runnable-track,
+.vol input::-webkit-slider-runnable-track,
+.panel.narrow .slide input[type='range']::-webkit-slider-runnable-track,
+.tune input[type='range']::-webkit-slider-runnable-track {
+  height: 14px;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background: linear-gradient(to right, var(--sun) var(--fill, 0%), var(--paper2) var(--fill, 0%));
+}
+.sheet input[type='range']::-moz-range-track,
+.vol input::-moz-range-track,
+.panel.narrow .slide input[type='range']::-moz-range-track,
+.tune input[type='range']::-moz-range-track {
+  height: 10px;
+  border-radius: 8px;
+  border: 2px solid var(--ink);
+  background: var(--paper2);
+}
+.sheet input[type='range']::-moz-range-progress,
+.vol input::-moz-range-progress {
+  height: 10px;
+  border-radius: 8px;
+  background: var(--sun);
+}
+.sheet input[type='range']::-webkit-slider-thumb,
+.vol input::-webkit-slider-thumb,
+.panel.narrow .slide input[type='range']::-webkit-slider-thumb,
+.tune input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 32px;
+  height: 32px;
+  margin-top: -11px;
+  border-radius: 50%;
+  border: var(--line) solid var(--ink);
+  background: var(--orange);
+  box-shadow: 0 3px 0 var(--ink);
+}
+.sheet input[type='range']::-moz-range-thumb,
+.vol input::-moz-range-thumb,
+.panel.narrow .slide input[type='range']::-moz-range-thumb,
+.tune input[type='range']::-moz-range-thumb {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: var(--line) solid var(--ink);
+  background: var(--orange);
+  box-shadow: 0 3px 0 var(--ink);
+}
+.sheet input[type='range']:disabled {
+  opacity: 0.45;
+}
+#volume {
+  padding: 2px 14px;
+}
+.vol span {
+  width: 66px;
+}
+
+/* ---- the settings sheet: to one side of a paused race, which shows beside it */
+#settings {
+  z-index: 6;
+  padding: 0;
+  background: none;
+  justify-content: flex-end;
+  align-items: stretch;
+  overflow: hidden;
+  touch-action: none;
+}
+#settings.over {
+  background: rgba(27, 34, 51, 0.42);
+}
+.sheet {
+  width: min(360px, 100%);
+  display: flex;
+  flex-direction: column;
+  color: var(--ink);
+  background: var(--paper);
+  border-left: var(--line) solid var(--ink);
+  box-shadow: -5px 0 0 rgba(27, 34, 51, 0.25);
+  padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0 12px;
+}
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sheet header h2 {
+  margin: 0;
+  font-size: 24px;
+}
+.sheet header button {
+  padding: 0 20px;
+  font-size: 15px;
+}
+.setTabs {
+  display: flex;
+  gap: 6px;
+  margin: 10px 0 0;
+}
+.sheet .setTabs button {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  background: var(--paper2);
+  box-shadow: none;
+  border-radius: 12px 12px 0 0;
+  border-bottom-width: 0;
+  min-height: 42px;
+}
+.sheet .setTabs button.on {
+  background: var(--sun);
+  transform: none;
+}
+.setBody {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  border-top: var(--line) solid var(--ink);
+  margin: 0 -12px;
+  padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+}
+.setBody > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.setBody > div.hidden {
+  display: none;
+}
+.sheet .setBody button {
+  padding: 0 14px;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  text-align: left;
+  background: #fff;
+}
+/* a switch: its lamp is lit while it is on */
+.sheet .setBody button.tog {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheet .setBody button.tog::after {
+  content: '';
+  flex: none;
+  width: 44px;
+  height: 24px;
+  border: var(--line) solid var(--ink);
+  border-radius: 999px;
+  background: radial-gradient(circle at 31px 50%, #fff 7px, transparent 8px) var(--grass);
+}
+.sheet .setBody button.tog.off::after {
+  background: radial-gradient(circle at 9px 50%, #fff 7px, transparent 8px) #b9bfcc;
+}
+#tuneRows {
+  grid-template-columns: 1fr;
+}
+/* a phone held upright: the sheet comes up from the bottom, the race shows above it */
+@media (orientation: portrait) {
+  #settings {
+    flex-direction: column;
+    justify-content: flex-end;
+  }
+  .sheet {
+    width: 100%;
+    height: min(62%, 560px);
+    border-left: 0;
+    border-top: var(--line) solid var(--ink);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -5px 0 rgba(27, 34, 51, 0.25);
+    padding-top: 10px;
+    padding-left: calc(12px + env(safe-area-inset-left));
+  }
+}
+
+/* ---- the pause menu */
+#pauseMenu .panel.narrow {
+  width: min(300px, 100%);
+}
+#pauseMenu h2 {
+  text-align: center;
+  margin: 0;
+}
+@media (max-height: 420px) {
+  #pauseMenu .panel.narrow {
+    width: min(460px, 100%);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  #pauseMenu h2 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---- the results */
+#results .panel.card {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  margin: auto 0;
+}
+#results h2 {
+  margin: 0;
+  color: var(--sun);
+  -webkit-text-stroke: 4.5px var(--ink);
+  letter-spacing: 0.03em;
+  paint-order: stroke fill;
+  text-shadow: 0 3px 0 var(--ink);
+  padding: 2px 6px 4px 3px;
+}
+#results .tag {
+  margin: 2px 0 4px;
+  font-size: 13px;
+}
+#results .tableWrap {
+  flex: 1 1 auto;
+  min-height: 60px;
+  overflow: auto;
+  touch-action: pan-x pan-y;
+}
+table {
+  border-collapse: separate;
+  border-spacing: 0 3px;
+  font-size: 13px;
+  font-weight: 700;
+}
+th {
+  opacity: 0.75;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 0 8px;
+}
+td {
+  padding: 4px 8px;
+  border: 0;
+  background: #fff;
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+td:first-child {
+  width: 34px;
+  text-align: center;
+  font-weight: 900;
+  border-left: 2px solid var(--ink);
+  border-radius: 10px 0 0 10px;
+}
+td:last-child {
+  border-right: 2px solid var(--ink);
+  border-radius: 0 10px 10px 0;
+  font-weight: 900;
+}
+td small {
+  opacity: 0.7;
+}
+tr.me td {
+  color: var(--ink);
+  background: var(--sun);
+  font-weight: 900;
+}
+/* gold, silver and bronze for the first three */
+#resTable tr:nth-child(2) td:first-child {
+  background: #ffc21a;
+}
+#resTable tr:nth-child(3) td:first-child {
+  background: #cfd6e2;
+}
+#resTable tr:nth-child(4) td:first-child {
+  background: #e79a5b;
+}
+.dot,
+.seats .dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--ink);
+  border-radius: 4px;
+  vertical-align: -2px;
+}
+.row {
+  margin-top: 10px;
+}
+#results .row button:first-child {
+  background: var(--grass);
+}
+#payout div.sum {
+  border-top-color: var(--ink);
+  color: #17803a;
+}
+#payout div.neg b {
+  color: #d1321f;
+}
+
+/* ---- the career hub, the online rooms, your tracks: the same pieces */
+.careerHead .cash,
+.item em {
+  color: #17803a;
+}
+.events .tabs button {
+  min-height: 40px;
+  border-color: var(--ink);
+  background: var(--paper);
+  box-shadow: 0 3px 0 var(--ink);
+}
+.events .tabs button.on {
+  border-color: var(--ink);
+  background: var(--sun);
+  color: var(--ink);
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+.events button.item {
+  background: var(--paper);
+}
+.events button.item.final {
+  border-color: var(--ink);
+  background: var(--orange);
+}
+.events button.item.picked {
+  border-color: var(--ink);
+  background: #c9f5c1;
+}
+.banner {
+  border: var(--line) solid var(--ink);
+  border-radius: 12px;
+  background: #c9f5c1;
+}
+.loadBar {
+  height: 16px;
+  border: var(--line) solid var(--ink);
+  border-radius: 9px;
+  background: #fff;
+}
+.loadBar b {
+  background: linear-gradient(90deg, var(--orange), var(--sun));
+}
+#onlinePanel input,
+#onlinePanel select,
+#tracksPanel select,
+#editSetup input[type='text'],
+#editSetup select {
+  color: var(--ink);
+  background: #fff;
+  border: var(--line) solid var(--ink);
+  border-radius: 12px;
+  min-height: 44px;
+}
+.roomCode b {
+  color: #b4420d;
+}
+.seats li.me {
+  color: #b4420d;
+}
+#onlinePanel .note {
+  color: #0d5c94;
+}
+.trackRow {
+  padding: 8px 10px 10px;
+}
+.trackRow small {
+  opacity: 0.8;
+  font-weight: 700;
+}
+.trackRow button {
+  padding: 0 14px;
+}
+#tracksPanel .newRow button {
+  flex: 1 1 120px;
+}
+
+/* ---- in the race: the pause button and the touch buttons, bold enough to find by feel */
+#pauseBtn {
+  width: 46px;
+  height: 46px;
+  color: var(--ink);
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--drop);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+#pauseBtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+#pauseKey {
+  top: calc(66px + env(safe-area-inset-top));
+}
+.pad {
+  color: #fff;
+  border: var(--line) solid var(--ink);
+  background: rgba(27, 34, 51, 0.5);
+  box-shadow:
+    0 5px 0 rgba(27, 34, 51, 0.7),
+    inset 0 0 0 3px rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  text-shadow:
+    0 2px 0 var(--ink),
+    0 0 4px var(--ink);
+  transition: transform 0.04s;
+}
+.pad.down {
+  transform: translateY(4px) scale(0.97);
+  box-shadow:
+    0 1px 0 rgba(27, 34, 51, 0.7),
+    inset 0 0 0 3px #fff;
+}
+#btnBoost {
+  width: 96px;
+  height: 96px;
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  border-color: var(--ink);
+  background: rgba(63, 180, 255, 0.72);
+  font-size: 16px;
+}
+#btnBoost.down {
+  background: rgba(63, 180, 255, 0.95);
+}
+#btnBrake {
+  width: 78px;
+  height: 78px;
+  right: calc(122px + env(safe-area-inset-right));
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  background: rgba(255, 107, 91, 0.66);
+}
+#btnBrake.down {
+  background: rgba(255, 107, 91, 0.95);
+}
+#btnFire {
+  width: 80px;
+  height: 80px;
+  right: calc(36px + env(safe-area-inset-right));
+  bottom: calc(126px + env(safe-area-inset-bottom));
+  border-color: var(--ink);
+  background: rgba(255, 210, 63, 0.9);
+  color: var(--ink);
+  text-shadow: none;
+  font-size: 12px;
+  line-height: 1.1;
+  padding: 0 6px;
+}
+#btnFire.down {
+  background: #fff;
+}
+#btnFire.empty {
+  opacity: 0.45;
+  background: rgba(27, 34, 51, 0.4);
+  color: #fff;
+}
+#stickBase {
+  width: 124px;
+  height: 124px;
+  margin: -62px 0 0 -62px;
+  border: var(--line) solid var(--ink);
+  background: rgba(27, 34, 51, 0.28);
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.5);
+}
+#stickKnob {
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border: var(--line) solid var(--ink);
+  background: var(--paper);
+  box-shadow: 0 4px 0 rgba(27, 34, 51, 0.6);
+}
+#stickZone .hint {
+  left: calc(20px + env(safe-area-inset-left));
+  padding: 7px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  color: var(--ink);
+  background: var(--paper);
+  opacity: 0.9;
+  transition: opacity 0.4s;
+}
+/* once the stick has been found it is not said again */
+body.driven #stickZone .hint {
+  opacity: 0;
+}
+#specBar button,
+#specWho {
+  color: var(--ink);
+  border: var(--line) solid var(--ink);
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--drop);
+}
+#specBar button {
+  min-width: 48px;
+  min-height: 46px;
+}
+#specBar button:active {
+  background: var(--sun);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+#specWho {
+  border-color: var(--ink);
+  background: var(--sun);
+}
+#specBar #specSkip {
+  border-color: var(--ink);
+  background: var(--orange);
+}
+#specBar small {
+  opacity: 0.85;
+}
+
+/* ---- a phone held upright: the stick has the left of the screen, the buttons stand in a
+   column up the right edge under the other thumb, and the speedometer keeps the middle */
+@media (orientation: portrait) {
+  #stickZone {
+    width: 66%;
+  }
+  #btnBoost {
+    right: calc(14px + env(safe-area-inset-right));
+    bottom: calc(22px + env(safe-area-inset-bottom));
+  }
+  #btnFire {
+    right: calc(22px + env(safe-area-inset-right));
+    bottom: calc(132px + env(safe-area-inset-bottom));
+  }
+  #btnBrake {
+    right: calc(23px + env(safe-area-inset-right));
+    bottom: calc(226px + env(safe-area-inset-bottom));
+  }
+  #stickZone .hint {
+    bottom: calc(126px + env(safe-area-inset-bottom));
+  }
+  #specBar {
+    flex-wrap: wrap;
+    justify-content: center;
+    width: calc(100% - 16px);
+  }
+  #specZoom {
+    margin-left: 0;
+  }
+  #pauseMenu .panel.narrow {
+    width: min(320px, 100%);
+  }
+}
+
+/* a narrow screen: CAREER has a row to itself, and the results keep to what matters */
+@media (max-width: 520px) {
+  .modes {
+    grid-template-columns: 1fr 1fr;
+  }
+  .modes #toCareer {
+    grid-column: 1 / -1;
+  }
+  #resTable th:nth-child(4),
+  #resTable td:nth-child(4),
+  #resTable th:nth-child(5),
+  #resTable td:nth-child(5) {
+    display: none;
+  }
+}
+
+/* ---- tournaments: medals and the cup table on paper */
+.medal.m3,
+#payout div.m3 b {
+  color: #b07a00;
+}
+.medal.m2,
+#payout div.m2 b {
+  color: #6b7486;
+}
+.medal.m1,
+#payout div.m1 b {
+  color: #a8571c;
+}
+#payout div.cupHead {
+  color: #b4420d;
+}
+#payout div.cupRow.me {
+  color: #17803a;
+  font-weight: 900;
+}
+.banner small {
+  opacity: 0.85;
+}
+.events button.item.cup {
+  border-left-width: 10px;
+}
+.events button.item.cup.cup {
+  border-left-color: var(--sun);
+}
+.events button.item.cup.trial {
+  border-left-color: var(--sky);
+}
+.events button.item.cup.derby {
+  border-left-color: var(--orange);
+}
+.events button.item.cup.last {
+  border-left-color: #b57cff;
+}
+.events button.item.cup.bounty {
+  border-left-color: var(--red);
+}
+.events button.item.cup.iron {
+  border-left-color: #9aa3b2;
+}
+
+/* ---- the driving lesson: a card that says what to do now, the one button it is about lit up,
+   a cheer when it is done. Loud on purpose: somebody new must not have to look for it */
+#tutor {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--ink);
+}
+#tutCard {
+  position: absolute;
+  left: 50%;
+  top: calc(10px + env(safe-area-inset-top));
+  transform: translateX(-50%);
+  width: min(430px, calc(100% - 300px));
+  min-width: min(300px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px 10px;
+  text-align: center;
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--round);
+  box-shadow: 0 5px 0 var(--ink);
+  animation: tutDrop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+#tutor.cheering #tutCard {
+  background: var(--sun);
+}
+#tutDots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 14px;
+}
+#tutDots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--paper2);
+}
+#tutDots i.done {
+  background: var(--grass);
+}
+#tutDots i.on {
+  width: 14px;
+  height: 14px;
+  background: var(--sun);
+  animation: tutBeat 0.6s ease-in-out infinite alternate;
+}
+#tutTitle {
+  font-size: clamp(20px, 5.4vmin, 28px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+#tutSub {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+#tutMeter {
+  width: min(220px, 80%);
+  height: 12px;
+  margin-top: 3px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+#tutMeter b {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--orange), var(--sun));
+  transition: width 0.12s linear;
+}
+#tutMeter.tank b {
+  background: linear-gradient(90deg, #2f8fe6, var(--sky));
+}
+#tutSkip {
+  position: absolute;
+  right: calc(12px + env(safe-area-inset-right));
+  top: calc(12px + env(safe-area-inset-top));
+  min-height: 40px;
+  padding: 0 12px;
+  pointer-events: auto;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+#tutSkip:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+/* a ghost of the stick with a thumb pushing it about, where a thumb would land */
+#tutHand {
+  position: absolute;
+  left: 24%;
+  bottom: 30%;
+  width: 124px;
+  height: 124px;
+  margin: 0 0 -62px -62px;
+  border: 4px dashed #fff;
+  border-radius: 50%;
+  background: rgba(27, 34, 51, 0.28);
+  box-shadow: 0 0 0 3px var(--ink);
+  animation: tutBeat 0.6s ease-in-out infinite alternate;
+}
+#tutHand i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: var(--sun);
+  border: var(--line) solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  animation: tutThumb 2.2s ease-in-out infinite;
+}
+#tutCheer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42%;
+  text-align: center;
+  font-size: clamp(40px, 13vmin, 76px);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: var(--sun);
+  -webkit-text-stroke: 9px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 var(--ink);
+  opacity: 0;
+}
+#tutCheer.go {
+  opacity: 1;
+  transform: rotate(-3deg);
+  animation: tutCheer 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+/* the button the step is about: a ring round it and an arrow down on it; the ones whose turn has
+   not come stay away, so there is one thing to press */
+body.tutor .pad:not(.teach):not(.taught) {
+  visibility: hidden;
+}
+body.tutor .pad.teach {
+  opacity: 1;
+  animation: tutPad 0.55s ease-in-out infinite alternate;
+}
+body.tutor .pad.teach::after {
+  content: '\25BC';
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  margin-left: -18px;
+  width: 36px;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--sun);
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: none;
+  animation: tutArrow 0.55s ease-in-out infinite alternate;
+}
+body.tutor #keyHints .teach {
+  border-radius: 10px;
+  outline: 3px solid var(--sun);
+  outline-offset: 4px;
+  animation: tutBeat 0.55s ease-in-out infinite alternate;
+}
+/* the lesson has no places, laps or rivals to show: the stick's own small hint goes too */
+body.tutor #stickZone .hint {
+  display: none;
+}
+@keyframes tutDrop {
+  from {
+    transform: translate(-50%, -120%);
+  }
+}
+@keyframes tutBeat {
+  to {
+    transform: scale(1.12);
+  }
+}
+@keyframes tutThumb {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25%,
+  45% {
+    transform: translate(30px, -22px);
+  }
+  70%,
+  88% {
+    transform: translate(-6px, -36px);
+  }
+}
+@keyframes tutCheer {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+  }
+}
+@keyframes tutPad {
+  from {
+    box-shadow:
+      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 0 0 4px var(--sun),
+      0 0 0 7px var(--ink);
+  }
+  to {
+    transform: scale(1.08);
+    box-shadow:
+      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 0 0 9px var(--sun),
+      0 0 0 12px var(--ink);
+  }
+}
+@keyframes tutArrow {
+  to {
+    transform: translateY(9px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #tutCard,
+  #tutDots i.on,
+  #tutHand,
+  body.tutor .pad.teach,
+  body.tutor .pad.teach::after {
+    animation: none;
+  }
+}
+/* upright, or too narrow for the card to sit between PAUSE and SKIP: it goes under them */
+@media (orientation: portrait), (max-width: 620px) {
+  #tutCard {
+    top: calc(60px + env(safe-area-inset-top));
+    width: calc(100% - 24px);
+    max-width: 430px;
+  }
+  #tutHand {
+    left: 33%;
+    bottom: 24%;
+  }
+}
+
+/* (the lesson's last card is up: nothing left to press behind it) */
+body.lessonEnd[data-screen='game'] #controls,
+body.lessonEnd[data-screen='game'] #pauseBtn {
+  display: none;
+}
+/* the offer, and the lesson's last card: the two kinds of event as two cards to pick from */
+#tutEnd {
+  background: rgba(27, 34, 51, 0.42);
+}
+#tutAsk .panel.narrow,
+#tutEnd .panel.narrow {
+  width: min(520px, 100%);
+  margin: auto;
+  max-height: 100%;
+  overflow: auto;
+}
+#tutAsk h2,
+#tutEnd h2 {
+  margin: 0;
+  text-align: center;
+}
+#tutAsk .tag,
+#tutEnd .tag {
+  margin: 0;
+  text-align: center;
+}
+#tutEnd .note {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+}
+.tutModes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tutModes button.venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 9px;
+  overflow: hidden;
+  background: var(--paper);
+  text-align: left;
+}
+.tutModes button.venue b {
+  display: block;
+  padding: 7px 10px 0;
+  font-size: 15px;
+  line-height: 1.15;
+}
+.tutModes button.venue small {
+  padding: 3px 10px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.events button.lesson {
+  background: var(--paper);
+}
+@media (max-height: 420px) {
+  .tutModes .thumb {
+    aspect-ratio: 150 / 56;
+    object-fit: cover;
+  }
+}

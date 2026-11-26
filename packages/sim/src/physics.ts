@@ -72,13 +72,23 @@ export function makeCar(
             behaviour,
             lane: w.rng.range(-0.5, 0.5),
             phase: w.rng.range(0, 100),
-            skill: setup.skill ?? w.rng.range(ai.skill[0], ai.skill[1]),
-            aggro: w.rng.range(ai.aggro[0], ai.aggro[1]),
+            skill: 1,
+            aggro: 0,
             stuckT: 0,
             revT: 0,
             boostT: 0,
             target: -1,
             targetT: 0,
+            style: '',
+            traits: { nerve: 0.5, greed: 0.5, block: 0.3, trigger: 0.5, wobble: 0.3 },
+            side: 0,
+            want: 0,
+            block: Infinity,
+            heldT: 0,
+            aimT: 0,
+            tries: 0,
+            freeT: 0,
+            jamT: 0,
           }
         : null,
     x: 0,
@@ -163,11 +173,39 @@ export function makeCar(
     draft: false,
     tricks: {},
   };
+  if (c.ai && ai) character(w, c, ai, setup.skill);
   for (const id of setup.fit ?? []) {
     const def = w.content.pickup.get(id);
     if (def) fitAddon(w, c, def, true);
   }
   return c;
+}
+
+/**
+ * Who is driving: the kind of driver that lists the car's name, or one picked by its name, and the
+ * skill and aggression rolled for it. How hard the race is set (`world.level`) moves the skill.
+ */
+function character(w: World, c: Car, ai: AiManifest, skill?: number): void {
+  const A = c.ai!;
+  const styles = ai.styles ?? [];
+  // (the same driver is the same kind in every race: by name, not by lot)
+  let h = 0;
+  for (let i = 0; i < c.name.length; i++) h = (h * 31 + c.name.charCodeAt(i)) >>> 0;
+  const style =
+    styles.find((s) => s.drivers.includes(c.name)) ??
+    (styles.length ? styles[h % styles.length]! : null);
+  const aggro = style?.aggro ?? ai.aggro;
+  A.skill = (skill ?? w.rng.range(ai.skill[0], ai.skill[1])) + (style?.pace ?? 0) + w.level.pace;
+  A.aggro = w.rng.range(aggro[0], aggro[1]);
+  if (!style) return;
+  A.style = style.name;
+  A.traits = {
+    nerve: style.nerve,
+    greed: style.greed,
+    block: style.block,
+    trigger: style.trigger,
+    wobble: style.wobble,
+  };
 }
 
 /** The two hull circles of a car (each of radius `hull(c)`). */
