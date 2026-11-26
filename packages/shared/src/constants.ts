@@ -2,10 +2,6 @@
 export const TICK_RATE = 60;
 export const DT = 1 / TICK_RATE;
 
-/** A car's hull is two circles on its centre line. */
-export const CAR_RADIUS = 6.2;
-export const CAR_OFFSET = 5.5;
-
 /** Downward acceleration for cars, props and debris, in art pixels per second squared. */
 export const GRAVITY = 420;
 
@@ -35,3 +31,19 @@ export const REBUILD_TIME = 2.4;
  * crater, a soft road), damage, and an item that slows it (a lead collar, a runt ray).
  */
 export const HELD = { rough: 1, hill: 2, sticky: 4, hurt: 8, weighed: 16 } as const;
+
+/**
+ * How hard the rivals are to beat. `pace` is added to every rival's skill (its top speed),
+ * `wits` scales how sharp it is (how soon it fires, how well it holds its line), `ease` is how
+ * much a rival far ahead of the humans backs off and `press` how much one far behind is helped.
+ */
+export const DIFFICULTY = {
+  easy: { pace: -0.09, wits: 0.45, ease: 0.86, press: 1.03 },
+  normal: { pace: -0.03, wits: 1, ease: 0.9, press: 1.07 },
+  hard: { pace: 0.03, wits: 1.4, ease: 0.97, press: 1.09 },
+} as const;
+export type Difficulty = keyof typeof DIFFICULTY;
+export const DIFFICULTIES = Object.keys(DIFFICULTY) as Difficulty[];
+
+/** How far a car's body rides over the ground its wheels are on, art px on a car of its own size. */
+export const BODY_UP = 0.6;

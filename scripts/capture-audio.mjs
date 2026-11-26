@@ -84,6 +84,13 @@ const scenes = [
     seconds: 7,
     noTune: true,
   })),
+  // the big courses' own noise: the fair's organ, the bay's surf and horn, lava, a cave
+  ...['tailspin-funfair', 'bonefish-bay', 'cinder-peak', 'glimmer-grotto'].map((v) => ({
+    name: `place-${v}`,
+    url: `?start=${v}&car=mutt&autoplay&seed=3`,
+    seconds: 12,
+    noTune: true,
+  })),
   // what a crash sounds like by what was hit, the tunes for moments, and the shop's
   {
     name: 'knocks',

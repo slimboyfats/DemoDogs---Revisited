@@ -1,9 +1,22 @@
-import { CAR_RADIUS, DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
+import { DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
 import { angDiff } from './math';
 import { batter, breakProp, damage, explode, ignite, light, shed, spill } from './damage';
 import { bounced, fireproof, held, hidden } from './guards';
 import type { World } from './world';
+import {
+  carGap,
+  carShape,
+  carsGap,
+  newShape,
+  newTouch,
+  pointGap,
+  propPoint,
+  thingGap,
+} from './shapes';
+
+const SHAPE = newShape();
+const TOUCH = newTouch();
 import { startCoil, throwOrb, updateCoils, updateOrbs, type Coil, type Orb } from './arcs';
 
 /**
@@ -282,7 +295,7 @@ function updateGobs(w: World): void {
     for (const c of w.cars) {
       if (gone) break;
       if (c.index === g.owner || c.wrecked || c.z > 8) continue;
-      if (Math.abs(c.x - g.x) > 10 || Math.hypot(c.x - g.x, c.y - g.y) > CAR_RADIUS + 3) continue;
+      if (Math.abs(c.x - g.x) > 40 || carGap(c, g.x, g.y) > 3) continue;
       const sp = Math.hypot(g.vx, g.vy) || 1;
       const push = (d.push ?? 0) * (d.push ? held(w, c) : 1);
       c.vx += (g.vx / sp) * push;
@@ -301,7 +314,7 @@ function updateGobs(w: World): void {
     if (!gone)
       for (const s of w.near(g.x, g.y, 2)) {
         if (s.down || !s.def.solid) continue;
-        if (Math.hypot(s.x - g.x, s.y - g.y) > s.def.radius + 1) continue;
+        if (thingGap(s, g.x, g.y) > 1) continue;
         if (d.lit) batter(w, s, 1.6, 'heat', g.x, g.y);
         w.emit({ t: 'splash', x: g.x, y: g.y, lit: !!d.lit });
         gone = true;
@@ -346,7 +359,7 @@ function updateGobs(w: World): void {
         }
       }
       for (const p of w.props) {
-        if (!p.alive || p.flying || Math.hypot(p.x - g.x, p.y - g.y) > p.def.radius + 2) continue;
+        if (!p.alive || p.flying || thingGap(p, g.x, g.y) > 2) continue;
         const m = 1 / Math.max(0.5, p.def.mass ?? 1);
         p.vx += g.vx * 0.06 * m;
         p.vy += g.vy * 0.06 * m;
@@ -374,8 +387,7 @@ function updateGobs(w: World): void {
 /** Is static s in the way at (x, y)? */
 function blocks(s: StaticProp, x: number, y: number, pad: number): boolean {
   if (s.down || !s.def.solid) return false;
-  const r = s.def.radius + pad;
-  return Math.abs(s.x - x) < r && Math.abs(s.y - y) < r && Math.hypot(s.x - x, s.y - y) < r;
+  return thingGap(s, x, y) < pad;
 }
 
 /**
@@ -401,7 +413,7 @@ export function rail(w: World, c: Car, d: WeaponManifest, x0: number, y0: number
     }
     for (const o of w.cars) {
       if (o === c || o.wrecked || o.z > 10 || struck.has(o.index)) continue;
-      if (Math.hypot(o.x - x, o.y - y) > CAR_RADIUS + 1.5) continue;
+      if (Math.abs(o.x - x) > 40 || carGap(o, x, y) > 1.5) continue;
       struck.add(o.index);
       // a mirrored car turns the slug: half of it comes back down the line
       const back = bounced(w, o, c, x, y, (d.damage ?? 30) * 0.5);
@@ -423,7 +435,7 @@ export function rail(w: World, c: Car, d: WeaponManifest, x0: number, y0: number
       c.smashed++;
     }
     for (const p of w.props) {
-      if (!p.alive || p.flying || Math.hypot(p.x - x, p.y - y) > p.def.radius + 1) continue;
+      if (!p.alive || p.flying || thingGap(p, x, y) > 1) continue;
       if (p.def.explodesAt !== undefined) light(p, c.index, 0.05);
       else if (p.def.breaksAt !== undefined) breakProp(w, p, c);
       p.vx += cs * 160;
@@ -489,9 +501,11 @@ function updateBalls(w: World): void {
     const rs = r * 0.6;
     for (const s of w.near(b.x, b.y, r)) {
       if (!blocks(s, b.x, b.y, rs)) continue;
-      const dx = b.x - s.x;
-      const dy = b.y - s.y;
-      const dl = Math.hypot(dx, dy) || 1;
+      // the way out of it, off whichever face the ball met
+      const gap = propPoint(s.def, s.x, s.y, s.rot, b.x, b.y, TOUCH);
+      const dx = TOUCH.nx;
+      const dy = TOUCH.ny;
+      const dl = 1;
       const into = -(b.vx * dx + b.vy * dy) / dl;
       if (into <= 0) continue;
       // what it took to bring the piece down, as a share of the blow: that much speed is spent
@@ -513,17 +527,19 @@ function updateBalls(w: World): void {
       } else {
         b.vx += (1.65 * into * dx) / dl;
         b.vy += (1.65 * into * dy) / dl;
-        b.x = s.x + (dx / dl) * (s.def.radius + rs + 0.1);
-        b.y = s.y + (dy / dl) * (s.def.radius + rs + 0.1);
+        b.x += dx * (rs + 0.1 - gap);
+        b.y += dy * (rs + 0.1 - gap);
       }
     }
     sp = Math.hypot(b.vx, b.vy);
     for (const c of w.cars) {
       if (c.wrecked || c.z > 6 || (c.index === b.owner && b.t > (d.life ?? 6) - 0.5)) continue;
-      const dx = c.x - b.x;
-      const dy = c.y - b.y;
-      const dl = Math.hypot(dx, dy) || 1;
-      if (dl > CAR_RADIUS + r) continue;
+      if (Math.abs(c.x - b.x) > 60 || Math.abs(c.y - b.y) > 60) continue;
+      if (pointGap(carShape(c, SHAPE), b.x, b.y, TOUCH) > r) continue;
+      // from the ball into the car, through the side of it the ball met
+      const dx = -TOUCH.nx;
+      const dy = -TOUCH.ny;
+      const dl = 1;
       // how hard they meet: the ball's speed into the car, less the car's own speed away
       const rel = ((b.vx - c.vx) * dx + (b.vy - c.vy) * dy) / dl;
       if (rel <= 20) continue;
@@ -565,7 +581,7 @@ function updateBalls(w: World): void {
       const dx = p.x - b.x;
       const dy = p.y - b.y;
       const dl = Math.hypot(dx, dy) || 1;
-      if (dl > p.def.radius + r) continue;
+      if (thingGap(p, b.x, b.y) > r) continue;
       if (p.def.breaksAt !== undefined && sp > p.def.breaksAt) {
         breakProp(w, p, owner);
         continue;
@@ -681,11 +697,7 @@ function updateStickies(w: World): void {
       s.x += s.vx * DT;
       s.y += s.vy * DT;
       const hit = w.cars.find(
-        (c) =>
-          c.index !== s.owner &&
-          !c.wrecked &&
-          c.z < 10 &&
-          Math.hypot(c.x - s.x, c.y - s.y) < CAR_RADIUS + 2,
+        (c) => c.index !== s.owner && !c.wrecked && c.z < 10 && carGap(c, s.x, s.y) < 2,
       );
       if (hit && bounced(w, hit, w.cars[s.owner], s.x, s.y, 1)) {
         // a mirrored car bats the dart back: it is the thrower's problem now
@@ -715,21 +727,13 @@ function updateStickies(w: World): void {
     if (s.car < 0) {
       // lying on the ground: the first car over it picks it up
       const c =
-        s.passCd > 0
-          ? undefined
-          : w.cars.find(
-              (c) => !c.wrecked && c.z < 5 && Math.hypot(c.x - x, c.y - y) < CAR_RADIUS + 1,
-            );
+        s.passCd > 0 ? undefined : w.cars.find((c) => !c.wrecked && c.z < 5 && carGap(c, x, y) < 1);
       if (c) cling(w, s, c, x, y);
     } else if (s.passCd <= 0) {
       // clinging to a car: touch another and it is theirs
       const from = w.cars[s.car]!;
       const to = w.cars.find(
-        (o) =>
-          o !== from &&
-          !o.wrecked &&
-          Math.abs(o.z - from.z) < 6 &&
-          Math.hypot(o.x - from.x, o.y - from.y) < CAR_RADIUS * 2 + 3,
+        (o) => o !== from && !o.wrecked && Math.abs(o.z - from.z) < 6 && carsGap(o, from) < 3,
       );
       if (to) {
         s.owner = from.index;

@@ -1,4 +1,5 @@
 import { DEFAULT_TUNING, type Tuning, type VenueManifest } from '@demodogs/shared';
+import type { LeapPiece } from './leaps';
 import type { Track } from './track';
 
 /**
@@ -176,8 +177,14 @@ const FACE = 5;
 
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
-/** A venue's relief; banks rise in the infield too unless `infield` is false. */
-type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield'> & { infield?: boolean };
+/**
+ * A venue's relief; banks rise in the infield too unless `infield` is false, and outside the loop
+ * unless `outfield` is.
+ */
+type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield' | 'outfield'> & {
+  infield?: boolean;
+  outfield?: boolean;
+};
 type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
 
 /** A venue with raised road and no `relief` of its own gets this: flat but for the platforms. */
@@ -354,6 +361,7 @@ export function buildRelief(
   oval: { cx: number; cy: number; rx: number; ry: number } | null,
   raised: readonly Raised[] = [],
   lanes: Lanes = DEFAULT_TUNING,
+  leaps: readonly LeapPiece[] = [],
 ): Relief {
   const R = new Relief(w, h);
   const C = Relief.CELL;
@@ -401,7 +409,10 @@ export function buildRelief(
   let max = 0;
   for (let gy = 0; gy < R.gh; gy++) {
     // (the loop's edges along this row, when the banks keep out of the infield)
-    const cross = spec.infield === false && track && !oval ? loopCrossings(track, gy * C) : null;
+    const cross =
+      (spec.infield === false || spec.outfield === false) && track && !oval
+        ? loopCrossings(track, gy * C)
+        : null;
     let ci = 0;
     for (let gx = 0; gx < R.gw; gx++) {
       const x = gx * C;
@@ -420,16 +431,31 @@ export function buildRelief(
       if (lift && near![k]! >= 0) {
         // the platform: the road's own height out to its shoulder, then down a steep side;
         // and beside it, where there is one, the lane of an on-ramp at the height it has climbed to
+        // (read between the samples either side of it, by how far along the road it lies: taken
+        // from the nearest sample alone a ramp is a flight of steps, and its light a lattice)
         const i = near![k]!;
-        const top = lift[i]!;
+        const N = track!.n;
+        const ca = Math.cos(track!.a[i]!);
+        const sa = Math.sin(track!.a[i]!);
+        const st = track!.step;
+        const along = Math.max(
+          -st,
+          Math.min(st, (x - track!.x[i]!) * ca + (y - track!.y[i]!) * sa),
+        );
+        const j = (i + (along < 0 ? N - 1 : 1)) % N;
+        const f = Math.abs(along) / st;
+        const top = lift[i]! + (lift[j]! - lift[i]!) * f;
         const edge = half + SHOULDER;
         const s = (edge + SIDE - dist[k]!) / SIDE;
         // (which side of the road this point is on says which lane it may be part of)
-        const a = track!.a[i]!;
-        const side =
-          (y - track!.y[i]!) * Math.cos(a) - (x - track!.x[i]!) * Math.sin(a) < 0 ? -1 : 1;
-        const wide = laneWide(lane!, i, side);
-        const low = wide > 0 ? top * lane!.rise[i]! : 0;
+        const side = (y - track!.y[i]!) * ca - (x - track!.x[i]!) * sa < 0 ? -1 : 1;
+        // (a lane's width and climb between samples too, where it runs past both of them)
+        const wi = laneWide(lane!, i, side);
+        const wj = laneWide(lane!, j, side);
+        const both = wi > 0 && wj > 0;
+        const wide = both ? wi + (wj - wi) * f : wi;
+        const rise = both ? lane!.rise[i]! + (lane!.rise[j]! - lane!.rise[i]!) * f : lane!.rise[i]!;
+        const low = wide > 0 ? top * rise : 0;
         if (wide > 0 && dist[k]! > half - 6 && dist[k]! < edge + wide + SIDE + 12)
           (R.slip ??= new Uint8Array(R.gw * R.gh))[k] =
             dist[k]! > edge - 4 && dist[k]! < edge + wide + 2 ? 2 : 1;
@@ -448,7 +474,7 @@ export function buildRelief(
           const q = Math.hypot((x - oval.cx) / oval.rx, (y - oval.cy) / oval.ry);
           d = (q - 1) * Math.min(oval.rx, oval.ry) - spec.from;
         } else d = dist[k]! - half - spec.from;
-        if (cross && ci % 2 === 1) d = 0;
+        if (cross && (ci % 2 === 1 ? spec.infield === false : spec.outfield === false)) d = 0;
         if (d > 0) {
           const rough = (noise(x / 150, y / 150, seed + 103) - 0.5) * 0.7 * Math.min(1, d / 40);
           R.bank[k] = clamp01(d / spec.spread + rough) * steps;
@@ -456,6 +482,56 @@ export function buildRelief(
       }
     }
   }
+  max = Math.max(max, layLeaps(R, leaps, (half + SHOULDER + SIDE - reach) / SIDE));
   R.max = max + steps * spec.step;
   return R;
+}
+
+/**
+ * Jump pieces, laid in the same grid as raised road (where both reach a point, the higher wins):
+ * each a block `long` along its turn and `wide` across, square at its ends, level across and
+ * sheer at its sides; a takeoff climbs from nothing at its back to its height at its front, where
+ * it drops sheer, and a landing the other way about. The highest any stands.
+ */
+function layLeaps(R: Relief, leaps: readonly LeapPiece[], far: number): number {
+  if (!leaps.length) return 0;
+  const C = Relief.CELL;
+  const P = (R.plat ??= platOf(R, far));
+  let max = 0;
+  for (const p of leaps) {
+    const L = p.def.long / 2;
+    const W = p.def.wide / 2;
+    const cs = Math.cos(p.rot);
+    const sn = Math.sin(p.rot);
+    // (a landing is a takeoff turned about: along it from its tall end)
+    const dir = p.def.way === 'up' ? 1 : -1;
+    const rc = Math.ceil((Math.hypot(L, W) + SIDE * 2) / C);
+    const gx0 = Math.max(0, Math.round(p.x / C) - rc);
+    const gx1 = Math.min(R.gw - 1, Math.round(p.x / C) + rc);
+    const gy0 = Math.max(0, Math.round(p.y / C) - rc);
+    const gy1 = Math.min(R.gh - 1, Math.round(p.y / C) + rc);
+    for (let gy = gy0; gy <= gy1; gy++)
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const dx = gx * C - p.x;
+        const dy = gy * C - p.y;
+        const u = (dx * cs + dy * sn) * dir;
+        const v = -dx * sn + dy * cs;
+        // how far inside the sides and the tall end (the low end meets the ground: no edge)
+        const e = Math.min(W - Math.abs(v), L - u);
+        if (e < -SIDE * 2 || u < -L - SIDE * 2) continue;
+        const s = (e + SIDE) / SIDE;
+        const top = p.def.high * clamp01((u + L) / (2 * L));
+        const k = gy * R.gw + gx;
+        const had =
+          P[k * 4 + 1]! * clamp01(P[k * 4]!) + P[k * 4 + 2]! * clamp01(P[k * 4]! + P[k * 4 + 3]!);
+        const h = top * clamp01(s);
+        if (h < had || (h === had && s <= P[k * 4]!)) continue;
+        P[k * 4] = s;
+        P[k * 4 + 1] = top;
+        P[k * 4 + 2] = 0;
+        P[k * 4 + 3] = 0;
+        if (R.hills[k]! + h > max) max = R.hills[k]! + h;
+      }
+  }
+  return max;
 }

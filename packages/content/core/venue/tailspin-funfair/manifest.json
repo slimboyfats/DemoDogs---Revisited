@@ -1,0 +1,889 @@
+{
+  "id": "venue.tailspin-funfair",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tailspin Funfair",
+    "description": "Race. A figure of eight through the fairground: over the flyover, round the big wheel, and a short way home through the bumpers.",
+    "since": "core@0.10.0"
+  },
+  "mode": "mode.race",
+  "seed": 2303,
+  "laps": 2,
+  "size": {
+    "w": 3900,
+    "h": 2600
+  },
+  "track": {
+    "road": 112,
+    "points": [
+      [900, 480],
+      [1500, 440],
+      [1950, 620],
+      [2150, 1050],
+      [2300, 1500],
+      [2700, 1900],
+      [3200, 2060],
+      [3540, 1760],
+      [3520, 1300],
+      [3200, 1020],
+      [2700, 1040],
+      [2150, 1300],
+      [1700, 1560],
+      [1300, 1960],
+      [800, 2120],
+      [420, 1820],
+      [380, 1300],
+      [480, 780]
+    ]
+  },
+  "colors": {
+    "ground": "#6fae4e",
+    "ground2": "#7cba58",
+    "dirt": "#b89a6a",
+    "outside": "#2c4a2a",
+    "terrain": "grass"
+  },
+  "scenery": [
+    {
+      "rule": "flyover",
+      "at": 0.595,
+      "length": 300,
+      "ramp": 150,
+      "height": 24,
+      "deck": "prop.flyover-deck",
+      "pillar": "prop.flyover-pillar",
+      "span": 5
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.dirt-track",
+          "x": -741.3,
+          "y": 648.9,
+          "rot": 3.0741
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -772.0,
+          "y": 648.3,
+          "rot": -2.9857
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -801.6,
+          "y": 640.1,
+          "rot": -2.7277
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -828.3,
+          "y": 625.1,
+          "rot": -2.5191
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -853.2,
+          "y": 607.0,
+          "rot": -2.5096
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -877.9,
+          "y": 588.7,
+          "rot": -2.4909
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -902.2,
+          "y": 569.8,
+          "rot": -2.4643
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -925.9,
+          "y": 550.2,
+          "rot": -2.4298
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -949.1,
+          "y": 529.9,
+          "rot": -2.5251
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -977.2,
+          "y": 512.4,
+          "rot": -2.5649
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1001.4,
+          "y": 492.5,
+          "rot": -2.262
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1016.4,
+          "y": 467.2,
+          "rot": -1.9374
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1025.9,
+          "y": 438.2,
+          "rot": -1.8677
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1034.9,
+          "y": 408.8,
+          "rot": -1.8677
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1165.0,
+          "y": -17.6,
+          "rot": -1.8441
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1174.4,
+          "y": -45.2,
+          "rot": -2.0333
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1190.0,
+          "y": -65.6,
+          "rot": -2.5276
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1214.7,
+          "y": -74.8,
+          "rot": -3.0627
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1248.4,
+          "y": -72.3,
+          "rot": 2.9361
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1288.0,
+          "y": -62.0,
+          "rot": 2.8574
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1327.0,
+          "y": -52.1,
+          "rot": 3.0058
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1359.3,
+          "y": -51.4,
+          "rot": -3.1183
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1390.6,
+          "y": -52.6,
+          "rot": -3.0772
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1421.7,
+          "y": -55.9,
+          "rot": -2.963
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1451.6,
+          "y": -64.9,
+          "rot": -2.6791
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1477.6,
+          "y": -82.2,
+          "rot": -2.375
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1496.7,
+          "y": -106.8,
+          "rot": -2.0521
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1508.1,
+          "y": -136.0,
+          "rot": -1.8432
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.jump-takeoff",
+          "x": -1059.5,
+          "y": 328.5,
+          "rot": -1.8677
+        },
+        {
+          "prop": "prop.jump-landing",
+          "x": -1140.8,
+          "y": 62.7,
+          "rot": -1.8677
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.secret-crate",
+          "x": -589.7,
+          "y": 570.2,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.switch-bollard",
+          "x": -914.4,
+          "y": 609.9,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -906.4,
+          "y": 599.6,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -898.4,
+          "y": 589.4,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -890.4,
+          "y": 579.1,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -882.4,
+          "y": 568.9,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -874.4,
+          "y": 558.6,
+          "rot": -2.4787
+        },
+        {
+          "prop": "prop.switch-bollard",
+          "x": -866.4,
+          "y": 548.4,
+          "rot": -2.4787
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.floor-switch",
+          "x": -649.2,
+          "y": 616.3,
+          "rot": 2.6155
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.bumper",
+          "x": -1149.5,
+          "y": 273.4,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1126.6,
+          "y": 266.4,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1038.6,
+          "y": 239.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1015.7,
+          "y": 232.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1161.3,
+          "y": 235.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1138.3,
+          "y": 228.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1050.3,
+          "y": 201.3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1027.4,
+          "y": 194.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1173.0,
+          "y": 197.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1150.0,
+          "y": 189.9,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1062.0,
+          "y": 163.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1039.1,
+          "y": 156.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1184.7,
+          "y": 158.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1161.7,
+          "y": 151.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1073.7,
+          "y": 124.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1050.8,
+          "y": 117.7,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 5,
+        "apart": 0.06
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "x": 1010.0,
+          "y": 200.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": -700.0,
+          "y": -50.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": 550.0,
+          "y": -740.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": 750.0,
+          "y": 200.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": -450.0,
+          "y": -250.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": 1200.0,
+          "y": 350.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": -1350.0,
+          "y": 1050.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.ferris-wheel",
+          "x": -650.0,
+          "y": -400.0,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.06, 0.42, 0.66],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": -2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.85,
+          "ahead": -26
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.85,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.15, 0.87],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": 2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.921,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18, 0.33, 0.48],
+      "items": [
+        {
+          "prop": "prop.carousel",
+          "lane": -2.062,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.957,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.957,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.21, 0.36],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": -2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "lane": -2.098,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.24, 0.39, 0.54],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": -2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "lane": -2.179,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.27, 0.84],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": 2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.85,
+          "ahead": -26
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.85,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.3, 0.45, 0.69],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": -2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.921,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.51, 0.78, 0.96],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": 2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "lane": 2.098,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.75, 0.93],
+      "items": [
+        {
+          "prop": "prop.carousel",
+          "lane": 2.062,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.957,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.957,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.81],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": 2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "lane": 2.179,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 44,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "kerb",
+      "every": 22,
+      "offset": 20,
+      "chance": 0.7,
+      "items": [
+        {
+          "prop": "prop.balloons",
+          "weight": 2
+        },
+        {
+          "prop": "prop.lamppost",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0001,
+      "clear": 60,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.4
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.5
+        },
+        {
+          "prop": "prop.balloons",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00035,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0.04],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.275],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.375],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 4,
+          "step": 26
+        },
+        {
+          "prop": "prop.crate",
+          "ahead": 60,
+          "row": 6,
+          "step": 16
+        },
+        {
+          "prop": "prop.cone",
+          "ahead": 84,
+          "row": 8,
+          "step": 12
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.47],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.82],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": -0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.955],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12, 0.68],
+      "items": [
+        {
+          "prop": "prop.chickens",
+          "lane": 1.9
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.bag-of-tricks",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

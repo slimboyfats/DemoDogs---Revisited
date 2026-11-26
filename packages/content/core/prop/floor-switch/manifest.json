@@ -1,0 +1,18 @@
+{
+  "id": "prop.floor-switch",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Floor switch",
+    "description": "A blue plate in the ground. Drive over it and every switch bollard within reach sinks for a few seconds.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 14,
+  "solid": false,
+  "pad": {
+    "kind": "switch",
+    "long": 28,
+    "wide": 28,
+    "reach": 320
+  }
+}

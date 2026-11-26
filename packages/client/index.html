@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
-    <meta name="theme-color" content="#16141c" />
+    <meta name="theme-color" content="#5cc0ff" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -64,9 +64,22 @@
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
     <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
+    <!-- the driving lesson: what to do now, said big, and a way out of it -->
+    <div id="tutor" class="hidden">
+      <div id="tutCard">
+        <div id="tutDots"></div>
+        <b id="tutTitle"></b>
+        <small id="tutSub"></small>
+        <i id="tutMeter"><b></b></i>
+      </div>
+      <button id="tutSkip">SKIP LESSON &#9654;&#9654;</button>
+      <div id="tutHand" aria-hidden="true"><i></i></div>
+      <div id="tutCheer" aria-hidden="true"></div>
+    </div>
     <button id="backToEdit">&#9998; EDIT</button>
     <div id="recDot"></div>
     <div id="netDot"></div>
+    <div id="netBanner" role="status"></div>
     <div id="devTap" class="hidden"></div>
     <div id="devPanel" class="hidden"></div>
     <!-- the track creator: its bar of tools, and the layer that takes taps on the map -->
@@ -76,64 +89,106 @@
 
     <section id="menu" class="screen">
       <div class="panel">
-        <h1>DEMO<span>DOGS</span></h1>
-        <p class="tag">Scrap-metal racing. Ram, wreck and outrun the pack.</p>
         <div class="cols">
-          <div class="garageBox">
-            <canvas id="garage"></canvas>
-            <div class="carPick">
-              <button id="prevCar" aria-label="Previous car">&#9664;</button>
-              <div><b id="carName">MUTT</b><small id="carBlurb"></small></div>
-              <button id="nextCar" aria-label="Next car">&#9654;</button>
-            </div>
-            <div class="stats">
-              <label
-                >SPEED<i><b id="stSpeed"></b></i
-              ></label>
-              <label
-                >ACCEL<i><b id="stAccel"></b></i
-              ></label>
-              <label
-                >GRIP<i><b id="stGrip"></b></i
-              ></label>
-              <label
-                >TOUGH<i><b id="stArmor"></b></i
-              ></label>
+          <div class="menuSide">
+            <header class="menuTop">
+              <h1>DEMO<span>DOGS</span></h1>
+              <button class="settingsBtn gear" aria-label="Settings">
+                <i aria-hidden="true">&#9881;</i><span>SETTINGS</span>
+              </button>
+            </header>
+            <p class="tag">Scrap-metal racing. Ram, wreck and outrun the pack.</p>
+            <div class="garageBox">
+              <canvas id="garage"></canvas>
+              <div class="carPick">
+                <button id="prevCar" aria-label="Previous car">&#9664;</button>
+                <div><b id="carName">MUTT</b><small id="carBlurb"></small></div>
+                <button id="nextCar" aria-label="Next car">&#9654;</button>
+              </div>
+              <div class="stats">
+                <label
+                  >SPEED<i><b id="stSpeed"></b></i
+                ></label>
+                <label
+                  >ACCEL<i><b id="stAccel"></b></i
+                ></label>
+                <label
+                  >GRIP<i><b id="stGrip"></b></i
+                ></label>
+                <label
+                  >TOUGH<i><b id="stArmor"></b></i
+                ></label>
+              </div>
             </div>
           </div>
           <div class="events">
-            <button id="toCareer" class="career">
-              <b>CAREER</b><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
-            </button>
-            <button id="toTracks" class="career tracks">
-              <b>TRACK CREATOR</b><small>Build your own track, save it as a file, race it.</small>
-            </button>
-            <button id="toOnline" class="career online">
-              <b>ONLINE</b
-              ><small>Race friends over the internet: host a room, share the code.</small>
-            </button>
+            <div class="modes">
+              <button id="toCareer" class="career">
+                <b>CAREER</b
+                ><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
+              </button>
+              <button id="toOnline" class="career online">
+                <b>ONLINE</b><small>Race friends: host a room, share the code.</small>
+              </button>
+              <button id="toTracks" class="career tracks">
+                <b>TRACK CREATOR</b><small>Build your own track, save it, race it.</small>
+              </button>
+            </div>
+            <h3 class="sect">QUICK RACE <small>pick the weather, tap a track</small></h3>
             <div id="worldPick">
               <b>WORLD</b><small>Tap to switch on for quick races: weather, night and worse.</small>
             </div>
             <div id="venues"></div>
-            <p class="help">
-              <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
-              BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X fire,
-              P pause, Tab names. CAMERA sets how far out you see.<br /><b>Scrapped?</b> Tap (or
-              Tab) to watch the next car, ZOOM (or Z) to pull back.<br />Smash scrap bots for points
-              and boost. Crates give rockets, mines, repairs.
-            </p>
-            <button class="muteBtn small">SOUND ON</button>
-            <button class="hintsBtn small">KEY HINTS ON</button>
-            <button class="namesBtn small">NAMES ON</button>
-            <button class="zoomBtn small">CAMERA NORMAL</button>
-            <button class="speedoBtn small">SPEEDOMETER ON</button>
-            <button class="speedoPlaceBtn small">SPEEDOMETER BOTTOM MIDDLE</button>
-            <button class="resBtn small">RESOLUTION AUTO</button>
-            <button id="toDev" class="small">TEST RANGE</button>
-            <button class="tuneBtn small">DEV SETTINGS</button>
+            <button id="toLesson" class="lesson">
+              <b>DRIVING LESSON</b><small>One minute: steer, boost, grab a crate, fire.</small>
+            </button>
+            <details class="help">
+              <summary>HOW TO PLAY</summary>
+              <p>
+                <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
+                BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X
+                fire, P pause, Tab names.<br /><b>Scrapped?</b> Tap (or Tab) to watch the next car,
+                ZOOM (or Z) to pull back.<br />Smash scrap bots for points and boost. Crates give
+                rockets, mines, repairs.
+              </p>
+            </details>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- somebody new: the lesson is offered once, and can be turned down -->
+    <section id="tutAsk" class="screen hidden">
+      <div class="panel narrow">
+        <h2>NEW HERE?</h2>
+        <p class="tag">Learn to drive, boost and shoot. It takes about a minute.</p>
+        <button id="tutYes" class="go">START THE LESSON</button>
+        <button id="tutNo" class="quiet">SKIP, I'LL WORK IT OUT</button>
+      </div>
+    </section>
+
+    <!-- the lesson's last card: the two kinds of event, and straight into one -->
+    <section id="tutEnd" class="screen hidden">
+      <div class="panel narrow">
+        <h2>YOU'RE READY!</h2>
+        <p class="tag">There are two kinds of event. Pick one for your first go.</p>
+        <div class="tutModes">
+          <button id="tutRace" class="venue race">
+            <em>RACE</em><b>FIRST OVER THE LINE</b
+            ><small
+              >Laps of a track against five rivals. Wrecked? You are towed back to the road.</small
+            >
+          </button>
+          <button id="tutDerby" class="venue derby">
+            <em>DERBY</em><b>LAST CAR RUNNING</b
+            ><small>A walled bowl. Ram and shoot until yours is the only car still moving.</small>
+          </button>
+        </div>
+        <p class="note">
+          Smash the little scrap bots for points and boost. The lesson is on the menu if you want it
+          again.
+        </p>
+        <button id="tutMenu" class="quiet">TO THE MENU</button>
       </div>
     </section>
 
@@ -161,51 +216,81 @@
     <section id="pauseMenu" class="screen hidden">
       <div class="panel narrow">
         <h2>PAUSED</h2>
-        <button id="resume">RESUME</button>
+        <button id="resume" class="go">RESUME</button>
         <button id="restart">RESTART</button>
-        <label class="slide">
-          <span>CAMERA <b class="zoomName">NORMAL</b></span>
-          <input class="zoomRange" type="range" min="0" max="6" step="1" value="3" />
-        </label>
-        <label class="slide">
-          <span>SUN <b class="sunTurnName">0°</b></span>
-          <input class="sunTurn" type="range" min="0" max="345" step="15" value="0" />
-        </label>
-        <label class="slide">
-          <span>SHADOWS <b class="sunLongName">AUTO</b></span>
-          <input class="sunLong" type="range" min="0" max="12" step="1" value="0" />
-        </label>
-        <button class="flameBtn">FLAME LIGHT ON</button>
-        <div id="volume"></div>
-        <button class="speedoBtn">SPEEDOMETER ON</button>
-        <button class="speedoPlaceBtn">SPEEDOMETER BOTTOM MIDDLE</button>
-        <label class="slide">
-          <span>SPEEDOMETER SIZE <b class="speedoSizeName">100%</b></span>
-          <input class="speedoSize" type="range" min="0.6" max="1.8" step="0.1" value="1" />
-        </label>
-        <button class="hintsBtn">KEY HINTS ON</button>
-        <button class="namesBtn">NAMES ON</button>
-        <button class="resBtn">RESOLUTION AUTO</button>
-        <button class="recBtn small">RECORD PERFORMANCE</button>
-        <button class="tuneBtn small">DEV SETTINGS</button>
-        <button id="quit">QUIT TO MENU</button>
+        <button class="settingsBtn">SETTINGS</button>
+        <button id="quit" class="quiet">QUIT TO MENU</button>
       </div>
     </section>
 
-    <section id="tuneMenu" class="screen hidden">
-      <div class="panel narrow wide">
-        <h2>DEV SETTINGS</h2>
-        <p class="note">
-          Numbers of the game's rules, for trying things out. Saved on this device. Online races
-          always use the game's own.
-        </p>
-        <div id="tuneRows"></div>
-        <button id="tuneBack">BACK</button>
+    <!-- every setting in one sheet, from the menu or the pause menu: it sits to one side of a
+         paused race, so a slider's doing is seen as it is dragged -->
+    <section id="settings" class="screen hidden">
+      <div class="sheet">
+        <header>
+          <h2>SETTINGS</h2>
+          <button id="settingsBack" class="go">DONE</button>
+        </header>
+        <nav class="setTabs">
+          <button data-tab="race" class="on">RACE</button>
+          <button data-tab="view">VIEW</button>
+          <button data-tab="sound">SOUND</button>
+          <button data-tab="hud">HUD</button>
+          <button data-tab="dev" class="tuneBtn">DEV</button>
+        </nav>
+        <div class="setBody">
+          <div data-pane="race">
+            <button class="rivalsBtn">RIVALS NORMAL</button>
+            <p class="note">
+              How hard the other drivers race, from the next race. Online races are always NORMAL.
+            </p>
+          </div>
+          <div data-pane="view" class="hidden">
+            <label class="slide">
+              <span>CAMERA <b class="zoomName">NORMAL</b></span>
+              <input class="zoomRange" type="range" min="0" max="6" step="1" value="3" />
+            </label>
+            <label class="slide">
+              <span>SUN <b class="sunTurnName">0°</b></span>
+              <input class="sunTurn" type="range" min="0" max="345" step="15" value="0" />
+            </label>
+            <label class="slide">
+              <span>SHADOWS <b class="sunLongName">AUTO</b></span>
+              <input class="sunLong" type="range" min="0" max="12" step="1" value="0" />
+            </label>
+            <button class="flameBtn tog">FLAME LIGHT ON</button>
+            <button class="resBtn">RESOLUTION AUTO</button>
+          </div>
+          <div data-pane="sound" class="hidden">
+            <button class="muteBtn tog">SOUND ON</button>
+            <div id="volume"></div>
+          </div>
+          <div data-pane="hud" class="hidden">
+            <button class="speedoBtn tog">SPEEDOMETER ON</button>
+            <button class="speedoPlaceBtn">SPEEDOMETER BOTTOM MIDDLE</button>
+            <label class="slide">
+              <span>SPEEDOMETER SIZE <b class="speedoSizeName">100%</b></span>
+              <input class="speedoSize" type="range" min="0.6" max="1.8" step="0.1" value="1" />
+            </label>
+            <button class="namesBtn tog">NAMES ON</button>
+            <button class="hintsBtn tog">KEY HINTS ON</button>
+          </div>
+          <div data-pane="dev" class="hidden">
+            <button id="toDev">TEST RANGE</button>
+            <button class="recBtn">RECORD PERFORMANCE</button>
+            <button class="hitBtn">HITBOXES</button>
+            <p class="note">
+              Numbers of the game's rules, for trying things out. Saved on this device. Online races
+              always use the game's own.
+            </p>
+            <div id="tuneRows"></div>
+          </div>
+        </div>
       </div>
     </section>
 
     <section id="results" class="screen hidden">
-      <div class="panel">
+      <div class="panel card">
         <h2 id="resTitle">RESULTS</h2>
         <p id="resSub" class="tag"></p>
         <div id="payout"></div>

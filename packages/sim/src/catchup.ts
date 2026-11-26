@@ -73,7 +73,7 @@ export function odds(
 }
 
 /** The rivals an item of c's goes for: all those ahead in a race, else those within `radius`. */
-function rivals(w: World, c: Car, radius: number): Car[] {
+export function rivals(w: World, c: Car, radius: number): Car[] {
   const ok = (o: Car) => o !== c && !o.wrecked && !o.finished;
   if (w.kind === 'race' && w.track) {
     const ahead = w.cars.filter((o) => ok(o) && o.progress > c.progress);

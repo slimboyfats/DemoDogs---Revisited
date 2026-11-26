@@ -1,0 +1,21 @@
+{
+  "id": "prop.geyser",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Geyser",
+    "description": "A hot spring in a ring of stones. Every few seconds it blows, and a car over it then is thrown high into the air.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 12,
+  "solid": false,
+  "pad": {
+    "kind": "vent",
+    "long": 24,
+    "wide": 24,
+    "lift": 150,
+    "period": 4.5,
+    "open": 1.3
+  },
+  "ambient": "bubble"
+}

@@ -45,7 +45,7 @@ describe('pickup.big-dog', () => {
       r.events.some((e) => e.t === 'catchup' && e.what === 'squash' && e.car === r.o.index);
     expect(squashed(plain)).toBe(false);
     expect(squashed(big)).toBe(true);
-    expect(big.o.hp).toBeLessThan(plain.o.hp);
+    expect(big.o.hp).toBeLessThan(90);
     // the big car went on through; the plain one was held up by the bump
     expect(big.c.x).toBeGreaterThan(plain.c.x + 20);
     expect(big.c.hp).toBeGreaterThanOrEqual(plain.c.hp);

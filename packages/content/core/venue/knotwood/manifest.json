@@ -57,6 +57,14 @@
     "spread": 90,
     "infield": false
   },
+  "weather": [
+    {
+      "x": 1414,
+      "y": 910,
+      "r": 4000,
+      "sky": "mist"
+    }
+  ],
   "scenery": [
     {
       "rule": "flyover",
@@ -318,6 +326,7 @@
     "pickup.blade",
     "pickup.springs",
     "pickup.kennel-kit",
+    "pickup.bag-of-tricks",
     "pickup.big-dog",
     "pickup.runt-ray",
     "pickup.second-wind",

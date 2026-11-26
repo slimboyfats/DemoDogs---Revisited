@@ -6,11 +6,24 @@
  */
 
 /** The kinds of standing noise a thing can make (a prop's `ambient` in its manifest). */
-export const AMBIENT = ['birds', 'crowd', 'flap', 'creak', 'hum', 'water'] as const;
+export const AMBIENT = [
+  'birds',
+  'crowd',
+  'flap',
+  'creak',
+  'hum',
+  'water',
+  'fire',
+  'surf',
+  'fair',
+  'bubble',
+  'drip',
+  'horn',
+] as const;
 export type Ambient = (typeof AMBIENT)[number];
 
 /** How much of each is heard, 0 to 1. */
-export type Air = Record<Ambient | 'wind' | 'fire', number>;
+export type Air = Record<Ambient | 'wind', number>;
 
 export const STILL: Air = {
   wind: 0,
@@ -21,12 +34,40 @@ export const STILL: Air = {
   creak: 0,
   hum: 0,
   water: 0,
+  surf: 0,
+  fair: 0,
+  bubble: 0,
+  drip: 0,
+  horn: 0,
 };
 
 /** How loud a thing `d` away is, heard as far as `reach`: 1 beside it, falling off quickly. */
 export function heard(d: number, reach: number): number {
   return d >= reach ? 0 : (1 - d / reach) ** 1.5;
 }
+
+/**
+ * The fairground organ's waltz: a bar at a time, each [melody, bass] in MIDI pitches, the melody
+ * on the first beat and the bass under it, the chord on the other two.
+ */
+export const WALTZ: readonly [number, number, number][] = [
+  [76, 48, 64],
+  [79, 48, 64],
+  [84, 53, 69],
+  [81, 53, 69],
+  [79, 55, 67],
+  [77, 55, 65],
+  [76, 48, 64],
+  [72, 48, 64],
+  [74, 55, 65],
+  [77, 55, 65],
+  [83, 55, 67],
+  [79, 55, 67],
+  [81, 53, 69],
+  [77, 53, 65],
+  [76, 48, 64],
+  [72, 48, 64],
+];
 
 /** A bird's call: tones as [hertz, seconds after the first, seconds long, slide]. */
 export type Call = [number, number, number, number][];
@@ -135,6 +176,9 @@ export class Ambience {
     band('crowd', 'bandpass', 1500, 1.2, 0.2, 0.37, 0.4);
     band('water', 'lowpass', 520, 0.7, 0.2, 0.45, 0.6);
     band('fire', 'lowpass', 300, 0.5, 0.3, 2.3, 0.3);
+    // the sea: a slow wash in and out
+    band('surf', 'lowpass', 700, 0.5, 0.3, 0.11, 0.85);
+    band('surf', 'bandpass', 2400, 0.6, 0.3, 0.11, 0.9);
     // a hum: mains at two pitches, kept dull
     const hum = ac.createGain();
     hum.gain.value = 0;
@@ -212,6 +256,56 @@ export class Ambience {
     });
     turn('fire', 0.12, (v) => K.noise(0.03, 1800 + R() * 3000, 2, 0.14 * v, 'bandpass', 0));
     turn('water', 1.3, (v) => K.noise(0.3, 900 + R() * 500, 1.5, 0.07 * v, 'bandpass', 0));
+    turn('surf', 4.5, (v) => {
+      // a wave breaking, now and then, over the wash
+      K.noise(1.4, 1100, 0.5, 0.18 * v, 'bandpass', 0);
+      K.noise(0.9, 300, 0.6, 0.12 * v, 'lowpass', 0.15);
+    });
+    turn('bubble', 0.35, (v) => {
+      // a blister of something hot bursting: a low blip that climbs
+      const f = 90 + R() * 140;
+      K.tone(f, 0.09, 0.12 * v, 'sine', 1.9, 0);
+      if (R() < 0.3) K.noise(0.12, 600, 1, 0.05 * v, 'bandpass', 0.06);
+    });
+    turn('drip', 0.9, (v) => {
+      // a drop falling in a cave, and the crystal ringing back at it now and then
+      K.tone(900 + R() * 1400, 0.07, 0.06 * v, 'sine', 1.7, 0);
+      if (R() < 0.35)
+        for (let i = 0; i < 3; i++)
+          K.tone(2600 + R() * 2200, 0.5, 0.012 * v, 'sine', 1, 0.05 + i * 0.07);
+    });
+    turn('horn', 8, (v) => {
+      // a lighthouse's horn: two low notes leaning on each other
+      K.tone(98, 1.7, 0.09 * v, 'sawtooth', 0.97, 0);
+      K.tone(123, 1.7, 0.06 * v, 'sawtooth', 0.97, 0);
+      K.noise(1.6, 220, 1.2, 0.05 * v, 'bandpass', 0);
+    });
+    this.organ(dt);
+  }
+
+  /** Where the fairground organ is in its waltz, in bars, and seconds left of this one. */
+  private bar = 0;
+  private barLeft = 0;
+
+  /** The organ of a ride nearby: one bar of its waltz at a time, at 3 bars in 2.6 seconds. */
+  private organ(dt: number): void {
+    const v = this.air.fair;
+    this.barLeft -= dt;
+    if (this.barLeft > 0) return;
+    const beat = 0.29;
+    this.barLeft = beat * 3;
+    if (v <= 0.03) return;
+    const [tune, bass, chord] = WALTZ[this.bar++ % WALTZ.length]!;
+    const hz = (m: number) => 440 * 2 ** ((m - 69) / 12);
+    const K = this.kit;
+    // the pipes: a reedy square with a flute an octave up, the bass on one, the chord on two, three
+    K.tone(hz(tune), beat * 2.6, 0.05 * v, 'square', 1, 0);
+    K.tone(hz(tune + 12), beat * 2.6, 0.025 * v, 'triangle', 1, 0);
+    K.tone(hz(bass), beat * 0.9, 0.09 * v, 'triangle', 1, 0);
+    for (const b of [1, 2]) {
+      K.tone(hz(chord), beat * 0.6, 0.03 * v, 'square', 1, b * beat);
+      K.tone(hz(chord + 4), beat * 0.6, 0.025 * v, 'square', 1, b * beat);
+    }
   }
 
   stop(t: number): void {

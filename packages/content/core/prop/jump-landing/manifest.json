@@ -1,0 +1,23 @@
+{
+  "id": "prop.jump-landing",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Jump landing",
+    "description": "The second half of a jump: a block of raised ground, sheer at its back, that a car leaping from a takeoff lands on and runs down off. It looks like the way it leads on to.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 40,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 128,
+    "wide": 64
+  },
+  "leap": {
+    "way": "down",
+    "long": 128,
+    "wide": 64,
+    "high": 26
+  }
+}

@@ -18,6 +18,12 @@ const unit = z.number().min(0).max(1);
  * - `jump`: a ramp. A car crossing it along the arrow faster than `min` is thrown up at `lift`
  *   (art px a second, at the game's base top speed; slower cars get less) and sails over whatever
  *   is `low` enough.
+ * - `road`: a piece of track laid off the road (a dirt path, a boardwalk): ground under it drives
+ *   like the road itself, and a car on it is not off the course. A row of them is a shortcut.
+ * - `switch`: a plate in the ground. A car driving onto it opens every switched gate (a prop with
+ *   a `gate` of `period` 0) within `reach` for that gate's `open` seconds.
+ * - `vent`: a spout in the ground (a geyser, a steam vent). Every `period` seconds it blows for
+ *   `open` seconds, and a car over it then is thrown up at `lift`, however fast it is going.
  */
 export const PadSchema = z.discriminatedUnion('kind', [
   z.strictObject({
@@ -34,6 +40,33 @@ export const PadSchema = z.discriminatedUnion('kind', [
     wide: z.number().positive(),
     lift: z.number().positive(),
     min: z.number().min(0).default(60),
+  }),
+  z.strictObject({
+    kind: z.literal('road'),
+    long: z.number().positive(),
+    wide: z.number().positive(),
+    /** What it is laid in (looks only): a jump piece that joins it takes the same look. */
+    skin: z.enum(['dirt', 'wood', 'rock', 'tarmac', 'boards']).optional(),
+    /**
+     * How loose it lies under a car (0 firm, 1 a rattletrap): it drives as fast as road, but the
+     * car is thrown a little from side to side and rocks as it goes.
+     */
+    wobble: z.number().min(0).max(1).optional(),
+  }),
+  z.strictObject({
+    kind: z.literal('switch'),
+    long: z.number().positive(),
+    wide: z.number().positive(),
+    /** It opens every switched gate within this many art px of it. */
+    reach: z.number().positive(),
+  }),
+  z.strictObject({
+    kind: z.literal('vent'),
+    long: z.number().positive(),
+    wide: z.number().positive(),
+    lift: z.number().positive(),
+    period: z.number().positive(),
+    open: z.number().positive(),
   }),
 ]);
 export type PadManifest = z.infer<typeof PadSchema>;
@@ -59,6 +92,42 @@ export const MoundSchema = z.strictObject({
 export type MoundManifest = z.infer<typeof MoundSchema>;
 
 /**
+ * One half of a jump: a block of raised ground laid where the prop stands, `long` art px along
+ * its turn and `wide` across it, with sheer sides and square ends. It is a piece of track as well
+ * (give it a `road` pad as big), so it drives like the road.
+ * - `up`: the takeoff. It rises from the ground at its back to `high` at its front, where it ends
+ *   sheer; a car leaving it faster than `min` is thrown up at `lift` (as off a ramp tile).
+ * - `down`: the landing. It stands `high` at its back, sheer, and runs down to the ground at its
+ *   front. A car that falls short of it is left on the ground below, against its face.
+ * A takeoff with a landing ahead of it is a gap that scenery keeps out of. Each looks like the
+ * way it joins (the client's choice): a takeoff like the ground it is driven onto from, a
+ * landing like the ground it leads on to.
+ */
+export const LeapSchema = z.strictObject({
+  way: z.enum(['up', 'down']),
+  long: z.number().min(40).max(400),
+  wide: z.number().min(24).max(200),
+  high: z.number().positive().max(60),
+  lift: z.number().min(0).default(0),
+  min: z.number().min(0).default(80),
+});
+export type LeapManifest = z.infer<typeof LeapSchema>;
+
+/**
+ * A gate: a solid static prop that sinks into the ground to let cars by and rises again. With a
+ * `period` it keeps a beat, down for `open` seconds of every `period` (`shift`, 0 to 1, is how far
+ * into the beat it starts, the same for every gate with the same numbers, so a row moves as one).
+ * With none it stands until a `switch` plate within reach is driven over, then is down for `open`
+ * seconds. It never rises onto a car: it waits for the car to clear it.
+ */
+export const GateSchema = z.strictObject({
+  period: z.number().min(0).default(0),
+  open: z.number().positive().default(3),
+  shift: unit.default(0),
+});
+export type GateManifest = z.infer<typeof GateSchema>;
+
+/**
  * An animal. The prop is where a group of `group` of them lives; they wander within `roam` of
  * it at `walk` and bolt at `run` from a car that comes within `scare` going faster than `shy`.
  * - `ground`: runs about on the ground. One lighter than `flung` (mass 1 is a car) is knocked
@@ -80,7 +149,9 @@ export const CritterSchema = z.strictObject({
   height: z.number().positive().default(34),
   step: z.number().min(0).default(0.6),
   /** What the client calls out and plays when a car sends it flying or runs into it. */
-  cry: z.enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow']).default('squeak'),
+  cry: z
+    .enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow', 'click'])
+    .default('squeak'),
   /** Points for the car that bowls it over (light ones only). */
   points: z.number().int().min(0).default(0),
   /**
@@ -110,6 +181,16 @@ export const FLUNG_BELOW = 0.6;
 export const pieceFields = {
   pad: PadSchema.optional(),
   mound: MoundSchema.optional(),
+  leap: LeapSchema.optional(),
+  gate: GateSchema.optional(),
+  /**
+   * A crate stand for a secret way (a yellow crate floats over it): a car that drives through it
+   * gets every pickup listed, and it comes back as the mode's pickups do. Not solid.
+   */
+  gives: z
+    .array(z.string().regex(/^pickup\.[a-z0-9-]+$/, 'a pickup.* id'))
+    .min(1)
+    .optional(),
   /** A piece of raised deck with rails: the prop that is the same piece with none. */
   bare: z.string().optional(),
   critter: CritterSchema.optional(),
@@ -118,6 +199,11 @@ export const pieceFields = {
    * grass, corn, flowers).
    */
   trample: z.boolean().default(false),
+  /**
+   * Solid static props: it is sprung. A car that touches it is thrown back off it at this many
+   * art px a second, unhurt (a fairground bumper).
+   */
+  bounce: z.number().positive().optional(),
   /**
    * Solid static props: how tall it is, art px. A car in the air higher than this passes over
    * it. Without it nothing gets over.

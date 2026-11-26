@@ -1,0 +1,1945 @@
+{
+  "id": "venue.castle-growl",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Castle Growl",
+    "description": "Race. In at one gate of the castle and out at the other, twice over the river, and a dirt track through the orchard for the brave.",
+    "since": "core@0.10.0"
+  },
+  "mode": "mode.race",
+  "seed": 2404,
+  "laps": 2,
+  "size": {
+    "w": 3900,
+    "h": 2700
+  },
+  "track": {
+    "road": 112,
+    "points": [
+      [1100, 480],
+      [1800, 440],
+      [2500, 480],
+      [3150, 560],
+      [3500, 900],
+      [3480, 1400],
+      [3100, 1640],
+      [2500, 1560],
+      [1950, 1360],
+      [1500, 1420],
+      [1380, 1800],
+      [1700, 2150],
+      [1500, 2380],
+      [950, 2330],
+      [520, 2050],
+      [400, 1500],
+      [430, 950],
+      [640, 600]
+    ]
+  },
+  "colors": {
+    "ground": "#5f9a44",
+    "ground2": "#6ba84e",
+    "dirt": "#8a6d45",
+    "outside": "#2d3a24",
+    "terrain": "grass"
+  },
+  "relief": {
+    "hills": 14,
+    "wave": 600,
+    "banks": 20,
+    "step": 20,
+    "from": 160,
+    "spread": 90,
+    "infield": false
+  },
+  "scenery": [
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.dirt-track",
+          "x": -634.6,
+          "y": 331.9,
+          "rot": 2.2012
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -653.2,
+          "y": 357.6,
+          "rot": 2.1251
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -662.3,
+          "y": 384.7,
+          "rot": 1.6617
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -663.5,
+          "y": 411.7,
+          "rot": 1.6375
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -668.6,
+          "y": 436.6,
+          "rot": 2.0279
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -686.5,
+          "y": 459.8,
+          "rot": 2.3054
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -707.8,
+          "y": 483.3,
+          "rot": 2.3054
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1007.8,
+          "y": 813.0,
+          "rot": 2.4902
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1033.3,
+          "y": 828.1,
+          "rot": 2.7556
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1063.7,
+          "y": 836.8,
+          "rot": 2.9897
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1098.8,
+          "y": 839.4,
+          "rot": -3.1201
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1137.4,
+          "y": 835.9,
+          "rot": -2.9766
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1177.8,
+          "y": 827.5,
+          "rot": -2.9034
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1216.4,
+          "y": 818.5,
+          "rot": -2.9627
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.jump-takeoff",
+          "x": -764.1,
+          "y": 545.6,
+          "rot": 2.3054
+        },
+        {
+          "prop": "prop.jump-landing",
+          "x": -950.5,
+          "y": 751.9,
+          "rot": 2.3054
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.secret-crate",
+          "x": -558.0,
+          "y": 152.8,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.blast-wall",
+          "x": -992.0,
+          "y": 857.0,
+          "rot": 2.5805
+        },
+        {
+          "prop": "prop.blast-wall",
+          "x": -1001.5,
+          "y": 841.7,
+          "rot": 2.5805
+        },
+        {
+          "prop": "prop.blast-wall",
+          "x": -1011.1,
+          "y": 826.5,
+          "rot": 2.5805
+        },
+        {
+          "prop": "prop.blast-wall",
+          "x": -1020.7,
+          "y": 811.2,
+          "rot": 2.5805
+        },
+        {
+          "prop": "prop.blast-wall",
+          "x": -1030.3,
+          "y": 796.0,
+          "rot": 2.5805
+        },
+        {
+          "prop": "prop.blast-wall",
+          "x": -1039.9,
+          "y": 780.8,
+          "rot": 2.5805
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 5,
+        "apart": 0.06
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "at": 0.405,
+      "leg": "prop.castle-tower",
+      "span": "prop.castle-arch",
+      "step": 9,
+      "offset": 6
+    },
+    {
+      "rule": "gantry",
+      "at": 0.535,
+      "leg": "prop.castle-tower",
+      "span": "prop.castle-arch",
+      "step": 9,
+      "offset": 6
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.castle-wall",
+          "x": 819.0,
+          "y": 356.6,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -334.1,
+          "y": 106.4,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 817.0,
+          "y": 367.6,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -330.7,
+          "y": 117.1,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 815.0,
+          "y": 378.6,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -327.4,
+          "y": 127.8,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 813.1,
+          "y": 389.6,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -324.0,
+          "y": 138.5,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 814.6,
+          "y": 381.2,
+          "rot": -2.9649
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 802.3,
+          "y": 378.9,
+          "rot": -2.9603
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 789.9,
+          "y": 376.6,
+          "rot": -2.9553
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 777.6,
+          "y": 374.3,
+          "rot": -2.9505
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 765.4,
+          "y": 371.9,
+          "rot": -2.946
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 753.1,
+          "y": 369.4,
+          "rot": -2.9417
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 740.9,
+          "y": 366.9,
+          "rot": -2.9377
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 728.8,
+          "y": 364.4,
+          "rot": -2.9339
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 716.7,
+          "y": 361.8,
+          "rot": -2.9304
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 704.6,
+          "y": 359.2,
+          "rot": -2.9275
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 692.6,
+          "y": 356.6,
+          "rot": -2.9248
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 680.6,
+          "y": 353.9,
+          "rot": -2.9219
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 668.6,
+          "y": 351.2,
+          "rot": -2.9191
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 656.6,
+          "y": 348.5,
+          "rot": -2.9165
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 644.7,
+          "y": 345.8,
+          "rot": -2.9142
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 632.7,
+          "y": 343.0,
+          "rot": -2.912
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 620.8,
+          "y": 340.2,
+          "rot": -2.9101
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 609.0,
+          "y": 337.4,
+          "rot": -2.9086
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 597.2,
+          "y": 334.6,
+          "rot": -2.9072
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 585.4,
+          "y": 331.8,
+          "rot": -2.9059
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 573.6,
+          "y": 328.9,
+          "rot": -2.9048
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 561.8,
+          "y": 326.1,
+          "rot": -2.9039
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 550.1,
+          "y": 323.2,
+          "rot": -2.9032
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 538.4,
+          "y": 320.4,
+          "rot": -2.9029
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 526.6,
+          "y": 317.5,
+          "rot": -2.9018
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 513.8,
+          "y": 314.3,
+          "rot": -2.8906
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 500.5,
+          "y": 310.8,
+          "rot": -2.8745
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 487.3,
+          "y": 307.1,
+          "rot": -2.8593
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 474.5,
+          "y": 303.3,
+          "rot": -2.8471
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 461.7,
+          "y": 299.3,
+          "rot": -2.8344
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 449.0,
+          "y": 295.2,
+          "rot": -2.8219
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 436.4,
+          "y": 290.9,
+          "rot": -2.8102
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 424.0,
+          "y": 286.6,
+          "rot": -2.7992
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 411.7,
+          "y": 282.2,
+          "rot": -2.7901
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 399.6,
+          "y": 277.7,
+          "rot": -2.7818
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 387.5,
+          "y": 273.0,
+          "rot": -2.7731
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 375.5,
+          "y": 268.4,
+          "rot": -2.7651
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 363.6,
+          "y": 263.6,
+          "rot": -2.7579
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 351.8,
+          "y": 258.8,
+          "rot": -2.7512
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 340.2,
+          "y": 254.0,
+          "rot": -2.7462
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 328.7,
+          "y": 249.1,
+          "rot": -2.7413
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 317.2,
+          "y": 244.2,
+          "rot": -2.7367
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 305.8,
+          "y": 239.3,
+          "rot": -2.7326
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 294.4,
+          "y": 234.4,
+          "rot": -2.7292
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 283.1,
+          "y": 229.4,
+          "rot": -2.7265
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 272.0,
+          "y": 224.5,
+          "rot": -2.7247
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 260.9,
+          "y": 219.6,
+          "rot": -2.7233
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 249.8,
+          "y": 214.6,
+          "rot": -2.7224
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 238.8,
+          "y": 209.7,
+          "rot": -2.7221
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 227.9,
+          "y": 204.9,
+          "rot": -2.7225
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 217.1,
+          "y": 200.0,
+          "rot": -2.7235
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 206.2,
+          "y": 195.2,
+          "rot": -2.7249
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 195.5,
+          "y": 190.5,
+          "rot": -2.7273
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 184.8,
+          "y": 185.8,
+          "rot": -2.7303
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 170.6,
+          "y": 179.7,
+          "rot": -2.735
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 156.6,
+          "y": 173.7,
+          "rot": -2.7419
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 142.6,
+          "y": 167.8,
+          "rot": -2.7493
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 128.7,
+          "y": 162.2,
+          "rot": -2.7588
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 115.0,
+          "y": 156.7,
+          "rot": -2.7696
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 101.2,
+          "y": 151.4,
+          "rot": -2.7816
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 87.7,
+          "y": 146.5,
+          "rot": -2.7962
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 74.4,
+          "y": 141.8,
+          "rot": -2.8127
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 61.0,
+          "y": 137.4,
+          "rot": -2.8307
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 47.9,
+          "y": 133.3,
+          "rot": -2.851
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 35.1,
+          "y": 129.6,
+          "rot": -2.8755
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 22.4,
+          "y": 126.3,
+          "rot": -2.9014
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 9.9,
+          "y": 123.4,
+          "rot": -2.9304
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -2.3,
+          "y": 121.0,
+          "rot": -2.9628
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -14.4,
+          "y": 119.1,
+          "rot": -2.9968
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -28.3,
+          "y": 117.2,
+          "rot": -3.0147
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -42.7,
+          "y": 115.5,
+          "rot": -3.0281
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -57.1,
+          "y": 113.9,
+          "rot": -3.0419
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -71.6,
+          "y": 112.6,
+          "rot": -3.0556
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -86.0,
+          "y": 111.4,
+          "rot": -3.0694
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -100.4,
+          "y": 110.5,
+          "rot": -3.0833
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -114.8,
+          "y": 109.7,
+          "rot": -3.0976
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -129.2,
+          "y": 109.2,
+          "rot": -3.1122
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -143.6,
+          "y": 108.9,
+          "rot": -3.1273
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -157.9,
+          "y": 108.8,
+          "rot": 3.1403
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -172.1,
+          "y": 108.9,
+          "rot": 3.1241
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -186.2,
+          "y": 109.3,
+          "rot": 3.1068
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -200.2,
+          "y": 109.9,
+          "rot": 3.0891
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -214.1,
+          "y": 110.8,
+          "rot": 3.0704
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -227.9,
+          "y": 111.9,
+          "rot": 3.0507
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -241.5,
+          "y": 113.3,
+          "rot": 3.0297
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -255.0,
+          "y": 114.9,
+          "rot": 3.0073
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -268.2,
+          "y": 116.9,
+          "rot": 2.9833
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -281.1,
+          "y": 119.1,
+          "rot": 2.9575
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -293.8,
+          "y": 121.7,
+          "rot": 2.9296
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -306.0,
+          "y": 124.5,
+          "rot": 2.898
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -317.9,
+          "y": 127.7,
+          "rot": 2.8645
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -317.9,
+          "y": 127.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 848.8,
+          "y": 189.2,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -385.0,
+          "y": -55.8,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 850.8,
+          "y": 178.2,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -388.3,
+          "y": -66.5,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 852.8,
+          "y": 167.2,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -391.7,
+          "y": -77.2,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 854.7,
+          "y": 156.1,
+          "rot": -1.3941
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -395.0,
+          "y": -87.9,
+          "rot": 4.4084
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 853.2,
+          "y": 164.6,
+          "rot": -2.9649
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 838.2,
+          "y": 161.9,
+          "rot": -2.9581
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 823.2,
+          "y": 159.0,
+          "rot": -2.9517
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 808.1,
+          "y": 156.1,
+          "rot": -2.946
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 793.0,
+          "y": 153.1,
+          "rot": -2.9403
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 781.7,
+          "y": 150.7,
+          "rot": -2.9368
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 770.3,
+          "y": 148.3,
+          "rot": -2.9335
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 758.9,
+          "y": 145.9,
+          "rot": -2.9299
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 747.5,
+          "y": 143.4,
+          "rot": -2.9266
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 736.2,
+          "y": 140.9,
+          "rot": -2.9235
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 724.8,
+          "y": 138.4,
+          "rot": -2.9206
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 713.3,
+          "y": 135.8,
+          "rot": -2.918
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 701.9,
+          "y": 133.2,
+          "rot": -2.9155
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 690.4,
+          "y": 130.5,
+          "rot": -2.9134
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 678.9,
+          "y": 127.9,
+          "rot": -2.9116
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 667.5,
+          "y": 125.2,
+          "rot": -2.9098
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 656.0,
+          "y": 122.4,
+          "rot": -2.9081
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 644.4,
+          "y": 119.7,
+          "rot": -2.9066
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 632.9,
+          "y": 116.9,
+          "rot": -2.9054
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 621.4,
+          "y": 114.1,
+          "rot": -2.9044
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 609.8,
+          "y": 111.3,
+          "rot": -2.9037
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 598.2,
+          "y": 108.5,
+          "rot": -2.9032
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 586.5,
+          "y": 105.7,
+          "rot": -2.9028
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 571.7,
+          "y": 102.0,
+          "rot": -2.896
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 558.5,
+          "y": 98.6,
+          "rot": -2.8745
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 545.1,
+          "y": 94.8,
+          "rot": -2.8564
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 531.8,
+          "y": 90.7,
+          "rot": -2.837
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 518.1,
+          "y": 86.3,
+          "rot": -2.8219
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 504.6,
+          "y": 81.7,
+          "rot": -2.807
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 490.9,
+          "y": 76.9,
+          "rot": -2.7932
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 477.1,
+          "y": 71.7,
+          "rot": -2.7818
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 463.4,
+          "y": 66.5,
+          "rot": -2.7697
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 449.4,
+          "y": 61.0,
+          "rot": -2.7607
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 435.6,
+          "y": 55.4,
+          "rot": -2.7512
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 421.5,
+          "y": 49.5,
+          "rot": -2.7444
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 407.4,
+          "y": 43.5,
+          "rot": -2.7378
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 393.2,
+          "y": 37.5,
+          "rot": -2.7326
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 382.6,
+          "y": 32.8,
+          "rot": -2.7292
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 371.9,
+          "y": 28.1,
+          "rot": -2.7265
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 361.1,
+          "y": 23.3,
+          "rot": -2.7247
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 350.2,
+          "y": 18.5,
+          "rot": -2.7233
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 339.4,
+          "y": 13.7,
+          "rot": -2.7224
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 328.4,
+          "y": 8.8,
+          "rot": -2.7221
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 317.4,
+          "y": 3.9,
+          "rot": -2.7225
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 306.4,
+          "y": -1.0,
+          "rot": -2.7235
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 295.3,
+          "y": -5.9,
+          "rot": -2.7249
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 284.1,
+          "y": -10.9,
+          "rot": -2.7273
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 272.7,
+          "y": -15.8,
+          "rot": -2.7303
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 261.4,
+          "y": -20.8,
+          "rot": -2.7342
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 249.9,
+          "y": -25.7,
+          "rot": -2.7387
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 238.4,
+          "y": -30.6,
+          "rot": -2.7431
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 226.7,
+          "y": -35.5,
+          "rot": -2.7493
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 214.9,
+          "y": -40.3,
+          "rot": -2.7563
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 202.9,
+          "y": -45.1,
+          "rot": -2.7642
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 190.9,
+          "y": -49.8,
+          "rot": -2.772
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 178.7,
+          "y": -54.4,
+          "rot": -2.7816
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 166.4,
+          "y": -59.0,
+          "rot": -2.7925
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 153.8,
+          "y": -63.5,
+          "rot": -2.8045
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 141.3,
+          "y": -67.8,
+          "rot": -2.8161
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 128.3,
+          "y": -72.1,
+          "rot": -2.8307
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 115.2,
+          "y": -76.2,
+          "rot": -2.8465
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 102.1,
+          "y": -80.1,
+          "rot": -2.8621
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 88.5,
+          "y": -83.8,
+          "rot": -2.881
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": 74.7,
+          "y": -87.4,
+          "rot": -2.9014
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 60.8,
+          "y": -90.6,
+          "rot": -2.9221
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 46.5,
+          "y": -93.6,
+          "rot": -2.9462
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 31.9,
+          "y": -96.3,
+          "rot": -2.972
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 17.3,
+          "y": -98.6,
+          "rot": -2.9968
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": 3.8,
+          "y": -100.5,
+          "rot": -3.0115
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -9.1,
+          "y": -102.1,
+          "rot": -3.0214
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -22.2,
+          "y": -103.6,
+          "rot": -3.0317
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -35.2,
+          "y": -105.0,
+          "rot": -3.0419
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -48.3,
+          "y": -106.2,
+          "rot": -3.052
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -61.4,
+          "y": -107.3,
+          "rot": -3.0625
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -74.5,
+          "y": -108.3,
+          "rot": -3.0726
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -87.6,
+          "y": -109.1,
+          "rot": -3.0833
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -100.8,
+          "y": -109.8,
+          "rot": -3.0939
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -114.0,
+          "y": -110.4,
+          "rot": -3.1049
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -127.2,
+          "y": -110.8,
+          "rot": -3.1162
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -140.4,
+          "y": -111.1,
+          "rot": -3.1273
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -153.7,
+          "y": -111.2,
+          "rot": -3.1392
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -167.0,
+          "y": -111.1,
+          "rot": 3.1323
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -180.4,
+          "y": -110.9,
+          "rot": 3.1197
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -193.8,
+          "y": -110.6,
+          "rot": 3.1068
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -207.2,
+          "y": -110.0,
+          "rot": 3.0937
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -220.7,
+          "y": -109.3,
+          "rot": 3.0799
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -234.3,
+          "y": -108.3,
+          "rot": 3.0657
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -247.9,
+          "y": -107.2,
+          "rot": 3.0507
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -261.5,
+          "y": -105.8,
+          "rot": 3.0351
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -275.2,
+          "y": -104.3,
+          "rot": 3.0187
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -289.0,
+          "y": -102.4,
+          "rot": 3.0014
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -302.9,
+          "y": -100.4,
+          "rot": 2.9833
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -316.8,
+          "y": -98.0,
+          "rot": 2.9639
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -330.7,
+          "y": -95.3,
+          "rot": 2.9438
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -344.9,
+          "y": -92.4,
+          "rot": 2.9217
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -359.1,
+          "y": -89.0,
+          "rot": 2.898
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -373.3,
+          "y": -85.3,
+          "rot": 2.8739
+        },
+        {
+          "prop": "prop.castle-wall",
+          "x": -387.7,
+          "y": -81.1,
+          "rot": 2.8465
+        },
+        {
+          "prop": "prop.castle-tower",
+          "x": -387.7,
+          "y": -81.1,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [
+        0.42000000000000004, 0.44000000000000006, 0.44000000000000006, 0.46, 0.48000000000000004,
+        0.5, 0.5, 0.52
+      ],
+      "items": [
+        {
+          "prop": "prop.banner",
+          "lane": 1.45
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.45
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.47000000000000003],
+      "items": [
+        {
+          "prop": "prop.hay-bale",
+          "lane": 1.9,
+          "n": 3,
+          "gap": 14
+        },
+        {
+          "prop": "prop.water-butt",
+          "lane": -2.0
+        },
+        {
+          "prop": "prop.crate",
+          "lane": -2.0,
+          "ahead": 16
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.06, 0.9],
+      "items": [
+        {
+          "prop": "prop.castle-tower",
+          "lane": -2.027,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.821,
+          "ahead": -22
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.821,
+          "ahead": 22
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.1, 0.26, 0.38, 0.94],
+      "items": [
+        {
+          "prop": "prop.hay-bale",
+          "lane": 1.982,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.hay-bale",
+          "lane": 1.982,
+          "ahead": 14
+        },
+        {
+          "prop": "prop.hay-bale",
+          "lane": 2.161,
+          "ahead": 7
+        },
+        {
+          "prop": "prop.banner",
+          "lane": 1.929,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.14, 0.74, 0.98],
+      "items": [
+        {
+          "prop": "prop.banner",
+          "lane": -1.929,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.929,
+          "ahead": 30
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.929,
+          "ahead": -30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18, 0.34, 0.78],
+      "items": [
+        {
+          "prop": "prop.castle-tower",
+          "lane": 2.027,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.banner",
+          "lane": 1.821,
+          "ahead": -22
+        },
+        {
+          "prop": "prop.banner",
+          "lane": 1.821,
+          "ahead": 22
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.3, 0.86],
+      "items": [
+        {
+          "prop": "prop.banner",
+          "lane": 1.929,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.banner",
+          "lane": 1.929,
+          "ahead": 30
+        },
+        {
+          "prop": "prop.banner",
+          "lane": 1.929,
+          "ahead": -30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.82],
+      "items": [
+        {
+          "prop": "prop.hay-bale",
+          "lane": -1.982,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.hay-bale",
+          "lane": -1.982,
+          "ahead": 14
+        },
+        {
+          "prop": "prop.hay-bale",
+          "lane": -2.161,
+          "ahead": 7
+        },
+        {
+          "prop": "prop.banner",
+          "lane": -1.929,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.hay-bale", "prop.tyres"],
+      "offset": 44,
+      "minCurve": 0.22
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00016,
+      "clear": 60,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.3
+        },
+        {
+          "prop": "prop.birch",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.poplar",
+          "weight": 0.2
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.5
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.1
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0004,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 1
+        },
+        {
+          "prop": "prop.tall-grass",
+          "weight": 1.2
+        }
+      ]
+    },
+    {
+      "rule": "field",
+      "count": 5,
+      "prop": "prop.corn",
+      "long": [54, 96],
+      "deep": [30, 54],
+      "step": 5.5,
+      "clear": 44
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0.035],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.1],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 4,
+          "step": 26
+        },
+        {
+          "prop": "prop.hay-wall",
+          "ahead": 50,
+          "row": 12,
+          "step": 9
+        },
+        {
+          "prop": "prop.hay-bale",
+          "ahead": 120,
+          "row": 4,
+          "step": 13
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.28],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.47],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.8],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": -0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.88],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.26, 0.76],
+      "items": [
+        {
+          "prop": "prop.sheep",
+          "lane": 2.2
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.9],
+      "items": [
+        {
+          "prop": "prop.deer",
+          "lane": 2.4
+        }
+      ]
+    },
+    {
+      "rule": "river",
+      "material": "material.river",
+      "bank": "material.mud",
+      "width": 44,
+      "points": [
+        [3020, -40],
+        [3060, 300],
+        [3000, 640],
+        [3080, 1000],
+        [3040, 1300],
+        [3090, 1500],
+        [3010, 1900],
+        [3070, 2300],
+        [3020, 2760]
+      ],
+      "bridges": [
+        {
+          "deck": "prop.deck-plank",
+          "rail": "prop.plank-fence"
+        },
+        {
+          "deck": "prop.deck-steel",
+          "rail": "prop.rail-steel"
+        }
+      ],
+      "edge": {
+        "every": 30,
+        "items": [
+          {
+            "prop": "prop.rock",
+            "weight": 2
+          },
+          {
+            "prop": "prop.bush",
+            "weight": 2
+          }
+        ]
+      }
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.bag-of-tricks",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

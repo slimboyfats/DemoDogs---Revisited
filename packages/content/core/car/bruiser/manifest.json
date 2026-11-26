@@ -20,12 +20,74 @@
     "halfWidth": 5.9
   },
   "wheels": [
-    [7.0, 4.65],
+    [7, 4.65],
     [-7.4, 4.65]
   ],
   "top": {
     "x": -3,
     "z": 9
+  },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11.5,
+        "halfWidth": 5.9,
+        "z": [0, 3]
+      },
+      {
+        "x": -0.5,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 9.8,
+        "halfWidth": 5.5,
+        "round": 5.5,
+        "z": [3, 4]
+      },
+      {
+        "x": 9.8,
+        "y": 0,
+        "rot": 1.57,
+        "halfLength": 3.8,
+        "halfWidth": 1,
+        "round": 1,
+        "z": [3, 4]
+      },
+      {
+        "x": -10.7,
+        "y": -0.5,
+        "rot": 1.44,
+        "halfLength": 4.9,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [3, 4]
+      },
+      {
+        "x": -1.5,
+        "y": 0,
+        "halfLength": 9.5,
+        "halfWidth": 6.5,
+        "round": 2,
+        "z": [4, 6]
+      },
+      {
+        "x": -2.2,
+        "y": 0,
+        "halfLength": 8.8,
+        "halfWidth": 5.5,
+        "round": 1,
+        "z": [6, 8]
+      },
+      {
+        "x": -2.7,
+        "y": 0,
+        "halfLength": 7.8,
+        "halfWidth": 5,
+        "round": 0.5,
+        "z": [8, 9]
+      }
+    ]
   },
   "engine": {
     "pitch": 0.7,

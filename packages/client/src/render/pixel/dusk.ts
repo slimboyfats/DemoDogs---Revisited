@@ -1,4 +1,4 @@
-import { compile, uniforms } from './gl';
+import { compile, type Sources, uniforms } from './gl';
 import type { Lights } from './lighting';
 
 /** Lights the tint pass can show at once: the frame's fires and flashes. */
@@ -145,3 +145,6 @@ export class DuskPass {
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
   }
 }
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const DUSK_PROGRAMS: readonly Sources[] = [[VS, FS]];

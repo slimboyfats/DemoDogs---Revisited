@@ -27,6 +27,103 @@
     "x": -2.5,
     "z": 7
   },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 9.3,
+        "halfWidth": 3.5,
+        "round": 3.5,
+        "z": [0, 1]
+      },
+      {
+        "x": -10.7,
+        "y": 2.8,
+        "radius": 0.5,
+        "z": [0, 1]
+      },
+      {
+        "x": -0.1,
+        "y": -0.1,
+        "rot": 0.65,
+        "halfLength": 6.3,
+        "halfWidth": 4.5,
+        "round": 4.5,
+        "z": [1, 4]
+      },
+      {
+        "x": 0,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 10.8,
+        "halfWidth": 2,
+        "round": 2,
+        "z": [1, 4]
+      },
+      {
+        "x": -0.5,
+        "y": 0,
+        "rot": 2.09,
+        "halfLength": 6.6,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [1, 4]
+      },
+      {
+        "x": -9.2,
+        "y": 2.8,
+        "radius": 0.6,
+        "z": [1, 4]
+      },
+      {
+        "x": -5,
+        "y": -5.2,
+        "radius": 0.6,
+        "z": [1, 4]
+      },
+      {
+        "x": -2.5,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 5,
+        "round": 2,
+        "z": [4, 5]
+      },
+      {
+        "x": -2.5,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 8.3,
+        "halfWidth": 4.5,
+        "round": 4.5,
+        "z": [5, 6]
+      },
+      {
+        "x": 3.8,
+        "y": 5.8,
+        "radius": 0.5,
+        "z": [5, 6]
+      },
+      {
+        "x": -3,
+        "y": 0,
+        "halfLength": 6,
+        "halfWidth": 4.5,
+        "round": 2,
+        "z": [6, 7]
+      },
+      {
+        "x": -3.2,
+        "y": 0,
+        "halfLength": 4.8,
+        "halfWidth": 4,
+        "round": 1,
+        "z": [7, 8]
+      }
+    ]
+  },
   "engine": {
     "pitch": 1.18,
     "lump": 0.2,

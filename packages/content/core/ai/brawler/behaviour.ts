@@ -1,23 +1,26 @@
 import { DT, type Controls } from '@demodogs/shared';
 import {
-  armsWants,
-  arsenalWants,
-  howlWants,
   defineAi,
-  dropsBehind,
-  nearestCar,
+  looksNow,
+  pickHeading,
+  recover,
   steerTo,
-  unstick,
+  thingsAhead,
+  wantsFire,
 } from '@demodogs/sim';
 
 /**
- * ai.brawler: pick a car (the player a little more often), aim where it is going and ram it.
- * Keeps off the wall, sometimes detours for a pickup, boosts into a lined-up hit.
+ * ai.brawler: pick a car (a human a little more often, a hurt one sooner than a sound one), aim
+ * where it is going and ram it, in the side if it can. Goes round what is in the way, keeps off
+ * the wall, goes for a crate when it has nothing to fire, and when it is nearly done for
+ * makes for one that might mend it. Boosts into a lined-up hit and
+ * fires what it carries when it would hit.
  */
 export default defineAi({
   id: 'ai.brawler',
   drive(w, c) {
     const ai = c.ai!;
+    const R = ai.traits;
     const O = w.oval;
     const cx = O ? O.cx : w.w / 2;
     const cy = O ? O.cy : w.h / 2;
@@ -30,7 +33,11 @@ export default defineAi({
       for (const o of w.cars) {
         if (o === c || o.wrecked) continue;
         const d =
-          Math.hypot(o.x - c.x, o.y - c.y) * (o.isPlayer ? 0.75 : 1) * w.rng.range(0.8, 1.2);
+          Math.hypot(o.x - c.x, o.y - c.y) *
+          (o.isPlayer ? 0.75 : 1) *
+          // the mean ones finish off whoever is limping
+          (1 - 0.4 * ai.aggro * (1 - o.hp / 100)) *
+          w.rng.range(0.8, 1.2);
         if (d < bd) {
           bd = d;
           best = o.index;
@@ -41,17 +48,28 @@ export default defineAi({
     let tx = cx;
     let ty = cy;
     const t = ai.target >= 0 ? w.cars[ai.target]! : null;
+    // nearly done for: a crate that might mend it comes first, if there is one about
+    const flee = c.hp < 12 + 14 * (1 - ai.aggro);
+    let chasing = false;
     if (t) {
-      tx = t.x + t.vx * 0.3;
-      ty = t.y + t.vy * 0.3;
+      // where it will be, and at its door if there is a way round to it
+      const far = Math.hypot(t.x - c.x, t.y - c.y);
+      const lead = Math.min(0.6, far / 260);
+      tx = t.x + t.vx * lead;
+      ty = t.y + t.vy * lead;
+      chasing = true;
     }
-    if (!c.weapon && w.rng.next() < 0.004) {
-      const p = w.pickups.find((p) => p.on);
-      if (p) {
-        ai.target = -1;
-        ai.targetT = 2;
+    // a crate: when hurt, when empty-handed and one is near, or just because it is greedy
+    const need = flee ? 200 : c.weapon ? 0 : 40 + 50 * R.greed;
+    let pd = need;
+    for (const p of w.pickups) {
+      if (!p.on) continue;
+      const d = Math.hypot(p.x - c.x, p.y - c.y);
+      if (d < pd) {
+        pd = d;
         tx = p.x;
         ty = p.y;
+        chasing = false;
       }
     }
     if (O) {
@@ -62,7 +80,11 @@ export default defineAi({
         ty = ty * (1 - k) + cy * k;
       }
     }
-    const [steer, d] = steerTo(c, tx, ty);
+    // round what is in the way (wrecks, scenery, mines: not the cars it is there to hit)
+    const look = 40 + Math.abs(c.vf) * 0.5;
+    const things = looksNow(w, c) ? thingsAhead(w, c, look + 30, false) : null;
+    const way = pickHeading(c, tx, ty, look, things);
+    const [steer, d] = steerTo(c, way.x, way.y);
     const out: Controls = {
       steer,
       throttle: 1,
@@ -70,29 +92,15 @@ export default defineAi({
       boost: false,
       fire: false,
     };
-    if (
-      t &&
-      Math.abs(d) < 0.25 &&
-      Math.hypot(tx - c.x, ty - c.y) < 120 &&
-      c.nitro > 0.3 &&
-      w.rng.next() < 0.03
-    )
+    const lined = chasing && Math.abs(d) < 0.25 && Math.hypot(tx - c.x, ty - c.y) < 130;
+    if (lined && c.nitro > 0.3 && ai.boostT <= 0 && w.rng.next() < 0.04 + 0.08 * ai.aggro)
       ai.boostT = 0.8;
     if (ai.boostT > 0) {
       ai.boostT -= DT;
       out.boost = true;
     }
-    if (armsWants(w, c) || arsenalWants(w, c)) out.fire = true;
-    if (c.weapon?.kind === 'rocket' && t && Math.abs(d) < 0.2) out.fire = true;
-    if (dropsBehind(c.weapon?.kind) && w.rng.next() < 0.01) out.fire = true;
-    // a shock pulse goes off when a rival is well inside its ring
-    if (
-      c.weapon?.kind === 'pulse' &&
-      nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
-    )
-      out.fire = true;
-    if (howlWants(w, c)) out.fire = true;
+    out.fire = wantsFire(w, c);
     if (!c.isPlayer) c.aiSpeed = ai.skill * 0.95;
-    return unstick(c, out);
+    return recover(c, out, d);
   },
 });

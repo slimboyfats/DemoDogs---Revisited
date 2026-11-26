@@ -1,0 +1,123 @@
+{
+  "id": "prop.lighthouse",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lighthouse",
+    "description": "A red and white lighthouse whose lamp goes round. Solid stone: it takes a great deal to bring it down.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 8,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 8,
+        "z": [0, 8]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 7.1,
+        "z": [8, 15]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 6.6,
+        "z": [15, 22]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 6,
+        "z": [22, 29]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 5.5,
+        "z": [29, 34]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 5,
+        "z": [34, 38]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 6.7,
+        "z": [38, 40]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.6,
+        "z": [40, 42]
+      },
+      {
+        "x": 0.2,
+        "y": -0.1,
+        "rot": 0.26,
+        "halfLength": 4.3,
+        "halfWidth": 2.3,
+        "round": 2.3,
+        "z": [42, 44]
+      },
+      {
+        "x": 2.2,
+        "y": 1,
+        "rot": 2.75,
+        "halfLength": 4.8,
+        "halfWidth": 1,
+        "round": 1,
+        "z": [42, 44]
+      },
+      {
+        "x": -1,
+        "y": -0.4,
+        "rot": 1.83,
+        "halfLength": 3.6,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [42, 44]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.6,
+        "z": [44, 46]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 4.1,
+        "z": [46, 47]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.1,
+        "z": [47, 48]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2,
+        "z": [48, 49]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.1,
+        "z": [49, 50]
+      }
+    ]
+  },
+  "made": "material.stone",
+  "integrity": 300,
+  "ambient": "horn"
+}

@@ -795,6 +795,20 @@ export class Sound {
     this.noise(0.5, 600, 0.5, 0.2, 'lowpass');
   }
 
+  /** A plate in the ground pressed down: a heavy clunk and a latch. */
+  clank(v = 1): void {
+    this.tone(150, 0.12, 0.25 * v, 'square', 0.5);
+    this.noise(0.08, 900, 1.2, 0.3 * v, 'bandpass');
+    this.tone(1250, 0.04, 0.08 * v, 'square', 1, 0.09);
+  }
+
+  /** Steel posts sinking into the ground: a motor's whine falling, and the grind of it. */
+  grind(v = 1): void {
+    this.tone(340, 0.7, 0.07 * v, 'sawtooth', 0.45, 0.1);
+    this.noise(0.7, 500, 1.4, 0.12 * v, 'bandpass', 0.1);
+    this.tone(70, 0.15, 0.2 * v, 'sine', 0.6, 0.8);
+  }
+
   /** Springs letting go: a rising twang. */
   boing(v = 1): void {
     this.tone(150, 0.32, 0.16 * v, 'triangle', 3.2);
@@ -838,8 +852,17 @@ export class Sound {
   }
 
   /** An animal's cry. */
-  cry(kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow', v = 1): void {
+  cry(
+    kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow' | 'click',
+    v = 1,
+  ): void {
     switch (kind) {
+      case 'click':
+        // claws snapping, and the scuttle of many legs
+        for (let i = 0; i < 2; i++) this.noise(0.025, 3800, 4, 0.22 * v, 'bandpass', i * 0.11);
+        for (let i = 0; i < 7; i++)
+          this.noise(0.015, 2400, 3, 0.07 * v, 'bandpass', 0.25 + i * 0.04);
+        break;
       case 'cluck':
         // three short clucks and a squawk
         for (let i = 0; i < 3; i++)

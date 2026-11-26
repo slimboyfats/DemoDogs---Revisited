@@ -55,6 +55,12 @@
       "y": 280,
       "r": 588,
       "sky": "rain"
+    },
+    {
+      "x": 1400,
+      "y": 1560,
+      "r": 760,
+      "sky": "mist"
     }
   ],
   "scenery": [
@@ -412,6 +418,7 @@
     "pickup.blade",
     "pickup.springs",
     "pickup.kennel-kit",
+    "pickup.bag-of-tricks",
     "pickup.big-dog",
     "pickup.runt-ray",
     "pickup.second-wind",

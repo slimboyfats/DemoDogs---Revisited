@@ -1,11 +1,12 @@
-import { BASE_SPEED, DT, type Controls, type Tuning } from '@demodogs/shared';
+import { BASE_SPEED, DT, type Controls, type Difficulty, type Tuning } from '@demodogs/shared';
 import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
 import { STILL, heard, type Air } from '../audio/ambience';
 import { engineNote, type EngineNote } from '../audio/engine';
 import type { Sound } from '../audio/sound';
 import { tuneFor, type Tune } from '../audio/tunes';
 import type { Input } from '../input/input';
-import type { Art } from '../render/art';
+import type { Art, ArtJob } from '../render/art';
+import { buildArt } from '../render/art-pool';
 import type { NetRace } from '../net/lockstep';
 import { Effects } from '../render/effects';
 import { makeGround, type Ground } from '../render/ground';
@@ -16,6 +17,8 @@ import { terrainOf } from '../render/terrain';
 const EARSHOT = 240;
 /** How far off a thing's own noise (a crowd, birds in a tree) is heard, art px. */
 const HEARD = 230;
+/** How far off the loudest things (a lighthouse's horn) are heard. */
+const FAR = 520;
 
 export interface SessionOptions {
   content: Content;
@@ -44,12 +47,25 @@ export interface SessionOptions {
   paint?: string;
   /** World modifiers on for this race (content ids). */
   modifiers?: string[];
+  /** How hard the rivals are (the RIVALS button; an online race is always normal). */
+  difficulty?: Difficulty;
   /** Rule numbers from the DEV SETTINGS pane (never for an online race). */
   tuning?: Partial<Tuning>;
 }
 
 /** What is being got ready, step `done` of `of`; resolves once it has been shown. */
 export type Report = (text: string, done: number, of: number) => Promise<void>;
+
+/**
+ * What the renderer does of a race while it loads, so that none of it is left for the first
+ * frames: `early` as soon as the ground is made, `ready` last, with the whole session (it says
+ * what it is doing, `steps` times, through `say`).
+ */
+export interface Stage {
+  early?(world: World, ground: Ground): void;
+  steps: number;
+  ready(s: Session, say: (text: string) => Promise<void>): Promise<void>;
+}
 
 function makeWorld(o: SessionOptions): World {
   return new World({
@@ -70,6 +86,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.paint ? { paint: o.paint } : {}),
     ...(o.modifiers?.length ? { modifiers: o.modifiers } : {}),
     ...(o.tuning && !o.humans ? { tuning: o.tuning } : {}),
+    ...(o.difficulty && o.you === undefined ? { difficulty: o.difficulty } : {}),
   });
 }
 
@@ -130,7 +147,7 @@ export class Session {
    * ground, each car in the field (the slow part: a car is hundreds of thousands of pixels), the
    * scenery and the bots.
    */
-  static async load(o: SessionOptions, report: Report): Promise<Session> {
+  static async load(o: SessionOptions, report: Report, stage?: Stage): Promise<Session> {
     const venue = o.content.venue.get(o.venue)?.meta.name.toUpperCase() ?? '';
     await report(`Laying out ${venue}`, 0, 1);
     const world = makeWorld(o);
@@ -150,23 +167,45 @@ export class Session {
     for (const m of world.mods) if (m.def.leaves) props.add(m.def.leaves.prop);
     const bots = new Map<string, { id: string; paint: string }>();
     for (const b of world.bots) bots.set(b.def.id + b.paint, { id: b.def.id, paint: b.paint });
-    const of = 3 + cars.size + props.size;
+    // the art is built on other threads (where the browser has them) while the ground is made here
+    const jobs: ArtJob[] = [];
+    const label = new Map<ArtJob, string>();
+    const job = (j: ArtJob, text: string) => {
+      jobs.push(j);
+      label.set(j, text);
+    };
+    for (const c of cars.values())
+      job({ kind: 'car', id: c.id, paint: c.paint }, `Building ${c.name.toUpperCase()}`);
+    for (const id of props)
+      job(
+        { kind: 'prop', id },
+        `Scenery: ${(o.content.prop.get(id)?.meta.name ?? id).toLowerCase()}`,
+      );
+    for (const b of bots.values())
+      job({ kind: 'bot', id: b.id, paint: b.paint }, 'Waking the scrap bots');
+    const of = 2 + jobs.length + (stage?.steps ?? 0);
     let done = 1;
-    await report('Painting the ground', done++, of);
+    let grounded = false;
+    const building = buildArt(
+      o.art,
+      jobs,
+      (j) => {
+        done++;
+        // (while the ground is being made the loader says so; then, whatever was built last)
+        if (grounded) void report(label.get(j)!, done, of);
+      },
+      (j) => report(label.get(j)!, done, of),
+    );
+    await report('Painting the ground', done, of);
     const ground = makeGround(world);
-    for (const c of cars.values()) {
-      await report(`Building ${c.name.toUpperCase()}`, done++, of);
-      o.art.car(c.id, c.paint);
-    }
-    for (const id of props) {
-      const name = o.content.prop.get(id)?.meta.name ?? id;
-      await report(`Scenery: ${name.toLowerCase()}`, done++, of);
-      o.art.warm(id);
-    }
-    await report('Waking the scrap bots', done++, of);
-    for (const b of bots.values()) o.art.bot(b.id, b.paint);
+    stage?.early?.(world, ground);
+    grounded = true;
+    done++;
+    await building;
+    const s = new Session(o, { world, ground });
+    if (stage) await stage.ready(s, (text) => report(text, done++, of));
     await report('Starting engines', done, of);
-    return new Session(o, { world, ground });
+    return s;
   }
 
   /** How much of the world the screen shows, in art pixels across and down the ground. */
@@ -297,11 +336,16 @@ export class Session {
     air.wind = Math.min(1, Math.hypot(w.wind[0], w.wind[1]) / 80);
     for (const b of w.blazes)
       air.fire = Math.max(air.fire, heard(Math.hypot(b.x - C.x, b.y - C.y) - b.r, 150));
-    for (const s of w.near(C.x, C.y, HEARD)) {
+    for (const s of w.near(C.x, C.y, FAR)) {
       if (s.down) continue;
       const what = s.def.ambient ?? (s.def.crown && s.leaves ? 'birds' : null);
       if (!what) continue;
-      const v = heard(Math.hypot(s.x - C.x, s.y - C.y) - s.def.radius, HEARD);
+      // a ride that has been hurt stands still, and its organ with it
+      if ((what === 'fair' || what === 'creak') && this.fx.scarred.has(s)) continue;
+      // a lighthouse's horn carries; a lantern is a small flame
+      const reach = what === 'horn' ? FAR : HEARD;
+      const v =
+        heard(Math.hypot(s.x - C.x, s.y - C.y) - s.def.radius, reach) * (what === 'fire' ? 0.4 : 1);
       if (v > air[what]) air[what] = v;
     }
     if (this.night || sky.dark > 0.5 || sky.rain > 0.1) air.birds = 0;

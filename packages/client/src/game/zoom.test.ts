@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CameraZoom, VIEWS, ZOOM_MODES, driveScale, zoomStops } from './zoom';
+import { CameraZoom, UPRIGHT, VIEWS, ZOOM_MODES, driveScale, zoomSides, zoomStops } from './zoom';
 
 const store = (init: Record<string, string> = {}) => {
   const m = new Map(Object.entries(init));
@@ -122,5 +122,19 @@ describe('camera zoom', () => {
     expect(z.view).toBe(VIEWS.normal);
     z.next();
     expect(z.view).toBe(VIEWS.wide);
+  });
+
+  it('an upright phone sees more across than one on its side sees up', () => {
+    expect(zoomSides(1688, 780)).toEqual([780, 1688]);
+    const [short, long] = zoomSides(780, 1688);
+    expect(short).toBeCloseTo(780 / UPRIGHT);
+    expect(long).toBe(1688);
+    const side = driveScale(VIEWS.normal, 780, 1688);
+    const up = driveScale(VIEWS.normal, short, long);
+    expect(up).toBeLessThan(side);
+    // art pixels across the upright screen: well over the road's width and its verges
+    expect(780 / up).toBeGreaterThan(210);
+    // and the slider still has stops to pick from
+    expect(zoomStops(short, long).length).toBeGreaterThan(2);
   });
 });

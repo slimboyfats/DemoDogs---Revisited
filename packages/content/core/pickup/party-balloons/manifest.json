@@ -1,0 +1,18 @@
+{
+  "id": "pickup.party-balloons",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Party Balloons",
+    "description": "Every rival ahead is tied to a bunch of balloons and floats off the road, wheels spinning, until they burst and drop it.",
+    "since": "core@0.10.0"
+  },
+  "kind": "balloons",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lead": 0.2,
+  "trail": 2,
+  "seconds": 2.8,
+  "radius": 300,
+  "lift": 30,
+  "amount": 6
+}

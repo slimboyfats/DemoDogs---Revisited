@@ -2,6 +2,7 @@ import { DT, type Controls, type WeaponManifest } from '@demodogs/shared';
 import type { Car, Spill, StaticProp } from './entities';
 import { damage, ignite, light } from './damage';
 import { earthed } from './guards';
+import { carGap } from './shapes';
 import type { World } from './world';
 
 /**
@@ -93,7 +94,7 @@ function edge(p: Pulse, x: number, y: number): [number, number] {
 function spread(w: World, p: Pulse): void {
   for (const c of w.cars) {
     if (c.wrecked || c.z > 10 || p.struck.includes(c.index)) continue;
-    if (Math.hypot(c.x - p.x, c.y - p.y) > p.r + c.def.body.halfWidth) continue;
+    if (carGap(c, p.x, p.y) > p.r) continue;
     const [ex, ey] = edge(p, c.x, c.y);
     strike(w, p, c, ex, ey, 2);
   }
@@ -123,12 +124,7 @@ function pool(w: World, p: Pulse, s: Spill, fx: number, fy: number, fz: number):
     if (q.def === s.def && !p.pools.includes(q) && Math.hypot(q.x - s.x, q.y - s.y) < q.r + s.r)
       pool(w, p, q, s.x, s.y, 0);
   for (const c of w.cars)
-    if (
-      !c.wrecked &&
-      c.z <= 2 &&
-      !p.struck.includes(c.index) &&
-      Math.hypot(c.x - s.x, c.y - s.y) < s.r + c.def.body.halfWidth
-    )
+    if (!c.wrecked && c.z <= 2 && !p.struck.includes(c.index) && carGap(c, s.x, s.y) < s.r)
       strike(w, p, c, s.x, s.y, 0);
 }
 

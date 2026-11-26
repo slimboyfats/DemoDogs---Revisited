@@ -1,5 +1,6 @@
 import { DT } from '@demodogs/shared';
 import type { Car } from './entities';
+import { pathAt } from './pads';
 import type { World } from './world';
 
 /** How high raised road must stand over a car beside it for the car to be off it. */
@@ -13,7 +14,7 @@ export function rescueIn(w: World, c: Car): number {
 
 /**
  * In a race a car that leaves the course has a while to find its own way back: over the grass,
- * or, below raised road (whose sides are walls), up a ramp at its end or a way up its side.
+ * along a path laid off the road (which is part of the course), or, below raised road (whose sides are walls), up a ramp at its end or a way up its side.
  * After a while off the course (`tuning.rescueGrace`) a count starts, shown to the player, and at its end the car
  * is put back on the nearest road it has already driven: never further on than where it left,
  * so there is nothing to gain by it.
@@ -39,6 +40,7 @@ export function updateRescue(w: World, c: Car): void {
   // (a way up the side is the way back: on one it is not off the course)
   const off =
     !R?.slipAt(c.x, c.y) &&
+    !pathAt(w, c.x, c.y) &&
     (below || Math.hypot(c.x - T.x[i]!, c.y - T.y[i]!) > w.road / 2 + verge);
   if (!off) {
     c.downT = 0;

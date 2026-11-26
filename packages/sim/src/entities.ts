@@ -9,6 +9,7 @@ import type {
 import type { Fit } from './addons';
 import type { AiBehaviour } from './behaviours';
 import type { Guards } from './guards';
+import type { Tricks } from './tricks';
 
 /** What a rival's AI remembers between ticks. */
 export interface AiState {
@@ -25,6 +26,31 @@ export interface AiState {
   /** A car index being chased, or -1. */
   target: number;
   targetT: number;
+  /** The kind of driver it is (the AI manifest's `styles`), and what that makes of it. */
+  style: string;
+  traits: Traits;
+  /** How far off its line it has moved to get round something, art px across the road. */
+  side: number;
+  /** Where it last decided to move to, and how far off the first thing in its way was. */
+  want: number;
+  block: number;
+  /** Seconds it has held the weapon it has, and seconds it has wanted to fire it. */
+  heldT: number;
+  aimT: number;
+  /** Times in a row it has had to back out of something, and seconds since the last. */
+  tries: number;
+  freeT: number;
+  /** Seconds it has been backing without getting anywhere. */
+  jamT: number;
+}
+
+/** What kind of driver an AI is, each 0 to 1 (see `DriverStyleSchema`). */
+export interface Traits {
+  nerve: number;
+  greed: number;
+  block: number;
+  trigger: number;
+  wobble: number;
 }
 
 /** Upgrade levels, 0 (stock) to TUNE_MAX. */
@@ -119,6 +145,8 @@ export interface Car {
   hole: number;
   bounce: number;
   wheelDist: number;
+  /** How far loose boards have wagged its heading from where it would point (rad). */
+  sway: number;
   wrecked: boolean;
   wreckT: number;
   /** How long the car has been off the course in a race (s), and the last road it was on: sample and lap. */
@@ -210,6 +238,8 @@ export interface Car {
   fit: Fit;
   /** In a rival's wake with a scoop to feed on it, this tick. */
   draft: boolean;
+  /** Tricks at work on the car, its own or a rival's doing, by kind (see tricks.ts). */
+  tricks: Tricks;
 }
 
 export interface Bot {
@@ -238,6 +268,8 @@ export interface StaticProp {
   hp?: number;
   /** It has come down: it is no longer in the way and no longer drawn. */
   down?: boolean;
+  /** A gate (see gates.ts): seconds it stays down for a switch that was pressed. */
+  openT?: number;
   /** Down, and to be built again (def.rebuild): seconds until it stands, and if it is on its way. */
   mendT?: number;
   mending?: boolean;
@@ -376,6 +408,8 @@ export interface Pickup {
   z: number;
   on: boolean;
   t: number;
+  /** A secret way's crate (a prop with `gives`): what it holds, every one, instead of a roll. */
+  gives?: readonly string[];
 }
 
 /** The bits of `Car.lamps`: head lamps left and right, tail lamps left and right. */

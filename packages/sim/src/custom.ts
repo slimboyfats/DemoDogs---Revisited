@@ -1,4 +1,7 @@
 import {
+  RAISE_MAX,
+  RAISE_MIN,
+  RAISE_STEP,
   SceneryRuleSchema,
   TRACK_FORMAT,
   TRACK_MARGIN,
@@ -13,6 +16,7 @@ import {
 } from '@demodogs/shared';
 import { sceneryRefs, type Content } from './content';
 import { sampleTrack, type Track } from './track';
+import { EDGE } from './shapes';
 
 /**
  * Tracks built in the track creator. A saved track (TrackFile) is turned into an ordinary venue,
@@ -124,6 +128,81 @@ export function newTrack(look: VenueManifest, id: string, name: string): TrackFi
   };
 }
 
+/**
+ * A venue that ships with the game as a track of the track creator's, to be changed and raced as
+ * one's own: its road, its raised stretches, surfaces and bridges, what was put down by hand as
+ * things that can be picked up and moved, and every other rule as dressing that can be switched
+ * off. Null for a venue with no road (a derby arena).
+ */
+export function trackFromVenue(
+  content: Content,
+  v: VenueManifest,
+  id: string,
+  name: string,
+): TrackFile | null {
+  if (!v.track) return null;
+  const T = sampleTrack(v.track.points, 4);
+  const at = (f: number): [number, number] => {
+    const i = Math.min(T.n - 1, Math.floor(f * T.n));
+    return [Math.round(T.x[i]!), Math.round(T.y[i]!)];
+  };
+  const stretch = (from: number, to: number) => {
+    const [x0, y0] = at(from);
+    const [x1, y1] = at(to);
+    return { x0, y0, x1, y1 };
+  };
+  const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
+  const items: TrackFile['items'] = [];
+  const pools: TrackFile['pools'] = [];
+  const bridges: TrackFile['bridges'] = [];
+  const dressing: TrackFile['dressing'] = [];
+  for (const r of v.scenery) {
+    if (r.rule === 'place')
+      for (const i of r.items)
+        items.push({ prop: i.prop, x: i.x + v.size.w / 2, y: i.y + v.size.h / 2, rot: i.rot });
+    else if (r.rule === 'pools' && r.items.every((p) => p.r >= 4 && p.r <= 80))
+      pools.push(...r.items.map((p) => ({ ...p })));
+    else if (r.rule === 'flyover' && bridges.length < 6) {
+      const [x, y] = at(r.at);
+      bridges.push({
+        x,
+        y,
+        length: clamp(r.length, 80, 600),
+        ...(r.rails === false ? { rails: false } : {}),
+      });
+    } else dressing.push({ on: true, rule: structuredCloneRule(r) });
+  }
+  const mode = content.mode.get(v.mode);
+  return {
+    format: TRACK_FORMAT,
+    version: TRACK_VERSION,
+    id,
+    name: name.slice(0, 32),
+    laps: v.laps ?? mode?.laps ?? 3,
+    seed: v.seed,
+    size: { ...v.size },
+    road: { width: v.track.road, points: v.track.points.slice(0, 80).map(([x, y]) => [x, y]) },
+    colors: { ...v.colors },
+    look: v.id,
+    dressing: dressing.slice(0, 40),
+    items: items.slice(0, 1200),
+    pools: pools.slice(0, 200),
+    bridges,
+    surfaces: (v.track.surfaces ?? [])
+      .slice(0, 24)
+      .map((s) => ({ material: s.material, ...stretch(s.from, s.to) })),
+    raised: (v.track.raised ?? []).slice(0, 12).map((r) => ({
+      ...stretch(r.from, r.to),
+      height: clamp(Math.round(r.height / RAISE_STEP) * RAISE_STEP, RAISE_MIN, RAISE_MAX),
+    })),
+    areas: [],
+    ...(v.relief ? { relief: { ...v.relief } } : {}),
+    ...(v.weather ? { weather: v.weather.map((a) => ({ ...a })) } : {}),
+    bots: v.bots.count,
+    pickups: [...v.pickups],
+  };
+}
+
 /** What stops a track being raced, in words for the person building it. Empty: it is fine. */
 export function trackProblems(t: TrackFile): string[] {
   const out: string[] = [];
@@ -154,6 +233,37 @@ export function clampPoint(t: TrackFile, x: number, y: number): [number, number]
   ];
 }
 
+type Hit = NonNullable<PropManifest['hit']>;
+
+/** A hit shape at `k` times its size: every piece as far out, as big and as tall as that makes it. */
+function sizedHit(H: Hit, k: number): Hit {
+  if ('parts' in H) {
+    const parts = H.parts.map((P) => ({
+      ...P,
+      x: P.x * k,
+      y: P.y * k,
+      ...('radius' in P
+        ? { radius: P.radius * k }
+        : {
+            halfLength: P.halfLength * k,
+            halfWidth: P.halfWidth * k,
+            round: (P.round ?? EDGE) * k,
+          }),
+      ...(P.z ? { z: [P.z[0] * k, P.z[1] * k] as [number, number] } : {}),
+    }));
+    return { parts };
+  }
+  const top = H.top !== undefined ? { top: H.top * k } : {};
+  if ('radius' in H) return { ...H, radius: H.radius * k, ...top };
+  return {
+    ...H,
+    halfLength: H.halfLength * k,
+    halfWidth: H.halfWidth * k,
+    round: (H.round ?? EDGE) * k,
+    ...top,
+  };
+}
+
 /**
  * A prop at `k` times its size: as wide, as heavy and as hard to break as that makes it. The
  * client draws it from the same look with pixels `k` times as big.
@@ -163,6 +273,7 @@ export function sizedProp(def: PropManifest, id: string, k: number): PropManifes
     ...def,
     id,
     radius: def.radius * k,
+    ...(def.hit ? { hit: sizedHit(def.hit, k) } : {}),
     ...(def.mass !== undefined ? { mass: def.mass * k * k } : {}),
     ...(def.integrity !== undefined ? { integrity: def.integrity * k } : {}),
     ...(def.low !== undefined ? { low: def.low * k } : {}),
@@ -224,6 +335,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       ...(b.rails === false ? { rails: false } : {}),
     });
   });
+  const head = scenery.length;
   for (const d of t.dressing) {
     if (!d.on) continue;
     const r = SceneryRuleSchema.safeParse(d.rule);
@@ -250,7 +362,10 @@ export function installTrack(content: Content, t: TrackFile): Installed {
   const pools = t.pools.filter((p) => content.material.has(p.material) || !dropped.add(p.material));
   if (grounds.length + pools.length)
     scenery.push({ rule: 'pools', items: [...grounds, ...pools.map((p) => ({ ...p }))] });
-  const weather = t.areas.filter((a) => a.sky).map(({ x, y, r, sky }) => ({ x, y, r, sky }));
+  const weather = [
+    ...(t.weather ?? []),
+    ...t.areas.filter((a) => a.sky).map(({ x, y, r, sky }) => ({ x, y, r, sky })),
+  ];
   // the place rule counts from the middle of the map
   const items = t.items.filter((i) => content.prop.has(i.prop) || !dropped.add(i.prop));
   // a thing at another size is a prop of the track's own, made here from the one it names
@@ -260,16 +375,22 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     if (!props.has(id))
       props.set(id, sizedProp(content.prop.get(i.prop)!, id, sizeStep(i.size ?? 1)));
   }
-  if (items.length)
-    scenery.push({
-      rule: 'place',
-      items: items.map((i) => ({
-        prop: sizedId(i.prop, i.size),
-        x: i.x - t.size.w / 2,
-        y: i.y - t.size.h / 2,
-        rot: i.rot,
-      })),
-    });
+  const placed = (list: typeof items): SceneryRule => ({
+    rule: 'place',
+    items: list.map((i) => ({
+      prop: sizedId(i.prop, i.size),
+      x: i.x - t.size.w / 2,
+      y: i.y - t.size.h / 2,
+      rot: i.rot,
+    })),
+  });
+  // (lengths of path go down before the dressing, which keeps off them: they are road)
+  const isPath = (i: (typeof items)[number]): boolean =>
+    content.prop.get(i.prop)!.pad?.kind === 'road';
+  const paths = items.filter(isPath);
+  const rest = items.filter((i) => !isPath(i));
+  if (paths.length) scenery.splice(head, 0, placed(paths));
+  if (rest.length) scenery.push(placed(rest));
   const near = (x: number, y: number): number => {
     let best = 0;
     let bd = Infinity;
@@ -320,6 +441,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       ...(raised.length && rail ? { rail } : {}),
     },
     colors: t.colors,
+    ...(t.relief ? { relief: t.relief } : {}),
     ...(weather.length ? { weather } : {}),
     scenery,
     bots: { bot: bot.id, count: t.bots },

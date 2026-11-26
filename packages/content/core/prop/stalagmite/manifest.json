@@ -1,0 +1,120 @@
+{
+  "id": "prop.stalagmite",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Stalagmite",
+    "description": "A spike of cave rock standing out of the floor, with a smaller one beside it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 4.6,
+  "hit": {
+    "parts": [
+      {
+        "x": -0.1,
+        "y": 0.2,
+        "radius": 4.9,
+        "z": [0, 2]
+      },
+      {
+        "x": -0.2,
+        "y": -0.2,
+        "rot": 0.79,
+        "halfLength": 5.4,
+        "halfWidth": 2.7,
+        "round": 2.7,
+        "z": [2, 4]
+      },
+      {
+        "x": -2,
+        "y": 2.1,
+        "rot": 0.26,
+        "halfLength": 2.4,
+        "halfWidth": 1.2,
+        "round": 1.2,
+        "z": [2, 4]
+      },
+      {
+        "x": -0.3,
+        "y": -0.1,
+        "rot": 0.26,
+        "halfLength": 4.9,
+        "halfWidth": 2.4,
+        "round": 2.4,
+        "z": [4, 6]
+      },
+      {
+        "x": -0.7,
+        "y": -3.2,
+        "rot": 0,
+        "halfLength": 2,
+        "halfWidth": 1,
+        "round": 1,
+        "z": [4, 6]
+      },
+      {
+        "x": -0.3,
+        "y": -0.1,
+        "radius": 3.5,
+        "z": [6, 7]
+      },
+      {
+        "x": -0.5,
+        "y": -0.2,
+        "radius": 3.2,
+        "z": [7, 9]
+      },
+      {
+        "x": -0.7,
+        "y": -0.2,
+        "radius": 2.7,
+        "z": [9, 10]
+      },
+      {
+        "x": -0.6,
+        "y": -0.3,
+        "radius": 2.4,
+        "z": [10, 12]
+      },
+      {
+        "x": -0.5,
+        "y": -0.1,
+        "radius": 2.1,
+        "z": [12, 13]
+      },
+      {
+        "x": -0.6,
+        "y": -0.3,
+        "radius": 1.9,
+        "z": [13, 14]
+      },
+      {
+        "x": -0.5,
+        "y": -0.3,
+        "radius": 1.6,
+        "z": [14, 15]
+      },
+      {
+        "x": -0.6,
+        "y": -0.4,
+        "radius": 1.2,
+        "z": [15, 16]
+      },
+      {
+        "x": -0.7,
+        "y": -0.6,
+        "radius": 0.8,
+        "z": [16, 17]
+      },
+      {
+        "x": -0.5,
+        "y": -0.5,
+        "radius": 0.6,
+        "z": [17, 18]
+      }
+    ]
+  },
+  "made": "material.stone",
+  "integrity": 150,
+  "ambient": "drip"
+}

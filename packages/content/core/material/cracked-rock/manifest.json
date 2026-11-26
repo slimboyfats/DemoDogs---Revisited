@@ -1,0 +1,23 @@
+{
+  "id": "material.cracked-rock",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cracked rock",
+    "description": "Rock split through with old cracks. A car can ram it all day and a fire will not touch it, but one blast brings it down.",
+    "since": "core@0.10.0"
+  },
+  "strength": {
+    "blast": 1,
+    "impact": 1000,
+    "heat": 1000
+  },
+  "breaks": {
+    "piece": 5,
+    "grit": 0.6,
+    "bounce": 0.25,
+    "brittle": 0.8,
+    "dust": 1.6
+  },
+  "colour": "#7a7468",
+  "sound": "stone"
+}

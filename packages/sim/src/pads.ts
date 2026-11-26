@@ -1,5 +1,6 @@
 import { BASE_SPEED, DT } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
+import { pressSwitch } from './gates';
 import type { World } from './world';
 
 /**
@@ -28,23 +29,77 @@ export function padAt(w: World, x: number, y: number): StaticProp | null {
   return null;
 }
 
+/** The piece of track laid off the road under (x, y), if any: there the ground is road. */
+export function pathAt(w: World, x: number, y: number): StaticProp | null {
+  for (const s of w.paths) {
+    if (s.down || Math.abs(s.x - x) > 60 || Math.abs(s.y - y) > 60) continue;
+    const P = s.def.pad!;
+    const [u, v] = onPad(s, x, y);
+    if (Math.abs(u) <= P.long / 2 && Math.abs(v) <= P.wide / 2) return s;
+  }
+  return null;
+}
+
+/** How loose the path piece under (x, y) lies (its pad's `wobble`), 0 where there is none. */
+export function wobbleAt(w: World, x: number, y: number): number {
+  if (!w.wobbly) return 0;
+  const P = pathAt(w, x, y)?.def.pad;
+  return P?.kind === 'road' ? (P.wobble ?? 0) : 0;
+}
+
+/**
+ * Is vent `s` blowing at time t (default now)? Each keeps a beat of its own, from the seed it
+ * was stood with. `lead` seconds early says it is about to (the client makes it rumble).
+ */
+export function ventOpen(w: World, s: StaticProp, lead = 0, t = w.time): boolean {
+  const P = s.def.pad;
+  if (P?.kind !== 'vent') return false;
+  const p = (t + lead + (s.seed / 10) * P.period) % P.period;
+  return p < P.open + lead;
+}
+
 /** One tick of a car and the tiles: after it has driven, before it is collided. */
 export function updatePads(w: World, c: Car): void {
   if (c.surge > 0) c.surge = Math.max(0, c.surge - DT);
-  if (!w.pads.length) return;
+  if (!w.pads.length && !w.leaps.length) return;
   // in the air, or up on a deck: the tiles are on the ground
   if (c.wrecked || c.z - c.deck > 1.5 || c.deck > 0) {
     if (c.z - c.deck > 1.5) c.pad = -1;
     return;
   }
+  if (w.leaps.length && leapOff(w, c)) return;
   const s = padAt(w, c.x, c.y);
   if (!s) {
     c.pad = -1;
     return;
   }
+  const P = s.def.pad!;
+  if (P.kind === 'vent') {
+    // a vent throws whatever is over it while it blows, however the car came onto it
+    if (ventOpen(w, s) && c.pad !== s.index) {
+      c.pad = s.index;
+      c.vz = Math.max(c.vz, P.lift);
+      c.z = Math.max(c.z, c.deck + 0.7);
+      w.emit({
+        t: 'pad',
+        kind: 'vent',
+        car: c.index,
+        prop: s.index,
+        x: c.x,
+        y: c.y,
+        power: P.lift,
+      });
+    }
+    return;
+  }
+  if (P.kind === 'road') return;
   if (c.pad === s.index) return;
   c.pad = s.index;
-  const P = s.def.pad!;
+  if (P.kind === 'switch') {
+    const n = pressSwitch(w, s.x, s.y, P.reach);
+    w.emit({ t: 'pad', kind: 'switch', car: c.index, prop: s.index, x: s.x, y: s.y, power: n });
+    return;
+  }
   const cs = Math.cos(s.rot);
   const sn = Math.sin(s.rot);
   const along = c.vx * cs + c.vy * sn;
@@ -62,6 +117,31 @@ export function updatePads(w: World, c: Car): void {
   c.vz = Math.max(c.vz, P.lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
   c.z = Math.max(c.z, c.deck + 0.7);
   w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
+}
+
+/** How far back from a takeoff's lip it throws a car (art px). */
+const LIP = 18;
+
+/**
+ * A takeoff's lip: a car on the last of it, going its way faster than its `min`, is thrown up
+ * at its `lift` (scaled by its speed as off a ramp tile). Whether it threw this one.
+ */
+function leapOff(w: World, c: Car): boolean {
+  for (const s of w.leaps) {
+    if (s.down || Math.abs(s.x - c.x) > 220 || Math.abs(s.y - c.y) > 220) continue;
+    const L = s.def.leap!;
+    const [u, v] = onPad(s, c.x, c.y);
+    if (u < L.long / 2 - LIP || u > L.long / 2 || Math.abs(v) > L.wide / 2) continue;
+    if (c.pad === s.index) return true;
+    const along = c.vx * Math.cos(s.rot) + c.vy * Math.sin(s.rot);
+    if (along < L.min) return false;
+    c.pad = s.index;
+    c.vz = Math.max(c.vz, L.lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
+    c.z = Math.max(c.z, c.deck + 0.7);
+    w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
+    return true;
+  }
+  return false;
 }
 
 /**

@@ -1,0 +1,105 @@
+{
+  "id": "prop.big-top",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big top",
+    "description": "A striped circus tent with a flag on its pole. Canvas and timber: it can be brought down.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 14,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 14,
+        "z": [0, 9]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 12.5,
+        "z": [9, 10]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 11,
+        "z": [10, 11]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 9.7,
+        "z": [11, 12]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 8.3,
+        "z": [12, 13]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 7,
+        "z": [13, 14]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 5.9,
+        "z": [14, 15]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 4.6,
+        "z": [15, 16]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.5,
+        "z": [16, 17]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2.5,
+        "z": [17, 18]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.6,
+        "z": [18, 19]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 0.6,
+        "z": [19, 21]
+      },
+      {
+        "x": 1.5,
+        "y": 0,
+        "halfLength": 2,
+        "halfWidth": 0.5,
+        "round": 0.5,
+        "z": [21, 23]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 0.6,
+        "z": [23, 24]
+      }
+    ]
+  },
+  "hardness": 0.6,
+  "made": "material.wood",
+  "integrity": 260,
+  "ambient": "crowd"
+}

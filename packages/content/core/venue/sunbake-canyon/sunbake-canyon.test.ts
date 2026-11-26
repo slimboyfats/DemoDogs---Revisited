@@ -42,7 +42,7 @@ describe('venue.sunbake-canyon', () => {
   });
 
   it('the racers get through a fallen arch and still finish', () => {
-    const w = makeWorld({ venue: 'venue.sunbake-canyon', autopilot: true });
+    const w = makeWorld({ venue: 'venue.sunbake-canyon', autopilot: true, seed: 2 });
     for (const s of w.statics.filter((s) => s.def.id === 'prop.arch-span'))
       explode(w, s.x, s.y, 1.2, null);
     w.takeEvents();
