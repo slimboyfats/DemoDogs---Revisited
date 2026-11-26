@@ -877,7 +877,7 @@ export const PropSchema = z.strictObject({
             ]),
           )
           .min(1)
-          .max(12),
+          .max(32),
       }),
     ])
     .optional(),

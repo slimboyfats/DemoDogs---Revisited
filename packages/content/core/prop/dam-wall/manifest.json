@@ -16,7 +16,23 @@
         "halfLength": 4.5,
         "halfWidth": 3,
         "round": 0.5,
-        "z": [0, 15]
+        "z": [0, 6]
+      },
+      {
+        "x": 0,
+        "y": -0.5,
+        "halfLength": 4.5,
+        "halfWidth": 2.5,
+        "round": 0.5,
+        "z": [6, 14]
+      },
+      {
+        "x": 0,
+        "y": -1.7,
+        "halfLength": 4.5,
+        "halfWidth": 0.3,
+        "round": 0.5,
+        "z": [14, 15]
       }
     ]
   },

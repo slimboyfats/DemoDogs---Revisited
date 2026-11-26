@@ -213,6 +213,17 @@ const hitboxes = new HitboxView();
   if (want !== null)
     hitboxes.mode = HITBOX_MODES.includes(want as HitboxMode) ? (want as HitboxMode) : 'boxes';
 }
+// (the same view from the SETTINGS sheet's DEV tab, so it can be turned on in any race on a phone)
+function showHitboxes(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.hitBtn'))
+    b.textContent = hitboxes.label;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.hitBtn'))
+  b.onclick = () => {
+    hitboxes.next();
+    showHitboxes();
+  };
+showHitboxes();
 const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   view: () => ({ w: W, h: H, scale, dpr: DPR }),
   restart: startDev,
@@ -242,6 +253,7 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   },
   hitboxes: () => {
     hitboxes.next();
+    showHitboxes();
     return hitboxes.label;
   },
   sky: () => {

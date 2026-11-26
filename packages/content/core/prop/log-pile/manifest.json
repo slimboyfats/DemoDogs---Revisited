@@ -22,9 +22,25 @@
         "x": 0,
         "y": 0,
         "halfLength": 7,
+        "halfWidth": 3,
+        "round": 0.5,
+        "z": [3, 4]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
         "halfWidth": 3.5,
         "round": 0.5,
-        "z": [3, 7]
+        "z": [4, 6]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 1.5,
+        "round": 0.5,
+        "z": [6, 7]
       },
       {
         "x": 0,
@@ -32,7 +48,15 @@
         "halfLength": 7,
         "halfWidth": 2,
         "round": 0.5,
-        "z": [7, 9]
+        "z": [7, 8]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 1.5,
+        "round": 0.5,
+        "z": [8, 9]
       }
     ]
   },

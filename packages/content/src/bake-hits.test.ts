@@ -10,10 +10,11 @@ import { loadContent, loadLooks } from './index';
  *
  * The rules never read a look (and every screen in an online race has to work out the very same
  * numbers), so what a thing looks like slice by slice is turned into hit shapes here, ahead of
- * time, and written into its manifest. Each standing prop's look is cut into bands of height over
- * which its outline stays much the same (roots, a trunk, limbs), and each band is fitted with as
- * few pieces as follow it: the one shape the manifest already had if that fits, else a box or a
- * circle about it, else capsules laid along it thickest first. A prop whose one shape fits all the
+ * time, and written into its manifest. Each slice of a standing prop's look gets a hitbox of its
+ * own and they are stacked as the slices are; slices one over another with the same outline share
+ * one, as tall as all of them (roots, a trunk, limbs). A hitbox is as few pieces as follow the
+ * outline: the one shape the manifest already had if that fits, else a box or a circle about it,
+ * else capsules laid along it thickest first. A prop whose one shape fits all the
  * way up only gains its height (`top`).
  *
  * Run it after a look is changed; `hitboxes.test.ts` fails when a shape no longer fits its look.
@@ -23,14 +24,17 @@ const ONLY = (process.env.BAKE_ONLY ?? '').split(',').filter(Boolean);
 
 /** The grid a look is sampled on, art px. */
 const STEP = 0.5;
-/** The heights (art px) a look is cut at: under these wheels, body, and what is over the roof. */
-const CUTS = [3, 7];
-/** Bands as alike as this (the share of their outlines they have in common) are one. */
-const SAME = 0.8;
+/** Wheel height and roof height (art px): see where they are used. */
+const LOW = 3;
+const ROOF = 7;
+/** Slices as alike as this (the share of their outlines they have in common) share a hitbox. */
+const SAME = 0.85;
+/** Slices that share a hitbox have edges no further apart than this, art px. */
+const EDGE_OFF = 1.5;
 /** A gap narrower than this (art px) is no gap: nothing gets into it. */
 const GAP = 2;
 /** The most pieces a prop is made of. */
-const PIECES = 12;
+const PIECES = 32;
 /** How much of a band a shape may miss or overshoot (as a share of its area) and still be it. */
 const NEAR = 0.22;
 /** How far any of it may stand out of its pieces, art px. */
@@ -351,6 +355,23 @@ function fit(G: Grid, mask: Uint8Array, def: PropManifest, most: number, rough: 
   }
   if (bm < NEAR * 0.8) return best;
   const C = capsules(G, mask, most);
+  // (a speck too small to be worth a capsule still gets a dot: the tip of a twig)
+  const spot = { hit: { parts: C }, radius: 1 } as unknown as PropManifest;
+  const T = newTouch();
+  for (let n = 0; C.length && n < 4; n++) {
+    let far = OUT;
+    let at: Piece | null = null;
+    for (let j = 0; j < G.ny; j++)
+      for (let i = 0; i < G.nx; i++) {
+        if (!mask[j * G.nx + i]) continue;
+        const x = G.x0 + i * STEP;
+        const y = G.y0 + j * STEP;
+        const d = propPoint(spot, 0, 0, 0, x, y, T, 0, Infinity);
+        if (d > far) [far, at] = [d, { x: r1(x), y: r1(y), radius: 0.5 }];
+      }
+    if (!at) break;
+    C.push(at);
+  }
   return C.length && score(C) < bm ? C : best;
 }
 
@@ -378,14 +399,6 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
     layers.push(M);
   }
   const count = (M: Uint8Array) => M.reduce((a, b) => a + b, 0);
-  /** How far out from the middle a slice reaches. */
-  const span = (M: Uint8Array) => {
-    let far = 0;
-    for (let j = 0; j < G.ny; j++)
-      for (let i = 0; i < G.nx; i++)
-        if (M[j * G.nx + i]) far = Math.max(far, Math.hypot(G.x0 + i * STEP, G.y0 + j * STEP));
-    return far;
-  };
   const alike = (A: Uint8Array, B: Uint8Array) => {
     let both = 0;
     let any = 0;
@@ -395,37 +408,65 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
     }
     return any ? both / any : 0;
   };
-  // bands: what the wheels meet, what the body meets, and what is up over the roof. Each is its
-  // slices laid over one another (its outline seen from above), cut again wherever there is air
-  // between slices; two that come out near enough the same are made one
-  const bands: { from: number; to: number; mask: Uint8Array }[] = [];
-  let cur: (typeof bands)[number] | null = null;
-  // (one such cut: up there a few pieces do)
-  let cutHigh = false;
+  // a hitbox a slice, stacked as the slices are. Gaps too narrow for anything to get into are no
+  // gaps (a row of heads, the slats of a fence), and a ring is hit as a disc
+  for (const M of layers) {
+    if (count(M) < 2) continue;
+    close(G, M);
+    fill(G, M);
+  }
+  // (a thing with nothing at its foot is held up by what is built under it, a roof on its walls:
+  // it stays the block it was, down to the ground)
+  if (count(layers[0]!) < 2) return null;
+  // slices one over another whose outline is the same share one hitbox, as tall as all of them
+  /** No part of A further than `EDGE_OFF` from B: a hitbox for both stands out of neither. */
+  const within = (A: Uint8Array, B: Uint8Array) => {
+    const r = Math.round(EDGE_OFF / STEP);
+    for (let j = 0; j < G.ny; j++)
+      for (let i = 0; i < G.nx; i++) {
+        if (!A[j * G.nx + i] || B[j * G.nx + i]) continue;
+        let by = false;
+        for (let v = Math.max(0, j - r); !by && v <= Math.min(G.ny - 1, j + r); v++)
+          for (let u = Math.max(0, i - r); u <= Math.min(G.nx - 1, i + r); u++)
+            if (B[v * G.nx + u] && Math.hypot(u - i, v - j) <= r) {
+              by = true;
+              break;
+            }
+        if (!by) return false;
+      }
+    return true;
+  };
+  type Band = { from: number; to: number; first: Uint8Array; mask: Uint8Array; fit?: Piece[] };
+  const bands: Band[] = [];
+  let cur: Band | null = null;
   for (let z = 0; z < layers.length; z++) {
     const M = layers[z]!;
     if (count(M) < 2) {
       cur = null;
       continue;
     }
-    // (and up over the roofs wherever the outline becomes another thing altogether: limbs
-    // leaving a trunk, a tank on its legs)
-    const was = cur ? span(layers[cur.from]!) : 0;
-    const other =
-      !cutHigh &&
-      cur !== null &&
-      cur.from >= CUTS[1]! &&
-      (span(M) > was * 1.5 + 1 || span(M) < was * 0.6 - 1);
-    if (other) cutHigh = true;
-    if (cur && !CUTS.includes(z) && !other) {
+    if (
+      cur &&
+      alike(M, cur.mask) >= SAME &&
+      alike(M, cur.first) >= SAME - 0.15 &&
+      within(cur.mask, M)
+    ) {
       cur.to = z + 1;
       for (let k = 0; k < M.length; k++) if (M[k]) cur.mask[k] = 1;
-    } else bands.push((cur = { from: z, to: z + 1, mask: Uint8Array.from(M) }));
+    } else bands.push((cur = { from: z, to: z + 1, first: M, mask: Uint8Array.from(M) }));
   }
+  const join = (k: number) => {
+    const A = bands[k]!;
+    const B = bands[k + 1]!;
+    for (let i = 0; i < A.mask.length; i++) if (B.mask[i]) A.mask[i] = 1;
+    A.to = B.to;
+    delete A.fit;
+    bands.splice(k + 1, 1);
+  };
   for (let k = bands.length - 2; k >= 0; k--) {
     const A = bands[k]!;
     const B = bands[k + 1]!;
-    if (A.to !== B.from) continue;
+    if (A.to !== B.from || A.to > LOW || B.from >= ROOF) continue;
     // (what stands no higher than a wheel under something wider is taken as that: the posts
     // under a rail, the wheels under a wreck. A car meets the wider thing whatever is under it)
     let under = 0;
@@ -435,35 +476,36 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
         under++;
         if (B.mask[i]) both++;
       }
-    const tucked = A.to <= CUTS[0]! && B.from < CUTS[1]! && both >= under * 0.85;
-    if (!tucked && alike(A.mask, B.mask) < SAME) continue;
-    for (let i = 0; i < A.mask.length; i++) if (B.mask[i]) A.mask[i] = 1;
-    A.to = B.to;
-    bands.splice(k + 1, 1);
+    if (both >= under * 0.85) join(k);
   }
-  // (more of them than that, with air between: the highest are taken as one)
-  while (bands.length > 5) {
-    const B = bands.pop()!;
-    const A = bands[bands.length - 1]!;
-    for (let i = 0; i < A.mask.length; i++) if (B.mask[i]) A.mask[i] = 1;
-    A.to = B.to;
+  // a thing may be only so many pieces. One with more has the two hitboxes most alike made one,
+  // and again, those up over the roofs first: little meets it there
+  let parts: Piece[];
+  for (;;) {
+    parts = [];
+    for (const B of bands) {
+      // (up over the roofs only what is in the air meets it: a few pieces do)
+      const high = B.from >= ROOF;
+      B.fit ??= fit(G, B.mask, def, high ? 4 : 8, high);
+      for (const P of B.fit) parts.push({ ...P, z: [B.from, B.to] });
+    }
+    if (parts.length <= PIECES) break;
+    let at = -1;
+    let most = -1;
+    for (let k = 0; k + 1 < bands.length; k++) {
+      const A = bands[k]!;
+      const B = bands[k + 1]!;
+      if (A.to !== B.from) continue;
+      const like = alike(A.mask, B.mask) + (A.from >= ROOF ? 1 : 0);
+      if (like > most) {
+        most = like;
+        at = k;
+      }
+    }
+    if (at < 0) break;
+    join(at);
   }
-  // gaps too narrow for anything to get into are no gaps (a row of heads, the slats of a
-  // fence), and a ring is hit as a disc
-  for (const B of bands) {
-    close(G, B.mask);
-    fill(G, B.mask);
-  }
-  // (a thing with nothing at its foot is held up by what is built under it, a roof on its walls:
-  // it stays the block it was, down to the ground)
-  if (!bands.length || bands[0]!.from > 0) return null;
-  const parts: Piece[] = [];
-  bands.forEach((B, k) => {
-    // (up over the roofs only what is in the air meets it: a few pieces do)
-    const high = B.from >= CUTS[1]!;
-    const most = high ? 3 : Math.max(1, PIECES - parts.length - 2 * (bands.length - k - 1));
-    for (const P of fit(G, B.mask, def, most, high)) parts.push({ ...P, z: [B.from, B.to] });
-  });
+  expect(parts.length, def.id).toBeLessThanOrEqual(PIECES);
   // the same piece in the band above too: one piece, as tall as both
   const same = (P: Piece, Q: Piece) =>
     JSON.stringify({ ...P, z: 0 }) === JSON.stringify({ ...Q, z: 0 });

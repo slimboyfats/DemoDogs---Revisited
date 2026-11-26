@@ -40,7 +40,7 @@ const SKIN = 0.5;
 /** How round the corners of a car's hull are, art px, on a car of its own size. */
 const CORNER = 3;
 /** How round the corners of a prop's box are, unless it says. */
-const EDGE = 1;
+export const EDGE = 1;
 
 /** How high a car stands, art px, on a car of its own size. */
 export const CAR_HIGH = 7;

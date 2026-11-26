@@ -81,3 +81,45 @@ describe('hit shapes fit what is drawn', () => {
     });
   }
 });
+
+/**
+ * And the other way about, slice by slice: where a car can be (under `CAR_HIGH`), no part of a
+ * baked hit shape is far from what is drawn in that very slice. Only a gap no car could get into
+ * is hit as if it were filled: between the wheels of a wreck, the posts of a rail, the legs of a
+ * stand.
+ */
+describe('hit shapes stand out of no slice', () => {
+  const T = newTouch();
+  /** Half a car's width, near enough: a gap narrower than a car is no gap. */
+  const GAP = 4.5;
+  for (const [id, def] of C.prop) {
+    const lm = L.get(id);
+    if (!lm || lm.look.kind !== 'prop' || !def.solid || def.critter || pieces(def) < 2) continue;
+    it(id, () => {
+      const p = (lm.look as PropLook).part;
+      const trunk = def.crown ? def.crown.trunk + 0.75 : Infinity;
+      const step = 0.5;
+      let worst = 0;
+      let inside = 0;
+      let empty = 0;
+      for (let z = 0; z < Math.min(p.layers, CAR_HIGH - 1); z++) {
+        const drawn: [number, number][] = [];
+        for (let x = -p.w / 2 + step / 2; x < p.w / 2; x += step)
+          for (let y = -p.h / 2 + step / 2; y < p.h / 2; y += step)
+            if (Math.hypot(x, y) <= trunk && p.fn(x, y, p.smooth ? z + 0.5 : z)) drawn.push([x, y]);
+        for (let x = -p.w / 2 - 3; x < p.w / 2 + 3; x += step)
+          for (let y = -p.h / 2 - 3; y < p.h / 2 + 3; y += step) {
+            if (propPoint(def, 0, 0, 0, x, y, T, z, z + 1) >= 0) continue;
+            let d = Infinity;
+            for (const [vx, vy] of drawn) d = Math.min(d, Math.hypot(vx - x, vy - y));
+            inside++;
+            if (d > 1.5) empty++;
+            worst = Math.max(worst, d);
+          }
+      }
+      expect(worst).toBeLessThan(GAP);
+      // (and little of it is such a gap)
+      expect(empty / Math.max(1, inside)).toBeLessThan(0.25);
+    });
+  }
+});
