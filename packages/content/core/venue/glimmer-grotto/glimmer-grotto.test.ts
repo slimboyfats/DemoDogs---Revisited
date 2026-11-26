@@ -15,6 +15,6 @@ describe('venue.glimmer-grotto', () => {
     expect(w.venue.weather?.[0]?.sky).toBe('night');
     const glow = w.statics.filter((s) => /crystal|glow-shroom|lantern/.test(s.def.id));
     expect(glow.length).toBeGreaterThan(300);
-    expect(w.paths.length).toBeGreaterThan(8);
+    expect(w.paths.length).toBeGreaterThan(4);
   });
 });

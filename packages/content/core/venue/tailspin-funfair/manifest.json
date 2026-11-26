@@ -58,25 +58,13 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.boardwalk",
-          "x": -710.7,
-          "y": 647.5,
-          "rot": -2.5235
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -739.6,
-          "y": 628.8,
-          "rot": -2.6027
-        },
-        {
-          "prop": "prop.boardwalk",
+          "prop": "prop.dirt-track",
           "x": -769.3,
           "y": 611.4,
           "rot": -2.6182
         },
         {
-          "prop": "prop.boardwalk",
+          "prop": "prop.dirt-track",
           "x": -799.2,
           "y": 594.2,
           "rot": -2.6175
@@ -190,28 +178,16 @@
           "rot": -2.8556
         },
         {
-          "prop": "prop.boardwalk",
+          "prop": "prop.dirt-track",
           "x": -1420.5,
           "y": -135.5,
           "rot": -2.8647
         },
         {
-          "prop": "prop.boardwalk",
+          "prop": "prop.dirt-track",
           "x": -1453.2,
           "y": -144.8,
           "rot": -2.8627
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1485.9,
-          "y": -154.4,
-          "rot": -2.8407
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1518.0,
-          "y": -165.6,
-          "rot": 0.0
         }
       ]
     },

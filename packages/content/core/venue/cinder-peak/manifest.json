@@ -63,49 +63,13 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.cobbles",
-          "x": 731.5,
-          "y": 1069.2,
-          "rot": 3.0354
-        },
-        {
-          "prop": "prop.cobbles",
-          "x": 694.2,
-          "y": 1073.3,
-          "rot": 3.0278
-        },
-        {
-          "prop": "prop.cobbles",
-          "x": 657.0,
-          "y": 1077.6,
-          "rot": 3.0261
-        },
-        {
-          "prop": "prop.cobbles",
-          "x": 619.8,
-          "y": 1081.9,
-          "rot": 3.026
-        },
-        {
-          "prop": "prop.cobbles",
-          "x": 582.6,
-          "y": 1086.3,
-          "rot": 3.0268
-        },
-        {
-          "prop": "prop.cobbles",
-          "x": 545.4,
-          "y": 1090.5,
-          "rot": 3.028
-        },
-        {
-          "prop": "prop.cobbles",
+          "prop": "prop.dirt-track",
           "x": 508.1,
           "y": 1094.8,
           "rot": 3.0298
         },
         {
-          "prop": "prop.cobbles",
+          "prop": "prop.dirt-track",
           "x": 470.9,
           "y": 1099.0,
           "rot": 3.0181
@@ -169,30 +133,6 @@
           "x": -311.9,
           "y": 1091.5,
           "rot": -2.9476
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -349.6,
-          "y": 1086.2,
-          "rot": -3.0114
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -387.2,
-          "y": 1081.2,
-          "rot": -3.011
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -424.9,
-          "y": 1076.3,
-          "rot": -3.0131
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -462.5,
-          "y": 1071.6,
-          "rot": 0.0
         }
       ]
     },

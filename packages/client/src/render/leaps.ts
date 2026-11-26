@@ -143,3 +143,64 @@ export function paintLeaps(g: CanvasRenderingContext2D, w: World): void {
     g.putImageData(img, x0, y0);
   }
 }
+
+/** How far off the road's edge a path tile still gets a dirt splay joining it to the road (art px). */
+const SPUR = 80;
+
+/** The convex hull of some points, round the outside in order. */
+function hull(p: [number, number][]): [number, number][] {
+  const pts = [...p].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: [number, number], a: [number, number], b: [number, number]) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lo: [number, number][] = [];
+  for (const q of pts) {
+    while (lo.length >= 2 && cross(lo[lo.length - 2]!, lo[lo.length - 1]!, q) <= 0) lo.pop();
+    lo.push(q);
+  }
+  const hi: [number, number][] = [];
+  for (const q of pts.reverse()) {
+    while (hi.length >= 2 && cross(hi[hi.length - 2]!, hi[hi.length - 1]!, q) <= 0) hi.pop();
+    hi.push(q);
+  }
+  return [...lo.slice(0, -1), ...hi.slice(0, -1)];
+}
+
+/**
+ * Where a way leaves the road or comes back to it: packed dirt from the road's edge out to the
+ * path tiles near it, so the way branches off the road as a track would, widening out of it,
+ * and no tile lies stranded on the grass beside it.
+ */
+export function paintSpurs(g: CanvasRenderingContext2D, w: World): void {
+  const T = w.track;
+  const G = w.grid;
+  if (!T || !G) return;
+  const half = w.road / 2;
+  g.fillStyle = '#b08c5e';
+  for (const s of w.paths) {
+    const P = s.def.pad;
+    if (s.def.leap || P?.kind !== 'road' || G.at(s.x, s.y) > half + SPUR) continue;
+    const cs = Math.cos(s.rot);
+    const sn = Math.sin(s.rot);
+    const pts: [number, number][] = [];
+    for (const u of [-P.long / 2, P.long / 2])
+      for (const v of [-P.wide / 2 + 3, P.wide / 2 - 3]) {
+        const x = s.x + cs * u - sn * v;
+        const y = s.y + sn * u + cs * v;
+        pts.push([x, y]);
+        // and the same corner brought in to the road's edge (a little over it, under its line)
+        const i = G.nearest(x, y);
+        if (i < 0) continue;
+        const a = T.a[i]!;
+        const nx = -Math.sin(a);
+        const ny = Math.cos(a);
+        const side = (x - T.x[i]!) * nx + (y - T.y[i]!) * ny >= 0 ? 1 : -1;
+        pts.push([T.x[i]! + nx * side * (half - 3), T.y[i]! + ny * side * (half - 3)]);
+      }
+    const H = hull(pts);
+    g.beginPath();
+    g.moveTo(H[0]![0], H[0]![1]);
+    for (const q of H.slice(1)) g.lineTo(q[0], q[1]);
+    g.closePath();
+    g.fill();
+  }
+}

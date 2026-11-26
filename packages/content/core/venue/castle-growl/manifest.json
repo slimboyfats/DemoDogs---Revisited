@@ -58,36 +58,6 @@
       "items": [
         {
           "prop": "prop.dirt-track",
-          "x": -616.1,
-          "y": 306.1,
-          "rot": 1.9554
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -627.1,
-          "y": 340.0,
-          "rot": 1.8497
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -637.1,
-          "y": 374.1,
-          "rot": 1.8749
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -647.0,
-          "y": 408.9,
-          "rot": 1.7642
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -656.4,
-          "y": 445.2,
-          "rot": 1.973
-        },
-        {
-          "prop": "prop.dirt-track",
           "x": -675.2,
           "y": 475.1,
           "rot": 2.3059
@@ -115,30 +85,6 @@
           "x": -1086.2,
           "y": 836.5,
           "rot": 2.8911
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -1121.0,
-          "y": 841.3,
-          "rot": 3.1293
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -1160.1,
-          "y": 839.0,
-          "rot": -3.0127
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -1201.6,
-          "y": 832.5,
-          "rot": -2.9755
-        },
-        {
-          "prop": "prop.dirt-track",
-          "x": -1242.3,
-          "y": 827.0,
-          "rot": 0.0
         }
       ]
     },
