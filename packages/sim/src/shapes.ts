@@ -1,4 +1,4 @@
-import { BODY_UP, type CarManifest, type PropManifest } from '@demodogs/shared';
+import { BODY_UP, type AddonKind, type CarManifest, type PropManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 
 /**
@@ -451,10 +451,58 @@ export function carPoint(c: Car, x: number, y: number, T: Touch, lo: number, hi:
     (lo - foot) / k,
     (hi - foot) / k,
   );
-  if (g >= CLEAR) return g;
-  T.px = c.x + (T.px - c.x) * k;
-  T.py = c.y + (T.py - c.y) * k;
-  return (T.gap = g * k);
+  let best = g;
+  if (g < CLEAR) {
+    T.px = c.x + (T.px - c.x) * k;
+    T.py = c.y + (T.py - c.y) * k;
+    best = g * k;
+  }
+  // and what is bolted on and stands out of it
+  for (const kind of OUT_KINDS) {
+    const H = c.fit[kind]?.def.hit;
+    if (!H || hi <= c.z + H.z[0] * k || lo >= c.z + H.z[1] * k) continue;
+    for (const [mx, my] of standOut(c, kind)) {
+      GEAR.cs = Math.cos(c.h);
+      GEAR.sn = Math.sin(c.h);
+      GEAR.x = c.x + (mx * GEAR.cs - my * GEAR.sn) * k;
+      GEAR.y = c.y + (mx * GEAR.sn + my * GEAR.cs) * k;
+      GEAR.r = Math.min(0.5, H.halfLength, H.halfWidth) * k;
+      GEAR.a = H.halfLength * k - GEAR.r;
+      GEAR.b = H.halfWidth * k - GEAR.r;
+      const d = pointGap(GEAR, x, y, PIECE);
+      if (d < best) {
+        best = d;
+        T.nx = PIECE.nx;
+        T.ny = PIECE.ny;
+        T.px = PIECE.px;
+        T.py = PIECE.py;
+      }
+    }
+  }
+  return (T.gap = best);
+}
+
+/** The add-ons that stand out of a car's body where a shot can meet them. */
+export const OUT_KINDS = ['plates', 'jaws'] as const satisfies readonly AddonKind[];
+const GEAR = newShape();
+/** Where along a car its plates are bolted, front pair then back. */
+const PLATE_AT = [2.8, -3.2] as const;
+
+/**
+ * Where on car c each piece of add-on `kind` that stands out of it is bolted: [x, y] in the car's
+ * own frame, at its usual size (x forward). Plates: `n` of them, as many as are still on. The client draws
+ * them at these same places.
+ */
+export function standOut(
+  c: Car,
+  kind: (typeof OUT_KINDS)[number],
+  n = c.fit.plates?.n ?? 0,
+): [number, number][] {
+  const D = c.def.body;
+  if (kind === 'jaws') return c.fit.jaws ? [[D.halfLength + (c.blade ? 3.6 : 1.7), 0]] : [];
+  const out: [number, number][] = [];
+  for (const x of PLATE_AT) for (const sg of [1, -1]) out.push([x, sg * (D.halfWidth + 0.5)]);
+  return out.slice(0, Math.max(0, n));
 }
 
 /**

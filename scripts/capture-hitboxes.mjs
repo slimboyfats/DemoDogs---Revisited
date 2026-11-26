@@ -125,6 +125,16 @@ if (scene('cars')) {
   // (and what a shot meets: each body slice by slice)
   await view('heights');
   await shot('cars-heights');
+  // (and with the add-ons that stand out of a car bolted on: jaws across the nose, plates)
+  await page.evaluate(() => {
+    const dd = window.__dd;
+    for (const id of ['pickup.scrap-jaws', 'pickup.hackles']) {
+      dd.dev.pickupSel.value = id;
+      for (const c of dd.session.world.cars) dd.dev.use(c.x, c.y, 'give');
+    }
+  });
+  await settle(10);
+  await shot('cars-gear-heights');
 }
 
 // 2: scenery and loose props in rows, each with its hit shape, a car beside them for size

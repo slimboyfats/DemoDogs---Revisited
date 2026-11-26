@@ -891,6 +891,19 @@ export const PickupSchema = z.strictObject({
    */
   price: z.number().int().positive().optional(),
   sold: z.enum(['garage', 'market']).optional(),
+  /**
+   * An add-on that stands out past the car's body where a shot can meet it (plates on its flanks,
+   * jaws across its nose): each piece of it as a box, `halfLength` along the car, standing from
+   * `z[0]` to `z[1]` over the ground under the car, on a car of its usual size. It is part of
+   * what a shot at the car meets (`carPoint`), where it is bolted on (`standOut`, sim/shapes.ts).
+   */
+  hit: z
+    .strictObject({
+      halfLength: z.number().positive(),
+      halfWidth: z.number().positive(),
+      z: z.tuple([z.number().min(0), z.number().positive()]),
+    })
+    .optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 

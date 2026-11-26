@@ -4,6 +4,7 @@ import {
   bound,
   carGap,
   carPoint,
+  grant,
   newShape,
   newTouch,
   pieces,
@@ -206,5 +207,47 @@ describe('a shot meets a car as it is drawn', () => {
     expect(carPoint(c, c.x - 7, c.y, T, c.z + 3.6, c.z + 5)).toBeGreaterThan(0);
     // the cab is there at that height
     expect(carPoint(c, c.x + 1, c.y, T, c.z + 3.6, c.z + 5)).toBeLessThan(0);
+  });
+
+  it('and what is bolted on and stands out of it: jaws across its nose, plates on its flanks', () => {
+    const w = makeWorld({ car: 'car.mutt' });
+    const c = w.cars.find((o) => o.isPlayer)!;
+    c.h = 0;
+    const hl = c.def.body.halfLength;
+    const hw = c.def.body.halfWidth;
+    const shot = (x: number, y: number) => carPoint(c, c.x + x, c.y + y, T, c.z + 3.5, c.z + 5);
+    // bare: ahead of its nose and beside its doors is clear air
+    expect(shot(hl + 2.5, 5)).toBeGreaterThan(1);
+    expect(shot(2.8, hw + 0.8)).toBeGreaterThan(0);
+    for (const id of ['pickup.scrap-jaws', 'pickup.hackles']) {
+      const def = C.pickup.get(id)!;
+      // (the box in the manifest is the look's own, where it is bolted)
+      const p = (L.get(id)!.look as PropLook).part;
+      let ax = 0;
+      let ay = 0;
+      for (let x = -p.w / 2; x <= p.w / 2; x += 0.25)
+        for (let y = -p.h / 2; y <= p.h / 2; y += 0.25)
+          for (let z = 0; z < p.layers; z++)
+            if (p.fn(x, y, z + 0.5)) {
+              ax = Math.max(ax, Math.abs(x));
+              ay = Math.max(ay, Math.abs(y));
+            }
+      expect(Math.abs(def.hit!.halfLength - ax)).toBeLessThan(0.6);
+      expect(Math.abs(def.hit!.halfWidth - ay)).toBeLessThan(0.6);
+      grant(w, c, def);
+    }
+    expect(shot(hl + 2.5, 5)).toBeLessThan(0);
+    expect(shot(2.8, hw + 0.8)).toBeLessThan(0);
+    expect(shot(2.8, -hw - 0.8)).toBeLessThan(0);
+    // twice the size, twice as far out
+    c.size = 2;
+    expect(shot((hl + 2.5) * 2, 10)).toBeLessThan(0);
+    c.size = 1;
+    // a plate blown off is gone from the shape: the first to go is the last bolted on
+    c.fit.plates!.n = 1;
+    expect(shot(2.8, hw + 0.8)).toBeLessThan(0);
+    expect(shot(2.8, -hw - 0.8)).toBeGreaterThan(0);
+    // and bumping is the hull's business still
+    expect(carGap(c, c.x + hl + 2.5, c.y + 5)).toBeGreaterThan(0);
   });
 });

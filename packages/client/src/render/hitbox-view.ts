@@ -11,8 +11,10 @@ import {
   moundHeight,
   muzzle,
   newShape,
+  OUT_KINDS,
   bodyOf,
   pieceFoot,
+  standOut,
   pieceTop,
   pieces,
   propShape,
@@ -593,6 +595,23 @@ export class HitboxView {
         this.block(P, c.z + foot, top - foot, col, 0.8, foot);
       }
     }
+    // (and what is bolted on and stands out of it)
+    if (heights && !c.wrecked)
+      for (const kind of OUT_KINDS) {
+        const H = c.fit[kind]?.def.hit;
+        if (!H) continue;
+        const k = c.size;
+        for (const [mx, my] of standOut(c, kind)) {
+          PIECE.cs = Math.cos(c.h);
+          PIECE.sn = Math.sin(c.h);
+          PIECE.x = c.x + (mx * PIECE.cs - my * PIECE.sn) * k;
+          PIECE.y = c.y + (mx * PIECE.sn + my * PIECE.cs) * k;
+          PIECE.r = Math.min(0.5, H.halfLength, H.halfWidth) * k;
+          PIECE.a = H.halfLength * k - PIECE.r;
+          PIECE.b = H.halfWidth * k - PIECE.r;
+          this.block(PIECE, c.z + H.z[0] * k, (H.z[1] - H.z[0]) * k, col, 1, H.z[0] * k);
+        }
+      }
     // which end is the nose
     const n = (c.def.body.halfLength + 0.5) * c.size;
     this.line(c.x, c.y, c.z, c.x + Math.cos(c.h) * n, c.y + Math.sin(c.h) * n, c.z);
