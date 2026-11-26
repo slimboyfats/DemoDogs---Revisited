@@ -1,6 +1,7 @@
 import { NEAR_Q, OFF, WILD_Q, type GroundPaint } from '../ground-paint';
 import { Field, LEDGES } from '../terrain';
 import { SHOULDER } from '@demodogs/sim';
+import { WATER_OUT, WATER_Q } from '../water';
 
 const TERRAINS = ['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved'];
 
@@ -24,6 +25,9 @@ export const PAINT_UNIFORMS = [
   'u_wn',
   'u_ws',
   'u_wayN',
+  'u_wm',
+  'u_wmSize',
+  'u_wt',
 ] as const;
 
 /**
@@ -596,6 +600,77 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
   c = col * m;
 }
 #endif
+uniform sampler2D u_wm;      // the water (water.ts): its colour, and how far in from the shore
+uniform vec2 u_wmSize;
+uniform vec2 u_wt;           // the water's clock (s), and whether there is any water at all
+// Whether this cell is water (nothing grows, lies or is ground into it).
+float g_water = 0.0;
+// Water laid over the ground in c: see-through where it laps the shore and plain further out, in
+// flat tones that step, like the rest of the country. All that moves is here: the line of foam
+// that runs up the shore and back, the rings that leave it, the wavelets that drift across open
+// water and wink out, the slow swell under them, a glint here and there. The same foam gathers
+// round whatever stands in the water, since the map counts its foot as shore.
+void waterOver(inout vec3 c, vec2 wp, ivec2 gc) {
+  if (u_wt.y < 0.5) return;
+  vec4 W = texture(u_wm, (wp / ${f(WATER_Q)} + 0.5) / u_wmSize);
+  float d = W.a * 127.5 - ${f(WATER_OUT)};
+  if (d < -5.0) return;
+  vec4 F = fieldsAt(wp);
+  float t = u_wt.x;
+  // (a shore is never a line drawn with compasses)
+  d += (F.a - 0.5) * 3.0;
+  // the waterline runs up the shore and back, each stretch of it in its own time
+  float lap = sin(t * 1.3 + F.g * 19.0);
+  float dl = d + lap * 1.1;
+  if (dl <= 0.0) {
+    // wet sand where the last wave reached
+    if (d > -1.3) c *= 0.84;
+    return;
+  }
+  g_water = 1.0;
+  vec3 w = W.rgb * 255.0;
+#ifdef BRIGHT
+  float wl = dot(w, vec3(0.3, 0.55, 0.15));
+  w = clamp((wl + (w - wl) * 1.12) * 1.08 + 6.0, 0.0, 255.0);
+#endif
+  // the slow swell: broad patches a tone lighter that slide by
+  float sw = sin(F.r * 15.0 + wp.x * 0.016 - wp.y * 0.011 + t * 0.45);
+  if (sw > 0.5) w *= 1.045;
+  else if (sw < -0.72) w *= 0.965;
+  // wavelets: short light dashes in rows, drifting with the breeze, each there a while and gone;
+  // and dark ones under them going the other way
+  vec2 q = vec2(wp.x + t * 5.0 + sin(wp.y * 0.19 + t * 0.8) * 2.2, wp.y + sin(wp.x * 0.07 + t * 0.6) * 1.2);
+  float ry = floor(q.y / 3.0);
+  float ox = q.x + ry * 7.3;
+  float rx = floor(ox / 11.0);
+  float hh = hash2(int(rx), int(ry), u_seed + 77);
+  if (hh > 0.62 && q.y - ry * 3.0 < 0.85 && ox - rx * 11.0 < 2.5 + hh * 5.0 && fract(hh * 13.0 + t * 0.3) < 0.62)
+    w *= 1.2;
+  else {
+    float oy = wp.y + sin(wp.x * 0.11 - t * 0.7) * 1.6;
+    float sy = floor(oy / 4.0);
+    float px = wp.x - t * 3.0 + sy * 5.1;
+    float sx = floor(px / 13.0);
+    float h2 = hash2(int(sx), int(sy), u_seed + 78);
+    if (h2 > 0.7 && oy - sy * 4.0 < 0.85 && px - sx * 13.0 < 3.0 + h2 * 6.0 && fract(h2 * 9.0 - t * 0.22) < 0.6)
+      w *= 0.88;
+  }
+  // a glint of the sun, a cell of it, here and there for a moment
+  float gh = hash2(gc.x >> 1, gc.y >> 1, u_seed + 79);
+  if (gh > 0.9985 && fract(gh * 311.0 + t * 0.9) < 0.3) w = vec3(250.0, 253.0, 255.0);
+  // see-through where it is thin: the bed shows in the first few px, less in the next few
+  float thin = dl < 3.0 ? 0.5 : dl < 8.0 ? 0.74 : dl < 15.0 ? 0.88 : 0.95;
+  c = mix(c, w * (dl < 8.0 ? 1.06 : 1.0), thin);
+  // the foam: a line where the water meets the shore, and now and then a ring leaving it that
+  // thins out and is gone a few px on
+  vec3 foam = vec3(247.0, 252.0, 255.0);
+  if (dl < 1.5) c = foam;
+  else {
+    float ph = fract(t * 0.21 + F.g * 5.0);
+    float rd = dl - (2.5 + ph * 8.0);
+    if (rd > 0.0 && rd < 1.05 && ph < 0.8 && F.b + ph * 0.3 < 0.86) c = mix(c, foam, 0.8 * (1.0 - ph));
+  }
+}
 vec3 groundPaint(vec2 wp, ivec2 gc) {
   vec2 p = wp - 0.5;
   vec4 F = fieldsAt(p);

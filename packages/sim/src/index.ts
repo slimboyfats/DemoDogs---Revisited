@@ -18,12 +18,12 @@ export * from './range';
 export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
-export { PLUNGE_TIME, inPit, rescueIn } from './rescue';
+export { PLUNGE_TIME, SINK_TIME, inPit, rescueIn, wading } from './rescue';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';
 export { OVERHANG, SAG, SAG_STEP } from './spans';
-export { batter, dig, shed, explode, fall, footing, ignite, spill } from './damage';
+export { batter, dig, shed, explode, fall, footing, ignite, spill, waterAt } from './damage';
 export {
   blinded,
   cloudReach,
