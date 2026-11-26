@@ -15,7 +15,7 @@
         "y": 0,
         "halfLength": 7,
         "halfWidth": 5,
-        "round": 2,
+        "round": 0.5,
         "z": [0, 3]
       },
       {

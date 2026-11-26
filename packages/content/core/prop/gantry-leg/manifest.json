@@ -9,10 +9,22 @@
   "body": "static",
   "radius": 3.2,
   "hit": {
-    "halfLength": 3,
-    "halfWidth": 3,
-    "round": 0.6,
-    "top": 28
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 3,
+        "halfWidth": 3,
+        "round": 0.6,
+        "z": [0, 27]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.1,
+        "z": [27, 28]
+      }
+    ]
   },
   "made": "material.steel",
   "integrity": 90

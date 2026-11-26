@@ -378,6 +378,14 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
     layers.push(M);
   }
   const count = (M: Uint8Array) => M.reduce((a, b) => a + b, 0);
+  /** How far out from the middle a slice reaches. */
+  const span = (M: Uint8Array) => {
+    let far = 0;
+    for (let j = 0; j < G.ny; j++)
+      for (let i = 0; i < G.nx; i++)
+        if (M[j * G.nx + i]) far = Math.max(far, Math.hypot(G.x0 + i * STEP, G.y0 + j * STEP));
+    return far;
+  };
   const alike = (A: Uint8Array, B: Uint8Array) => {
     let both = 0;
     let any = 0;
@@ -392,13 +400,24 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
   // between slices; two that come out near enough the same are made one
   const bands: { from: number; to: number; mask: Uint8Array }[] = [];
   let cur: (typeof bands)[number] | null = null;
+  // (one such cut: up there a few pieces do)
+  let cutHigh = false;
   for (let z = 0; z < layers.length; z++) {
     const M = layers[z]!;
     if (count(M) < 2) {
       cur = null;
       continue;
     }
-    if (cur && !CUTS.includes(z)) {
+    // (and up over the roofs wherever the outline becomes another thing altogether: limbs
+    // leaving a trunk, a tank on its legs)
+    const was = cur ? span(layers[cur.from]!) : 0;
+    const other =
+      !cutHigh &&
+      cur !== null &&
+      cur.from >= CUTS[1]! &&
+      (span(M) > was * 1.5 + 1 || span(M) < was * 0.6 - 1);
+    if (other) cutHigh = true;
+    if (cur && !CUTS.includes(z) && !other) {
       cur.to = z + 1;
       for (let k = 0; k < M.length; k++) if (M[k]) cur.mask[k] = 1;
     } else bands.push((cur = { from: z, to: z + 1, mask: Uint8Array.from(M) }));
@@ -422,8 +441,13 @@ function bake(def: PropManifest, look: PropLook): PropManifest['hit'] | null {
     A.to = B.to;
     bands.splice(k + 1, 1);
   }
-  // (more of them than that, with air between: the lowest are what matter)
-  bands.length = Math.min(bands.length, 5);
+  // (more of them than that, with air between: the highest are taken as one)
+  while (bands.length > 5) {
+    const B = bands.pop()!;
+    const A = bands[bands.length - 1]!;
+    for (let i = 0; i < A.mask.length; i++) if (B.mask[i]) A.mask[i] = 1;
+    A.to = B.to;
+  }
   // gaps too narrow for anything to get into are no gaps (a row of heads, the slats of a
   // fence), and a ring is hit as a disc
   for (const B of bands) {
