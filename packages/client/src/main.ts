@@ -721,6 +721,17 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
         setTimeout(go, 60);
       });
     },
+    // the pixel engine gets the race's ground, shaders and atlas ready behind the loader
+    scene instanceof PixelScene
+      ? {
+          early: (w, g) => scene.early(w, g),
+          steps: 2,
+          ready: (s, say) => {
+            if (shown !== scale) scene.setScale((shown = scale));
+            return scene.prepare(s.world, s.fx, s.ground, s.cam, W, H, say);
+          },
+        }
+      : undefined,
   );
   if (mine !== launching || screen !== 'loading') return;
   session = made;

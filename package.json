@@ -35,6 +35,7 @@
     "world": "pnpm build && node scripts/capture-world.mjs",
     "bridge": "pnpm build && node scripts/capture-bridge.mjs",
     "res": "pnpm build && node scripts/resolution.mjs",
+    "perf:start": "pnpm build && node scripts/perf-start.mjs",
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",

@@ -227,7 +227,6 @@ export class OverdrawMeter {
       gl.deleteTexture(this.tex[i]!);
     }
     gl.deleteRenderbuffer(this.depth);
-    gl.deleteProgram(this.heat);
     gl.deleteVertexArray(this.vao);
   }
 }

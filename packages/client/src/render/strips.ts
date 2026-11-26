@@ -1,4 +1,5 @@
 import { finishOf, type Finish, type Part, type Tones } from '@demodogs/shared';
+import { GLOW_MAX, SKY, packNormal } from './pixel/aux';
 import type { Strip } from './stack';
 
 /**
@@ -66,7 +67,11 @@ function mix3(t: readonly number[][], k: number, out: number[]): void {
   for (let i = 0; i < 3; i++) out[i] = a[i]! + (b[i]! - a[i]!) * f;
 }
 
-/** A part sampled into voxels: which material each is (0 for none) and how lit, 0 to 255. */
+/**
+ * A part sampled into voxels: which material each is (0 for none), how lit, 0 to 255, and which
+ * way its surface faces (the lighting's byte 0, see pixel/aux.ts; 0 inside the solid). `top` is
+ * the highest solid voxel of every column, -1 for an empty one.
+ */
 interface Sampled {
   cw: number;
   ch: number;
@@ -74,6 +79,8 @@ interface Sampled {
   names: string[];
   grid: Uint8Array;
   lit: Uint8Array;
+  face: Uint8Array;
+  top: Int16Array;
 }
 
 const sampled = new WeakMap<Part, Map<number, Sampled>>();
@@ -81,13 +88,13 @@ const sampled = new WeakMap<Part, Map<number, Sampled>>();
 /**
  * Sample a part into voxels and work out how lit each one is. A smooth part is sampled at every
  * texel's centre in all three directions; any other part was written for whole layers, so it gets
- * its layer number and only its outline is finer. Kept per part: a car in another colour only
- * needs colouring again.
+ * its layer number and only its outline is finer. With `keep` it is kept with the part: a car in
+ * another colour only needs colouring again. (Scenery is built once in its one set of colours, so
+ * keeping its voxels would only hold memory.)
  */
-function sample(part: Part, res: number): Sampled {
+function sample(part: Part, res: number, keep: boolean): Sampled {
   let byRes = sampled.get(part);
-  if (!byRes) sampled.set(part, (byRes = new Map()));
-  const had = byRes.get(res);
+  const had = byRes?.get(res);
   if (had) return had;
   const cw = part.w * res;
   const ch = part.h * res;
@@ -95,60 +102,90 @@ function sample(part: Part, res: number): Sampled {
   const names: string[] = [''];
   const index = new Map<string, number>();
   const grid = new Uint8Array(cw * ch * n);
-  for (let z = 0; z < n; z++) {
-    const pz = part.smooth ? (z + 0.5) / res : Math.floor(z / res);
-    for (let y = 0; y < ch; y++)
-      for (let x = 0; x < cw; x++) {
-        const m = part.fn((x + 0.5) / res - part.w / 2, (y + 0.5) / res - part.h / 2, pz);
-        if (!m) continue;
-        let k = index.get(m);
-        if (k === undefined) {
-          index.set(m, (k = names.length));
-          names.push(m);
-        }
-        grid[(z * ch + y) * cw + x] = k;
-      }
-  }
-  const solid = (x: number, y: number, z: number): boolean =>
-    x >= 0 && y >= 0 && z >= 0 && x < cw && y < ch && z < n && grid[(z * ch + y) * cw + x] !== 0;
   // the shading looks at the same distance around a voxel however fine the part is
   const st = Math.max(1, Math.round(res / DETAIL));
+  // what is solid, with an empty margin all round so nothing below has to check its bounds
+  const p = st * 2;
+  const sx = cw + p * 2;
+  const layer = sx * (ch + p * 2);
+  const occ = new Uint8Array(layer * (n + p * 2));
+  const top = new Int16Array(cw * ch).fill(-1);
+  const fn = part.fn;
+  const hw = part.w / 2;
+  const hh = part.h / 2;
+  let last = '';
+  let lastK = 0;
+  for (let z = 0; z < n; z++) {
+    const pz = part.smooth ? (z + 0.5) / res : Math.floor(z / res);
+    for (let y = 0; y < ch; y++) {
+      const py = (y + 0.5) / res - hh;
+      const row = (z * ch + y) * cw;
+      const o = (z + p) * layer + (y + p) * sx + p;
+      for (let x = 0; x < cw; x++) {
+        const m = fn((x + 0.5) / res - hw, py, pz);
+        if (!m) continue;
+        // (runs of one material are the rule: the name just seen needs no lookup)
+        if (m !== last) {
+          let k = index.get(m);
+          if (k === undefined) {
+            index.set(m, (k = names.length));
+            names.push(m);
+          }
+          last = m;
+          lastK = k;
+        }
+        grid[row + x] = lastK;
+        occ[o + x] = 1;
+        top[y * cw + x] = z;
+      }
+    }
+  }
   const steps = res > DETAIL ? 10 : 7;
   const lit = new Uint8Array(cw * ch * n);
+  const face = new Uint8Array(cw * ch * n);
   for (let z = 0; z < n; z++)
-    for (let y = 0; y < ch; y++)
+    for (let y = 0; y < ch; y++) {
+      const row = (z * ch + y) * cw;
+      const o = (z + p) * layer + (y + p) * sx + p;
       for (let x = 0; x < cw; x++) {
-        const i = (z * ch + y) * cw + x;
-        if (!grid[i]) continue;
+        const i = o + x;
+        if (!occ[i]) continue;
         // only the surface is ever seen (until something is knocked off, and then it is scuffed)
-        if (
-          solid(x, y, z + 1) &&
-          solid(x + 1, y, z) &&
-          solid(x - 1, y, z) &&
-          solid(x, y + 1, z) &&
-          solid(x, y - 1, z)
-        )
-          continue;
+        if (occ[i + layer] && occ[i + 1] && occ[i - 1] && occ[i + sx] && occ[i - sx]) continue;
         // which way the surface faces: away from the solid around this voxel
         let nx = 0;
         let ny = 0;
         let nz = 0;
         let open = 0;
-        for (let dz = -2; dz <= 2; dz++)
-          for (let dy = -2; dy <= 2; dy++)
+        for (let dz = -2; dz <= 2; dz++) {
+          const iz = i + dz * st * layer;
+          for (let dy = -2; dy <= 2; dy++) {
+            const iy = iz + dy * st * sx;
             for (let dx = -2; dx <= 2; dx++) {
-              if (solid(x + dx * st, y + dy * st, z + dz * st)) continue;
+              if (occ[iy + dx * st]) continue;
               nx += dx;
               ny += dy;
               nz += dz;
               if (dz > 0 && dx >= -1 && dx <= 1 && dy >= -1 && dy <= 1) open++;
             }
-        lit[i] = Math.round(
+          }
+        }
+        lit[row + x] = Math.round(
           lightOf(nz / (Math.hypot(nx, ny, nz) || 1), open / 18, z / n, steps) * 255,
         );
+        // the lighting's facing is the same sum, but for it the ground under the part is solid
+        // (the foot of a wall does not face down): take back what the empty layers below added
+        let gz = nz;
+        if (z - st < 0) gz += 25;
+        if (z - 2 * st < 0) gz += 50;
+        face[row + x] = packNormal(nx, ny, gz);
       }
-  const out = { cw, ch, n, names, grid, lit };
-  byRes.set(res, out);
+    }
+  const out = { cw, ch, n, names, grid, lit, face, top };
+  if (keep) {
+    if (!byRes) sampled.set(part, (byRes = new Map()));
+    byRes.set(res, out);
+  }
   return out;
 }
 
@@ -181,21 +218,35 @@ export function shineOf(
   return [glows?.[m] ?? (BURNS.test(m) ? 6 : 0), glosses?.[m] ?? 0];
 }
 
-/** A part as a strip in the given materials, `res` texels to the art pixel. */
+/**
+ * A strip's canvas. Where there is no page (a worker building art): its size alone, which is all
+ * that is read of a canvas nothing has drawn from.
+ */
+export function canvasOf(w: number, h: number): HTMLCanvasElement {
+  if (typeof document === 'undefined') return { width: w, height: h } as HTMLCanvasElement;
+  const cv = document.createElement('canvas');
+  cv.width = w;
+  cv.height = h;
+  return cv;
+}
+
+/**
+ * A part as a strip in the given materials, `res` texels to the art pixel. `keep` holds on to the
+ * part's voxels for the next build of it (in another colour).
+ */
 export function build(
   part: Part,
   mats: Record<string, Tones>,
   res = DETAIL,
   glows?: Readonly<Record<string, number>>,
   glosses?: Readonly<Record<string, number>>,
+  keep = false,
 ): Strip {
-  const { cw, ch, n, names, grid, lit } = sample(part, res);
+  const { cw, ch, n, names, grid, lit, face, top } = sample(part, res, keep);
   const cols = Math.max(1, Math.min(n, Math.floor(MAX_W / cw)));
   const W = cw * cols;
   const H = ch * Math.ceil(n / cols);
-  const cv = document.createElement('canvas');
-  cv.width = W;
-  cv.height = H;
+  const cv = canvasOf(W, H);
   const px = new Uint8ClampedArray(W * H * 4);
   // (a name may carry a finish of its own, `paintr@metal`: the colour is the material's)
   const told = names.map((m) => finishOf(m));
@@ -209,15 +260,29 @@ export function build(
   // and which shine in the light (paint, metal, chrome and glass)
   const sheen = names.map((m) => shineOf(m, glows, glosses)[1]);
   const gloss = sheen.some((g) => g > 0) ? new Uint8Array(W * H) : undefined;
+  // and what the lighting needs of every texel, known here for nothing: no bake while it is drawn
+  const aux = new Uint8Array(W * H * 2);
+  const more = names.map((_, m) => Math.min(GLOW_MAX, shine[m]!) | ((sheen[m]! & 3) << 3));
+  // and the part of each slice that has anything in it: all of it that needs drawing
+  const trim = new Uint16Array(n * 4);
   const c = [0, 0, 0];
-  for (let z = 0; z < n; z++)
+  for (let z = 0; z < n; z++) {
+    const at = Math.floor(z / cols) * ch * W + (z % cols) * cw;
+    let x0 = cw;
+    let y0 = ch;
+    let x1 = 0;
+    let y1 = 0;
     for (let y = 0; y < ch; y++)
       for (let x = 0; x < cw; x++) {
         const i = (z * ch + y) * cw + x;
         const m = grid[i]!;
         if (!m) continue;
+        if (x < x0) x0 = x;
+        if (x >= x1) x1 = x + 1;
+        if (y < y0) y0 = y;
+        y1 = y + 1;
         mix3(rgb[m]!, lit[i]! / 255, c);
-        const t = (Math.floor(z / cols) * ch + y) * W + (z % cols) * cw + x;
+        const t = at + y * W + x;
         const j = t * 4;
         px[j] = c[0]!;
         px[j + 1] = c[1]!;
@@ -225,8 +290,12 @@ export function build(
         px[j + 3] = 255;
         if (glow) glow[t] = shine[m]!;
         if (gloss) gloss[t] = sheen[m]!;
+        aux[t * 2] = face[i]!;
+        aux[t * 2 + 1] = (top[y * cw + x] === z ? SKY : 0) | more[m]!;
       }
-  return { img: cv, cw, ch, n, res, cols, px, stale: true, glow, gloss };
+    if (x1 > x0) trim.set([x0, y0, x1, y1], z * 4);
+  }
+  return { img: cv, cw, ch, n, res, cols, px, stale: true, glow, gloss, aux, trim };
 }
 
 /**
@@ -261,6 +330,8 @@ export function clone(s: Strip): Strip {
 export function restore(s: Strip, from: Strip): void {
   pixels(s).set(pixels(from));
   s.stale = true;
+  s.aux = from.aux;
+  s.touched = null;
 }
 
 /**
@@ -626,10 +697,29 @@ export const voxels = (s: Strip, px: Uint8ClampedArray): Voxels => ({
   cols: s.cols,
 });
 
-/** Run `fn` over a strip's pixels; its canvas is brought up to date later, if anyone needs it. */
-function edit<T>(s: Strip, fn: (v: Voxels) => T): T {
-  const out = fn(voxels(s, pixels(s)));
+/**
+ * Run `fn` over a strip's pixels; its canvas is brought up to date later, if anyone needs it.
+ * `box` says which part of every slice `fn` may change (see `Strip.touched`), given what it
+ * returned; without it, any part.
+ */
+function edit<T>(
+  s: Strip,
+  fn: (v: Voxels) => T,
+  box?: (out: T, v: Voxels) => [number, number, number, number],
+): T {
+  const v = voxels(s, pixels(s));
+  const out = fn(v);
   s.stale = true;
+  // its shape has changed: the lighting it was built with is no longer its own
+  s.aux = undefined;
+  if (!box) s.touched = null;
+  else if (s.touched !== null) {
+    const b = box(out, v);
+    const t = s.touched;
+    s.touched = t
+      ? [Math.min(t[0], b[0]), Math.min(t[1], b[1]), Math.max(t[2], b[2]), Math.max(t[3], b[3])]
+      : b;
+  }
   return out;
 }
 
@@ -649,21 +739,46 @@ export function dent(
   rand: () => number,
   keep = 1,
 ): Broken {
-  return edit(s, (v) => {
-    const chips = dentVoxels(v, lx, ly, r, power, rand, keep);
-    const cx = v.cw / 2 + lx * v.res;
-    const cy = v.ch / 2 + ly * v.res;
-    const R = r * v.res + 2;
-    const loose = detachNear(
-      v,
-      Math.floor(cx - R),
-      Math.floor(cy - R),
-      Math.ceil(cx + R),
-      Math.ceil(cy + R),
-      keep,
-    );
-    return { chips, loose };
-  });
+  return edit(
+    s,
+    (v) => {
+      const chips = dentVoxels(v, lx, ly, r, power, rand, keep);
+      const cx = v.cw / 2 + lx * v.res;
+      const cy = v.ch / 2 + ly * v.res;
+      const R = r * v.res + 2;
+      const loose = detachNear(
+        v,
+        Math.floor(cx - R),
+        Math.floor(cy - R),
+        Math.ceil(cx + R),
+        Math.ceil(cy + R),
+        keep,
+      );
+      return { chips, loose };
+    },
+    // what changed: the crater, and the cubes anything cut loose was gathered into
+    ({ loose }, v) => {
+      const cx = v.cw / 2 + lx * v.res;
+      const cy = v.ch / 2 + ly * v.res;
+      const R = r * v.res;
+      const b: [number, number, number, number] = [
+        Math.floor(cx - R),
+        Math.floor(cy - R),
+        Math.ceil(cx + R) + 1,
+        Math.ceil(cy + R) + 1,
+      ];
+      const B = v.res * 2;
+      for (const c of loose) {
+        const x = Math.floor((c.x * v.res + v.cw / 2 - 0.5) / B + 1e-6) * B;
+        const y = Math.floor((c.y * v.res + v.ch / 2 - 0.5) / B + 1e-6) * B;
+        b[0] = Math.min(b[0], x);
+        b[1] = Math.min(b[1], y);
+        b[2] = Math.max(b[2], x + B);
+        b[3] = Math.max(b[3], y + B);
+      }
+      return b;
+    },
+  );
 }
 
 export function shatter(s: Strip, share: number, rand: () => number, keep = 1): Broken {

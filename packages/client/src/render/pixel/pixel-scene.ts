@@ -9,24 +9,25 @@ import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
 import { lampsOut, queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
-import { GroundLayer } from './ground-layer';
-import { SunShadow } from './sun-shadow';
+import { prelink } from './gl';
+import { GroundLayer, groundSources } from './ground-layer';
+import { SUN_PROGRAMS, SunShadow } from './sun-shadow';
 import { LightBlock } from './light-block';
-import { TracedLight } from './traced-light';
-import { BeamHaze } from './beam-haze';
-import { ShadowLayer } from './shadow-layer';
+import { TRACED_PROGRAMS, TracedLight } from './traced-light';
+import { BeamHaze, HAZE_PROGRAMS } from './beam-haze';
+import { SHADOW_PROGRAMS, ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights, MAX_CONES } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
 import { fineGrid } from '../strips';
-import { GasGpu, type GasView } from './gas-gpu';
+import { GAS_PROGRAMS, GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
-import { StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
+import { STACK_PROGRAMS, StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
-import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
-import { DuskPass } from './dusk';
+import { LensPass, MAX_RIPPLES, POST_PROGRAMS, rippleAt, type Lens } from './post';
+import { DUSK_PROGRAMS, DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
@@ -130,6 +131,19 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     });
     if (!gl) throw new Error('WebGL2 is not available');
     this.gl = gl;
+    // every shader the game draws with starts building now, while the menu is up: none is left
+    // to be built in the middle of a race, the first time its effect is seen
+    prelink(
+      gl,
+      ...STACK_PROGRAMS,
+      ...SUN_PROGRAMS,
+      ...TRACED_PROGRAMS,
+      ...GAS_PROGRAMS,
+      ...SHADOW_PROGRAMS,
+      ...HAZE_PROGRAMS,
+      ...POST_PROGRAMS,
+      ...DUSK_PROGRAMS,
+    );
     this.atlas = new StackAtlas(gl);
     this.stacks = new StackBatch(gl, this.atlas);
     this.quads = new QuadBatch(gl);
@@ -196,6 +210,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   // StackSink: visibility and forwarding to the batch (the GPU needs no grouping)
   visible(x: number, y: number, rad: number, ht = 0): boolean {
+    // (getting a race ready: everything in the world is "in view")
+    if (this.everything) return true;
     const sx = this.sx(x);
     const sy = this.sy(y);
     // (raised ground lifts things up the screen: allow for the highest it stands)
@@ -346,23 +362,73 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
   }
 
-  draw(w: World, fx: Effects, ground: Ground, cam: Camera, W: number, H: number): void {
+  /** Getting a race ready (`prepare`): everything counts as in view, and every pass is drawn. */
+  private everything = false;
+  private warming = false;
+
+  /**
+   * A venue's ground is known: start building the shader it is painted with, while the rest of
+   * the race is still being made.
+   */
+  early(w: World, ground: Ground): void {
+    prelink(this.gl, groundSources(ground, this.raised && !!w.relief));
+    // and its heights and textures go to the GPU now, while the art is built on other threads
+    this.lay(w, ground);
+  }
+
+  /**
+   * Everything a race's first frames would otherwise stop to do, done behind the loader: the
+   * raised ground's map, the ground's textures, the shadow map, every pass the frame may go
+   * through, and every strip in the world packed into the atlas. `say` tells the loader what is
+   * being done and comes back once that has been shown. Then one frame is drawn, with every pass
+   * in it, so the first frame the player sees is like any other.
+   */
+  async prepare(
+    w: World,
+    fx: Effects,
+    ground: Ground,
+    cam: Camera,
+    W: number,
+    H: number,
+    say: (text: string) => Promise<void>,
+  ): Promise<void> {
     const gl = this.gl;
-    const S = this.scale;
-    if (ground !== this.ground) {
-      this.groundLayer?.dispose();
-      this.relief?.dispose();
-      this.relief = new ReliefLayer(
-        gl,
-        this.raised ? w.relief : null,
-        w.w,
-        w.h,
-        this.cosP / this.ys,
-      );
-      this.stacks.relief = this.relief;
-      this.groundLayer = new GroundLayer(gl, ground, this.relief);
-      this.ground = ground;
+    await say('Raising the ground');
+    this.adopt(w, fx, ground);
+    await say('Lighting the scenery');
+    this.sun ??= new SunShadow(gl);
+    this.block ??= new LightBlock(gl);
+    this.field ??= new TracedLight(gl);
+    this.haze ??= new BeamHaze(gl);
+    this.lens ??= new LensPass(gl);
+    this.dusk ??= new DuskPass(gl);
+    this.warming = true;
+    try {
+      this.draw(w, fx, ground, cam, W, H);
+    } finally {
+      this.warming = false;
     }
+    // and wait until the GPU has really drawn it (a read-back of one pixel is the one call that
+    // does): whatever it had to do for the first time is done behind the loader too
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  }
+
+  /** A race's ground and its heights onto the GPU (once: nothing to do for the ground there is). */
+  private lay(w: World, ground: Ground): void {
+    if (ground === this.ground) return;
+    const gl = this.gl;
+    this.groundLayer?.dispose();
+    this.relief?.dispose();
+    this.relief = new ReliefLayer(gl, this.raised ? w.relief : null, w.w, w.h, this.cosP / this.ys);
+    this.stacks.relief = this.relief;
+    this.groundLayer = new GroundLayer(gl, ground, this.relief);
+    this.ground = ground;
+  }
+
+  /** Take a race in: its ground and heights on the GPU, its shadows mapped, last race's art dropped. */
+  private adopt(w: World, fx: Effects, ground: Ground): void {
+    const gl = this.gl;
+    this.lay(w, ground);
     // a new race: nothing of the last one's damaged art will be drawn again
     if (fx !== this.fx) {
       this.atlas.reset();
@@ -390,6 +456,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       this.shadows.build(w.statics);
       this.shadowLayer = new ShadowLayer(gl, this.shadows, this.relief);
     }
+  }
+
+  draw(w: World, fx: Effects, ground: Ground, cam: Camera, W: number, H: number): void {
+    const gl = this.gl;
+    const S = this.scale;
+    this.adopt(w, fx, ground);
     // the sky follows its targets, and strips waiting for their lighting get a little time
     const clock = performance.now();
     const dt = this.fixedDt ?? (this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0);
@@ -437,6 +509,15 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     // every slice of the frame is queued first: the sun's map is drawn from them before anything
     // that reads it
+    if (this.warming) {
+      // every strip in the world takes its place in the atlas now, not as it comes into view
+      this.everything = true;
+      this.atlas.gather();
+      this.stacks.begin(view);
+      queueStacks(this, this.art, w, fx);
+      this.atlas.pack();
+      this.everything = false;
+    }
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
@@ -446,7 +527,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // the bright look casts lighter shadows
     this.shade =
       A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1) * (groundMode.bright ? 0.6 : 1);
-    const cast = this.sunCast && sky.lit && this.shade > 0.03 && fx.quality > 0.3;
+    const warm = this.warming;
+    const cast = this.sunCast && sky.lit && (warm || (this.shade > 0.03 && fx.quality > 0.3));
     if (cast) {
       const sun = (this.sun ??= new SunShadow(gl));
       sun.density = fx.quality > 0.6 ? 2 : 1;
@@ -476,7 +558,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
     const lit = this.lights.count + this.lights.coneCount > 0;
     // (by day it is wanted for the light things throw back on the ground beside them)
-    const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;
+    const blocked = this.lightCast && sky.lit && (lit || cast) && (warm || fx.quality > 0.5);
     const rl = Math.hypot(A.reach[0]!, A.reach[1]!) || 1;
     const bounce: [number, number, number] = [
       A.reach[0]! / rl,
@@ -492,7 +574,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       block.end(null, W, H);
       sky.block = block;
       // (the rays are walked while nothing else is bound: the frame's own target comes after)
-      if (this.traced && fx.quality > 0.6) {
+      if (this.traced && (warm || fx.quality > 0.6)) {
         const field = (this.field ??= new TracedLight(gl));
         const k = cast ? this.shade : 0;
         field.trace(
@@ -515,7 +597,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
-    if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
+    const bent = lenses.length > 0 || warm;
+    if (bent) (this.lens ??= new LensPass(gl)).begin(W, H);
 
     gl.viewport(0, 0, W, H);
     const bg = hex(w.venue.colors.outside);
@@ -608,7 +691,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
+    if (bent) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {
@@ -629,7 +712,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
    */
   private darken(fx: Effects, W: number, H: number): void {
     const A = fx.weather;
-    if (!A.dim && A.flash <= 0) return;
+    if (!A.dim && A.flash <= 0 && !this.warming) return;
     const D = (this.dusk ??= new DuskPass(this.gl));
     D.clear();
     D.take(this.lights);

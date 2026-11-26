@@ -21,6 +21,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm ground [out-dir] [venue ...] [--maps]`                    | every venue's painted ground as one picture, a close-up and a race frame (`captures/ground/`)                 |
 | `pnpm bridge [out-dir] [--only=scene] [--frames]`               | knocks the legs out from under the overpass and the flyover and shoots the collapse (`captures/bridge/`)      |
 | `pnpm res [out-dir] [venue ...]`, RESOLUTION when paused        | frame time at each resolution step (`captures/resolution/`); `?res=auto`, `full`, `low`                       |
+| `pnpm perf:start [venue ...]`; `STEPS=1`, `FRAMES=240`          | what a race's load and first frames cost the page: stalling GL calls, slowest frames, heap                    |
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, saves, loads and races a track by touch at 844×390 (`captures/editor/`) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
@@ -147,4 +148,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
   `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
   built-in track can be rebuilt without touching tests. A test about a real venue names it.
+- **Nothing is done for the first time in a race.** Shaders start building when the page opens (`prelink` in
+  pixel/gl.ts: a new pass adds its sources to its file's `*_PROGRAMS` list; `compile` keeps every program, so never
+  delete one). A race's art is built on workers behind the loader (render/art-pool.ts; the same `Art` runs there),
+  and `PixelScene.prepare` lays the ground, packs every strip of the world into the atlas and draws one frame with
+  every pass in it before the race is shown. A strip is built with its lighting bytes (`Strip.aux`) and the part of
+  each slice that has anything in it (`Strip.trim`, all that is drawn); what changes a strip's shape goes through
+  `edit` in render/strips.ts, which clears the one and notes what changed (`Strip.touched`) for the atlas.
 - Golden hashes change only on purpose: say why in the commit when you regenerate them.
