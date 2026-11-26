@@ -1,6 +1,5 @@
 import {
   BASE_SPEED,
-  CAR_OFFSET,
   DT,
   GRAVITY,
   type Controls,
@@ -14,7 +13,7 @@ import { damage, explode } from './damage';
 import { absorb } from './defence';
 import type { Car } from './entities';
 import { clamp } from './math';
-import { circles, hull } from './physics';
+import { carShape, carsGap, hull, newShape, newTouch, shapeGap } from './shapes';
 import type { World } from './world';
 
 /**
@@ -72,6 +71,8 @@ const DROP = 30;
 const STRIKE = 3;
 /** A pair further apart than this parts: the pull cannot hold them. */
 const PAIR_SNAP = 620;
+/** And one whose hulls are nearer than this is pulled no more: they are side by side. */
+const PAIR_SLACK = 4;
 
 const secs = (d: PickupManifest, fallback: number) => d.seconds ?? fallback;
 const NAME = (d: PickupManifest) => d.meta.name.toUpperCase();
@@ -335,24 +336,9 @@ function pair(w: World, c: Car, got: PickupManifest): string {
   return NOBODY(got);
 }
 
-/** How near car o's hull is to car c's: the gap between them, and the way from c to o. */
-function gap(c: Car, o: Car): [number, number, number] {
-  let best = Infinity;
-  let nx = 1;
-  let ny = 0;
-  for (const p of circles(c))
-    for (const q of circles(o)) {
-      const dx = q[0] - p[0];
-      const dy = q[1] - p[1];
-      const d = Math.hypot(dx, dy);
-      if (d < best) {
-        best = d;
-        nx = d > 0.001 ? dx / d : 1;
-        ny = d > 0.001 ? dy / d : 0;
-      }
-    }
-  return [best - hull(c) - hull(o), nx, ny];
-}
+const MINE = newShape();
+const THEIRS = newShape();
+const TOUCH = newTouch();
 
 /** Car c, a comet or a bumper, throws off every car that has come up against it. */
 function strike(w: World, c: Car, S: Spell, lift: number): void {
@@ -361,8 +347,9 @@ function strike(w: World, c: Car, S: Spell, lift: number): void {
     if (o === c || o.wrecked || o.hitCd > 0 || phased(o)) continue;
     if (Math.abs(o.z - c.z) > 10 || Math.abs(o.deck - c.deck) > 8) continue;
     if (Math.abs(o.x - c.x) > 40 * (c.size + o.size)) continue;
-    const [far, nx, ny] = gap(c, o);
-    if (far > STRIKE) continue;
+    // (hull against hull: the way out of c towards o, and where on c's hull they meet)
+    if (shapeGap(carShape(o, THEIRS), carShape(c, MINE), TOUCH) > STRIKE) continue;
+    const { nx, ny, px, py } = TOUCH;
     const v = d.factor ?? 220;
     o.vx = c.vx * 0.4 + nx * v;
     o.vy = c.vy * 0.4 + ny * v;
@@ -370,8 +357,6 @@ function strike(w: World, c: Car, S: Spell, lift: number): void {
     o.z = Math.max(o.z, o.deck + 0.5);
     o.spin += w.rng.range(3, 6) * (w.rng.next() < 0.5 ? -1 : 1);
     o.hitCd = 0.4;
-    const px = o.x - nx * hull(o);
-    const py = o.y - ny * hull(o);
     damage(w, o, d.amount ?? 8, c, px, py);
     say(w, 'use', c, c.index, d, { to: o.index, x: px, y: py });
   }
@@ -501,7 +486,7 @@ export function updateTricks(w: World): void {
       if (P.t <= 0 || o.wrecked || !o.tricks.pair || d > PAIR_SNAP) {
         end(w, c, 'pair');
         if (o.tricks.pair?.to === c.index) o.tricks.pair = undefined;
-      } else if (d > (hull(c) + hull(o)) * 1.2 + CAR_OFFSET) {
+      } else if (carsGap(c, o) > PAIR_SLACK) {
         // each is hauled towards the other, wheels on the ground or not
         const a = (P.def.factor ?? 300) * DT;
         c.vx += (dx / d) * a;

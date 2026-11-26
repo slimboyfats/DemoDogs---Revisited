@@ -67,6 +67,7 @@ import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
 import { FLAT_RELIEF, buildRelief, type Relief } from './relief';
 import { updateRivers } from './river';
+import { bound } from './shapes';
 import { updatePresses } from './hazards';
 import { updateGuards, type Decoy } from './guards';
 import { addModifier, updateModifiers, type Mod } from './modifiers';
@@ -541,7 +542,7 @@ export class World {
    * still beside where it now stands may have to make room (see `updateProps`).
    */
   stood = 0;
-  /** The widest static's radius among those in the cells. */
+  /** The widest static among those in the cells: the circle that holds its shape. */
   private widest = 0;
   private readonly freeNear: StaticProp[] = [];
 
@@ -569,7 +570,9 @@ export class World {
       const c = C[k];
       if (c) c.push(s);
       else C[k] = [s];
-      if (s.def.radius > this.widest) this.widest = s.def.radius;
+      // (its shape, or its size where that is the bigger: both are asked after)
+      const wide = Math.max(bound(s.def), s.def.radius);
+      if (wide > this.widest) this.widest = wide;
     }
     out.length = 0;
     const reach = r + this.widest;

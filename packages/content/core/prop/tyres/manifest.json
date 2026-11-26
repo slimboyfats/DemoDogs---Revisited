@@ -8,6 +8,10 @@
   },
   "body": "static",
   "radius": 5,
+  "hit": {
+    "radius": 4.5,
+    "top": 6
+  },
   "hardness": 0.5,
   "made": "material.rubber",
   "integrity": 70

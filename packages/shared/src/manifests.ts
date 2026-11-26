@@ -24,6 +24,25 @@ const base = {
   extends: z.string().optional(),
 };
 
+/** One piece of a hit shape in several: a circle or a box set off from the thing's middle and turned, standing from `z[0]` up to `z[1]`. */
+const HitPiece = z.union([
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    radius: z.number().positive(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    rot: z.number().optional(),
+    halfLength: z.number().positive(),
+    halfWidth: z.number().positive(),
+    round: z.number().min(0).optional(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+]);
+
 export const CarSchema = z.strictObject({
   ...base,
   id: id('car'),
@@ -51,6 +70,12 @@ export const CarSchema = z.strictObject({
     .max(3),
   /** Where the roof piece sits: x along the car, z its underside. */
   top: z.strictObject({ x: z.number(), z: z.number() }),
+  /**
+   * What a shot meets: a hitbox a slice of the body, stacked as the slices are, baked from the
+   * look by `pnpm hitboxes:bake`. x runs along the car, heights are over the body's underside.
+   * Bumping into things goes by the one hull (`body`), which this does not change.
+   */
+  hit: z.strictObject({ parts: z.array(HitPiece).min(1).max(32) }).optional(),
 });
 export type CarManifest = z.infer<typeof CarSchema>;
 
@@ -599,7 +624,10 @@ export const WeaponSchema = z.strictObject({
   /** Slicks: a pool of `material` of this `radius` poured out behind the car. */
   material: id('material').optional(),
   radius: z.number().positive().optional(),
-  /** Mines: seconds before it arms; trigger radius. Rockets: seconds before contact sets it off. */
+  /**
+   * Mines: seconds before it arms, and how near it a car's hull has to come to set it off (art
+   * px). Rockets: seconds before contact sets it off.
+   */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
   /**
@@ -863,6 +891,19 @@ export const PickupSchema = z.strictObject({
    */
   price: z.number().int().positive().optional(),
   sold: z.enum(['garage', 'market']).optional(),
+  /**
+   * An add-on that stands out past the car's body where a shot can meet it (plates on its flanks,
+   * jaws across its nose): each piece of it as a box, `halfLength` along the car, standing from
+   * `z[0]` to `z[1]` over the ground under the car, on a car of its usual size. It is part of
+   * what a shot at the car meets (`carPoint`), where it is bolted on (`standOut`, sim/shapes.ts).
+   */
+  hit: z
+    .strictObject({
+      halfLength: z.number().positive(),
+      halfWidth: z.number().positive(),
+      z: z.tuple([z.number().min(0), z.number().positive()]),
+    })
+    .optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 
@@ -872,6 +913,34 @@ export const PropSchema = z.strictObject({
   /** static: never moves, cars bounce off. loose: pushed around, can fly. */
   body: z.enum(['static', 'loose']),
   radius: z.number().positive(),
+  /**
+   * Its hit shape, where that is not a circle of `radius`: a box lying the way the prop is turned,
+   * `halfLength` along it and `halfWidth` across (art px, as its look is drawn at the height of a
+   * car), its corners rounded by `round`; or a circle of a `radius` of its own (a tree's trunk).
+   * Cars, rounds and other props meet this shape. `radius` stays its size for everything that
+   * only asks how big it is: the room it is given when scenery is laid, a blast's reach, how a
+   * driver steers round it.
+   */
+  hit: z
+    .union([
+      // (`top`: how high it stands, art px; what is up above that goes over it. Without one it
+      // is as high as anything gets)
+      z.strictObject({ radius: z.number().positive(), top: z.number().positive().optional() }),
+      z.strictObject({
+        halfLength: z.number().positive(),
+        halfWidth: z.number().positive(),
+        round: z.number().min(0).optional(),
+        top: z.number().positive().optional(),
+      }),
+      // a thing whose outline is no one box, or not the same all the way up: several pieces, each
+      // a circle or a box set off from its middle and turned, each standing from `z[0]` up to
+      // `z[1]` (roots spread low about a trunk, a tank up on legs). Baked from the look's slices
+      // by `pnpm hitboxes:bake`, so that what is hit is what is drawn at every height
+      z.strictObject({
+        parts: z.array(HitPiece).min(1).max(32),
+      }),
+    ])
+    .optional(),
   /** Static props: false for looks-only props (fences, the oval wall). */
   solid: z.boolean().default(true),
   mass: z.number().positive().optional(),

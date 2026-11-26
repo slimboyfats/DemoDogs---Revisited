@@ -35,6 +35,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
+| `pnpm hitboxes [dir]`; `?hitboxes=heights`; `hitboxes:bake`     | hit shapes drawn over cars, scenery, guns and roads (`captures/hitboxes/`); bake them from the looks          |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
@@ -131,6 +132,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   driver a rival is (`styles` in the AI manifest: ACE, BULLY, HOARDER, BLOCKER, WILD) goes by its name, and how
   hard the field is (`DIFFICULTY` in shared/constants.ts, the RIVALS button) is a `World` option, normal online.
   Judge a change to the drivers with `pnpm bots` before and after.
+- **What is hit is what is drawn.** Every rule that asks whether two things touch asks `sim/shapes.ts` (`carGap`,
+  `propGap`, `thingGap`, `propTouch`, `carsGap`), never a distance between middles. A car's hull comes from its own
+  body and `size`. A prop's `hit` is a circle, a box, or `parts`: pieces with a foot and a top (`z`), baked from the
+  look's slices by `pnpm hitboxes:bake`, a hitbox a slice stacked as the slices are, so run it after a standing
+  prop's or a car's look changes (`hitboxes.test.ts` fails when a shape no longer fits). A rule says how high the thing
+  it asks about is (a car `c.z` to its roof, a rocket `ROCKET_HIGH`). `radius` stays for layout, blasts and drivers.
+  A car bumps with its one hull, and a shot meets its body slice by slice (`carPoint`, the car manifest's `hit`).
+  The HITBOXES view (`render/hitbox-view.ts`) draws these same shapes: a new thing that can be hit is drawn there too.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

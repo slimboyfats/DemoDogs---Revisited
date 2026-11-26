@@ -1,8 +1,8 @@
-import { CAR_RADIUS, DT } from '@demodogs/shared';
+import { DT } from '@demodogs/shared';
 import type { LooseProp, StaticProp } from './entities';
 import { batter, breakProp, damage, light } from './damage';
 import { TAU } from './math';
-import { circles } from './physics';
+import { carGap, carPropGap, hull } from './shapes';
 import { padded } from './guards';
 import type { World } from './world';
 
@@ -74,7 +74,8 @@ function slam(w: World, s: StaticProp, reach: number, hurt: number): void {
   let caught = 0;
   for (const c of w.cars) {
     if (c.wrecked || c.z > 10) continue;
-    if (Math.hypot(c.x - s.x, c.y - s.y) > reach + CAR_RADIUS * 0.5) continue;
+    // (a good part of it under the plate, whichever part: half its width or more)
+    if (Math.abs(c.x - s.x) > reach + 40 || carGap(c, s.x, s.y) > reach - hull(c) * 0.5) continue;
     caught++;
     // flattened where it stands
     c.vx *= 0.1;
@@ -142,7 +143,7 @@ export function land(w: World, p: LooseProp, v: number): void {
   for (const c of w.cars) {
     if (c.wrecked || c.z > 8) continue;
     // (a car shoves a falling slab aside as it comes down, so look a little wide)
-    if (!circles(c).some(([x, y]) => Math.hypot(x - p.x, y - p.y) < r + CAR_RADIUS + 1.5)) continue;
+    if (Math.abs(c.x - p.x) > 40 || carPropGap(c, p.def, p.x, p.y, p.rot) > 1.5) continue;
     if (!padded(w, c, p.x, p.y)) damage(w, c, k, null, p.x, p.y);
     w.emit({ t: 'crash', x: p.x, y: p.y, impact: v * 0.5, player: c === w.player });
   }

@@ -5,6 +5,7 @@ import { SliceFx } from './slice-fx';
 import { Spread } from './spread';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
+import { BODY_UP } from './lamps';
 import { markGround, paintHollow, type Ground } from './ground';
 import { fallTime, floorOf, laidOut, type Toppling } from './collapse';
 import { tall, type Strip } from './stack';
@@ -1651,11 +1652,19 @@ export class Effects {
           const c = w.cars[e.car];
           let x = e.x;
           let y = e.y;
+          // as high as the barrel's mouth is on this car, wherever the car is (in the air, up on
+          // a deck), and down the line to the height of what it strikes
+          let z = 5;
+          let tz = 5;
           if (c && c.gun) {
             const last = this.gunShots.get(c.index);
             const side = last ? -last.side : 1;
             this.gunShots.set(c.index, { side, at: w.time });
-            const off = side * this.art.gunMount(c.def.id, c.def.body)[1] * c.size;
+            const mount = this.art.gunMount(c.def.id, c.def.body);
+            const off = side * mount[1] * c.size;
+            z = tz = c.z + (BODY_UP + mount[2] + 1.3) * c.size;
+            const o = e.hit >= 0 ? w.cars[e.hit] : undefined;
+            if (o) tz = o.z + 4 * o.size;
             x -= Math.sin(c.h) * off;
             y += Math.cos(c.h) * off;
           }
@@ -1672,7 +1681,7 @@ export class Effects {
               'glitter',
               x + dx * k,
               y + dy * k,
-              5,
+              z + (tz - z) * k,
               ux * 30,
               uy * 30,
               0,
@@ -1689,7 +1698,7 @@ export class Effects {
               'glitter',
               x + ux * 1.5,
               y + uy * 1.5,
-              5,
+              z,
               Math.cos(a) * sp,
               Math.sin(a) * sp,
               rand(0, 20),
@@ -1702,7 +1711,7 @@ export class Effects {
             'glitter',
             x,
             y,
-            6,
+            z + 1,
             -uy * rand(25, 50),
             ux * rand(25, 50),
             70,
@@ -1720,7 +1729,7 @@ export class Effects {
                 'glitter',
                 e.tx,
                 e.ty,
-                5,
+                tz,
                 Math.cos(a) * sp - ux * 30,
                 Math.sin(a) * sp - uy * 30,
                 rand(20, 80),
@@ -1729,14 +1738,14 @@ export class Effects {
                 i < 4 ? 0xffffff : i % 2 ? 0xffe070 : 0xff7a20,
               );
             }
-            for (let i = 0; i < 4; i++) this.spark(e.tx, e.ty, 4, 70);
+            for (let i = 0; i < 4; i++) this.spark(e.tx, e.ty, tz - 1, 70);
             this.flashes.push({ x: e.tx, y: e.ty, r: 24, life: 0.1, max: 0.1, rgb: 0xfff0c0 });
             if (e.hit === w.player.index) this.shake = Math.max(this.shake, 1.2);
           }
           // a miss kicks up the ground where it lands
           else
             for (let i = 0; i < 3; i++)
-              this.puff(e.tx + rand(-2, 2), e.ty + rand(-2, 2), 0.6, 'dust');
+              this.puff(e.tx + rand(-2, 2), e.ty + rand(-2, 2), (c ? c.deck : 0) + 0.6, 'dust');
           const vol = this.vol(e.x, e.y);
           if (vol > 0) S.gun(vol);
           break;

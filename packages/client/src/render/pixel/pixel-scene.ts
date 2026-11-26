@@ -7,6 +7,7 @@ import { groundMode, type Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
 import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
+import { BODY_UP } from '../lamps';
 import { lampsOut, queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
 import { prelink } from './gl';
@@ -306,9 +307,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       // a car in the air: its beams leave its lamps where they are drawn, up off the ground, so
       // they never come loose from the car, and they tip and swing with it as on the ground
       const air = Math.max(0, c.z - c.deck);
-      const a = (c.def.body.halfLength - 1) * c.size;
-      const up = Math.round((air * this.cosP) / this.ys);
-      const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * c.def.body.halfWidth * 0.55 * c.size;
+      // from the lamps themselves: where this car's look has them, ahead of its middle, out to
+      // each side and up off the ground (a car with none drawn throws its beam from its nose)
+      const spot = this.art.headLamp(c.def.id);
+      const a = (spot ? spot.x - 0.5 : c.def.body.halfLength - 1) * c.size;
+      const wide = (spot ? spot.y : c.def.body.halfWidth * 0.6) * c.size;
+      const high = spot ? (BODY_UP + spot.z) * c.size : 0;
+      // a lamp up off the ground is drawn that far up the picture, and so is the start of its
+      // beam: the light is seen to leave the lamp, not the ground under the bumper
+      const up = Math.round(((air + high) * this.cosP) / this.ys);
+      const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * wide;
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side - up,
@@ -322,7 +330,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         air > 1 ? Math.max(-0.6, Math.min(0.12, c.pitch * 1.5)) : c.pitch * 1.5,
         // (two lamps, a beam from each, unless one of them is out)
         // (with how far up the picture the beam starts: its shadows fall from the car's foot)
-        (out === 0 ? Math.min(31, c.def.body.halfWidth * 0.6 * c.size) : 0) + up * 32,
+        (out === 0 ? Math.min(31, wide) : 0) + up * 32,
       );
     };
     lamp(w.player);

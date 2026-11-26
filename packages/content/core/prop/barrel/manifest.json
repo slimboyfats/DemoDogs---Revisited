@@ -8,6 +8,7 @@
   },
   "body": "loose",
   "radius": 4.2,
+  "hit": { "radius": 3.9 },
   "mass": 0.45,
   "explodesAt": 75,
   "blast": 1.1,

@@ -6,5 +6,9 @@
     "description": "Painted tyre stack.",
     "since": "core@0.1.0"
   },
-  "extends": "prop.tyres"
+  "extends": "prop.tyres",
+  "hit": {
+    "radius": 4.5,
+    "top": 6
+  }
 }
