@@ -30,11 +30,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
+| `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -116,6 +118,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
   `GLOSS` and `GLOWS` lists say. A material named for fire or light (fire, flame, ember, lava, lamp, light, glow,
   neon, torch in its name) gives light off without being listed, so do not name a dull colour that way. Looks only: the client reads it when it builds the strip (`shineOf`).
+- **Tricks are pickups that go off when picked up** (`TRICK_KINDS` in shared/manifests.ts, sim/tricks.ts,
+  `Car.tricks`): they come out of one crate, `pickup.bag-of-tricks`, which rolls its `kits` by their own odds, so a
+  new trick is a pickup folder and a line in that list, not a line in every venue. The client's side is
+  render/tricks-fx.ts (one `trick` SimEvent: on, off, use).
 - **Rival drivers are built from the AI kit** (sim/ai-kit.ts): `thingsAhead` gathers what is in the way and what is
   worth having as plain `Thing`s (a place, a size, a weight), `pickPath` / `pickHeading` weigh a fan of ways past
   them, `cornerSpeed` reads the racing line (sim/line.ts, `world.line`), `recover` backs out of trouble, and
@@ -171,6 +177,12 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   every pass in it before the race is shown. A strip is built with its lighting bytes (`Strip.aux`) and the part of
   each slice that has anything in it (`Strip.trim`, all that is drawn); what changes a strip's shape goes through
   `edit` in render/strips.ts, which clears the one and notes what changed (`Strip.touched`) for the atlas.
+- **A fight's heavy work is spread over ticks.** What a hit, a wreck or a scar does to a strip (dents, blowing a
+  body apart, dropping what hangs loose, charring) is looks only, so effects queue it on `heavy` (a `Spread`,
+  render/spread.ts: about 2 ms a tick, more when a crowd waits, never two big jobs in one tick) and `settle` a strip
+  before anything reads it whole (a respawn, a weld). Effects throw their dice with `roll` (render/dice.ts), never
+  `Math.random`, which makes garbage on every call; a loop that lets go many cells fills `Cells.q` and calls `one`,
+  or calls `spray`, and spent particles go back to a pool. Judge a change there with `pnpm perf:fight`.
 - **The menus wear one look** (client `theme.css`, loaded after `styles.css`): paper cards and sunny buttons with
   an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
   `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD

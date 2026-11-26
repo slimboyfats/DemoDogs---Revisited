@@ -64,6 +64,8 @@ describe('content validate', () => {
           p.kind === 'springs' ||
           p.kind === 'collar' ||
           isAddon(p.kind) ||
+          // tricks that put something on a car, or stand something in the world
+          ['balloons', 'door', 'splat', 'steal', 'pair', 'bumper'].includes(p.kind) ||
           (GUARD_KINDS as readonly string[]).includes(p.kind),
       )
       .map((p) => p.id);

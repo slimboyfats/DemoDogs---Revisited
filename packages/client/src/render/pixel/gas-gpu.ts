@@ -600,6 +600,58 @@ export class GasGpu {
     this.head = (this.head + 1) % this.cap;
   }
 
+  /**
+   * `n` cells from the numbers in `q` (x, y, z, vx, vy, vz, life): the first as given, each of
+   * the rest a little apart and on its own clock (see `Cells.split`). The same as `add` once for
+   * each, but nothing is handed over number by number: a blast lets go thousands of cells in a
+   * tick, and every number passed to a function is a little garbage of its own.
+   */
+  take(kind: CKind, q: Float64Array, rgb: number, n: number, rand: () => number): void {
+    const x = q[0]!;
+    const y = q[1]!;
+    const z = q[2]!;
+    const vx = q[3]!;
+    const vy = q[4]!;
+    const vz = q[5]!;
+    const life0 = q[6]!;
+    const S = this.stage;
+    for (let k = 0; k < n; k++) {
+      if (this.staged * F >= S.length || this.stageAt + this.staged >= this.cap) this.upload();
+      if (this.staged === 0) this.stageAt = this.head;
+      const o = this.staged * F;
+      let life = life0;
+      if (k === 0) {
+        S[o] = x;
+        S[o + 1] = y;
+        S[o + 2] = Math.max(0, z);
+        S[o + 3] = vx;
+        S[o + 4] = vy;
+        S[o + 5] = vz;
+      } else {
+        const f = 0.85 + rand() * 0.3;
+        S[o] = x + (rand() - 0.5) * 0.9;
+        S[o + 1] = y + (rand() - 0.5) * 0.9;
+        S[o + 2] = Math.max(0, z + (rand() - 0.5) * 0.9);
+        S[o + 3] = vx * f;
+        S[o + 4] = vy * f;
+        S[o + 5] = vz * f;
+        life = life0 * (0.9 + rand() * 0.2);
+      }
+      const th = rand();
+      S[o + 6] = 0;
+      S[o + 7] = life;
+      S[o + 8] = th;
+      S[o + 9] = kind;
+      S[o + 10] = rgb;
+      S[o + 11] = (th * 977 + this.tick) % 1024;
+      this.staged++;
+      const c = (this.head / CHUNK) | 0;
+      const end = this.now + Math.ceil(life * 60) + 3;
+      if (end > this.until[c]!) this.until[c] = end;
+      this.head = (this.head + 1) % this.cap;
+    }
+  }
+
   /** A whirlpool this tick (see `Cells.swirl`). */
   swirl(x: number, y: number, R: number, kdt: number): void {
     if (this.swirls.length < MAX_SWIRLS * 4) this.swirls.push(x, y, R, kdt);

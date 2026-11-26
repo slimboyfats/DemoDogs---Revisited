@@ -154,8 +154,14 @@ export function launch(c: Chip, b: Burst, rand: () => number): Voxel {
 }
 
 /** Throw several chips as one piece: they all leave with the same velocity and spin. */
-export function launchTogether(chips: Chip[], b: Burst, rand: () => number): Voxel[] {
-  const out = chips.map((c) => launch(c, b, rand));
+export function launchTogether(
+  chips: readonly Chip[],
+  b: Burst,
+  rand: () => number,
+  n = chips.length,
+): Voxel[] {
+  const out: Voxel[] = [];
+  for (let i = 0; i < n; i++) out.push(launch(chips[i]!, b, rand));
   const lead = out[0];
   if (lead)
     for (const v of out) {
@@ -165,6 +171,22 @@ export function launchTogether(chips: Chip[], b: Burst, rand: () => number): Vox
       v.spin = 0;
     }
   return out;
+}
+
+/**
+ * Bring at most `max` items picked at random to the front, in place, and say how many: nothing
+ * is dropped or copied, so a list that is kept (what a kind of prop breaks into) can be picked
+ * from again and again.
+ */
+export function pickSome<T>(items: T[], max: number, rand: () => number): number {
+  const n = Math.min(max, items.length);
+  for (let i = 0; i < n; i++) {
+    const j = i + Math.floor(rand() * (items.length - i));
+    const t = items[i]!;
+    items[i] = items[j]!;
+    items[j] = t;
+  }
+  return n;
 }
 
 /** Pick at most `max` items at random, in place (the rest are dropped). */

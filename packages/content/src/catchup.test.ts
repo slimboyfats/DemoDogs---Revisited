@@ -28,7 +28,9 @@ describe('catch-up', () => {
       );
     };
     expect(share(0)).toBeLessThan(0.05);
-    expect(share(1)).toBeGreaterThan(0.35);
+    // (a third: the Bag of Tricks is not counted here, though the car at the back mostly rolls
+    // the door and the comet out of it)
+    expect(share(1)).toBeGreaterThan(0.33);
     expect(share(0.5)).toBeGreaterThan(share(0));
     expect(share(1)).toBeGreaterThan(share(0.5));
     // and an untouched pickup's odds are its weight

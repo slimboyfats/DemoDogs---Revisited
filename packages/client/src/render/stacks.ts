@@ -21,6 +21,7 @@ import { leanAt } from './rubble';
 import type { Lie } from './pixel/stack-batch';
 import { Builder } from './slice-fx';
 import { queueDecoys, queueGuards } from './guard-mounts';
+import { queueTrickThings, queueTricks, trickAlpha } from './tricks-fx';
 import { BREEZE, WIND } from './pixel/particles';
 
 const MINE_OFF = { minelit: 'black' };
@@ -167,6 +168,7 @@ export function queueStacks(
   }
   queueArms(R, art, w);
   queueDecoys(R, art, w);
+  queueTrickThings(R, art, w, fx.tricks);
   queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(built(R, fx, b, 16), art, fx, b);
   for (const k of w.critters) queueCritter(R, art, w, k);
@@ -401,12 +403,15 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const D = c.def;
   const cs = Math.cos(c.h) * k;
   const sn = Math.sin(c.h) * k;
+  // (a trick that makes the car safe from harm has a look of its own, not the blink)
   const alpha =
     fall > 0
       ? 1 - 0.85 * Math.max(0, (fall - 0.4) / 0.6)
-      : c.invuln > 0 && !((c.sunk ?? 0) > 0) && Math.floor(w.time * 12) % 2
-        ? 0.4
-        : 1;
+      : trickAlpha(c) !== undefined
+        ? trickAlpha(c)!
+        : c.invuln > 0 && !((c.sunk ?? 0) > 0) && Math.floor(w.time * 12) % 2
+          ? 0.4
+          : 1;
   // the end that went over first drops and the other end kicks up
   const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 3.5;
   const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
@@ -490,6 +495,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       }
   }
   queueGuards(R, art, w, fx, c, alpha, k, up, z);
+  if (!c.wrecked && flat >= 1) queueTricks(R, art, w, c, alpha, k, up, z);
   if (c.springs && c.hop >= 0 && c.hop < 0.4) {
     const coil = art.prop(c.springs.def.id);
     const cz = Math.max(0, z - 4 * k);

@@ -265,7 +265,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // the darker it is the further every light carries: by night they are the picture
     const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
     // (less far on a phone that is struggling: a wide light is a lot of ground to work out)
-    L.spread = this.sky.flat ? 1 : 1 + (fx.quality > 0.6 ? 1.1 : 0.4) * night;
+    L.spread = this.sky.flat ? 1 : 1 + (fx.quality > 0.6 ? 0.8 : 0.4) * night;
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
@@ -334,8 +334,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.add(
         c.x - Math.cos(c.h) * back,
         c.y - Math.sin(c.h) * back,
-        15 * c.size,
-        (c.handbrake || c.vf < -1 ? 1.7 : 0.8) * k,
+        11 * c.size,
+        (c.handbrake || c.vf < -1 ? 0.8 : 0.35) * k,
         0xff2838,
       );
     }
@@ -352,7 +352,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         if (Math.abs(lit[n]! - s.x) + Math.abs(lit[n + 1]! - s.y) < 70) near = true;
       if (near) continue;
       lit.push(s.x, s.y);
-      L.add(s.x, s.y, 54, 0.8 * k, 0xffd890);
+      L.add(s.x, s.y, 54, 0.6 * k, 0xffd890);
     }
   }
 

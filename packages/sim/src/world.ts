@@ -58,6 +58,7 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
+import { phased, trickControls, updateTricks } from './tricks';
 import { updateRescue } from './rescue';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
@@ -647,6 +648,7 @@ export class World {
     const live = this.phase === 'race';
 
     updateCatchup(this);
+    updateTricks(this);
     for (const c of this.cars) {
       c.invuln = Math.max(0, c.invuln - DT);
       c.fireCd -= DT;
@@ -670,6 +672,7 @@ export class World {
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
         ctl = blinded(this, c, ctl);
         ctl = stallControls(c, ctl);
+        ctl = trickControls(this, c, ctl);
       } else if (c.isPlayer) c.throttle = (seats[c.seat] ?? NO_CONTROLS).throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
@@ -698,6 +701,8 @@ export class World {
         const o = this.cars[j]!;
         // a car down a pit is not there to be hit
         if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
+        // nor is a ghost
+        if (phased(c) || phased(o)) continue;
         collideCars(this, c, o);
       }
     for (const c of this.cars) {
