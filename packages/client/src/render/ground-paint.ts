@@ -12,6 +12,7 @@ import {
   type RoadStyle,
   type Terrain,
 } from './terrain';
+import { waysOf, type Ways } from './ways';
 
 /**
  * What the ground shader needs to paint a venue's country and road itself, at whatever fineness
@@ -53,6 +54,8 @@ export interface GroundPaint {
     gully: boolean;
   } | null;
   oval: { cx: number; cy: number; rx: number; ry: number } | null;
+  /** The roads laid off the main road (ways.ts), if any. */
+  ways: Ways | null;
 }
 
 export const NEAR_Q = 2;
@@ -215,6 +218,7 @@ export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
     fields: { gw, gh, data },
     line,
     oval: w.oval ? { cx: w.oval.cx, cy: w.oval.cy, rx: w.oval.rx, ry: w.oval.ry } : null,
+    ways: waysOf(w, true),
   };
 }
 

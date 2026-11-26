@@ -96,6 +96,24 @@ export class GroundLayer {
           L.wild.data,
         );
       else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, 1, 1, 0, gl.RED, gl.FLOAT, new Float32Array(1));
+      // the ways off the road: which sample each block is nearest, and the samples
+      const Y = P.ways;
+      if (Y) {
+        this.paintTex.push(texture(gl, gl.NEAREST));
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.R16UI,
+          Y.near.gw,
+          Y.near.gh,
+          0,
+          gl.RED_INTEGER,
+          gl.UNSIGNED_SHORT,
+          Y.near.data,
+        );
+        this.paintTex.push(texture(gl, gl.NEAREST));
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, Y.n, 2, 0, gl.RGBA, gl.FLOAT, Y.samples);
+      }
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     }
     this.prog = compile(gl, GROUND_VS, groundFs(!!relief?.map, P ? paintGlsl(P) : ''));
@@ -206,8 +224,9 @@ export class GroundLayer {
     }
     const P = this.ground.paint;
     if (P) {
-      const names = ['u_pf', 'u_pn', 'u_ps', 'u_pw'] as const;
-      for (let k = 0; k < 4; k++) {
+      const names = ['u_pf', 'u_pn', 'u_ps', 'u_pw', 'u_wn', 'u_ws'] as const;
+      if (P.ways) gl.uniform1f(u.u_wayN, P.ways.n);
+      for (let k = 0; k < this.paintTex.length; k++) {
         gl.activeTexture(gl.TEXTURE7 + k);
         gl.bindTexture(gl.TEXTURE_2D, this.paintTex[k]!);
         gl.uniform1i(u[names[k]!], 7 + k);

@@ -144,6 +144,8 @@ export interface Car {
   hole: number;
   bounce: number;
   wheelDist: number;
+  /** How far loose boards have wagged its heading from where it would point (rad). */
+  sway: number;
   wrecked: boolean;
   wreckT: number;
   /** How long the car has been off the course in a race (s), and the last road it was on: sample and lap. */

@@ -46,7 +46,12 @@ export const PadSchema = z.discriminatedUnion('kind', [
     long: z.number().positive(),
     wide: z.number().positive(),
     /** What it is laid in (looks only): a jump piece that joins it takes the same look. */
-    skin: z.enum(['dirt', 'wood', 'rock', 'tarmac']).optional(),
+    skin: z.enum(['dirt', 'wood', 'rock', 'tarmac', 'boards']).optional(),
+    /**
+     * How loose it lies under a car (0 firm, 1 a rattletrap): it drives as fast as road, but the
+     * car is thrown a little from side to side and rocks as it goes.
+     */
+    wobble: z.number().min(0).max(1).optional(),
   }),
   z.strictObject({
     kind: z.literal('switch'),

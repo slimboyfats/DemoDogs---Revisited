@@ -197,6 +197,8 @@ export class World {
   readonly pads: StaticProp[] = [];
   /** The statics that are pieces of track laid off the road (a dirt path, a boardwalk). */
   readonly paths: StaticProp[] = [];
+  /** Is any of them loose underfoot (a pad with `wobble`)? */
+  wobbly = false;
   /** The statics that are takeoffs that throw a car up off their lip (see leaps.ts, pads.ts). */
   readonly leaps: StaticProp[] = [];
   /** The statics that are gates that sink to let cars by (see gates.ts). */

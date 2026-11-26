@@ -59,135 +59,183 @@
       "items": [
         {
           "prop": "prop.dirt-track",
+          "x": -740.0,
+          "y": 656.5,
+          "rot": 2.7858
+        },
+        {
+          "prop": "prop.dirt-track",
           "x": -769.3,
-          "y": 611.4,
-          "rot": -2.6182
+          "y": 665.6,
+          "rot": 2.9405
         },
         {
           "prop": "prop.dirt-track",
-          "x": -799.2,
-          "y": 594.2,
-          "rot": -2.6175
+          "x": -799.9,
+          "y": 668.1,
+          "rot": -3.0474
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -829.0,
-          "y": 576.8,
-          "rot": -2.6078
+          "prop": "prop.dirt-track",
+          "x": -829.5,
+          "y": 660.5,
+          "rot": -2.6868
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -858.5,
-          "y": 559.1,
-          "rot": -2.5932
+          "prop": "prop.dirt-track",
+          "x": -855.3,
+          "y": 643.8,
+          "rot": -2.4755
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -887.7,
-          "y": 540.9,
-          "rot": -2.5708
+          "prop": "prop.dirt-track",
+          "x": -878.9,
+          "y": 624.1,
+          "rot": -2.4176
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -916.5,
-          "y": 521.9,
-          "rot": -2.5415
+          "prop": "prop.dirt-track",
+          "x": -901.6,
+          "y": 603.3,
+          "rot": -2.3725
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -948.5,
-          "y": 505.4,
-          "rot": -2.8028
+          "prop": "prop.dirt-track",
+          "x": -923.3,
+          "y": 581.5,
+          "rot": -2.3332
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -982.3,
-          "y": 491.1,
-          "rot": -2.5681
+          "prop": "prop.dirt-track",
+          "x": -944.2,
+          "y": 558.9,
+          "rot": -2.2943
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -1004.9,
-          "y": 468.2,
-          "rot": -2.0869
+          "prop": "prop.dirt-track",
+          "x": -964.4,
+          "y": 535.7,
+          "rot": -2.3683
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -1018.5,
-          "y": 437.5,
-          "rot": -1.9448
+          "prop": "prop.dirt-track",
+          "x": -988.6,
+          "y": 514.3,
+          "rot": -2.4017
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -1031.1,
-          "y": 405.5,
-          "rot": -1.9448
+          "prop": "prop.dirt-track",
+          "x": -1009.5,
+          "y": 491.2,
+          "rot": -2.1493
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -1191.6,
-          "y": -6.1,
-          "rot": -1.8428
+          "prop": "prop.dirt-track",
+          "x": -1022.5,
+          "y": 464.4,
+          "rot": -1.8869
         },
         {
-          "prop": "prop.boardwalk",
-          "x": -1199.9,
-          "y": -37.2,
-          "rot": -1.8606
+          "prop": "prop.dirt-track",
+          "x": -1030.8,
+          "y": 435.0,
+          "rot": -1.8294
         },
         {
-          "prop": "prop.boardwalk",
+          "prop": "prop.dirt-track",
+          "x": -1038.7,
+          "y": 405.3,
+          "rot": -1.8294
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1152.7,
+          "y": -25.7,
+          "rot": -1.856
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1163.3,
+          "y": -52.2,
+          "rot": -2.1475
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1181.9,
+          "y": -69.6,
+          "rot": -2.7338
+        },
+        {
+          "prop": "prop.dirt-track",
           "x": -1210.7,
-          "y": -63.7,
-          "rot": -2.1372
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1228.7,
-          "y": -82.4,
-          "rot": -2.5966
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1255.3,
-          "y": -92.9,
-          "rot": -2.9265
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1288.6,
-          "y": -98.3,
-          "rot": -3.001
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1322.7,
-          "y": -105.7,
-          "rot": -2.8195
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1355.1,
-          "y": -116.1,
-          "rot": -2.8406
-        },
-        {
-          "prop": "prop.boardwalk",
-          "x": -1387.7,
-          "y": -126.0,
-          "rot": -2.8556
+          "y": -74.1,
+          "rot": 3.0509
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1420.5,
-          "y": -135.5,
-          "rot": -2.8647
+          "x": -1248.9,
+          "y": -65.7,
+          "rot": 2.8165
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1453.2,
-          "y": -144.8,
-          "rot": -2.8627
+          "x": -1292.4,
+          "y": -49.2,
+          "rot": 2.7567
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1333.7,
+          "y": -34.1,
+          "rot": 2.9012
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1366.2,
+          "y": -30.2,
+          "rot": 3.0773
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1397.4,
+          "y": -28.6,
+          "rot": 3.1108
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1428.6,
+          "y": -28.7,
+          "rot": -3.0796
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1459.4,
+          "y": -33.3,
+          "rot": -2.818
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1486.5,
+          "y": -48.4,
+          "rot": -2.3973
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1504.8,
+          "y": -73.4,
+          "rot": -1.9727
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1513.0,
+          "y": -103.4,
+          "rot": -1.7005
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": -1515.2,
+          "y": -134.6,
+          "rot": -1.5931
         }
       ]
     },
@@ -196,15 +244,15 @@
       "items": [
         {
           "prop": "prop.jump-takeoff",
-          "x": -1061.1,
-          "y": 329.1,
-          "rot": -1.9448
+          "x": -1060.2,
+          "y": 324.0,
+          "rot": -1.8294
         },
         {
           "prop": "prop.jump-landing",
-          "x": -1162.6,
-          "y": 70.4,
-          "rot": -1.9448
+          "x": -1131.3,
+          "y": 55.3,
+          "rot": -1.8294
         }
       ]
     },
@@ -224,57 +272,45 @@
       "items": [
         {
           "prop": "prop.switch-bollard",
-          "x": -809.7,
-          "y": 648.2,
-          "rot": -2.6191
+          "x": -883.6,
+          "y": 671.1,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -803.2,
-          "y": 636.9,
-          "rot": -2.6191
+          "x": -875.5,
+          "y": 661.0,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -796.7,
-          "y": 625.7,
-          "rot": -2.6191
+          "x": -867.3,
+          "y": 650.8,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -790.2,
-          "y": 614.4,
-          "rot": -2.6191
+          "x": -859.2,
+          "y": 640.7,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -783.7,
-          "y": 603.1,
-          "rot": -2.6191
+          "x": -851.1,
+          "y": 630.6,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -777.2,
-          "y": 591.9,
-          "rot": -2.6191
+          "x": -842.9,
+          "y": 620.4,
+          "rot": -2.4644
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -770.7,
-          "y": 580.6,
-          "rot": -2.6191
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -764.3,
-          "y": 569.3,
-          "rot": -2.6191
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -757.8,
-          "y": 558.1,
-          "rot": -2.6191
+          "x": -834.8,
+          "y": 610.3,
+          "rot": -2.4644
         }
       ]
     },
@@ -294,98 +330,98 @@
       "items": [
         {
           "prop": "prop.bumper",
-          "x": -1155.1,
-          "y": 281.2,
+          "x": -1148.0,
+          "y": 265.6,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1132.7,
-          "y": 272.4,
+          "x": -1124.8,
+          "y": 259.4,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1047.1,
-          "y": 238.8,
+          "x": -1035.9,
+          "y": 235.9,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1024.8,
-          "y": 230.0,
+          "x": -1012.7,
+          "y": 229.8,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1169.7,
-          "y": 243.9,
+          "x": -1158.3,
+          "y": 226.9,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1147.4,
-          "y": 235.2,
+          "x": -1135.1,
+          "y": 220.8,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1061.7,
-          "y": 201.6,
+          "x": -1046.1,
+          "y": 197.2,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1039.4,
-          "y": 192.8,
+          "x": -1022.9,
+          "y": 191.1,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1184.3,
-          "y": 206.7,
+          "x": -1168.5,
+          "y": 188.2,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1162.0,
-          "y": 197.9,
+          "x": -1145.3,
+          "y": 182.1,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1076.3,
-          "y": 164.3,
+          "x": -1056.4,
+          "y": 158.6,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1054.0,
-          "y": 155.6,
+          "x": -1033.2,
+          "y": 152.4,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1198.9,
-          "y": 169.5,
+          "x": -1178.7,
+          "y": 149.6,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1176.6,
-          "y": 160.7,
+          "x": -1155.5,
+          "y": 143.4,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1091.0,
-          "y": 127.1,
+          "x": -1066.6,
+          "y": 119.9,
           "rot": 0
         },
         {
           "prop": "prop.bumper",
-          "x": -1068.6,
-          "y": 118.3,
+          "x": -1043.4,
+          "y": 113.8,
           "rot": 0
         }
       ]

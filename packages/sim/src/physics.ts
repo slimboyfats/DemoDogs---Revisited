@@ -19,7 +19,7 @@ import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
 import { crest, groundAt, moundAt } from './mounds';
-import { pathAt } from './pads';
+import { pathAt, wobbleAt } from './pads';
 import type { World } from './world';
 import { pace } from './modifiers';
 
@@ -125,6 +125,7 @@ export function makeCar(
     hole: -1,
     bounce: 0,
     wheelDist: 0,
+    sway: 0,
     wrecked: false,
     wreckT: 0,
     downT: 0,
@@ -298,6 +299,19 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     (c.handbrake ? 1.4 : 1) *
     (0.45 + 0.55 * hold);
   if (c.hp < 30) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
+  // loose boards under the wheels wag the car from side to side as it goes over them (and
+  // let it straighten as it leaves them)
+  const loose = airborne || floor > 0 ? 0 : wobbleAt(w, c.x, c.y);
+  if (loose > 0 || c.sway !== 0) {
+    const to =
+      (Math.sin(c.wheelDist * 0.034 + c.index * 1.7) * 0.13 +
+        Math.sin(c.wheelDist * 0.107 + c.index) * 0.04) *
+      loose *
+      grip;
+    const by = clamp(to - c.sway, -0.03, 0.03);
+    c.sway += by;
+    c.h += by;
+  }
   if (airborne) turn *= 0.15;
   c.h += (turn + c.spin) * DT;
   c.spin *= Math.exp(-3.5 * DT);

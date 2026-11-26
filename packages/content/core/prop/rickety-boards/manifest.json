@@ -1,0 +1,19 @@
+{
+  "id": "prop.rickety-boards",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rickety Boards",
+    "description": "A length of poor old plank road, grey and gappy. It is as fast as any road, but the loose boards throw a car from side to side and set it rocking.",
+    "since": "core@0.11.0"
+  },
+  "body": "static",
+  "radius": 20,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 40,
+    "wide": 56,
+    "skin": "boards",
+    "wobble": 1
+  }
+}

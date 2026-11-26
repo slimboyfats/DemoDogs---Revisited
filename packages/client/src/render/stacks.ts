@@ -1,4 +1,5 @@
 import { fitted, mounts, place } from './addon-mounts';
+import { wayPainted } from './ways';
 import {
   moundAt,
   pressOpen,
@@ -304,7 +305,7 @@ const PAD_RATE = 9;
  */
 function queuePad(R: StackSink, art: Art, w: World, s: StaticProp): void {
   // (a jump piece is raised ground, painted with it: see leaps.ts)
-  if (s.def.leap) return;
+  if (s.def.leap || wayPainted(s)) return;
   if (!R.visible(s.x, s.y, s.def.radius + 12, 12)) return;
   // under everything that drives over it
   R.group(s.y - 40);

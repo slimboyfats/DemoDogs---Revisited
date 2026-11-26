@@ -40,6 +40,13 @@ export function pathAt(w: World, x: number, y: number): StaticProp | null {
   return null;
 }
 
+/** How loose the path piece under (x, y) lies (its pad's `wobble`), 0 where there is none. */
+export function wobbleAt(w: World, x: number, y: number): number {
+  if (!w.wobbly) return 0;
+  const P = pathAt(w, x, y)?.def.pad;
+  return P?.kind === 'road' ? (P.wobble ?? 0) : 0;
+}
+
 /**
  * Is vent `s` blowing at time t (default now)? Each keeps a beat of its own, from the seed it
  * was stood with. `lead` seconds early says it is about to (the client makes it rumble).

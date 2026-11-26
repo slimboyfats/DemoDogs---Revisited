@@ -21,6 +21,9 @@ export const PAINT_UNIFORMS = [
   'u_line',
   'u_wild',
   'u_oval',
+  'u_wn',
+  'u_ws',
+  'u_wayN',
 ] as const;
 
 /**
@@ -45,6 +48,7 @@ ${L ? '#define ROAD' : ''}
 ${L?.lanes ? '#define LANES' : ''}
 ${L?.gully ? '#define GULLY' : ''}
 ${P.oval ? '#define BOWL' : ''}
+${P.ways ? '#define WAYS' : ''}
 ${P.terrain === 'paved' || P.terrain === 'gravel' || P.terrain === 'dirt' ? '#define HAZARD' : ''}
 uniform sampler2D u_pf;      // the noise: big, mid, bare, small
 uniform vec2 u_pfSize;
@@ -61,6 +65,8 @@ uniform float u_road;
 uniform vec4 u_line;         // samples, step, where the pit apron begins and ends
 uniform vec2 u_wild;
 uniform vec4 u_oval;
+// Whether this cell is on a way off the road, and which surface: 0 none, else 1 and on (ways.ts).
+float g_way = 0.0;
 float hash2(int x, int y, int seed) {
   uint h = uint(x) * 374761393u + uint(y) * 668265263u + uint(seed) * 974711u;
   h = (h ^ (h >> 13)) * 1274126177u;
@@ -201,6 +207,125 @@ vec3 country(vec2 p, ivec2 gc, vec4 F) {
 #endif
   return col * k;
 }
+#ifdef WAYS
+uniform highp usampler2D u_wn;  // nearest sample of the ways' lines
+uniform sampler2D u_ws;         // their samples
+uniform float u_wayN;
+vec4 wayOf(int i, int row) {
+  return texelFetch(u_ws, ivec2(i, row), 0);
+}
+#ifdef BRIGHT
+#define WAYSUN(x) sunny(x)
+#else
+#define WAYSUN(x) (x)
+#endif
+// A way off the road laid over the country in c: a road like the main one in another surface
+// (packed dirt, planks, stone setts), unbroken along its line, up a takeoff and down a landing.
+void wayOver(inout vec3 c, vec2 wp, ivec2 gc) {
+  uint near = texelFetch(u_wn, ivec2(wp / 2.0), 0).r;
+  if (near == 65535u) return;
+  int n = int(u_wayN);
+  int i = int(near);
+  vec4 S = wayOf(i, 0);
+  int fl = int(wayOf(i, 1).g) / 4;
+  float best = dot(wp - S.xy, wp - S.xy);
+  for (int o = -1; o <= 1; o += 2) {
+    // (not past the end of this way into the next one's samples)
+    if ((o < 0 && (fl & 1) != 0) || (o > 0 && (fl & 2) != 0)) continue;
+    int j = i + o;
+    if (j < 0 || j >= n) continue;
+    vec4 Sj = wayOf(j, 0);
+    float dj = dot(wp - Sj.xy, wp - Sj.xy);
+    if (dj < best) {
+      best = dj;
+      S = Sj;
+      i = j;
+    }
+  }
+  vec4 Q = wayOf(i, 1);
+  fl = int(Q.g) / 4;
+  int kind = int(Q.g) - fl * 4;
+  int skin = int(Q.r);
+  float sn = sin(S.z), cs = cos(S.z);
+  vec2 dd = wp - S.xy;
+  float la = cs * dd.x + sn * dd.y;
+  // a way ends square
+  if (((fl & 1) != 0 && la < -0.5) || ((fl & 2) != 0 && la > 0.5)) return;
+  float ac = -sn * dd.x + cs * dd.y;
+  float d = abs(ac);
+  float half_ = S.w;
+  float side = ac >= 0.0 ? 1.0 : -1.0;
+  float lit = side * 0.7071 * (sn - cs);
+  if (d > half_) {
+    // it stands a little proud of the ground: a line of shade along the side away from the light
+    if (kind == 0 && d < half_ + 2.4) c *= lit < -0.15 ? 0.7 : lit > 0.15 ? 1.04 : 0.86;
+    return;
+  }
+  float al = Q.a + la;
+  float edge = kind == 1 ? Q.b - la : Q.b + la;
+  vec3 col;
+  if (skin == 2) {
+    // packed dirt, the colour of the road's own verge: two faint wheel ruts, a darker shoulder
+    col = WAYSUN(u_cD);
+    if (abs(d - half_ * 0.42) < 2.6) col *= 0.93;
+    if (d > half_ - 2.2) col *= 0.82;
+  } else if (skin == 1) {
+    // planks laid across, a beam down each edge, a nail at each end of every plank
+    float pl = mod(al, 7.0);
+    float tone = hash2(int(floor(al / 7.0)), 3, u_seed + 41);
+    col = tone < 0.34 ? vec3(178.0, 140.0, 90.0) : tone < 0.7 ? vec3(192.0, 152.0, 100.0) : vec3(166.0, 128.0, 82.0);
+    if (pl < 0.9) col = vec3(92.0, 68.0, 44.0);
+    else if (d > half_ - 8.0 && d < half_ - 6.6 && pl > 3.2 && pl < 4.6) col = vec3(92.0, 68.0, 44.0);
+    if (d > half_ - 4.2) col = d < half_ - 3.4 || d > half_ - 0.9 ? vec3(104.0, 78.0, 50.0) : vec3(148.0, 112.0, 72.0);
+    // where the boards begin or end on another surface: a stout beam across
+    int ja = min(n - 1, i + 2), jb = max(0, i - 2);
+    if (int(wayOf(ja, 1).r) != 1 || int(wayOf(jb, 1).r) != 1) col = vec3(120.0, 90.0, 58.0);
+  } else if (skin == 4) {
+    // old boards, grey with weather: each its own width, length and slant, some gone
+    float sl = (hash2(int(floor(al / 9.0)), 5, u_seed + 43) - 0.5) * 0.16;
+    float ar = al + ac * sl;
+    float k = floor(ar / 9.0);
+    float pl = ar - k * 9.0;
+    float h1 = hash2(int(k), 11, u_seed + 44);
+    float h2 = hash2(int(k), 17, u_seed + 45);
+    float gapw = 0.9 + h2 * 1.6;
+    // (a board is short of one edge or the other, or both)
+    float reach = half_ - 1.0 - 5.0 * (side > 0.0 ? h1 : h2) * step(0.35, fract(h1 * 7.0));
+    bool gone = h1 > 0.9 && d < half_ - 4.0;
+    if (d > reach) return;
+    if (pl < gapw || gone) {
+      // through the gap: the dark under the boards, and the two bearers they lie on
+      col = vec3(52.0, 44.0, 40.0);
+      if (abs(d - half_ * 0.55) < 2.2) col = vec3(98.0, 84.0, 70.0);
+    } else {
+      col = h2 < 0.3 ? vec3(150.0, 138.0, 122.0) : h2 < 0.68 ? vec3(166.0, 150.0, 128.0) : vec3(134.0, 122.0, 108.0);
+      // the grain, a split, and a rusty nail over each bearer
+      if (hash2(int(floor(ac / 3.0)), int(k), u_seed + 46) > 0.86) col *= 0.9;
+      if (h1 < 0.22 && abs(ac - (h2 - 0.5) * half_) < 0.6 && pl > 3.0) col *= 0.7;
+      if (abs(d - half_ * 0.55) < 0.8 && abs(pl - 4.8) < 0.8) col = vec3(110.0, 66.0, 44.0);
+    }
+  } else if (skin == 0) {
+    // stone setts in rows, each row half a stone over from the last, a kerbstone down each edge
+    float row = floor(al / 7.0);
+    float sv = ac + 400.0 + mod(row, 2.0) * 4.0;
+    float tone = hash2(int(row), int(floor(sv / 8.0)), u_seed + 42);
+    col = vec3(172.0, 168.0, 158.0) * (0.86 + 0.24 * tone);
+    if (mod(al, 7.0) < 0.9 || mod(sv, 8.0) < 0.9) col = vec3(112.0, 108.0, 102.0);
+    if (d > half_ - 4.0) col = mod(al, 11.0) < 0.9 || d < half_ - 3.2 ? vec3(104.0, 100.0, 94.0) : vec3(150.0, 146.0, 138.0);
+  } else {
+    // the main road's own tarmac
+    col = vec3(122.0, 126.0, 140.0);
+    if (d > half_ - 5.6 && d < half_ - 2.6) col = vec3(250.0, 248.0, 238.0);
+  }
+  if (kind != 0) {
+    // a jump: arrows up the takeoff, and a hazard band at the edge of the drop
+    if (edge < 24.0) col = mod(floor((ac + edge + 400.0) / 7.0), 2.0) < 0.5 ? vec3(248.0, 204.0, 40.0) : vec3(34.0, 34.0, 38.0);
+    else if (kind == 1 && edge > 34.0 && d < 15.0 && mod(al + d, 24.0) < 3.2) col = vec3(250.0, 248.0, 238.0);
+  }
+  c = col;
+  g_way = 1.0 + float(skin);
+}
+#endif
 #ifdef ROAD
 vec4 sampleOf(int i, int row) {
   return texelFetch(u_ps, ivec2(i, row), 0);
@@ -263,6 +388,8 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
     d = half_ * 0.12 + kk * (half_ * 0.88 - 2.2);
   }
 #endif
+  // a way forks out of the road here: no kerb or verge across its mouth
+  if (g_way > 0.5 && d > half_) return;
   vec3 col;
   float m = 1.0;
 #ifdef BRIGHT
@@ -275,7 +402,8 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
     if (d > half_ - 3.0) col *= 0.86;
 #else
     col = vec3(122.0, 126.0, 140.0);
-    if (d > half_ - 5.6 && d < half_ - 2.6) col = vec3(250.0, 248.0, 238.0);
+    // (the line along the edge is broken where a way leaves)
+    if (d > half_ - 5.6 && d < half_ - 2.6 && !(g_way > 0.5 && mod(al, 14.0) < 7.0)) col = vec3(250.0, 248.0, 238.0);
     else if (d < 1.5 && mod(al, 30.0) < 15.0 && !lane) col = vec3(250.0, 248.0, 238.0);
 #endif
   } else if (kerbed && d <= half_ + 7.0) {
@@ -365,7 +493,7 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
     }
     // the painted lines: one down each edge, dashes down the middle, whole but for a rare scuff
     bool worn = hash2(int(floor(al / 4.0)), d < 3.0 ? 0 : int(side), u_seed + 14) < 0.015;
-    if (d > half_ - 4.4 && d < half_ - 2.4 && !worn) {
+    if (d > half_ - 4.4 && d < half_ - 2.4 && !worn && !(g_way > 0.5 && mod(al, 14.0) < 7.0)) {
 #if TERRAIN == 5
       col = col * 0.2 + vec3(214.0, 178.0, 40.0) * 0.8;
 #else
@@ -479,6 +607,9 @@ vec3 groundPaint(vec2 wp, ivec2 gc) {
     if (gd <= 17.0 && !(gd > 11.0 && gh < (gd - 11.0) / 6.0))
       c = u_cD * (gd < 6.0 ? 0.62 : 1.0) * (gh < 0.06 ? 0.7 : gh > 0.94 ? 1.2 : 1.0);
   }
+#endif
+#ifdef WAYS
+  wayOver(c, wp, gc);
 #endif
   roadOver(c, wp, gc, F);
 #endif
