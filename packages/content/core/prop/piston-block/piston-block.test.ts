@@ -9,7 +9,7 @@ describe('prop.piston-block', () => {
   const row = () => {
     const w = bench();
     const [x, y] = openSpot(w, 120);
-    return { w, x, y, blocks: [-27, -9, 9, 27].map((v) => stand(w, def, x, y + v, 0, 0)) };
+    return { w, x, y, blocks: [-24, -8, 8, 24].map((v) => stand(w, def, x, y + v, 0, 0)) };
   };
 
   it('a row is a wave: one block stands at a time, each in turn, so there is always a gap and it moves', () => {
@@ -39,8 +39,8 @@ describe('prop.piston-block', () => {
       for (let i = 0; i < 7; i++) w.step();
       // between two blocks that are both down now, or straight at the one that stands
       let lane = 0;
-      for (let k = 0; k < 3; k++) if (blocks[k]!.down && blocks[k + 1]!.down) lane = -18 + k * 18;
-      if (!through) lane = -27 + blocks.findIndex((b) => !b.down) * 18;
+      for (let k = 0; k < 3; k++) if (blocks[k]!.down && blocks[k + 1]!.down) lane = -16 + k * 16;
+      if (!through) lane = -24 + blocks.findIndex((b) => !b.down) * 16;
       const c = w.player;
       put(c, x - 34, y + lane, 0, 150);
       for (let i = 0; i < 24; i++)

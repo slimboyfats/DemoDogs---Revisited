@@ -7,16 +7,16 @@
     "since": "core@0.11.0"
   },
   "body": "static",
-  "radius": 9,
+  "radius": 8,
   "hit": {
-    "halfLength": 9,
-    "halfWidth": 9,
+    "halfLength": 8,
+    "halfWidth": 8,
     "round": 2,
     "top": 15
   },
   "gate": {
     "period": 4.8,
     "open": 3.6,
-    "wave": 72
+    "wave": 64
   }
 }

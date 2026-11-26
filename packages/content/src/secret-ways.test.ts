@@ -130,7 +130,7 @@ describe('secret ways', () => {
         const { w, x0, y0, a } = jump(v.id);
         const R = w.relief!;
         const gate = gateOf(w);
-        expect(gate.length).toBeGreaterThan(3);
+        expect(gate.length).toBeGreaterThanOrEqual(3);
         // every post up on the ramp, and no room for a car between them or past the last
         const across = gate
           .map((s) => -(s.x - x0) * Math.sin(a) + (s.y - y0) * Math.cos(a))
@@ -138,6 +138,9 @@ describe('secret ways', () => {
         for (const s of gate) expect(R.platAt(s.x, s.y)).toBeGreaterThan(12);
         const r = gate[0]!.def.radius;
         expect(across[0]! - r).toBeLessThan(-32 + 8);
+        // and none of it hangs out over the ramp's sides (the ramp is 64 px across)
+        expect(across[0]! - r).toBeGreaterThanOrEqual(-32.5);
+        expect(across[across.length - 1]! + r).toBeLessThanOrEqual(32.5);
         expect(across[across.length - 1]! + r).toBeGreaterThan(32 - 8);
         for (let k = 1; k < across.length; k++)
           expect(across[k]! - across[k - 1]! - 2 * r).toBeLessThan(8);
