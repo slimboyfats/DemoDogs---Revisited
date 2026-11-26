@@ -21,6 +21,7 @@
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
     "play:editor": "pnpm build && node scripts/play-editor.mjs",
+    "play:cups": "pnpm build && node scripts/play-cups.mjs",
     "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "look": "pnpm build && node scripts/capture-look.mjs",
     "speed": "pnpm build && node scripts/capture-speed.mjs",
