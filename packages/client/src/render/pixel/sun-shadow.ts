@@ -39,6 +39,7 @@ export class SunShadow {
   readonly shear = new Float32Array([0, 0, SUN_TOP]);
   /** Texels to the art pixel. */
   density = 2;
+  private most = 0;
   private prog: WebGLProgram | null = null;
   private u: Record<string, WebGLUniformLocation | null> = {};
   private readonly vao: WebGLVertexArrayObject;
@@ -55,17 +56,22 @@ export class SunShadow {
    */
   begin(v: StackView, sx: number, sy: number): void {
     const gl = this.gl;
-    const k = this.density;
     this.shear[0] = sx;
     this.shear[1] = sy;
     // the ground on screen, and as far beyond it as something tall at its edge is thrown; what
     // stands high on screen stands on ground further south than the ground drawn there
     const top = v.top ?? 0;
     const up = ((REACH + top) * v.zk) / v.scale / v.ys;
-    const x0 = Math.floor((-v.ox / v.scale - 8) * k) / k;
-    const y0 = Math.floor((-v.oy / (v.scale * v.ys) - 8) * k) / k;
+    const left = -v.ox / v.scale - 8;
+    const north = -v.oy / (v.scale * v.ys) - 8;
     const x1 = (v.w - v.ox) / v.scale + 8 + Math.max(0, sx) * (REACH + top);
     const y1 = (v.h - v.oy) / (v.scale * v.ys) + 8 + up + Math.max(0, sy) * (REACH + top);
+    // a whole big map at once (the overview) can be more than a texture holds: coarser then
+    const most = (this.most ||= gl.getParameter(gl.MAX_TEXTURE_SIZE) as number) - 128;
+    let k = this.density;
+    while (k > 0.25 && Math.max(x1 - left, y1 - north) * k > most) k /= 2;
+    const x0 = Math.floor(left * k) / k;
+    const y0 = Math.floor(north * k) / k;
     const w = Math.ceil(((x1 - x0) * k) / 64) * 64;
     const h = Math.ceil(((y1 - y0) * k) / 64) * 64;
     if (w > this.tw || h > this.th) {

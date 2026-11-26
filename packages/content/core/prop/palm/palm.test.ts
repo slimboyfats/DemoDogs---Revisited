@@ -14,7 +14,11 @@ describe('prop.palm', () => {
     for (let x = -12; x <= 12; x += 0.5)
       for (let y = -12; y <= 12; y += 0.5) {
         if (Math.hypot(x, y) < 4) continue;
-        for (let z = 0; z < 25; z += 0.5) if (L.part.fn(x, y, z)) z < 12 ? low++ : high++;
+        for (let z = 0; z < 25; z += 0.5)
+          if (L.part.fn(x, y, z)) {
+            if (z < 12) low++;
+            else high++;
+          }
       }
     expect(low).toBe(0);
     expect(high).toBeGreaterThan(400);

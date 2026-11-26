@@ -71,7 +71,15 @@ export function updatePads(w: World, c: Car): void {
       c.pad = s.index;
       c.vz = Math.max(c.vz, P.lift);
       c.z = Math.max(c.z, c.deck + 0.7);
-      w.emit({ t: 'pad', kind: 'vent', car: c.index, prop: s.index, x: c.x, y: c.y, power: P.lift });
+      w.emit({
+        t: 'pad',
+        kind: 'vent',
+        car: c.index,
+        prop: s.index,
+        x: c.x,
+        y: c.y,
+        power: P.lift,
+      });
     }
     return;
   }

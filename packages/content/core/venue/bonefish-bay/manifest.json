@@ -1,0 +1,906 @@
+{
+  "id": "venue.bonefish-bay",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bonefish Bay",
+    "description": "Race. A long lap of the beach: round the lighthouse on the causeway, along the sands, and round the lagoon, or over it on the boardwalk.",
+    "since": "core@0.10.0"
+  },
+  "mode": "mode.race",
+  "seed": 2101,
+  "laps": 2,
+  "size": {
+    "w": 3900,
+    "h": 2600
+  },
+  "track": {
+    "road": 112,
+    "points": [
+      [1000, 470],
+      [1700, 440],
+      [2400, 500],
+      [3000, 440],
+      [3420, 620],
+      [3560, 1040],
+      [3380, 1460],
+      [2900, 1640],
+      [2300, 1600],
+      [1800, 1720],
+      [1560, 2060],
+      [1120, 2250],
+      [640, 2140],
+      [400, 1740],
+      [480, 1340],
+      [760, 1080],
+      [700, 780],
+      [660, 580]
+    ],
+    "raised": [
+      {
+        "from": 0.25,
+        "to": 0.36,
+        "height": 16
+      }
+    ],
+    "rail": "prop.armco"
+  },
+  "colors": {
+    "ground": "#e6cc8c",
+    "ground2": "#eed8a0",
+    "dirt": "#c9a561",
+    "outside": "#2f9cc0",
+    "terrain": "sand"
+  },
+  "relief": {
+    "hills": 8,
+    "wave": 620,
+    "banks": 0
+  },
+  "scenery": [
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.boardwalk",
+          "x": -332.9,
+          "y": 612.2,
+          "rot": -3.0217
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -370.4,
+          "y": 608.9,
+          "rot": -3.0837
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -410.7,
+          "y": 606.9,
+          "rot": -3.0959
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -457.9,
+          "y": 604.7,
+          "rot": -3.0932
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -496.5,
+          "y": 602.7,
+          "rot": -3.0842
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -537.1,
+          "y": 600.2,
+          "rot": -3.0696
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -578.6,
+          "y": 596.9,
+          "rot": -3.0493
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -620.2,
+          "y": 592.7,
+          "rot": -3.022
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -661.1,
+          "y": 587.4,
+          "rot": -2.9861
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -700.4,
+          "y": 580.6,
+          "rot": -2.9385
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -737.2,
+          "y": 572.3,
+          "rot": -2.8745
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -781.0,
+          "y": 558.3,
+          "rot": -2.7493
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -817.3,
+          "y": 540.6,
+          "rot": -2.5856
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -848.6,
+          "y": 518.7,
+          "rot": -2.44
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -876.2,
+          "y": 493.1,
+          "rot": -2.3202
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -900.8,
+          "y": 464.6,
+          "rot": -2.231
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -923.5,
+          "y": 433.9,
+          "rot": -2.1733
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -944.9,
+          "y": 401.9,
+          "rot": -2.146
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -966.1,
+          "y": 369.1,
+          "rot": -2.1479
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -987.8,
+          "y": 336.5,
+          "rot": -2.1784
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1010.9,
+          "y": 304.6,
+          "rot": -2.2372
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1036.2,
+          "y": 274.3,
+          "rot": -2.3241
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1064.8,
+          "y": 245.7,
+          "rot": -2.3849
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1097.1,
+          "y": 215.8,
+          "rot": -2.4102
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1123.3,
+          "y": 192.5,
+          "rot": -2.4242
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1150.6,
+          "y": 168.9,
+          "rot": -2.4352
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1178.4,
+          "y": 145.3,
+          "rot": -2.4439
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1206.4,
+          "y": 121.9,
+          "rot": -2.4507
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1234.1,
+          "y": 99.2,
+          "rot": -2.4558
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1269.4,
+          "y": 70.3,
+          "rot": -2.4603
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1302.1,
+          "y": 43.9,
+          "rot": -2.462
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1330.9,
+          "y": 20.6,
+          "rot": -2.4597
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1359.8,
+          "y": -3.0,
+          "rot": -2.4466
+        }
+      ]
+    },
+    {
+      "rule": "pools",
+      "items": [
+        {
+          "material": "material.lagoon",
+          "x": 1010,
+          "y": 1700,
+          "r": 250
+        },
+        {
+          "material": "material.lagoon",
+          "x": 840,
+          "y": 1820,
+          "r": 190
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1200,
+          "y": 1590,
+          "r": 180
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1130,
+          "y": 1870,
+          "r": 170
+        },
+        {
+          "material": "material.lagoon",
+          "x": 890,
+          "y": 1530,
+          "r": 170
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1900,
+          "y": 2520,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2230,
+          "y": 2560,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2560,
+          "y": 2520,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2890,
+          "y": 2560,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3220,
+          "y": 2520,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3550,
+          "y": 2560,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3880,
+          "y": 2520,
+          "r": 300
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3840,
+          "y": 1900,
+          "r": 280
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3840,
+          "y": 2230,
+          "r": 280
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3840,
+          "y": 2560,
+          "r": 280
+        },
+        {
+          "material": "material.lagoon",
+          "x": -100,
+          "y": 2650,
+          "r": 260
+        },
+        {
+          "material": "material.lagoon",
+          "x": 230,
+          "y": 2650,
+          "r": 260
+        },
+        {
+          "material": "material.lagoon",
+          "x": 560,
+          "y": 2650,
+          "r": 260
+        },
+        {
+          "material": "material.lagoon",
+          "x": 890,
+          "y": 2650,
+          "r": 260
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 5,
+        "apart": 0.06
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.lighthouse",
+          "x": 1170.0,
+          "y": -260.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.lighthouse",
+          "x": 670.0,
+          "y": 830.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.sandcastle",
+          "x": 430.0,
+          "y": 630.0,
+          "rot": 0.3
+        },
+        {
+          "prop": "prop.sandcastle",
+          "x": 490.0,
+          "y": 675.0,
+          "rot": 1.1
+        },
+        {
+          "prop": "prop.sandcastle",
+          "x": -50.0,
+          "y": 880.0,
+          "rot": 0.2
+        },
+        {
+          "prop": "prop.parasol",
+          "x": 250.0,
+          "y": 600.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.parasol",
+          "x": 340.0,
+          "y": 690.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.parasol",
+          "x": 810.0,
+          "y": 600.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.parasol",
+          "x": 950.0,
+          "y": 690.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.parasol",
+          "x": 1300.0,
+          "y": 530.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.beach-ball",
+          "x": 300.0,
+          "y": 640.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.beach-ball",
+          "x": 870.0,
+          "y": 650.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.beach-ball",
+          "x": 1230.0,
+          "y": 600.0,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.06, 0.57],
+      "items": [
+        {
+          "prop": "prop.palm",
+          "lane": -1.932,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": -2.075,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.palm",
+          "lane": -2.182,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.09, 0.42, 0.63, 0.81],
+      "items": [
+        {
+          "prop": "prop.parasol",
+          "lane": 1.964,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.beach-ball",
+          "lane": 1.839,
+          "ahead": 16
+        },
+        {
+          "prop": "prop.parasol",
+          "lane": 2.143,
+          "ahead": 34
+        },
+        {
+          "prop": "prop.sandcastle",
+          "lane": 2.116,
+          "ahead": -26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12, 0.45, 0.66],
+      "items": [
+        {
+          "prop": "prop.palm",
+          "lane": -1.932,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": -2.111,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.15, 0.48, 0.69],
+      "items": [
+        {
+          "prop": "prop.lighthouse",
+          "lane": 2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": 1.932,
+          "ahead": -30
+        },
+        {
+          "prop": "prop.palm",
+          "lane": 2.004,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18, 0.51, 0.93],
+      "items": [
+        {
+          "prop": "prop.sandcastle",
+          "lane": -2.009,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.sandcastle",
+          "lane": -2.223,
+          "ahead": 22
+        },
+        {
+          "prop": "prop.beach-ball",
+          "lane": -1.946,
+          "ahead": -18
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.21, 0.54, 0.75, 0.96],
+      "items": [
+        {
+          "prop": "prop.parasol",
+          "lane": 1.964,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.parasol",
+          "lane": 2.179,
+          "ahead": -28
+        },
+        {
+          "prop": "prop.beach-ball",
+          "lane": 1.982,
+          "ahead": 14
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.39, 0.78],
+      "items": [
+        {
+          "prop": "prop.palm",
+          "lane": 1.932,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": 2.075,
+          "ahead": 26
+        },
+        {
+          "prop": "prop.palm",
+          "lane": 2.182,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.72],
+      "items": [
+        {
+          "prop": "prop.sandcastle",
+          "lane": 2.009,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.sandcastle",
+          "lane": 2.223,
+          "ahead": 22
+        },
+        {
+          "prop": "prop.beach-ball",
+          "lane": 1.946,
+          "ahead": -18
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.84],
+      "items": [
+        {
+          "prop": "prop.palm",
+          "lane": 1.932,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": 2.111,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.9],
+      "items": [
+        {
+          "prop": "prop.lighthouse",
+          "lane": -2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.palm",
+          "lane": -1.932,
+          "ahead": -30
+        },
+        {
+          "prop": "prop.palm",
+          "lane": -2.004,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 44,
+      "minCurve": 0.22
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00011,
+      "clear": 60,
+      "items": [
+        {
+          "prop": "prop.palm",
+          "weight": 1.0
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.25
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 4e-5,
+      "clear": 40,
+      "items": [
+        {
+          "prop": "prop.parasol",
+          "weight": 1
+        },
+        {
+          "prop": "prop.sandcastle",
+          "weight": 0.6
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 3e-5,
+      "clear": 10,
+      "items": [
+        {
+          "prop": "prop.beach-ball",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0.2, 0.48, 0.7],
+      "items": [
+        {
+          "prop": "prop.crabs",
+          "lane": 1.9
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.1, 0.43, 0.92],
+      "items": [
+        {
+          "prop": "prop.gulls",
+          "lane": 2.1
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.035],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.13],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.455],
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "ahead": -60
+        },
+        {
+          "prop": "prop.big-ramp",
+          "row": 3,
+          "step": 38
+        },
+        {
+          "prop": "prop.beach-ball",
+          "ahead": 60,
+          "row": 5,
+          "step": 16
+        },
+        {
+          "prop": "prop.sandcastle",
+          "ahead": 90,
+          "row": 3,
+          "step": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.53],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": -0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.775],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

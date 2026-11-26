@@ -135,6 +135,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   sides, so nothing else needs to know about it. The platform is wider than the road (`SHOULDER`), its edges are
   railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
   that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
+- **A course is a venue with one big idea**, and its pieces are plain props, so the track creator places them all.
+  A shortcut is a run of path tiles (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`; kept in `w.paths`):
+  the ground under one is road to the sim (grip, speed, no off-course countdown) and scenery rules keep off it. A
+  pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
+  back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
+  raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.
+  Sights stand close beside the road (about 50 px off its edge), since that is all a phone shows. Every built-in
+  track opens in the track creator as a copy (`trackFromVenue` in sim/custom.ts, COPY THIS TRACK on the tracks screen).
 - **Rule numbers tuned by hand are in one list** (`TUNABLES` in shared/tuning.ts): the DEV SETTINGS pane (menu and
   pause menu) draws a slider for each, a `World` takes them as `tuning`, and a rule reads `world.tuning`. A new one is
   an entry in that list and a read in its rule. They are saved on the device and never used in an online race, so

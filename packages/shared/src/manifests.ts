@@ -391,6 +391,8 @@ export const VenueSchema = z.strictObject({
   mode: id('mode'),
   /** Fixed seed for the venue's scenery, so a venue looks the same every time. */
   seed: z.number().int(),
+  /** Race venues: laps to finish here, where the mode's own count is wrong for it (a very long lap). */
+  laps: z.number().int().positive().optional(),
   size: z.strictObject({
     w: z.number().int().min(400).max(4000),
     h: z.number().int().min(400).max(4000),

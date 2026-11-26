@@ -1,0 +1,724 @@
+{
+  "id": "venue.glimmer-grotto",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glimmer Grotto",
+    "description": "Race. A cavern at night, lit by its own crystals and toadstools: a raised run over the crystal beds, and a path through the glowcaps.",
+    "since": "core@0.10.0"
+  },
+  "mode": "mode.race",
+  "seed": 2505,
+  "laps": 2,
+  "size": {
+    "w": 3800,
+    "h": 2600
+  },
+  "track": {
+    "road": 112,
+    "points": [
+      [900, 500],
+      [1500, 560],
+      [2000, 420],
+      [2600, 440],
+      [3150, 560],
+      [3420, 950],
+      [3300, 1400],
+      [2900, 1620],
+      [2780, 1950],
+      [2880, 2230],
+      [2450, 2300],
+      [1900, 2100],
+      [1400, 2240],
+      [800, 2140],
+      [440, 1780],
+      [520, 1300],
+      [420, 880]
+    ],
+    "raised": [
+      {
+        "from": 0.12,
+        "to": 0.22,
+        "height": 18
+      }
+    ],
+    "rail": "prop.armco"
+  },
+  "colors": {
+    "ground": "#4a4466",
+    "ground2": "#555072",
+    "dirt": "#3a3552",
+    "outside": "#15131f",
+    "terrain": "gravel"
+  },
+  "relief": {
+    "hills": 0,
+    "wave": 520,
+    "banks": 60,
+    "step": 30,
+    "from": 170,
+    "spread": 130,
+    "infield": false
+  },
+  "weather": [
+    {
+      "x": 1900,
+      "y": 1300,
+      "r": 4000,
+      "sky": "night"
+    }
+  ],
+  "scenery": [
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.dirt-track",
+          "x": 942.6,
+          "y": 322.9,
+          "rot": 2.3748
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 908.2,
+          "y": 353.9,
+          "rot": 2.4274
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 874.2,
+          "y": 383.3,
+          "rot": 2.4295
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 843.1,
+          "y": 410.2,
+          "rot": 2.4212
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 810.2,
+          "y": 439.5,
+          "rot": 2.4055
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 776.5,
+          "y": 470.5,
+          "rot": 2.3823
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 743.3,
+          "y": 502.7,
+          "rot": 2.3498
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 712.0,
+          "y": 535.4,
+          "rot": 2.3049
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 683.8,
+          "y": 568.0,
+          "rot": 2.2421
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 660.0,
+          "y": 600.0,
+          "rot": 2.152
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 639.5,
+          "y": 633.7,
+          "rot": 2.0675
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 620.4,
+          "y": 671.1,
+          "rot": 2.0065
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 602.7,
+          "y": 710.9,
+          "rot": 1.9618
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 586.4,
+          "y": 751.9,
+          "rot": 1.9289
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 571.6,
+          "y": 792.8,
+          "rot": 1.9053
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 558.1,
+          "y": 832.3,
+          "rot": 1.8899
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 543.3,
+          "y": 877.8,
+          "rot": 1.8824
+        },
+        {
+          "prop": "prop.dirt-track",
+          "x": 530.7,
+          "y": 916.6,
+          "rot": 1.8933
+        }
+      ]
+    },
+    {
+      "rule": "pools",
+      "items": [
+        {
+          "material": "material.lagoon",
+          "x": 1750,
+          "y": 1300,
+          "r": 230
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2000,
+          "y": 1380,
+          "r": 200
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1560,
+          "y": 1420,
+          "r": 170
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.glow-shroom",
+          "x": 905.6,
+          "y": 419.6,
+          "rot": 0
+        },
+        {
+          "prop": "prop.crystal",
+          "x": 842.7,
+          "y": 347.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.crystal",
+          "x": 815.3,
+          "y": 510.9,
+          "rot": 1
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "x": 737.6,
+          "y": 430.2,
+          "rot": 1
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "x": 722.0,
+          "y": 597.2,
+          "rot": 2
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "x": 645.6,
+          "y": 538.9,
+          "rot": 2
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "x": 671.5,
+          "y": 694.1,
+          "rot": 3
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "x": 569.3,
+          "y": 648.1,
+          "rot": 3
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "x": 617.0,
+          "y": 808.4,
+          "rot": 4
+        },
+        {
+          "prop": "prop.crystal",
+          "x": 526.2,
+          "y": 777.2,
+          "rot": 4
+        },
+        {
+          "prop": "prop.crystal",
+          "x": 588.7,
+          "y": 919.6,
+          "rot": 5
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "x": 482.3,
+          "y": 884.5,
+          "rot": 5
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 5,
+        "apart": 0.06
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.06, 0.485, 0.61, 0.71],
+      "items": [
+        {
+          "prop": "prop.crystal",
+          "lane": -1.793,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": -1.936,
+          "ahead": 14
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "lane": -1.971,
+          "ahead": -12
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -1.8,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.085, 0.635],
+      "items": [
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -1.764,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -1.889,
+          "ahead": 10
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -1.925,
+          "ahead": -9
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -2.05,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": -1.904,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.11, 0.41, 0.66, 0.86, 0.96],
+      "items": [
+        {
+          "prop": "prop.crystal-rose",
+          "lane": -1.793,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "lane": -1.954,
+          "ahead": -13
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": -1.954,
+          "ahead": 13
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": -1.868,
+          "ahead": 28
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.235, 0.335, 0.585, 0.685, 0.785],
+      "items": [
+        {
+          "prop": "prop.stalagmite",
+          "lane": 1.796,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": 1.975,
+          "ahead": 12
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": 1.864,
+          "ahead": -14
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 1.764,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.26, 0.36, 0.81, 0.91],
+      "items": [
+        {
+          "prop": "prop.crystal",
+          "lane": 1.793,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": 1.936,
+          "ahead": 14
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "lane": 1.971,
+          "ahead": -12
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 1.8,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.285, 0.385, 0.51, 0.735, 0.835, 0.935],
+      "items": [
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 1.764,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 1.889,
+          "ahead": 10
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 1.925,
+          "ahead": -9
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": 2.05,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": 1.904,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.31, 0.535, 0.76],
+      "items": [
+        {
+          "prop": "prop.crystal-rose",
+          "lane": 1.793,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "lane": 1.954,
+          "ahead": -13
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": 1.954,
+          "ahead": 13
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": 1.868,
+          "ahead": 28
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.46, 0.885],
+      "items": [
+        {
+          "prop": "prop.stalagmite",
+          "lane": -1.796,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.stalagmite",
+          "lane": -1.975,
+          "ahead": 12
+        },
+        {
+          "prop": "prop.crystal",
+          "lane": -1.864,
+          "ahead": -14
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "lane": -1.764,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "kerb",
+      "every": 18,
+      "offset": 22,
+      "chance": 0.8,
+      "items": [
+        {
+          "prop": "prop.lantern",
+          "weight": 4
+        },
+        {
+          "prop": "prop.crystal",
+          "weight": 1
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.stalagmite", "prop.crystal", "prop.stalagmite", "prop.crystal-rose"],
+      "offset": 44,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0002,
+      "clear": 56,
+      "items": [
+        {
+          "prop": "prop.stalagmite",
+          "weight": 1.0
+        },
+        {
+          "prop": "prop.crystal",
+          "weight": 0.7
+        },
+        {
+          "prop": "prop.crystal-rose",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.glow-shroom",
+          "weight": 0.8
+        },
+        {
+          "prop": "prop.rock",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00025,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.mushrooms",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0.035],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.26],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.635],
+      "items": [
+        {
+          "prop": "prop.turbo-pad",
+          "ahead": -60
+        },
+        {
+          "prop": "prop.big-ramp",
+          "row": 3,
+          "step": 38
+        },
+        {
+          "prop": "prop.crate",
+          "ahead": 60,
+          "row": 6,
+          "step": 16
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.74],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": -0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.905],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.33],
+      "items": [
+        {
+          "prop": "prop.geyser",
+          "lane": 0.5
+        },
+        {
+          "prop": "prop.geyser",
+          "lane": -0.5
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}

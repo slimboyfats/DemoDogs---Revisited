@@ -930,7 +930,7 @@ function buildMenu(): void {
     const b = document.createElement('button');
     b.dataset.venue = v.id;
     const what =
-      mode.kind === 'race' ? `Race · ${mode.laps} laps` : 'Derby · last car running wins';
+      mode.kind === 'race' ? `Race · ${v.laps ?? mode.laps} laps` : 'Derby · last car running wins';
     b.append(
       Object.assign(document.createElement('b'), { textContent: v.meta.name.toUpperCase() }),
       Object.assign(document.createElement('small'), {

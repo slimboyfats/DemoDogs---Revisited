@@ -462,7 +462,7 @@ export class World {
   }
 
   get laps(): number {
-    return this.lapsOpt ?? this.mode.laps ?? 0;
+    return this.lapsOpt ?? this.venue.laps ?? this.mode.laps ?? 0;
   }
 
   emit(e: SimEvent): void {

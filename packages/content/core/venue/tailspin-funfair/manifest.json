@@ -1,0 +1,820 @@
+{
+  "id": "venue.tailspin-funfair",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tailspin Funfair",
+    "description": "Race. A figure of eight through the fairground: over the flyover, round the big wheel, and a short way home through the bumpers.",
+    "since": "core@0.10.0"
+  },
+  "mode": "mode.race",
+  "seed": 2303,
+  "laps": 2,
+  "size": {
+    "w": 3900,
+    "h": 2600
+  },
+  "track": {
+    "road": 112,
+    "points": [
+      [900, 480],
+      [1500, 440],
+      [1950, 620],
+      [2150, 1050],
+      [2300, 1500],
+      [2700, 1900],
+      [3200, 2060],
+      [3540, 1760],
+      [3520, 1300],
+      [3200, 1020],
+      [2700, 1040],
+      [2150, 1300],
+      [1700, 1560],
+      [1300, 1960],
+      [800, 2120],
+      [420, 1820],
+      [380, 1300],
+      [480, 780]
+    ]
+  },
+  "colors": {
+    "ground": "#6fae4e",
+    "ground2": "#7cba58",
+    "dirt": "#b89a6a",
+    "outside": "#2c4a2a",
+    "terrain": "grass"
+  },
+  "scenery": [
+    {
+      "rule": "flyover",
+      "at": 0.595,
+      "length": 300,
+      "ramp": 150,
+      "height": 24,
+      "deck": "prop.flyover-deck",
+      "pillar": "prop.flyover-pillar",
+      "span": 5
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.boardwalk",
+          "x": -710.7,
+          "y": 647.5,
+          "rot": -2.5267
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -745.7,
+          "y": 625.2,
+          "rot": -2.6096
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -777.7,
+          "y": 606.6,
+          "rot": -2.6192
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -814.7,
+          "y": 585.2,
+          "rot": -2.6122
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -854.7,
+          "y": 561.4,
+          "rot": -2.5926
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -885.7,
+          "y": 542.2,
+          "rot": -2.5698
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -916.6,
+          "y": 521.8,
+          "rot": -2.5392
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -946.8,
+          "y": 500.5,
+          "rot": -2.4993
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -975.4,
+          "y": 478.4,
+          "rot": -2.4473
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1009.9,
+          "y": 447.8,
+          "rot": -2.3522
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1038.5,
+          "y": 416.1,
+          "rot": -2.2133
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1059.5,
+          "y": 383.2,
+          "rot": -1.9973
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1073.1,
+          "y": 346.0,
+          "rot": -1.813
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1081.0,
+          "y": 305.2,
+          "rot": -1.6909
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1084.9,
+          "y": 261.9,
+          "rot": -1.6201
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1086.5,
+          "y": 217.3,
+          "rot": -1.5917
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1087.5,
+          "y": 172.5,
+          "rot": -1.6023
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1089.5,
+          "y": 128.7,
+          "rot": -1.654
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1094.4,
+          "y": 87.1,
+          "rot": -1.7552
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1103.8,
+          "y": 48.8,
+          "rot": -1.9193
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1119.4,
+          "y": 14.9,
+          "rot": -2.1564
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1142.9,
+          "y": -13.8,
+          "rot": -2.4072
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1175.2,
+          "y": -39.1,
+          "rot": -2.5728
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1214.4,
+          "y": -61.8,
+          "rot": -2.6827
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1247.1,
+          "y": -77.1,
+          "rot": -2.7411
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1281.7,
+          "y": -91.1,
+          "rot": -2.785
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1317.1,
+          "y": -103.8,
+          "rot": -2.8179
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1352.7,
+          "y": -115.4,
+          "rot": -2.8417
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1387.4,
+          "y": -125.9,
+          "rot": -2.8573
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1430.9,
+          "y": -138.4,
+          "rot": -2.8653
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1469.3,
+          "y": -149.4,
+          "rot": -2.8543
+        },
+        {
+          "prop": "prop.boardwalk",
+          "x": -1507.0,
+          "y": -161.3,
+          "rot": -2.7861
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.bumper",
+          "x": -815.8,
+          "y": 542.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -881.5,
+          "y": 593.6,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -989.2,
+          "y": 513.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -962.7,
+          "y": 434.9,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1055.0,
+          "y": 391.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1048.3,
+          "y": 271.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1127.1,
+          "y": 245.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1124.7,
+          "y": 142.6,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1050.1,
+          "y": 106.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1104.8,
+          "y": 16.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1142.9,
+          "y": 5.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1220.1,
+          "y": -24.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1212.6,
+          "y": -106.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1330.2,
+          "y": -146.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1381.8,
+          "y": -81.0,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "gantry",
+      "leg": "prop.gantry-leg",
+      "span": "prop.gantry-beam"
+    },
+    {
+      "rule": "along",
+      "at": [0],
+      "items": [
+        {
+          "prop": "prop.flag",
+          "lane": 1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.flag",
+          "lane": -1.24,
+          "ahead": 2
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": 1.82,
+          "ahead": -74,
+          "n": 4,
+          "gap": 15
+        },
+        {
+          "prop": "prop.grandstand",
+          "lane": -1.82,
+          "ahead": -66,
+          "n": 3,
+          "gap": 15,
+          "rot": 3.1416
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "pick": {
+        "where": "bend",
+        "count": 5,
+        "apart": 0.06
+      },
+      "items": [
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": -6,
+          "rot": -1.5708
+        },
+        {
+          "prop": "prop.chevron-sign",
+          "lane": 1.8,
+          "ahead": 10,
+          "rot": -1.5708
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "x": 1010.0,
+          "y": 200.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": -700.0,
+          "y": -50.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": 550.0,
+          "y": -740.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": 750.0,
+          "y": 200.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": -450.0,
+          "y": -250.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "x": 1200.0,
+          "y": 350.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "x": -1350.0,
+          "y": 1050.0,
+          "rot": 0
+        },
+        {
+          "prop": "prop.ferris-wheel",
+          "x": -650.0,
+          "y": -400.0,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.06, 0.42, 0.66],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": -2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.85,
+          "ahead": -26
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.85,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.15, 0.87],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": 2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.921,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.18, 0.33, 0.48],
+      "items": [
+        {
+          "prop": "prop.carousel",
+          "lane": -2.062,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.957,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.957,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.21, 0.36],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": -2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "lane": -2.098,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.24, 0.39, 0.54],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": -2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "lane": -2.179,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.27, 0.84],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": 2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.85,
+          "ahead": -26
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.85,
+          "ahead": 26
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.3, 0.45, 0.69],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": -2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": -1.921,
+          "ahead": 30
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.51, 0.78, 0.96],
+      "items": [
+        {
+          "prop": "prop.big-top",
+          "lane": 2.143,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.carousel",
+          "lane": 2.098,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.75, 0.93],
+      "items": [
+        {
+          "prop": "prop.carousel",
+          "lane": 2.062,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.957,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.balloons",
+          "lane": 1.957,
+          "ahead": 24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.81],
+      "items": [
+        {
+          "prop": "prop.ferris-wheel",
+          "lane": 2.071,
+          "ahead": 0
+        },
+        {
+          "prop": "prop.big-top",
+          "lane": 2.179,
+          "ahead": 44
+        }
+      ]
+    },
+    {
+      "rule": "bend-wall",
+      "props": ["prop.tyres-red", "prop.tyres"],
+      "offset": 44,
+      "minCurve": 0.2
+    },
+    {
+      "rule": "kerb",
+      "every": 22,
+      "offset": 20,
+      "chance": 0.7,
+      "items": [
+        {
+          "prop": "prop.balloons",
+          "weight": 2
+        },
+        {
+          "prop": "prop.lamppost",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.0001,
+      "clear": 60,
+      "items": [
+        {
+          "prop": "prop.tree",
+          "weight": 0.6
+        },
+        {
+          "prop": "prop.maple",
+          "weight": 0.4
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 0.5
+        },
+        {
+          "prop": "prop.balloons",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "rule": "scatter",
+      "perArea": 0.00035,
+      "clear": 8,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 1
+        }
+      ]
+    },
+    {
+      "rule": "border",
+      "prop": "prop.fence-tyres",
+      "spacing": 10
+    },
+    {
+      "rule": "along",
+      "at": [0.04],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.275],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": 0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.375],
+      "items": [
+        {
+          "prop": "prop.ramp",
+          "row": 4,
+          "step": 26
+        },
+        {
+          "prop": "prop.crate",
+          "ahead": 60,
+          "row": 6,
+          "step": 16
+        },
+        {
+          "prop": "prop.cone",
+          "ahead": 84,
+          "row": 8,
+          "step": 12
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.47],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.82],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "lane": -0.5,
+          "n": 3,
+          "gap": 56
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.955],
+      "items": [
+        {
+          "prop": "prop.boost-pad",
+          "row": 2,
+          "step": 36
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.12, 0.68],
+      "items": [
+        {
+          "prop": "prop.chickens",
+          "lane": 1.9
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 10
+  },
+  "pickups": [
+    "pickup.repair",
+    "pickup.nitro",
+    "pickup.arms",
+    "pickup.ammo",
+    "pickup.cash",
+    "pickup.storm-cell",
+    "pickup.howler",
+    "pickup.dome",
+    "pickup.welder",
+    "pickup.blade",
+    "pickup.springs",
+    "pickup.kennel-kit",
+    "pickup.big-dog",
+    "pickup.runt-ray",
+    "pickup.second-wind",
+    "pickup.lead-collar",
+    "pickup.bone-shower",
+    "pickup.fetch-magnet",
+    "pickup.zoomies",
+    "pickup.hackles",
+    "pickup.scrap-jaws",
+    "pickup.roll-cage"
+  ]
+}
