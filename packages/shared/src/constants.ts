@@ -2,10 +2,6 @@
 export const TICK_RATE = 60;
 export const DT = 1 / TICK_RATE;
 
-/** A car's hull is two circles on its centre line. */
-export const CAR_RADIUS = 6.2;
-export const CAR_OFFSET = 5.5;
-
 /** Downward acceleration for cars, props and debris, in art pixels per second squared. */
 export const GRAVITY = 420;
 
@@ -48,3 +44,6 @@ export const DIFFICULTY = {
 } as const;
 export type Difficulty = keyof typeof DIFFICULTY;
 export const DIFFICULTIES = Object.keys(DIFFICULTY) as Difficulty[];
+
+/** How far a car's body rides over the ground its wheels are on, art px on a car of its own size. */
+export const BODY_UP = 0.6;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CAR_RADIUS, NO_CONTROLS } from '@demodogs/shared';
+import { NO_CONTROLS } from '@demodogs/shared';
 import { Rng, type Car, type World } from '@demodogs/sim';
 import { makeWorld, put, startRace, testContent } from './testing';
 
@@ -134,7 +134,7 @@ describe('holes in the world', () => {
         c.z = rng.next() < 0.3 ? 30 : 0;
         for (let k = 0; k < 30; k++) {
           w.step(GO);
-          const edge = 10 + CAR_RADIUS - 3;
+          const edge = 13.2;
           const out = w.oval
             ? Math.hypot((c.x - w.oval.cx) / w.oval.rx, (c.y - w.oval.cy) / w.oval.ry) > 1.02
             : c.x < edge || c.y < edge || c.x > w.w - edge || c.y > w.h - edge;

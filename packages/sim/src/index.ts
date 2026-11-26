@@ -7,13 +7,16 @@ export * from './math';
 export * from './prng';
 export * from './track';
 export * from './relief';
-export { circles, heft, hull, toLocal, zoneFactor } from './physics';
+export * from './leaps';
+export * from './gates';
+export { CLIFF, heft, toLocal, zoneFactor } from './physics';
+export * from './shapes';
 export { fitCatchup, odds, place } from './catchup';
 export { FINISH_GRACE } from './race';
 export { World, ahead, type Oval, type Phase, type WorldOptions } from './world';
 export * from './range';
 export { putProp, stand } from './stand';
-export { boostAhead, onPad, padAt } from './pads';
+export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
 export { rescueIn } from './rescue';
 export type { Critter } from './critters';
@@ -33,7 +36,16 @@ export {
 export type { Pulse } from './shock';
 export { howl, howlWants, type Howl } from './howl';
 export { fitMover, nose } from './movers';
-export { grant } from './things';
+export {
+  MINE_TRIGGER,
+  PICKUP_REACH,
+  ROCKET_REACH,
+  ROUND_HIGH,
+  ROUND_LOW,
+  grant,
+  gunSight,
+  muzzle,
+} from './things';
 export * from './guards';
 export * from './arms';
 export { light } from './damage';
@@ -45,4 +57,5 @@ export { inWater } from './docks';
 export * from './dmath';
 export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';
 export * from './addons';
+export { dip, fitTrick, phased, type Spell, type Tricks } from './tricks';
 export * from './line';

@@ -1,9 +1,10 @@
-import { CAR_RADIUS, DT, type WeaponManifest } from '@demodogs/shared';
+import { DT, type WeaponManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 import { angDiff, clamp } from './math';
 import { batter, breakProp, damage, dig, explode, light, scatter, shed, spill } from './damage';
 import { prey, squash, wall } from './arsenal';
 import type { World } from './world';
+import { carGap, thingGap } from './shapes';
 
 /**
  * Six wilder arms, fired and stepped through `arsenal.ts`; every number is the manifest's.
@@ -306,7 +307,7 @@ function updateFlails(w: World): void {
         f.cd[o.index]! -= DT;
         continue;
       }
-      if (Math.hypot(o.x - x, o.y - y) > CAR_RADIUS + r) continue;
+      if (carGap(o, x, y) > r) continue;
       f.cd[o.index] = 0.35;
       o.vx += tx * (d.push ?? 140);
       o.vy += ty * (d.push ?? 140);
@@ -317,7 +318,7 @@ function updateFlails(w: World): void {
     for (const b of w.bots)
       if (b.alive && Math.hypot(b.x - x, b.y - y) < r + 4) squash(w, b, c, tx * 160, ty * 160);
     for (const p of w.props) {
-      if (!p.alive || p.flying || Math.hypot(p.x - x, p.y - y) > p.def.radius + r) continue;
+      if (!p.alive || p.flying || thingGap(p, x, y) > r) continue;
       if (p.def.breaksAt !== undefined) {
         breakProp(w, p, c);
         continue;
@@ -356,7 +357,7 @@ function updateBones(w: World): void {
     w.emit({ t: 'meteor', x: b.x, y: b.y });
     // whoever is right under it takes the bone itself before the blast
     for (const c of w.cars)
-      if (!c.wrecked && c.deck < 4 && Math.hypot(c.x - b.x, c.y - b.y) < CAR_RADIUS + 8)
+      if (!c.wrecked && c.deck < 4 && carGap(c, b.x, b.y) < 8)
         damage(w, c, d.damage ?? 45, o && o !== c ? o : null, b.x, b.y);
     explode(w, b.x, b.y, d.power, o);
     // it throws burning bits a long way and leaves a ring of smaller pits round the big one
@@ -404,7 +405,7 @@ function open(w: World, k: Crack): void {
   dig(w, k.x, k.y, d.power);
   for (const c of w.cars) {
     if (c === o || c.wrecked || c.deck > 4 || c.z > 6 || k.hit.includes(c.index)) continue;
-    if (Math.hypot(c.x - k.x, c.y - k.y) > R + CAR_RADIUS) continue;
+    if (carGap(c, k.x, k.y) > R) continue;
     k.hit.push(c.index);
     const side = w.rng.next() < 0.5 ? -1 : 1;
     c.vx += -Math.sin(k.h) * side * 70;

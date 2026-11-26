@@ -1,0 +1,36 @@
+{
+  "id": "prop.switch-bollard",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Switch bollard",
+    "description": "A blue striped steel post that stands until a floor switch near it is driven over, then sinks for four seconds. A row of them across a path is a gate to race to.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 6,
+        "z": [0, 1]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 5.1,
+        "z": [1, 14]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.1,
+        "z": [14, 16]
+      }
+    ]
+  },
+  "gate": {
+    "open": 4
+  }
+}

@@ -7,26 +7,30 @@ import { groundMode, type Ground } from '../ground';
 import type { WorldRenderer } from '../overlay';
 import { PITCH, type Camera } from '../scene';
 import type { Strip } from '../stack';
+import { BODY_UP } from '../lamps';
 import { lampsOut, queueShadows, queueStacks, type StackSink } from '../stacks';
 import { QuadBatch, Shape } from './batch';
-import { GroundLayer } from './ground-layer';
-import { SunShadow } from './sun-shadow';
+import { prelink } from './gl';
+import { GroundLayer, groundSources } from './ground-layer';
+import { SUN_PROGRAMS, SunShadow } from './sun-shadow';
 import { LightBlock } from './light-block';
-import { TracedLight } from './traced-light';
-import { BeamHaze } from './beam-haze';
-import { ShadowLayer } from './shadow-layer';
+import { TRACED_PROGRAMS, TracedLight } from './traced-light';
+import { BeamHaze, HAZE_PROGRAMS } from './beam-haze';
+import { FOG_PROGRAMS, FogFluid, FogPass, MAX_STIRS, type Stir } from './fog';
+import { SHADOW_PROGRAMS, ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
+import { leapFaces, leapHeights } from '../leaps';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
-import { Lights, MAX_CONES } from './lighting';
+import { Lights, MAX_CONES, MAX_LIGHTS } from './lighting';
 import { drawParticle, overSmoke, type Put } from './particles';
 import { fineGrid } from '../strips';
-import { GasGpu, type GasView } from './gas-gpu';
+import { GAS_PROGRAMS, GasGpu, type GasView } from './gas-gpu';
 import { StackAtlas } from './stack-atlas';
-import { StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
+import { STACK_PROGRAMS, StackBatch, type Lie, type StackSky, type StackView } from './stack-batch';
 import { Atmosphere } from '../atmosphere';
-import { LensPass, MAX_RIPPLES, rippleAt, type Lens } from './post';
-import { DuskPass } from './dusk';
+import { LensPass, MAX_RIPPLES, POST_PROGRAMS, rippleAt, type Lens } from './post';
+import { DUSK_PROGRAMS, DuskPass } from './dusk';
 import type { WeatherDraw } from '../weather-fx';
 import { OverdrawMeter, type Channel, type CountSource, type OverdrawStats } from './overdraw';
 
@@ -39,6 +43,12 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
+/**
+ * A thing is taken to stand at least this high when its shadow is looked for (art px): for
+ * callers that give no height.
+ */
+const SHADOW_OVER = 12;
+
 /** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
 const GAS_CAP = 131072;
 
@@ -105,6 +115,14 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   showTraced = false;
   private field: TracedLight | null = null;
   private haze: BeamHaze | null = null;
+  /** Ground fog (`sky.fog`): the sheets it is drawn as, and the air it is pushed about in. */
+  groundFog = true;
+  private fog: FogPass | null = null;
+  private fluid: FogFluid | null = null;
+  private readonly stirs: Stir[] = [];
+  /** Where each car was at the fluid's last step, and the race's clock then. */
+  private readonly stirAt = new Map<number, [number, number]>();
+  private fogT = 0;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -130,6 +148,20 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     });
     if (!gl) throw new Error('WebGL2 is not available');
     this.gl = gl;
+    // every shader the game draws with starts building now, while the menu is up: none is left
+    // to be built in the middle of a race, the first time its effect is seen
+    prelink(
+      gl,
+      ...STACK_PROGRAMS,
+      ...SUN_PROGRAMS,
+      ...TRACED_PROGRAMS,
+      ...GAS_PROGRAMS,
+      ...SHADOW_PROGRAMS,
+      ...HAZE_PROGRAMS,
+      ...FOG_PROGRAMS,
+      ...POST_PROGRAMS,
+      ...DUSK_PROGRAMS,
+    );
     this.atlas = new StackAtlas(gl);
     this.stacks = new StackBatch(gl, this.atlas);
     this.quads = new QuadBatch(gl);
@@ -196,13 +228,28 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
   // StackSink: visibility and forwarding to the batch (the GPU needs no grouping)
   visible(x: number, y: number, rad: number, ht = 0): boolean {
+    // (getting a race ready: everything in the world is "in view")
+    if (this.everything) return true;
     const sx = this.sx(x);
     const sy = this.sy(y);
     // (raised ground lifts things up the screen: allow for the highest it stands)
     ht += this.relief?.top ?? 0;
     const m = rad * this.scale;
-    return sx > -m && sx < this.vw + m && sy > -m && sy < this.vh + m + ht * this.scale * this.cosP;
+    // (and what stands off the screen on the sun's side still throws its shadow onto it: a
+    // thing is in view for as long as its shadow is, or the shadow goes out while it is watched)
+    const tall = ht + SHADOW_OVER;
+    const ex = this.throwX * tall * this.scale;
+    const ey = this.throwY * tall * this.scale * this.ys;
+    return (
+      sx > -m - Math.max(0, ex) &&
+      sx < this.vw + m + Math.max(0, -ex) &&
+      sy > -m - Math.max(0, ey) &&
+      sy < this.vh + m + ht * this.scale * this.cosP + Math.max(0, -ey)
+    );
   }
+  /** How far the sun throws a shadow this frame, ground px per px of height (0 when it casts none). */
+  private throwX = 0;
+  private throwY = 0;
   group(): void {}
   slice(
     s: Strip,
@@ -239,10 +286,24 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     return this.relief ? this.relief.at(x, y) : 0;
   }
 
+  /** Where this frame's lamp pools are (x, y each), to keep a row of lamps from taking every light. */
+  private readonly lit: number[] = [];
+
+  /** Each car's speed at the last frame and how far on its brake lamps are (0 to 1), and when. */
+  private readonly tailV: number[] = [];
+  private readonly tailOn: number[] = [];
+  private tailT = 0;
+
   private gatherLights(w: World, fx: Effects): void {
     const L = this.lights;
     L.clear();
     const t = w.time;
+    // the darker it is the further a light carries, a little
+    const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
+    L.spread = this.sky.flat ? 1 : 1 + 0.25 * night;
+    // and in daylight a fire, a flash or a lamp is no match for the sun: none of them lights the
+    // ground or anything else. They come up as the light goes, from dusk on
+    L.gain = this.sky.flat ? 1 : Math.max(0, Math.min(1, (this.sky.now.dark - 0.25) / 0.35));
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
@@ -250,7 +311,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.add(b.x, b.y, b.r * 7, (1.8 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
     }
     for (const c of w.cars)
-      if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
+      // (not from a car up on a deck: these lights lie on the ground, which there is the road
+      // under the bridge)
+      if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);
@@ -266,21 +329,28 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const m of w.mines)
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
-      if (p.on && this.visible(p.x, p.y, 30)) L.add(p.x, p.y, 20, 0.45, 0x60f0ff);
-    this.glances(w, fx);
+      if (p.on && this.visible(p.x, p.y, 30))
+        L.add(p.x, p.y, p.gives ? 26 : 20, p.gives ? 0.6 : 0.45, p.gives ? 0xffd040 : 0x60f0ff);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
-      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
+      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 150)) return;
       // (a beam from whichever head lamps are lit this instant: both, one to its side, or none)
       const out = lampsOut(c, w.time) & 3;
       if (out === 3) return;
       // a car in the air: its beams leave its lamps where they are drawn, up off the ground, so
       // they never come loose from the car, and they tip and swing with it as on the ground
       const air = Math.max(0, c.z - c.deck);
-      const a = (c.def.body.halfLength - 1) * c.size;
-      const up = Math.round((air * this.cosP) / this.ys);
-      const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * c.def.body.halfWidth * 0.55 * c.size;
+      // from the lamps themselves: where this car's look has them, ahead of its middle, out to
+      // each side and up off the ground (a car with none drawn throws its beam from its nose)
+      const spot = this.art.headLamp(c.def.id);
+      const a = (spot ? spot.x - 0.5 : c.def.body.halfLength - 1) * c.size;
+      const wide = (spot ? spot.y : c.def.body.halfWidth * 0.6) * c.size;
+      const high = spot ? (BODY_UP + spot.z) * c.size : 0;
+      // a lamp up off the ground is drawn that far up the picture, and so is the start of its
+      // beam: the light is seen to leave the lamp, not the ground under the bumper
+      const up = Math.round(((air + high) * this.cosP) / this.ys);
+      const side = out === 0 ? 0 : (out === 1 ? 1 : -1) * wide;
       L.cone(
         c.x + Math.cos(c.h) * a - Math.sin(c.h) * side,
         c.y + Math.sin(c.h) * a + Math.cos(c.h) * side - up,
@@ -294,75 +364,138 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         air > 1 ? Math.max(-0.6, Math.min(0.12, c.pitch * 1.5)) : c.pitch * 1.5,
         // (two lamps, a beam from each, unless one of them is out)
         // (with how far up the picture the beam starts: its shadows fall from the car's foot)
-        (out === 0 ? Math.min(31, c.def.body.halfWidth * 0.6 * c.size) : 0) + up * 32,
+        (out === 0 ? Math.min(31, wide) : 0) + up * 32,
       );
     };
     lamp(w.player);
     // (a phone that is struggling gets your own beam and two more)
     const most = fx.quality > 0.6 ? MAX_CONES : 3;
     for (const c of w.cars) if (c !== w.player && L.coneCount < most) lamp(c);
-    // and scenery with a lamp in it lights the ground round its foot
     const k = (this.sky.now.dark - 0.42) / 0.58;
+    // and every running car's two tail lamps each lay a small red glow on the ground right at
+    // its own corner of the bumper, as a car's do: dim while it runs, bright while it brakes
+    // (it is slowing hard, backing up or on the handbrake). None from a car in the air or on a deck.
+    const dt = Math.max(0, t - this.tailT);
+    this.tailT = t;
+    for (const c of w.cars) {
+      // what it has slowed by since the last frame, eased so the lamps do not flicker
+      const was = this.tailV[c.index] ?? c.vf;
+      this.tailV[c.index] = c.vf;
+      const slowing = dt > 0 && dt < 0.2 && c.vf > 5 && (was - c.vf) / dt > 45;
+      const on = slowing || c.handbrake || c.vf < -1 ? 1 : 0;
+      const lit = (this.tailOn[c.index] ?? 0) + (on - (this.tailOn[c.index] ?? 0)) * 0.35;
+      this.tailOn[c.index] = lit;
+      if (c.wrecked || !this.visible(c.x, c.y, 60)) continue;
+      // (your own only, on a phone that is struggling)
+      if (c !== w.player && fx.quality <= 0.6) continue;
+      if (c.z - c.deck > 1 || c.deck >= 1) continue;
+      const cs = Math.cos(c.h);
+      const sn = Math.sin(c.h);
+      const back = (c.def.body.halfLength + 1.5) * c.size;
+      const side = c.def.body.halfWidth * 0.6 * c.size;
+      for (const sgn of [-1, 1])
+        L.add(
+          c.x - cs * back - sn * side * sgn,
+          c.y - sn * back + cs * side * sgn,
+          (3.2 + 1.3 * lit) * c.size,
+          (0.4 + 0.9 * lit) * k,
+          0xff2030,
+        );
+    }
+    // and scenery with a lamp in it lights the ground round its foot. A row of lit things (a run
+    // of barriers) is a few pools, not one each: lights are few, and the cars' come first
+    const lit = this.lit;
+    lit.length = 0;
     for (const s of w.statics) {
+      // (and only into light slots still free: a lamp post never puts a car's lamps out)
+      if (lit.length >= 10 || L.count >= MAX_LIGHTS) break;
       if (s.down || !this.visible(s.x, s.y, 50)) continue;
       if (!this.art.prop(s.def.id).glow) continue;
-      L.add(s.x, s.y, 44, 0.75 * k, 0xffd890);
+      let near = false;
+      for (let n = 0; n < lit.length; n += 2)
+        if (Math.abs(lit[n]! - s.x) + Math.abs(lit[n + 1]! - s.y) < 70) near = true;
+      if (near) continue;
+      lit.push(s.x, s.y);
+      L.add(s.x, s.y, 44, 0.6 * k, 0xffd890);
     }
+  }
+
+  /** Getting a race ready (`prepare`): everything counts as in view, and every pass is drawn. */
+  private everything = false;
+  private warming = false;
+
+  /**
+   * A venue's ground is known: start building the shader it is painted with, while the rest of
+   * the race is still being made.
+   */
+  early(w: World, ground: Ground): void {
+    prelink(this.gl, groundSources(ground, this.raised && !!w.relief));
+    // and its heights and textures go to the GPU now, while the art is built on other threads
+    this.lay(w, ground);
   }
 
   /**
-   * Sunlight thrown off bodywork: a car with a side turned to the sun lays a patch of the sun's
-   * own light on the ground beside it, that flares and dies as the car turns and shimmers as
-   * it goes. Weak lights, so they are the first to make way for a blast's.
+   * Everything a race's first frames would otherwise stop to do, done behind the loader: the
+   * raised ground's map, the ground's textures, the shadow map, every pass the frame may go
+   * through, and every strip in the world packed into the atlas. `say` tells the loader what is
+   * being done and comes back once that has been shown. Then one frame is drawn, with every pass
+   * in it, so the first frame the player sees is like any other.
    */
-  private glances(w: World, fx: Effects): void {
-    const A = this.sky;
-    if (!this.sunCast || this.shade < 0.2 || fx.quality <= 0.5) return;
-    const rx = A.reach[0]!;
-    const ry = A.reach[1]!;
-    const len = Math.hypot(rx, ry);
-    if (len < 0.01) return;
-    const sx = -rx / len;
-    const sy = -ry / len;
-    const rgb =
-      (Math.min(255, Math.round(A.sun[0]! * 400)) << 16) |
-      (Math.min(255, Math.round(A.sun[1]! * 400)) << 8) |
-      Math.min(255, Math.round(A.sun[2]! * 400));
-    for (const c of w.cars) {
-      if (c.wrecked || !this.visible(c.x, c.y, 40)) continue;
-      // how square a side of it is to the sun
-      const side = Math.abs(-Math.sin(c.h) * sx + Math.cos(c.h) * sy);
-      const flare = side * side * side;
-      if (flare < 0.15) continue;
-      const out = (c.def.body.halfWidth + 5) * c.size;
-      const shimmer = 0.85 + 0.15 * Math.sin(w.time * 19 + c.index * 2.4 + (c.x + c.y) * 0.21);
-      this.lights.add(
-        c.x + sx * out,
-        c.y + sy * out,
-        15 * c.size,
-        0.4 * flare * shimmer * this.shade,
-        rgb,
-      );
+  async prepare(
+    w: World,
+    fx: Effects,
+    ground: Ground,
+    cam: Camera,
+    W: number,
+    H: number,
+    say: (text: string) => Promise<void>,
+  ): Promise<void> {
+    const gl = this.gl;
+    await say('Raising the ground');
+    this.adopt(w, fx, ground);
+    await say('Lighting the scenery');
+    this.sun ??= new SunShadow(gl);
+    this.block ??= new LightBlock(gl);
+    this.field ??= new TracedLight(gl);
+    this.haze ??= new BeamHaze(gl);
+    this.fog ??= new FogPass(gl);
+    this.lens ??= new LensPass(gl);
+    this.dusk ??= new DuskPass(gl);
+    this.warming = true;
+    try {
+      this.draw(w, fx, ground, cam, W, H);
+    } finally {
+      this.warming = false;
     }
+    // and wait until the GPU has really drawn it (a read-back of one pixel is the one call that
+    // does): whatever it had to do for the first time is done behind the loader too
+    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
   }
 
-  draw(w: World, fx: Effects, ground: Ground, cam: Camera, W: number, H: number): void {
+  /** A race's ground and its heights onto the GPU (once: nothing to do for the ground there is). */
+  private lay(w: World, ground: Ground): void {
+    if (ground === this.ground) return;
     const gl = this.gl;
-    const S = this.scale;
-    if (ground !== this.ground) {
-      this.groundLayer?.dispose();
-      this.relief?.dispose();
-      this.relief = new ReliefLayer(
-        gl,
-        this.raised ? w.relief : null,
-        w.w,
-        w.h,
-        this.cosP / this.ys,
-      );
-      this.stacks.relief = this.relief;
-      this.groundLayer = new GroundLayer(gl, ground, this.relief);
-      this.ground = ground;
-    }
+    this.groundLayer?.dispose();
+    this.relief?.dispose();
+    this.relief = new ReliefLayer(
+      gl,
+      this.raised ? w.relief : null,
+      w.w,
+      w.h,
+      this.cosP / this.ys,
+      leapFaces(w),
+      leapHeights(w),
+    );
+    this.stacks.relief = this.relief;
+    this.groundLayer = new GroundLayer(gl, ground, this.relief);
+    this.ground = ground;
+  }
+
+  /** Take a race in: its ground and heights on the GPU, its shadows mapped, last race's art dropped. */
+  private adopt(w: World, fx: Effects, ground: Ground): void {
+    const gl = this.gl;
+    this.lay(w, ground);
     // a new race: nothing of the last one's damaged art will be drawn again
     if (fx !== this.fx) {
       this.atlas.reset();
@@ -378,6 +511,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       this.gas?.clear();
       fx.cells.gpu = this.gas;
+      // still air over the new map
+      this.fluid?.reset(w.w, w.h);
+      this.stirAt.clear();
+      this.fogT = w.time;
       // and its tall scenery throws its shadows anew, from its own shape
       this.shadowLayer?.dispose();
       const art = this.art;
@@ -390,6 +527,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       this.shadows.build(w.statics);
       this.shadowLayer = new ShadowLayer(gl, this.shadows, this.relief);
     }
+  }
+
+  draw(w: World, fx: Effects, ground: Ground, cam: Camera, W: number, H: number): void {
+    const gl = this.gl;
+    const S = this.scale;
+    this.adopt(w, fx, ground);
     // the sky follows its targets, and strips waiting for their lighting get a little time
     const clock = performance.now();
     const dt = this.fixedDt ?? (this.lastT ? Math.min(0.1, (clock - this.lastT) / 1000) : 0);
@@ -397,6 +540,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const A = this.sky;
     A.ask.dark = fx.weather.dark;
     A.ask.wet = fx.weather.wet;
+    A.ask.fog = fx.weather.fog;
     A.update(dt);
     this.atlas.work(2.5, () => performance.now());
     const sky = this.stackSky;
@@ -437,6 +581,20 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
 
     // every slice of the frame is queued first: the sun's map is drawn from them before anything
     // that reads it
+    if (this.warming) {
+      // every strip in the world takes its place in the atlas now, not as it comes into view
+      this.everything = true;
+      this.atlas.gather();
+      this.stacks.begin(view);
+      queueStacks(this, this.art, w, fx);
+      this.atlas.pack();
+      this.everything = false;
+    }
+    {
+      const casts = this.sunCast && sky.lit && A.shade > 0.03 && fx.quality > 0.3;
+      this.throwX = casts ? A.reach[0]! : 0;
+      this.throwY = casts ? A.reach[1]! : 0;
+    }
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
     for (const v of fx.voxels) this.stacks.voxel(v.rgb, v.x, v.y, v.z, v.rot, v.s);
@@ -446,7 +604,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // the bright look casts lighter shadows
     this.shade =
       A.shade * (sky.grow ? Math.min(1, w.time / 2.6) : 1) * (groundMode.bright ? 0.6 : 1);
-    const cast = this.sunCast && sky.lit && this.shade > 0.03 && fx.quality > 0.3;
+    const warm = this.warming;
+    const cast = this.sunCast && sky.lit && (warm || (this.shade > 0.03 && fx.quality > 0.3));
     if (cast) {
       const sun = (this.sun ??= new SunShadow(gl));
       sun.density = fx.quality > 0.6 ? 2 : 1;
@@ -476,7 +635,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
     const lit = this.lights.count + this.lights.coneCount > 0;
     // (by day it is wanted for the light things throw back on the ground beside them)
-    const blocked = this.lightCast && sky.lit && (lit || cast) && fx.quality > 0.5;
+    const blocked = this.lightCast && sky.lit && (lit || cast) && (warm || fx.quality > 0.5);
     const rl = Math.hypot(A.reach[0]!, A.reach[1]!) || 1;
     const bounce: [number, number, number] = [
       A.reach[0]! / rl,
@@ -492,7 +651,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       block.end(null, W, H);
       sky.block = block;
       // (the rays are walked while nothing else is bound: the frame's own target comes after)
-      if (this.traced && fx.quality > 0.6) {
+      if (this.traced && (warm || fx.quality > 0.6)) {
         const field = (this.field ??= new TracedLight(gl));
         const k = cast ? this.shade : 0;
         field.trace(
@@ -513,9 +672,16 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       sky.traced = undefined;
     }
 
+    // ground fog: the air it lies in moves on, stirred by what drives and bursts in it
+    const foggy = this.groundFog && sky.lit ? (warm ? Math.max(A.now.fog, 0.5) : A.now.fog) : 0;
+    const drift: [number, number] = [7 + w.wind[0] * 0.5, 2.5 + w.wind[1] * 0.5];
+    if (foggy > 0.01) this.stir(w, fx, drift, W, H);
+    else this.fogT = w.time;
+
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
-    if (lenses.length) (this.lens ??= new LensPass(gl)).begin(W, H);
+    const bent = lenses.length > 0 || warm;
+    if (bent) (this.lens ??= new LensPass(gl)).begin(W, H);
 
     gl.viewport(0, 0, W, H);
     const bg = hex(w.venue.colors.outside);
@@ -572,6 +738,23 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
     this.stacks.flush(this.lights, sky);
     gl.disable(gl.DEPTH_TEST);
+    // the fog lies over the ground and the feet of everything on it; fire and smoke are over it
+    if (foggy > 0.01)
+      (this.fog ??= new FogPass(gl)).draw(
+        view,
+        this.lights,
+        this.relief!,
+        [w.w, w.h],
+        this.fluid!.pushed,
+        {
+          amount: foggy,
+          time: w.time,
+          wind: drift,
+          light: A.ground,
+          dark: A.now.dark,
+          sheets: fx.quality > 0.6 ? 3 : fx.quality > 0.35 ? 2 : 1,
+        },
+      );
 
     // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
     // Smoke first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
@@ -608,7 +791,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.gas?.draw(gas, this.lights, 2, undefined, this.relief!);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.BLEND);
-    if (lenses.length) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
+    if (bent) this.lens!.end(lenses, [this.ox, this.oy], S / this.fxGrid, this.ys);
 
     this.frameW = w;
     if (this.metering && (this.heat || this.wantRead)) {
@@ -623,13 +806,88 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   }
 
   /**
+   * Move the fog's air on to the race's clock (see FogFluid). Cars on the ground shove it aside
+   * and drag it after them, the faster the more; a rocket cuts a thin line; a blast blows a hole.
+   */
+  private stir(w: World, fx: Effects, wind: readonly [number, number], W: number, H: number): void {
+    const gl = this.gl;
+    if (!this.fluid) {
+      this.fluid = new FogFluid(gl);
+      this.fluid.reset(w.w, w.h);
+      this.fogT = w.time;
+    }
+    const S = this.stirs;
+    let n = 0;
+    const put = (
+      ax: number,
+      ay: number,
+      bx: number,
+      by: number,
+      vx: number,
+      vy: number,
+      r: number,
+      push: number,
+      clear: number,
+    ) => {
+      if (n >= MAX_STIRS) return;
+      const s = (S[n] ??= { ax: 0, ay: 0, bx: 0, by: 0, vx: 0, vy: 0, r: 0, push: 0, clear: 0 });
+      n++;
+      s.ax = ax;
+      s.ay = ay;
+      s.bx = bx;
+      s.by = by;
+      s.vx = vx;
+      s.vy = vy;
+      s.r = r;
+      s.push = push;
+      s.clear = clear;
+    };
+    for (const b of fx.blasts) if (b.age < 8) put(b.x, b.y, b.x, b.y, 0, 0, b.r * 3.4, 170, 1);
+    for (const c of w.cars) {
+      const speed = Math.hypot(c.vx, c.vy);
+      const was = this.stirAt.get(c.index);
+      // (not from the air, and a car put back on the road did not drive there)
+      if (c.z > 6 || speed < 10) continue;
+      const far = was ? Math.hypot(was[0] - c.x, was[1] - c.y) : 99;
+      const from = was && far < 70 ? was : [c.x, c.y];
+      put(
+        from[0]!,
+        from[1]!,
+        c.x,
+        c.y,
+        c.vx,
+        c.vy,
+        8 * c.size,
+        speed * 0.32,
+        Math.min(0.92, speed / 95),
+      );
+    }
+    for (const r of w.rockets) {
+      const vx = Math.cos(r.h) * r.v;
+      const vy = Math.sin(r.h) * r.v;
+      put(r.x - vx / 30, r.y - vy / 30, r.x, r.y, vx, vy, 4, 30, 0.6);
+    }
+    S.length = n;
+    const dt = Math.min(0.1, Math.max(0, w.time - this.fogT));
+    this.fogT = w.time;
+    if (this.fluid.advance(dt, S, wind, null, W, H, this.warming) > 0)
+      for (const c of w.cars) {
+        const at = this.stirAt.get(c.index);
+        if (at) {
+          at[0] = c.x;
+          at[1] = c.y;
+        } else this.stirAt.set(c.index, [c.x, c.y]);
+      }
+  }
+
+  /**
    * A modifier's own colour (dust in a gale, the heat of a dry spell): multiply the world drawn so
    * far by the weather's tint, less where a fire or a flash lights the ground, and blink the lot
    * for a bolt. Night and rain are the sky's work; fire and glow are drawn after this.
    */
   private darken(fx: Effects, W: number, H: number): void {
     const A = fx.weather;
-    if (!A.dim && A.flash <= 0) return;
+    if (!A.dim && A.flash <= 0 && !this.warming) return;
     const D = (this.dusk ??= new DuskPass(this.gl));
     D.clear();
     D.take(this.lights);

@@ -24,6 +24,8 @@ export class Input {
     fire: false,
   };
   private pausePressed = false;
+  /** The controls as last read: what is held now, for whoever teaches or shows them. */
+  last: Controls = { steer: 0, throttle: 0, brake: false, boost: false, fire: false };
 
   constructor(
     private readonly onGesture: () => void,
@@ -155,6 +157,7 @@ export class Input {
       out = { ...pad, fire: out.fire };
     if (this.pads?.takeFire()) out.fire = true;
     r.fire = false;
+    this.last = out;
     return out;
   }
 

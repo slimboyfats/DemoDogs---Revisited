@@ -64,9 +64,22 @@
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
     <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
+    <!-- the driving lesson: what to do now, said big, and a way out of it -->
+    <div id="tutor" class="hidden">
+      <div id="tutCard">
+        <div id="tutDots"></div>
+        <b id="tutTitle"></b>
+        <small id="tutSub"></small>
+        <i id="tutMeter"><b></b></i>
+      </div>
+      <button id="tutSkip">SKIP LESSON &#9654;&#9654;</button>
+      <div id="tutHand" aria-hidden="true"><i></i></div>
+      <div id="tutCheer" aria-hidden="true"></div>
+    </div>
     <button id="backToEdit">&#9998; EDIT</button>
     <div id="recDot"></div>
     <div id="netDot"></div>
+    <div id="netBanner" role="status"></div>
     <div id="devTap" class="hidden"></div>
     <div id="devPanel" class="hidden"></div>
     <!-- the track creator: its bar of tools, and the layer that takes taps on the map -->
@@ -126,6 +139,9 @@
               <b>WORLD</b><small>Tap to switch on for quick races: weather, night and worse.</small>
             </div>
             <div id="venues"></div>
+            <button id="toLesson" class="lesson">
+              <b>DRIVING LESSON</b><small>One minute: steer, boost, grab a crate, fire.</small>
+            </button>
             <details class="help">
               <summary>HOW TO PLAY</summary>
               <p>
@@ -138,6 +154,41 @@
             </details>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- somebody new: the lesson is offered once, and can be turned down -->
+    <section id="tutAsk" class="screen hidden">
+      <div class="panel narrow">
+        <h2>NEW HERE?</h2>
+        <p class="tag">Learn to drive, boost and shoot. It takes about a minute.</p>
+        <button id="tutYes" class="go">START THE LESSON</button>
+        <button id="tutNo" class="quiet">SKIP, I'LL WORK IT OUT</button>
+      </div>
+    </section>
+
+    <!-- the lesson's last card: the two kinds of event, and straight into one -->
+    <section id="tutEnd" class="screen hidden">
+      <div class="panel narrow">
+        <h2>YOU'RE READY!</h2>
+        <p class="tag">There are two kinds of event. Pick one for your first go.</p>
+        <div class="tutModes">
+          <button id="tutRace" class="venue race">
+            <em>RACE</em><b>FIRST OVER THE LINE</b
+            ><small
+              >Laps of a track against five rivals. Wrecked? You are towed back to the road.</small
+            >
+          </button>
+          <button id="tutDerby" class="venue derby">
+            <em>DERBY</em><b>LAST CAR RUNNING</b
+            ><small>A walled bowl. Ram and shoot until yours is the only car still moving.</small>
+          </button>
+        </div>
+        <p class="note">
+          Smash the little scrap bots for points and boost. The lesson is on the menu if you want it
+          again.
+        </p>
+        <button id="tutMenu" class="quiet">TO THE MENU</button>
       </div>
     </section>
 
@@ -248,6 +299,7 @@
           <div data-pane="dev" class="hidden">
             <button id="toDev">TEST RANGE</button>
             <button class="recBtn">RECORD PERFORMANCE</button>
+            <button class="hitBtn">HITBOXES</button>
             <p class="note">
               Numbers of the game's rules, for trying things out. Saved on this device. Online races
               always use the game's own.

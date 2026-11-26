@@ -8,6 +8,99 @@
   },
   "body": "static",
   "radius": 7,
+  "hit": {
+    "parts": [
+      {
+        "x": -0.2,
+        "y": 0,
+        "halfLength": 6.3,
+        "halfWidth": 5,
+        "round": 2,
+        "z": [0, 4]
+      },
+      {
+        "x": 0,
+        "y": -2.2,
+        "rot": 0,
+        "halfLength": 6.7,
+        "halfWidth": 2,
+        "round": 2,
+        "z": [4, 5]
+      },
+      {
+        "x": -1.2,
+        "y": 3.8,
+        "radius": 0.5,
+        "z": [4, 5]
+      },
+      {
+        "x": -4.2,
+        "y": 2.8,
+        "radius": 0.5,
+        "z": [4, 5]
+      },
+      {
+        "x": 0,
+        "y": -2.2,
+        "rot": 0,
+        "halfLength": 6.4,
+        "halfWidth": 1.1,
+        "round": 1.1,
+        "z": [5, 6]
+      },
+      {
+        "x": 0,
+        "y": -2.1,
+        "rot": 0.65,
+        "halfLength": 4.6,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [5, 6]
+      },
+      {
+        "x": -0.6,
+        "y": -3,
+        "rot": 2.88,
+        "halfLength": 6.1,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [5, 6]
+      },
+      {
+        "x": 2.9,
+        "y": -2.1,
+        "rot": 0.65,
+        "halfLength": 3.7,
+        "halfWidth": 0.7,
+        "round": 0.7,
+        "z": [5, 6]
+      },
+      {
+        "x": 2.8,
+        "y": -2.2,
+        "rot": 2.75,
+        "halfLength": 3.3,
+        "halfWidth": 1.8,
+        "round": 1.8,
+        "z": [6, 7]
+      },
+      {
+        "x": -3.7,
+        "y": -2.7,
+        "radius": 2,
+        "z": [6, 7]
+      },
+      {
+        "x": -2.9,
+        "y": -3.3,
+        "rot": 0.26,
+        "halfLength": 2.9,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [6, 7]
+      }
+    ]
+  },
   "made": "material.sandstone",
   "integrity": 42,
   "points": 15

@@ -26,7 +26,7 @@ describe('venue.rustwater-wharf', () => {
       venue: 'venue.rustwater-wharf',
       car: 'car.bruiser',
       autopilot: true,
-      seed: 3,
+      seed: 2,
     });
     const seen = new Set<string>();
     runUntil(

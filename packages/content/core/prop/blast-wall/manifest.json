@@ -1,0 +1,20 @@
+{
+  "id": "prop.blast-wall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Cracked wall",
+    "description": "A block of cracked rock with a yellow cross painted on it. Ramming it does nothing; a rocket or any other blast brings it down, and it is built again half a minute later.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 9,
+  "hit": {
+    "halfLength": 9,
+    "halfWidth": 9,
+    "round": 2,
+    "top": 19
+  },
+  "made": "material.cracked-rock",
+  "integrity": 24,
+  "rebuild": 30
+}

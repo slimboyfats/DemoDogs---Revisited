@@ -160,6 +160,12 @@ export const TrackFileSchema = z.object({
     )
     .max(12)
     .default([]),
+  /**
+   * The lie of the land and the weather of the venue it was copied from, if it was copied from
+   * one: kept as they were, since the editor has no tool for them yet.
+   */
+  relief: VenueSchema.shape.relief,
+  weather: VenueSchema.shape.weather,
   /** How many scrap bots wander it. */
   bots: z.number().int().min(0).max(40),
   /** The crates' pickups; none listed means all of them. */

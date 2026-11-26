@@ -1,6 +1,7 @@
 import { DT } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
 import { clamp } from './math';
+import { wobbleAt } from './pads';
 import type { World } from './world';
 
 /**
@@ -147,6 +148,12 @@ export function updateRide(w: World, c: Car): void {
     side = (on(-sn * W, cs * W, W) - on(sn * W, -cs * W, W)) / (2 * W);
     nose = clamp(nose, -STEEPEST, STEEPEST);
     side = clamp(side, -STEEPEST, STEEPEST);
+  }
+  const loose = air || c.deck > 0 ? 0 : wobbleAt(w, c.x, c.y);
+  if (loose > 0) {
+    // loose boards: it rocks from wheel to wheel and nods as they give under it
+    side += Math.sin(c.wheelDist * 0.09 + c.index) * 0.16 * loose;
+    nose += Math.sin(c.wheelDist * 0.13 + 1 + c.index) * 0.07 * loose;
   }
   if (air) {
     // in the air it turns on as it left, the nose coming down, and nothing pulls it straight

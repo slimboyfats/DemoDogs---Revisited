@@ -3,7 +3,7 @@ import { makeWorld, startRace } from '../../../src/testing';
 
 /** The top speed a rival reaches in 12 seconds, with or without its nose. */
 function pace(modifiers: string[], nose: boolean): number {
-  const w = startRace(makeWorld({ rivals: 1, seed: 3, modifiers }));
+  const w = startRace(makeWorld({ rivals: 1, seed: 5, modifiers }));
   const r = w.cars.find((c) => !c.isPlayer)!;
   // its own pace is what is measured: no boost tiles, no bumps, no animals in the road
   w.pads.length = 0;

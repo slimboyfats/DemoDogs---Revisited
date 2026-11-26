@@ -12,6 +12,7 @@ import {
   type RoadStyle,
   type Terrain,
 } from './terrain';
+import { waysOf, type Ways } from './ways';
 
 /**
  * What the ground shader needs to paint a venue's country and road itself, at whatever fineness
@@ -53,6 +54,8 @@ export interface GroundPaint {
     gully: boolean;
   } | null;
   oval: { cx: number; cy: number; rx: number; ry: number } | null;
+  /** The roads laid off the main road (ways.ts), if any. */
+  ways: Ways | null;
 }
 
 export const NEAR_Q = 2;
@@ -118,6 +121,27 @@ export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
   if (T) {
     const half = w.road / 2;
     const B = bends(T);
+    // no kerb where a way forks out of the road or comes back to it: the kerb stops short of the
+    // mouth on both sides, and what is left of its run, if that is only a stump, goes too
+    const Wy = waysOf(w, true);
+    if (Wy && w.grid) {
+      const clear = Math.round(44 / T.step);
+      const few = Math.round(72 / T.step);
+      for (let k = 0; k < Wy.n; k++) {
+        const x = Wy.samples[k * 4]!;
+        const y = Wy.samples[k * 4 + 1]!;
+        if (w.grid.at(x, y) > half + Wy.samples[k * 4 + 3]! + 6) continue;
+        const i = w.grid.nearest(x, y);
+        if (i < 0) continue;
+        for (let d = -clear; d <= clear; d++) B[(i + d + T.n) % T.n] = 0;
+        for (const dir of [-1, 1]) {
+          let len = 0;
+          while (len <= few && B[(i + dir * (clear + 1 + len) + T.n * 4) % T.n] !== 0) len++;
+          if (len <= few)
+            for (let q = 1; q <= len; q++) B[(i + dir * (clear + q) + T.n * 4) % T.n] = 0;
+        }
+      }
+    }
     const raised = V.track?.raised;
     const L = raised?.length ? lanesOf(T, liftsOf(T, raised), w.road, w.tuning) : null;
     const samples = new Float32Array(T.n * 12);
@@ -215,6 +239,7 @@ export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
     fields: { gw, gh, data },
     line,
     oval: w.oval ? { cx: w.oval.cx, cy: w.oval.cy, rx: w.oval.rx, ry: w.oval.ry } : null,
+    ways: waysOf(w, true),
   };
 }
 

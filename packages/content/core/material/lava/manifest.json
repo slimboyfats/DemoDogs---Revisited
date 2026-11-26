@@ -1,0 +1,13 @@
+{
+  "id": "material.lava",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lava",
+    "description": "Molten rock, glowing. It drags at a car like tar and is slippery with it.",
+    "since": "core@0.10.0"
+  },
+  "grip": 0.55,
+  "drag": 2.4,
+  "colour": "#ff6a14",
+  "alpha": 0.95
+}

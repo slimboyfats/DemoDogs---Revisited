@@ -1,9 +1,10 @@
-import { CAR_RADIUS, DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
+import { DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
 import type { Bot, Car, StaticProp } from './entities';
 import { angDiff, clamp } from './math';
 import { batter, breakProp, damage, explode, ignite, light, shed } from './damage';
 import { inSmoke } from './drops';
 import type { World } from './world';
+import { carGap, thingGap } from './shapes';
 import { fireWild, isWild, updateWild, wildWants } from './wild';
 
 /**
@@ -246,8 +247,7 @@ export function prey(
 /** Is static s in the way at (x, y)? */
 function blocks(s: StaticProp, x: number, y: number, pad: number): boolean {
   if (s.down || !s.def.solid) return false;
-  const r = s.def.radius + pad;
-  return Math.abs(s.x - x) < r && Math.abs(s.y - y) < r && Math.hypot(s.x - x, s.y - y) < r;
+  return thingGap(s, x, y) < pad;
 }
 
 /** The solid piece of scenery in the way at (x, y), if any. Only the ground has scenery on it. */
@@ -457,7 +457,7 @@ function updateSticks(w: World): void {
       const turn = (d.homing ?? 6) * DT * (1 + 60 / (dist + 1));
       s.h += clamp(angDiff(Math.atan2(o.y - s.y, o.x - s.x), s.h), -turn, turn);
       s.v = Math.max(s.v, Math.hypot(o.vx, o.vy) + 150);
-      if (dist < CAR_RADIUS + r + 3) {
+      if (carGap(o, s.x, s.y) < r + 3) {
         // caught: the round goes back in the rack
         K.sticks.splice(i, 1);
         if (o.weapon === d) o.ammo++;
@@ -482,7 +482,7 @@ function updateSticks(w: World): void {
         s.cd[c.index]! -= DT;
         continue;
       }
-      if (Math.hypot(c.x - s.x, c.y - s.y) > CAR_RADIUS + r) continue;
+      if (carGap(c, s.x, s.y) > r) continue;
       s.cd[c.index] = 0.5;
       c.vx += cs * 50;
       c.vy += sn * 50;
@@ -493,7 +493,7 @@ function updateSticks(w: World): void {
     for (const b of w.bots)
       if (b.alive && Math.hypot(b.x - s.x, b.y - s.y) < r + 4) squash(w, b, o, cs * 120, sn * 120);
     for (const p of w.props) {
-      if (!p.alive || p.flying || Math.hypot(p.x - s.x, p.y - s.y) > p.def.radius + r) continue;
+      if (!p.alive || p.flying || thingGap(p, s.x, s.y) > r) continue;
       if (p.def.breaksAt !== undefined) breakProp(w, p, o);
       else if (p.def.explodesAt !== undefined) light(p, s.owner, 0.2);
     }
@@ -537,9 +537,7 @@ function updateToys(w: World): void {
     if (!down && t.z < 8)
       down = w.cars.some(
         (c) =>
-          within(c, t.level) &&
-          (c.index !== t.owner || t.age > 0.5) &&
-          Math.hypot(c.x - t.x, c.y - t.y) < CAR_RADIUS + 3,
+          within(c, t.level) && (c.index !== t.owner || t.age > 0.5) && carGap(c, t.x, t.y) < 3,
       );
     const st = !down && t.z < 10 ? wall(w, t.x, t.y, t.level, 2) : null;
     if (st) {
@@ -578,9 +576,7 @@ function updateHooks(w: World): void {
     h.x += h.vx * DT;
     h.y += h.vy * DT;
     h.left -= v * DT;
-    const b = w.cars.find(
-      (c) => c !== a && within(c, h.z) && Math.hypot(c.x - h.x, c.y - h.y) < CAR_RADIUS + 2,
-    );
+    const b = w.cars.find((c) => c !== a && within(c, h.z) && carGap(c, h.x, h.y) < 2);
     if (b) {
       K.hooks.splice(i, 1);
       const old = K.tethers.findIndex((t) => t.a === a.index);
@@ -738,11 +734,7 @@ function updateSentries(w: World): void {
     s.cd -= DT;
     // run down: any car that drives over it flattens it, and it goes off under them
     const over = w.cars.find(
-      (c) =>
-        within(c, 0) &&
-        c.z < 4 &&
-        (c !== o || s.age > 1.2) &&
-        Math.hypot(c.x - s.x, c.y - s.y) < CAR_RADIUS + 3,
+      (c) => within(c, 0) && c.z < 4 && (c !== o || s.age > 1.2) && carGap(c, s.x, s.y) < 3,
     );
     if (over) {
       K.sentries.splice(i, 1);
@@ -819,7 +811,7 @@ function updateFleas(w: World): void {
         const dist = Math.hypot(dx, dy) || 1;
         f.x += (dx / dist) * sp * DT + w.rng.range(-1, 1) * 0.6;
         f.y += (dy / dist) * sp * DT + w.rng.range(-1, 1) * 0.6;
-        if (dist < CAR_RADIUS + 2 && within(t, 0) && t.z - t.deck < 5) {
+        if (carGap(t, f.x, f.y) < 2 && within(t, 0) && t.z - t.deck < 5) {
           f.host = t.index;
           f.lx = w.rng.range(-0.7, 0.7) * t.def.body.halfLength;
           f.ly = w.rng.range(-0.7, 0.7) * t.def.body.halfWidth;
@@ -888,14 +880,13 @@ function updateBeams(w: World): void {
       y = b.y + sn * s;
       const k = w.keepInside(x, y, 1);
       if (k[0] !== x || k[1] !== y) break;
-      for (const o of w.cars)
-        if (o !== c && within(o, c.deck) && Math.hypot(o.x - x, o.y - y) < CAR_RADIUS) on = o;
+      for (const o of w.cars) if (o !== c && within(o, c.deck) && carGap(o, x, y) < 1) on = o;
       st = wall(w, x, y, c.deck, 0);
       if (!burn) continue;
       for (const bt of w.bots)
         if (bt.alive && Math.hypot(bt.x - x, bt.y - y) < 4) squash(w, bt, c, cs * 60, sn * 60);
       for (const p of w.props) {
-        if (!p.alive || p.flying || Math.hypot(p.x - x, p.y - y) > p.def.radius + 1) continue;
+        if (!p.alive || p.flying || thingGap(p, x, y) > 1) continue;
         if (p.def.explodesAt !== undefined) light(p, c.index, 0.15);
         else if (p.def.breaksAt !== undefined) breakProp(w, p, c);
       }
@@ -943,9 +934,7 @@ function updateBolts(w: World): void {
     b.x += Math.cos(b.h) * v * DT;
     b.y += Math.sin(b.h) * v * DT;
     b.left -= v * DT;
-    const hit = w.cars.find(
-      (c) => c !== o && within(c, b.z) && Math.hypot(c.x - b.x, c.y - b.y) < CAR_RADIUS + 2,
-    );
+    const hit = w.cars.find((c) => c !== o && within(c, b.z) && carGap(c, b.x, b.y) < 2);
     if (hit && !o.wrecked) {
       K.bolts.splice(i, 1);
       swap(w, o, hit);

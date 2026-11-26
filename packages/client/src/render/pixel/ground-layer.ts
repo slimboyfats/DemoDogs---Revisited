@@ -1,6 +1,6 @@
 import { fineGrid } from '../strips';
 import type { Ground } from '../ground';
-import { compile, texture, uniforms } from './gl';
+import { compile, texture, uniforms, type Sources } from './gl';
 import { groundFs, GROUND_VS } from './stack-shaders';
 import { PAINT_UNIFORMS, paintGlsl } from './ground-paint-glsl';
 import type { ReliefLayer } from './relief-layer';
@@ -8,6 +8,12 @@ import type { LightBlock } from './light-block';
 import type { TracedLight } from './traced-light';
 import type { Lights } from './lighting';
 import { depthRange, type StackView } from './stack-batch';
+
+/** The sources of the program a ground is painted with (raised: through a picture-to-ground map). */
+export function groundSources(ground: Ground, raised: boolean): Sources {
+  const P = ground.paint;
+  return [GROUND_VS, groundFs(raised, P ? paintGlsl(P) : '')];
+}
 
 /**
  * The ground canvas as a texture, drawn as one quad behind everything. Marks painted onto the
@@ -96,9 +102,27 @@ export class GroundLayer {
           L.wild.data,
         );
       else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, 1, 1, 0, gl.RED, gl.FLOAT, new Float32Array(1));
+      // the ways off the road: which sample each block is nearest, and the samples
+      const Y = P.ways;
+      if (Y) {
+        this.paintTex.push(texture(gl, gl.NEAREST));
+        gl.texImage2D(
+          gl.TEXTURE_2D,
+          0,
+          gl.R16UI,
+          Y.near.gw,
+          Y.near.gh,
+          0,
+          gl.RED_INTEGER,
+          gl.UNSIGNED_SHORT,
+          Y.near.data,
+        );
+        this.paintTex.push(texture(gl, gl.NEAREST));
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, Y.n, 2, 0, gl.RGBA, gl.FLOAT, Y.samples);
+      }
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     }
-    this.prog = compile(gl, GROUND_VS, groundFs(!!relief?.map, P ? paintGlsl(P) : ''));
+    this.prog = compile(gl, ...groundSources(ground, !!relief?.map));
     this.u = uniforms(gl, this.prog, [
       ...PAINT_UNIFORMS,
       'u_view',
@@ -134,21 +158,23 @@ export class GroundLayer {
 
   /** Copy up whatever was painted since the last frame. */
   sync(): void {
-    const d = this.ground.dirty;
-    if (!d) return;
+    const D = this.ground.dirty;
+    if (!D) return;
     this.ground.dirty = null;
     const W = this.ground.cv.width;
     const H = this.ground.cv.height;
-    const x0 = Math.max(0, d[0]);
-    const y0 = Math.max(0, d[1]);
-    const x1 = Math.min(W, d[2]);
-    const y1 = Math.min(H, d[3]);
-    if (x1 <= x0 || y1 <= y0) return;
-    const img = this.ground.g.getImageData(x0, y0, x1 - x0, y1 - y0);
     const gl = this.gl;
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, !!this.ground.paint);
-    gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    for (const d of D) {
+      const x0 = Math.max(0, d[0]);
+      const y0 = Math.max(0, d[1]);
+      const x1 = Math.min(W, d[2]);
+      const y1 = Math.min(H, d[3]);
+      if (x1 <= x0 || y1 <= y0) continue;
+      const img = this.ground.g.getImageData(x0, y0, x1 - x0, y1 - y0);
+      gl.texSubImage2D(gl.TEXTURE_2D, 0, x0, y0, gl.RGBA, gl.UNSIGNED_BYTE, img);
+    }
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
   }
 
@@ -206,8 +232,9 @@ export class GroundLayer {
     }
     const P = this.ground.paint;
     if (P) {
-      const names = ['u_pf', 'u_pn', 'u_ps', 'u_pw'] as const;
-      for (let k = 0; k < 4; k++) {
+      const names = ['u_pf', 'u_pn', 'u_ps', 'u_pw', 'u_wn', 'u_ws'] as const;
+      if (P.ways) gl.uniform1f(u.u_wayN, P.ways.n);
+      for (let k = 0; k < this.paintTex.length; k++) {
         gl.activeTexture(gl.TEXTURE7 + k);
         gl.bindTexture(gl.TEXTURE_2D, this.paintTex[k]!);
         gl.uniform1i(u[names[k]!], 7 + k);
@@ -250,6 +277,5 @@ export class GroundLayer {
     this.gl.deleteTexture(this.tex);
     for (const t of this.paintTex) this.gl.deleteTexture(t);
     this.gl.deleteVertexArray(this.vao);
-    this.gl.deleteProgram(this.prog);
   }
 }

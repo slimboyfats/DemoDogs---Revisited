@@ -1,5 +1,5 @@
 import { ADDON_KINDS, type AddonKind } from '@demodogs/shared';
-import type { Car } from '@demodogs/sim';
+import { standOut, type Car } from '@demodogs/sim';
 import type { Strip } from './stack';
 import { at, pixels, voxels } from './strips';
 
@@ -77,7 +77,6 @@ const CAGE_TOP = 9.3;
 export function mounts(c: Car, kind: AddonKind, body: Strip, n = c.fit[kind]?.n ?? 0): Mount[] {
   const D = c.def;
   const hl = D.body.halfLength;
-  const hw = D.body.halfWidth;
   const S = shapeOf(body);
   const each = (f: (wx: number, wy: number, sg: number) => Mount): Mount[] =>
     D.wheels.flatMap((wh) => [-1, 1].map((sg) => f(wh[0], wh[1], sg)));
@@ -112,15 +111,16 @@ export function mounts(c: Car, kind: AddonKind, body: Strip, n = c.fit[kind]?.n 
       return [{ x: S.roofX, y: 0, z: S.roofZ + 1.2 - CAGE_TOP, rot: 0 }];
     case 'magnet':
       return [{ x: S.roofX - 0.5, y: 0, z: S.roofZ - 0.4, rot: 0 }];
-    case 'plates': {
-      const slots: Mount[] = [];
-      for (const x of [2.8, -3.2])
-        for (const sg of [1, -1])
-          slots.push({ x, y: sg * (hw + 0.5), z: 1.5, rot: sg > 0 ? 0 : Math.PI });
-      return slots.slice(0, Math.max(0, n));
-    }
+    case 'plates':
+      // (where the rules have them: what a shot meets is what is drawn)
+      return standOut(c, 'plates', n).map(([x, y]) => ({
+        x,
+        y,
+        z: 1.5,
+        rot: y > 0 ? 0 : Math.PI,
+      }));
     case 'jaws':
-      return [{ x: hl + (c.blade ? 3.6 : 1.7), y: 0, z: 0.5, rot: 0 }];
+      return standOut(c, 'jaws').map(([x, y]) => ({ x, y, z: 0.5, rot: 0 }));
   }
 }
 

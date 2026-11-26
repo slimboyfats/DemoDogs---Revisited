@@ -1176,3 +1176,325 @@ body.driven #stickZone .hint {
 .slide > .padAt {
   outline: none;
 }
+
+/* ---- the driving lesson: a card that says what to do now, the one button it is about lit up,
+   a cheer when it is done. Loud on purpose: somebody new must not have to look for it */
+#tutor {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--ink);
+}
+#tutCard {
+  position: absolute;
+  left: 50%;
+  top: calc(10px + env(safe-area-inset-top));
+  transform: translateX(-50%);
+  width: min(430px, calc(100% - 300px));
+  min-width: min(300px, calc(100% - 24px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 14px 10px;
+  text-align: center;
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: var(--round);
+  box-shadow: 0 5px 0 var(--ink);
+  animation: tutDrop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+#tutor.cheering #tutCard {
+  background: var(--sun);
+}
+#tutDots {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  height: 14px;
+}
+#tutDots i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--ink);
+  background: var(--paper2);
+}
+#tutDots i.done {
+  background: var(--grass);
+}
+#tutDots i.on {
+  width: 14px;
+  height: 14px;
+  background: var(--sun);
+  animation: tutBeat 0.6s ease-in-out infinite alternate;
+}
+#tutTitle {
+  font-size: clamp(20px, 5.4vmin, 28px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+#tutSub {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+#tutMeter {
+  width: min(220px, 80%);
+  height: 12px;
+  margin-top: 3px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: #fff;
+  overflow: hidden;
+}
+#tutMeter b {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--orange), var(--sun));
+  transition: width 0.12s linear;
+}
+#tutMeter.tank b {
+  background: linear-gradient(90deg, #2f8fe6, var(--sky));
+}
+#tutSkip {
+  position: absolute;
+  right: calc(12px + env(safe-area-inset-right));
+  top: calc(12px + env(safe-area-inset-top));
+  min-height: 40px;
+  padding: 0 12px;
+  pointer-events: auto;
+  color: var(--ink);
+  background: var(--paper);
+  border: var(--line) solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 3px 0 var(--ink);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+#tutSkip:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--ink);
+}
+/* a ghost of the stick with a thumb pushing it about, where a thumb would land */
+#tutHand {
+  position: absolute;
+  left: 24%;
+  bottom: 30%;
+  width: 124px;
+  height: 124px;
+  margin: 0 0 -62px -62px;
+  border: 4px dashed #fff;
+  border-radius: 50%;
+  background: rgba(27, 34, 51, 0.28);
+  box-shadow: 0 0 0 3px var(--ink);
+  animation: tutBeat 0.6s ease-in-out infinite alternate;
+}
+#tutHand i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 54px;
+  height: 54px;
+  margin: -27px 0 0 -27px;
+  border-radius: 50%;
+  background: var(--sun);
+  border: var(--line) solid var(--ink);
+  box-shadow: 0 4px 0 var(--ink);
+  animation: tutThumb 2.2s ease-in-out infinite;
+}
+#tutCheer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 42%;
+  text-align: center;
+  font-size: clamp(40px, 13vmin, 76px);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+  color: var(--sun);
+  -webkit-text-stroke: 9px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: 0 6px 0 var(--ink);
+  opacity: 0;
+}
+#tutCheer.go {
+  opacity: 1;
+  transform: rotate(-3deg);
+  animation: tutCheer 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+/* the button the step is about: a ring round it and an arrow down on it; the ones whose turn has
+   not come stay away, so there is one thing to press */
+body.tutor .pad:not(.teach):not(.taught) {
+  visibility: hidden;
+}
+body.tutor .pad.teach {
+  opacity: 1;
+  animation: tutPad 0.55s ease-in-out infinite alternate;
+}
+body.tutor .pad.teach::after {
+  content: '\25BC';
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  margin-left: -18px;
+  width: 36px;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--sun);
+  -webkit-text-stroke: 6px var(--ink);
+  paint-order: stroke fill;
+  text-shadow: none;
+  animation: tutArrow 0.55s ease-in-out infinite alternate;
+}
+body.tutor #keyHints .teach {
+  border-radius: 10px;
+  outline: 3px solid var(--sun);
+  outline-offset: 4px;
+  animation: tutBeat 0.55s ease-in-out infinite alternate;
+}
+/* the lesson has no places, laps or rivals to show: the stick's own small hint goes too */
+body.tutor #stickZone .hint {
+  display: none;
+}
+@keyframes tutDrop {
+  from {
+    transform: translate(-50%, -120%);
+  }
+}
+@keyframes tutBeat {
+  to {
+    transform: scale(1.12);
+  }
+}
+@keyframes tutThumb {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  25%,
+  45% {
+    transform: translate(30px, -22px);
+  }
+  70%,
+  88% {
+    transform: translate(-6px, -36px);
+  }
+}
+@keyframes tutCheer {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-10deg);
+  }
+}
+@keyframes tutPad {
+  from {
+    box-shadow:
+      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 0 0 4px var(--sun),
+      0 0 0 7px var(--ink);
+  }
+  to {
+    transform: scale(1.08);
+    box-shadow:
+      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 0 0 9px var(--sun),
+      0 0 0 12px var(--ink);
+  }
+}
+@keyframes tutArrow {
+  to {
+    transform: translateY(9px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #tutCard,
+  #tutDots i.on,
+  #tutHand,
+  body.tutor .pad.teach,
+  body.tutor .pad.teach::after {
+    animation: none;
+  }
+}
+/* upright, or too narrow for the card to sit between PAUSE and SKIP: it goes under them */
+@media (orientation: portrait), (max-width: 620px) {
+  #tutCard {
+    top: calc(60px + env(safe-area-inset-top));
+    width: calc(100% - 24px);
+    max-width: 430px;
+  }
+  #tutHand {
+    left: 33%;
+    bottom: 24%;
+  }
+}
+
+/* (the lesson's last card is up: nothing left to press behind it) */
+body.lessonEnd[data-screen='game'] #controls,
+body.lessonEnd[data-screen='game'] #pauseBtn {
+  display: none;
+}
+/* the offer, and the lesson's last card: the two kinds of event as two cards to pick from */
+#tutEnd {
+  background: rgba(27, 34, 51, 0.42);
+}
+#tutAsk .panel.narrow,
+#tutEnd .panel.narrow {
+  width: min(520px, 100%);
+  margin: auto;
+  max-height: 100%;
+  overflow: auto;
+}
+#tutAsk h2,
+#tutEnd h2 {
+  margin: 0;
+  text-align: center;
+}
+#tutAsk .tag,
+#tutEnd .tag {
+  margin: 0;
+  text-align: center;
+}
+#tutEnd .note {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+}
+.tutModes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.tutModes button.venue {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 9px;
+  overflow: hidden;
+  background: var(--paper);
+  text-align: left;
+}
+.tutModes button.venue b {
+  display: block;
+  padding: 7px 10px 0;
+  font-size: 15px;
+  line-height: 1.15;
+}
+.tutModes button.venue small {
+  padding: 3px 10px 0;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.events button.lesson {
+  background: var(--paper);
+}
+@media (max-height: 420px) {
+  .tutModes .thumb {
+    aspect-ratio: 150 / 56;
+    object-fit: cover;
+  }
+}

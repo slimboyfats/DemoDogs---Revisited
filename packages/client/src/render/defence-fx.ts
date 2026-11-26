@@ -189,6 +189,7 @@ export class DefenceFx {
       const beads = weldSome(pixels(body), pixels(fresh), wd.plan, wd.done, to, L, 3);
       wd.done = to;
       body.stale = true;
+      body.aux = undefined;
       this.h.changed.add(body);
       const cs = Math.cos(c.h) * c.size;
       const sn = Math.sin(c.h) * c.size;
