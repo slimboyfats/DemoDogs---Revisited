@@ -1,0 +1,30 @@
+{
+  "id": "car.greyhound",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Greyhound",
+    "description": "Hot rod. Nothing is faster in a straight line. Corners are another matter.",
+    "since": "core@0.4.0"
+  },
+  "paint": "#7a3fd0",
+  "price": 24000,
+  "stats": {
+    "speed": 1.22,
+    "accel": 1.0,
+    "grip": 0.78,
+    "mass": 0.88,
+    "armor": 0.8
+  },
+  "body": {
+    "halfLength": 12.5,
+    "halfWidth": 5.8
+  },
+  "wheels": [
+    [8.6, 4.6],
+    [-7.4, 4.55]
+  ],
+  "top": {
+    "x": -11.0,
+    "z": 4.6
+  }
+}

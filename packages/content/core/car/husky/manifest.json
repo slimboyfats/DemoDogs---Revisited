@@ -1,0 +1,30 @@
+{
+  "id": "car.husky",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Husky",
+    "description": "Rally estate. Quick, tough and hard to knock off line.",
+    "since": "core@0.4.0"
+  },
+  "paint": "#4aa3e0",
+  "price": 19000,
+  "stats": {
+    "speed": 1.07,
+    "accel": 1.14,
+    "grip": 1.12,
+    "mass": 1.12,
+    "armor": 1.12
+  },
+  "body": {
+    "halfLength": 11.3,
+    "halfWidth": 5.9
+  },
+  "wheels": [
+    [7.0, 4.65],
+    [-7.1, 4.65]
+  ],
+  "top": {
+    "x": -2.7,
+    "z": 8.0
+  }
+}
