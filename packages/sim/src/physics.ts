@@ -186,6 +186,7 @@ export function makeCar(
     collar: null,
     fit: {},
     draft: false,
+    tricks: {},
   };
   if (c.ai && ai) character(w, c, ai, setup.skill);
   for (const id of setup.fit ?? []) {

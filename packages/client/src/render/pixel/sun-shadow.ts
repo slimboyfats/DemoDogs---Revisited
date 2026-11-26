@@ -1,4 +1,4 @@
-import { compile, texture, uniforms } from './gl';
+import { compile, type Sources, texture, uniforms } from './gl';
 import { GROUND_VS, SMOOTH_LIGHT } from './stack-shaders';
 import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
@@ -195,7 +195,6 @@ export class SunShadow {
       ]);
       this.reliefMap = !!relief.map;
     } else if (this.reliefMap !== !!relief.map) {
-      gl.deleteProgram(this.prog);
       this.prog = null;
       this.drawGround(v, relief, size, fine, strength);
       return;
@@ -228,8 +227,6 @@ export class SunShadow {
     gl.deleteTexture(this.tex);
     gl.deleteFramebuffer(this.fbo);
     gl.deleteVertexArray(this.vao);
-    if (this.prog) gl.deleteProgram(this.prog);
-    if (this.land) gl.deleteProgram(this.land.prog);
   }
 }
 
@@ -312,3 +309,10 @@ void main() {
   // shade is the sky's light without the sun's: a little blue
   o = vec4(vec3(0.0, 0.01, 0.05) * u_alpha, u_alpha)${SMOOTH_LIGHT ? ' * cov' : ''};
 }`;
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const SUN_PROGRAMS: readonly Sources[] = [
+  [LAND_VS, LAND_FS],
+  [GROUND_VS, sunGroundFs(false)],
+  [GROUND_VS, sunGroundFs(true)],
+];

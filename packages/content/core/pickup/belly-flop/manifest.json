@@ -1,0 +1,15 @@
+{
+  "id": "pickup.belly-flop",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Belly Flop",
+    "description": "The car leaps high into the air and comes down flat on the nearest rival, with a blast that only it walks away from.",
+    "since": "core@0.10.0"
+  },
+  "kind": "flop",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lift": 250,
+  "radius": 170,
+  "factor": 1.1
+}

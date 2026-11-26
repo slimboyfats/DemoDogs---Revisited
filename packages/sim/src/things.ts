@@ -29,6 +29,7 @@ import { fireArsenal, isArsenal } from './arsenal';
 import { fireArms, isArms } from './arms';
 import { land } from './hazards';
 import { bounced, fitGuard, hidden, lureHit, lureTurn, lured } from './guards';
+import { dip, fitTrick } from './tricks';
 
 // ---------------------------------------------------------------- scrap bots
 
@@ -335,6 +336,10 @@ export function grant(w: World, c: Car, got: PickupManifest): string {
   if (guard !== null) return guard;
   // a kit crate: one of the pickups it lists
   if (got.kind === 'kit') return grant(w, c, w.content.pickup.get(w.rng.pick(got.kits ?? []))!);
+  // a bag of tricks: one of the toys it lists, by their own odds
+  if (got.kind === 'tricks') return grant(w, c, dip(w, c, got));
+  const trick = fitTrick(w, c, got);
+  if (trick !== null) return trick;
   const help = fitCatchup(w, c, got);
   if (help !== null) return help;
   const addon = fitAddon(w, c, got);

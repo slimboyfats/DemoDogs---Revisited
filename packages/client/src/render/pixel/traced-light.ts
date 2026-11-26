@@ -1,4 +1,4 @@
-import { compile, texture, uniforms } from './gl';
+import { compile, type Sources, texture, uniforms } from './gl';
 import type { LightBlock } from './light-block';
 import { CONE_REACH, MAX_CONES, MAX_LIGHTS, type Lights } from './lighting';
 import { RELIEF_GLSL, type ReliefLayer } from './relief-layer';
@@ -271,11 +271,6 @@ export class TracedLight {
     gl.deleteTexture(this.rungs[1]);
     gl.deleteFramebuffer(this.fbo);
     gl.deleteVertexArray(this.vao);
-    if (this.progs) {
-      gl.deleteProgram(this.progs.scene);
-      gl.deleteProgram(this.progs.level);
-      gl.deleteProgram(this.progs.fold);
-    }
   }
 }
 
@@ -466,3 +461,10 @@ vec4 traced(vec2 wp) {
   if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return vec4(0.0, 0.0, 0.0, 1.0);
   return texture(u_gi, uv);
 }`;
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const TRACED_PROGRAMS: readonly Sources[] = [
+  [TRI_VS, SCENE_FS],
+  [TRI_VS, LEVEL_FS],
+  [TRI_VS, FOLD_FS],
+];

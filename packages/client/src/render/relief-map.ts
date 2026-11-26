@@ -22,6 +22,10 @@ import type { Relief } from '@demodogs/sim';
 export const FAR_SHADE = 26;
 export const FAR_DARK = 0.62;
 
+/** How far from a px the bake looks: to the sides and north of it, and to its south. */
+const REACH = 20;
+const SOUTH = 56;
+
 export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8Array {
   // the height of every px, read between the grid's points a row at a time
   const hh = new Float32Array(w * h);
@@ -31,6 +35,49 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
   const last = new Int32Array(w).fill(-1);
   const at = (x: number, y: number): number =>
     hh[(y < 0 ? 0 : y >= h ? h - 1 : y) * w + (x < 0 ? 0 : x >= w ? w - 1 : x)]!;
+  // Most of a map is level ground with nothing near it, and a look at every px's surroundings is
+  // what costs here (seconds, on a phone, for a big venue). So first, in blocks of `B` px: the
+  // lowest and highest each holds, then whether everything a px in the block could look at
+  // (`REACH` px to the sides and north, `SOUTH` px south) is at one height, and the highest
+  // ground south of it. A px whose surroundings are level is plain ground in flat light, and one
+  // with nothing higher to its south has no far shade to look for: the same map, much sooner.
+  const B = 8;
+  const bw = Math.ceil(w / B);
+  const bh = Math.ceil(h / B);
+  const lo = new Float32Array(bw * bh).fill(Infinity);
+  const hi = new Float32Array(bw * bh).fill(-Infinity);
+  for (let y = 0; y < h; y++) {
+    const row = (y >> 3) * bw;
+    for (let x = 0; x < w; x++) {
+      const v = hh[y * w + x]!;
+      const b = row + (x >> 3);
+      if (v < lo[b]!) lo[b] = v;
+      if (v > hi[b]!) hi[b] = v;
+    }
+  }
+  const sides = Math.ceil((REACH + B - 1) / B);
+  const south = Math.ceil((SOUTH + B - 1) / B);
+  const level = new Uint8Array(bw * bh);
+  const above = new Float32Array(bw * bh);
+  for (let by = 0; by < bh; by++)
+    for (let bx = 0; bx < bw; bx++) {
+      let a = Infinity;
+      let b = -Infinity;
+      let up = -Infinity;
+      // (past the map's edge a look finds the edge's own height: the blocks at the edge again)
+      for (let j = by - sides; j <= by + south; j++) {
+        const row = (j < 0 ? 0 : j >= bh ? bh - 1 : j) * bw;
+        if (j >= by && hi[row + bx]! > up) up = hi[row + bx]!;
+        for (let i = bx - sides; i <= bx + sides; i++) {
+          const k = row + (i < 0 ? 0 : i >= bw ? bw - 1 : i);
+          if (lo[k]! < a) a = lo[k]!;
+          if (hi[k]! > b) b = hi[k]!;
+        }
+      }
+      // (1 level, 2 gentle: under 1 px of height between the lowest and the highest)
+      level[by * bw + bx] = a === b ? 1 : b - a < 1 ? 2 : 0;
+      above[by * bw + bx] = up;
+    }
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const v = hh[y * w + x]!;
@@ -38,6 +85,24 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       const prev = last[x]!;
       last[x] = s;
       if (s < 0) continue;
+      const blk = (y >> 3) * bw + (x >> 3);
+      const calm = level[blk]!;
+      if (calm) {
+        // level ground all round: where it is, in flat light. Gently rolling ground: lit by its
+        // slope and nothing else (no face, drop, lip or shade can be within reach of it)
+        let g = 128;
+        if (calm === 2) {
+          const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
+          g = Math.round(128 * (1 + Math.max(-0.46, Math.min(0.4, lit * 1.7))));
+        }
+        for (let j = Math.max(0, Math.min(prev + 1, s)); j <= s; j++) {
+          const k = (j * w + x) * 4;
+          out[k] = Math.min(255, y - j);
+          out[k + 1] = g;
+          out[k + 2] = 0;
+        }
+        continue;
+      }
       // the light is at the top left: ground that rises to the south-east faces it
       const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
       // a face: ground too steep to stand on, whichever way it looks; it takes the light harder
@@ -69,12 +134,13 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       // the far edge of higher ground lies dark, deepest at the foot and fading out past where
       // the top stops hiding it, the darker the higher the drop
       let sunk = 0;
-      for (let d = 2; d <= 56; d += 2) {
-        const dh = at(x, y + d) - v;
-        if (dh < 5) continue;
-        const k = Math.min(1, (dh * rise + FAR_SHADE - d) / FAR_SHADE) * Math.min(1, dh / 14);
-        if (k > sunk) sunk = k;
-      }
+      if (above[blk]! - v >= 5)
+        for (let d = 2; d <= SOUTH; d += 2) {
+          const dh = at(x, y + d) - v;
+          if (dh < 5) continue;
+          const k = Math.min(1, (dh * rise + FAR_SHADE - d) / FAR_SHADE) * Math.min(1, dh / 14);
+          if (k > sunk) sunk = k;
+        }
       if (sunk > 0) shade *= 1 - FAR_DARK * sunk;
       // and its far lip, with nothing but air behind it, is a bright line
       else if (v - at(x, y - 3) > 5) shade *= 1.3;

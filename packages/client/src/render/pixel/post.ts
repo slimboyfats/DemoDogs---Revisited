@@ -1,4 +1,4 @@
-import { compile, texture, uniforms } from './gl';
+import { compile, type Sources, texture, uniforms } from './gl';
 
 export const MAX_RIPPLES = 8;
 
@@ -164,3 +164,6 @@ export function rippleAt(
 ): { r: number; width: number; strength: number } {
   return { r: maxR * Math.sqrt(k), width: width * (0.7 + 0.6 * k), strength: strength * (1 - k) };
 }
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const POST_PROGRAMS: readonly Sources[] = [[VS, POST_FS]];

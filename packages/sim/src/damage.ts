@@ -651,13 +651,29 @@ export function dig(w: World, x: number, y: number, power: number): void {
   const r = (soft ? 8 : 5) * Math.sqrt(power);
   for (const c of w.craters) {
     if (Math.hypot(c.x - x, c.y - y) > c.r * 0.6) continue;
-    c.r = Math.min(24, Math.sqrt(c.r * c.r + r * r * 0.6));
+    const wider = Math.min(24, Math.sqrt(c.r * c.r + r * r * 0.6));
+    if (laidOn(w, c.x, c.y, wider)) return;
+    c.r = wider;
     w.emit({ t: 'crater', x: c.x, y: c.y, r: c.r });
     return;
   }
+  if (laidOn(w, x, y, r)) return;
   w.craters.push({ x, y, r });
   if (w.craters.length > 160) w.craters.shift();
   w.emit({ t: 'crater', x, y, r });
+}
+
+/**
+ * Whether a pit of radius `r` at (x, y) would reach under something laid flat on the ground (a
+ * boost tile, a ramp, a speed bump): the ground under those stays whole, so nothing is left
+ * lying over a hole.
+ */
+export function laidOn(w: World, x: number, y: number, r: number): boolean {
+  for (const s of w.pads)
+    if (!s.down && Math.hypot(s.x - x, s.y - y) < s.def.radius + r) return true;
+  for (const s of w.mounds)
+    if (!s.down && Math.hypot(s.x - x, s.y - y) < s.def.radius + r) return true;
+  return false;
 }
 
 /** A tree loses up to `amount` of a full crown of leaves. */

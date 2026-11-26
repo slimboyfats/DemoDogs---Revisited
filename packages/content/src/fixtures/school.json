@@ -1,0 +1,61 @@
+{
+  "id": "venue.school",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Puppy School",
+    "description": "A fenced lawn with nothing in the way: where the driving lesson is given.",
+    "since": "core@0.1.0"
+  },
+  "mode": "mode.derby",
+  "seed": 7,
+  "size": {
+    "w": 1160,
+    "h": 900
+  },
+  "oval": {
+    "cx": 580,
+    "cy": 450,
+    "rx": 500,
+    "ry": 380
+  },
+  "colors": {
+    "ground": "#4f7a37",
+    "ground2": "#5c8a3f",
+    "dirt": "#8a6d45",
+    "outside": "#3f6a2e",
+    "terrain": "grass"
+  },
+  "scenery": [
+    {
+      "rule": "oval-wall",
+      "prop": "prop.plank-fence",
+      "spacing": 8
+    },
+    {
+      "rule": "oval-scatter",
+      "count": 30,
+      "qMin": 0.9,
+      "qMax": 0.98,
+      "clear": 0,
+      "items": [
+        {
+          "prop": "prop.flowers",
+          "weight": 3
+        },
+        {
+          "prop": "prop.bush",
+          "weight": 1
+        },
+        {
+          "prop": "prop.hay-bale",
+          "weight": 1
+        }
+      ]
+    }
+  ],
+  "bots": {
+    "bot": "bot.scrap",
+    "count": 0
+  },
+  "pickups": ["pickup.arms"]
+}

@@ -1,6 +1,6 @@
 import { fineGrid } from '../strips';
 import type { ShadowMap } from '../cast';
-import { compile, texture, uniforms } from './gl';
+import { compile, texture, uniforms, type Sources } from './gl';
 import { GROUND_VS, shadowFs } from './stack-shaders';
 import type { ReliefLayer } from './relief-layer';
 import type { StackView } from './stack-batch';
@@ -114,6 +114,11 @@ export class ShadowLayer {
     this.gl.deleteTexture(this.tex);
     this.gl.deleteTexture(this.deep);
     this.gl.deleteVertexArray(this.vao);
-    this.gl.deleteProgram(this.prog);
   }
 }
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const SHADOW_PROGRAMS: readonly Sources[] = [
+  [GROUND_VS, shadowFs(false)],
+  [GROUND_VS, shadowFs(true)],
+];

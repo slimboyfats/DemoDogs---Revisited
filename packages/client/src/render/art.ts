@@ -12,7 +12,7 @@ import { GLOSS, GLOWS, PALETTE, kit } from '@demodogs/content';
 import type { RigArt } from './bones';
 import { findLamp, type LampSpot } from './lamps';
 import type { Strip } from './stack';
-import { build, CAR_DETAIL, hexRgb, tones } from './strips';
+import { build, canvasOf, CAR_DETAIL, hexRgb, tones } from './strips';
 
 export interface CarArt {
   body: Strip;
@@ -27,6 +27,22 @@ export interface BotArt {
   limb: Strip;
   foot: Strip;
   chunk: Strip;
+}
+
+/** A strip without its canvas: what a worker that built it sends back (see art-pool.ts). */
+export type StripData = Pick<Strip, 'cw' | 'ch' | 'n' | 'res' | 'cols'> & {
+  px: Uint8ClampedArray;
+  glow: Uint8Array | undefined;
+  gloss: Uint8Array | undefined;
+  aux: Uint8Array | undefined;
+  trim: Uint16Array | undefined;
+};
+
+/** A piece of art to build ahead of a race: a car or a bot in a paint, or a prop with all its poses. */
+export interface ArtJob {
+  kind: 'car' | 'bot' | 'prop';
+  id: string;
+  paint?: string;
 }
 
 const TRIM = '#f1ede2';
@@ -61,13 +77,102 @@ export class Art {
   /** How many pixels (voxels of art) have been built so far, for the loader's readout. */
   built = 0;
 
-  private make(part: Part, mats: Record<string, Tones>, res?: number): Strip {
-    const s = build(part, mats, res, GLOWS, GLOSS);
+  /** While set (a worker at a job): every strip built, in the order built, as it was built. */
+  private record: StripData[] | null = null;
+  /** While set (a job's strips come back): strips to hand out, in that order, in place of building. */
+  private supply: StripData[] | null = null;
+
+  private make(part: Part, mats: Record<string, Tones>, res?: number, keep = false): Strip {
+    const got = this.supply?.shift();
+    const s: Strip = got
+      ? {
+          ...got,
+          img: canvasOf(got.cw * got.cols, got.ch * Math.ceil(got.n / got.cols)),
+          stale: true,
+        }
+      : build(part, mats, res, GLOWS, GLOSS, keep);
     this.built += s.cw * s.ch * s.n;
+    if (this.record) {
+      const { cw, ch, n, cols, px, glow, gloss, aux, trim } = s;
+      this.record.push({ cw, ch, n, res: s.res, cols, px: px!, glow, gloss, aux, trim });
+    }
     return s;
   }
 
-  constructor(private readonly looks: Map<string, LookModule>) {
+  /** Is this piece of art built already? */
+  has(j: ArtJob): boolean {
+    if (j.kind === 'car') return this.cars.has(j.id + j.paint!);
+    if (j.kind === 'bot') return this.bots.has(j.id + j.paint!);
+    return this.props.has(j.id) || this.rigs.has(j.id);
+  }
+
+  /** Build a piece of art (as its getter would). */
+  run(j: ArtJob): void {
+    if (j.kind === 'car') this.car(j.id, j.paint!);
+    else if (j.kind === 'bot') this.bot(j.id, j.paint!);
+    else this.warm(j.id);
+  }
+
+  private forget(j: ArtJob): void {
+    if (j.kind === 'car') this.cars.delete(j.id + j.paint!);
+    else if (j.kind === 'bot') this.bots.delete(j.id + j.paint!);
+    else {
+      for (const k of [...this.props.keys()])
+        if (k === j.id || k.startsWith(`${j.id}#`)) this.props.delete(k);
+      this.rigs.delete(j.id);
+    }
+  }
+
+  /**
+   * In a worker: build a job's art from nothing and give back its strips, in the order they were
+   * built. Nothing of it is kept here: the page keeps what it is sent.
+   */
+  work(j: ArtJob): StripData[] {
+    this.forget(j);
+    const made = (this.record = []);
+    try {
+      this.run(j);
+    } finally {
+      this.record = null;
+      this.forget(j);
+    }
+    return made;
+  }
+
+  /**
+   * On the page: take a job's strips from the worker that built them. The same steps run as for
+   * building it here, and each strip that would be built is one of those sent instead. If that
+   * does not come out even (it always should), the job is simply built here.
+   */
+  take(j: ArtJob, strips: StripData[]): void {
+    if (this.has(j)) return;
+    const built = this.built;
+    this.supply = [...strips];
+    let left = 1;
+    try {
+      this.run(j);
+      left = this.supply.length;
+    } catch {
+      // a strip too few: built here below
+    } finally {
+      this.supply = null;
+    }
+    if (left === 0) return;
+    this.built = built;
+    this.forget(j);
+    this.run(j);
+  }
+
+  /** `bare`: none of the small parts every race draws (a worker builds only what it is asked for). */
+  constructor(
+    private readonly looks: Map<string, LookModule>,
+    bare = false,
+  ) {
+    if (bare) {
+      this.wheels = [];
+      this.pickup = this.plank = this.squeaky = this.link = undefined as unknown as Strip;
+      return;
+    }
     this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, CAR_DETAIL));
     this.pickup = this.make(kit.PICKUP_BOX, PALETTE);
     this.plank = this.make(kit.PLANK, PALETTE);
@@ -238,10 +343,11 @@ export class Art {
         paint2: tones(scale(paint, 0.68)),
       };
       a = {
-        body: this.make(L.body, m, CAR_DETAIL),
-        top: this.make(L.top, m, CAR_DETAIL),
-        bumper: this.make(kit.BUMPER, m, CAR_DETAIL),
-        chunk: this.make(kit.CHUNK, m),
+        // (a car comes in many paints: its voxels are kept, and only coloured again)
+        body: this.make(L.body, m, CAR_DETAIL, true),
+        top: this.make(L.top, m, CAR_DETAIL, true),
+        bumper: this.make(kit.BUMPER, m, CAR_DETAIL, true),
+        chunk: this.make(kit.CHUNK, m, undefined, true),
       };
       this.cars.set(key, a);
     }
@@ -254,7 +360,7 @@ export class Art {
     if (!a) {
       const L = this.look(id, 'bot');
       const m = { ...PALETTE, paint: tones(paint) };
-      const b = (p: Part) => this.make(p, m);
+      const b = (p: Part) => this.make(p, m, undefined, true);
       a = {
         body: b(L.body),
         aerial: b(L.aerial),
