@@ -28,6 +28,9 @@ export const FAR_DARK = 0.62;
 const REACH = 20;
 const SOUTH = 56;
 
+/** The look of a face that is the side of raised road (alpha on a face: see leaps.ts for the rest). */
+export const WALL = 224;
+
 export function bakeRelief(
   R: Relief,
   w: number,
@@ -96,6 +99,10 @@ export function bakeRelief(
       level[by * bw + bx] = a === b ? 1 : b - a < 1 ? 2 : 0;
       above[by * bw + bx] = up;
     }
+  // built road that climbs (a ramp, an on-ramp's lane) is one even surface: its slope tells in
+  // the light only a little, or the road has a pale or a dark band across it
+  const built = (x: number, y: number): boolean => !!R.plat && R.platAt(x + 0.5, y + 0.5) > 0.1;
+  const ramp = (lit: number): number => 1 + Math.max(-0.1, Math.min(0.1, lit * 0.5));
   for (let y = 0; y < h; y++)
     for (let x = 0; x < w; x++) {
       const v = hh[y * w + x]!;
@@ -111,7 +118,9 @@ export function bakeRelief(
         let g = 128;
         if (calm === 2) {
           const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
-          g = Math.round(128 * (1 + Math.max(-0.46, Math.min(0.4, lit * 1.7))));
+          g = Math.round(
+            128 * (built(x, y) ? ramp(lit) : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7))),
+          );
         }
         for (let j = Math.max(0, Math.min(prev + 1, s)); j <= s; j++) {
           const k = (j * w + x) * 4;
@@ -128,8 +137,11 @@ export function bakeRelief(
       const sy = (at(x, y + 1) - at(x, y - 1)) / 2;
       const slope = Math.hypot(sx, sy);
       // (a jump piece's side is wall from where it leaves the ground, however low it is there)
-      const code = faces ? faces(x + 0.5, y + 0.5) : 0;
-      let steep = slope > (code ? 0.45 : 1);
+      // (and so is the side of raised road, which is a wall of its own look: `WALL`)
+      const code =
+        (faces ? faces(x + 0.5, y + 0.5) : 0) ||
+        (R.plat && R.platAt(x + 0.5, y + 0.5) > 0 ? WALL : 0);
+      let steep = slope > (code === WALL ? 0.7 : code ? 0.45 : 1);
       // the side of a platform eases out at its foot, and the foot is still wall: a gentle
       // slope there with the steep of the side just above it is face too, or grass shows in it
       if (!steep && slope > 0.04 && R.plat && R.platAt(x + 0.5, y + 0.5) > 0.1)
@@ -143,7 +155,9 @@ export function bakeRelief(
         ? 1
         : steep
           ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
-          : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
+          : built(x, y)
+            ? ramp(lit)
+            : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
       // and higher ground up and to the left throws its shadow here
       let dark =
         at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17;
