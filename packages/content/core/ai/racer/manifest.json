@@ -8,5 +8,62 @@
   },
   "behaviour": "ai.racer",
   "skill": [0.9, 1.0],
-  "aggro": [0.25, 0.8]
+  "aggro": [0.25, 0.8],
+  "styles": [
+    {
+      "name": "ACE",
+      "drivers": ["BISCUIT", "BONES"],
+      "pace": 0.02,
+      "aggro": [0.1, 0.35],
+      "nerve": 0.9,
+      "greed": 0.3,
+      "block": 0.35,
+      "trigger": 0.5,
+      "wobble": 0.05
+    },
+    {
+      "name": "BULLY",
+      "drivers": ["FANG", "GNASHER"],
+      "pace": 0,
+      "aggro": [0.75, 1],
+      "nerve": 0.7,
+      "greed": 0.35,
+      "block": 0.6,
+      "trigger": 0.9,
+      "wobble": 0.3
+    },
+    {
+      "name": "HOARDER",
+      "drivers": ["SCRAPS"],
+      "pace": -0.01,
+      "aggro": [0.3, 0.55],
+      "nerve": 0.5,
+      "greed": 1,
+      "block": 0.2,
+      "trigger": 1,
+      "wobble": 0.3
+    },
+    {
+      "name": "BLOCKER",
+      "drivers": ["TANK", "DOZER"],
+      "pace": -0.02,
+      "aggro": [0.4, 0.6],
+      "nerve": 0.45,
+      "greed": 0.4,
+      "block": 1,
+      "trigger": 0.4,
+      "wobble": 0.15
+    },
+    {
+      "name": "WILD",
+      "drivers": ["REX"],
+      "pace": 0.01,
+      "aggro": [0.5, 0.8],
+      "nerve": 1,
+      "greed": 0.8,
+      "block": 0.1,
+      "trigger": 0.7,
+      "wobble": 0.9
+    }
+  ]
 }
