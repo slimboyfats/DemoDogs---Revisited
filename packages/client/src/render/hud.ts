@@ -1,5 +1,5 @@
 import { ADDON_KINDS, BASE_SPEED, GUARD_KINDS, HELD } from '@demodogs/shared';
-import { rescueIn, type Car, type World } from '@demodogs/sim';
+import { haunting, rescueIn, type Car, type World } from '@demodogs/sim';
 import type { Effects } from './effects';
 import { DIAL_DEFAULT, dialSpot, type DialSetup } from '../game/speedo';
 
@@ -406,7 +406,7 @@ export class Hud {
     const top = BASE_SPEED * P.stats.speed;
     // the dial runs to a boost and a bit over the car's own top speed
     const full = top * 1.45;
-    const v = P.wrecked ? 0 : dialSpeed(P);
+    const v = P.wrecked && !haunting(P) ? 0 : dialSpeed(P);
     const k = Math.min(1, v / full);
     const a0 = Math.PI * 0.8;
     const a1 = Math.PI * 2.2;

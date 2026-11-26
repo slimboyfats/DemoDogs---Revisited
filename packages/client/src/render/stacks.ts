@@ -1,6 +1,7 @@
 import { fitted, mounts, place } from './addon-mounts';
 import { wayPainted } from './ways';
 import {
+  away,
   SINK_TIME,
   gateOpen,
   moundAt,
@@ -509,7 +510,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const flat = squashed(c);
   // going down a pit: it tips over the edge the way it went in, and gets small and dark
   const fall = falling(c);
-  if (fall >= 1) return;
+  // (nor is there anything to draw of a ghost car that has gone away)
+  if (fall >= 1 || away(c)) return;
   const k = c.size * (1 + (1 - Math.min(1, flat)) * 0.95) * (1 - 0.8 * fall ** 1.5);
   if (!R.visible(c.x, c.y, 20 * k, 14 * k)) return;
   R.group(c.y);
@@ -546,7 +548,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
     for (const sg of [-1, 1]) {
       const wx = wh[0];
       const wy = wh[1] * sg;
-      const steer = wx > 0 && !c.wrecked ? c.steer * 0.45 : 0;
+      const steer = wx > 0 && (!c.wrecked || c.haunt) ? c.steer * 0.45 : 0;
       R.stack(
         wheel,
         c.x + cs * wx - sn * wy + wtx,
@@ -820,7 +822,7 @@ export function queueShadows(
   if (sun) return;
   for (const c of w.cars)
     // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
-    if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
+    if (c.deck < 4 && falling(c) === 0 && !away(c) && R.visible(c.x, c.y, 20))
       // (off the ground its shadow falls away from it, down and to the right, and thins: it is
       // how you see a car has left an edge and is in the air)
       shadow(

@@ -295,7 +295,7 @@ body:not([data-screen='game']) #spectate {
   pointer-events: auto;
   touch-action: none;
 }
-#specBar {
+:is(#specBar, #ghostBar) {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -305,8 +305,8 @@ body:not([data-screen='game']) #spectate {
   gap: 6px;
   pointer-events: none;
 }
-#specBar button,
-#specWho {
+:is(#specBar, #ghostBar) button,
+:is(#specWho, #ghostWho) {
   position: relative;
   pointer-events: auto;
   touch-action: none;
@@ -316,7 +316,7 @@ body:not([data-screen='game']) #spectate {
   font-weight: 900;
   letter-spacing: 0.04em;
 }
-#specBar button {
+:is(#specBar, #ghostBar) button {
   min-width: 44px;
   min-height: 42px;
   padding: 0 12px;
@@ -326,10 +326,10 @@ body:not([data-screen='game']) #spectate {
   align-items: center;
   justify-content: center;
 }
-#specBar button:active {
+:is(#specBar, #ghostBar) button:active {
   background: rgba(255, 255, 255, 0.35);
 }
-#specWho {
+:is(#specWho, #ghostWho) {
   pointer-events: none;
   min-width: 176px;
   padding: 4px 14px;
@@ -339,14 +339,14 @@ body:not([data-screen='game']) #spectate {
   justify-content: center;
   border-color: #ffd24a;
 }
-#specBar small {
+:is(#specBar, #ghostBar) small {
   font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.14em;
   opacity: 0.75;
   white-space: nowrap;
 }
-#specWho b {
+:is(#specWho, #ghostWho) b {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -364,31 +364,53 @@ body:not([data-screen='game']) #spectate {
   font-size: 12px;
   white-space: nowrap;
 }
-#specBar #specSkip {
+:is(#specBar #specSkip, #ghostBar #ghostSkip) {
   font-size: 12px;
   white-space: nowrap;
   border-color: rgba(255, 120, 80, 0.85);
 }
-#specBar #specSkip.hidden {
+:is(#specBar #specSkip, #ghostBar #ghostSkip).hidden {
   display: none;
 }
-#specBar kbd {
+:is(#specBar, #ghostBar) kbd {
   position: absolute;
   left: 50%;
   bottom: calc(100% + 7px);
   transform: translateX(-50%);
   display: none;
 }
-#specBar kbd.down {
+:is(#specBar, #ghostBar) kbd.down {
   transform: translate(-50%, 3px);
 }
-body.kbd:not(.nohints) #specBar kbd {
+body.kbd:not(.nohints) :is(#specBar, #ghostBar) kbd {
   display: inline-flex;
 }
 @media (hover: hover) and (pointer: fine) {
-  body:not(.nohints) #specBar kbd {
+  body:not(.nohints) :is(#specBar, #ghostBar) kbd {
     display: inline-flex;
   }
+}
+/* driving the ghost of a scrapped car: a small bar at the top, clear of the thumbs */
+#ghostBar {
+  position: fixed;
+  bottom: auto;
+  top: calc(8px + env(safe-area-inset-top));
+}
+#ghostBar.hidden,
+#specGhost.hidden,
+body:not([data-screen='game']) #ghostBar {
+  display: none;
+}
+:is(#specBar #specGhost, #ghostBar #ghostWatch) {
+  font-size: 12px;
+  white-space: nowrap;
+}
+#ghostBar kbd {
+  bottom: auto;
+  top: calc(100% + 7px);
+}
+body.ghosting :is(#btnFire, #btnBoost, #khFire, .khRow.boost) {
+  visibility: hidden;
 }
 
 /* screens */

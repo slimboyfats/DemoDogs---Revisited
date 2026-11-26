@@ -18,6 +18,7 @@ import {
   pieceTop,
   pieces,
   propShape,
+  away,
   type Car,
   type Shape,
   type StaticProp,
@@ -566,7 +567,7 @@ export class HitboxView {
   }
 
   private car(w: World, c: Car, heights: boolean): void {
-    if (c.buried || !this.seen(c.x, c.y, 30)) return;
+    if (c.buried || away(c) || !this.seen(c.x, c.y, 30)) return;
     const col = c.wrecked ? COL.ghost : COL.car;
     const Q = carShape(c, S);
     // up in the air (or on a deck): where it is over the ground, faint, and where it is
