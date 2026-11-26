@@ -120,6 +120,12 @@ export interface Car {
   throttle: number;
   boosting: boolean;
   handbrake: boolean;
+  /**
+   * A drift held now: -1 turning left, 1 right, 0 none. `charge` is how long it has been held
+   * well (seconds, up to the last of `DRIFT.stage`): let go past a stage, it pays a burst.
+   */
+  drift: number;
+  charge: number;
   /** Sliding sideways this tick (skid marks). */
   sliding: boolean;
   offroad: boolean;

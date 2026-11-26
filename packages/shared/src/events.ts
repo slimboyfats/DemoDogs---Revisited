@@ -35,6 +35,8 @@ export type SimEvent =
   /** A car off the course in a race was put back on the road, from (x, y). */
   | { t: 'rescue'; car: number; x: number; y: number }
   | { t: 'land'; car: number; impact: number }
+  /** A drift came to a stage of its charge (`go` false) or was let go and paid out (`go` true). */
+  | { t: 'drift'; car: number; stage: number; go: boolean }
   /** z: up on a deck, art px; absent on the ground. */
   | { t: 'explode'; x: number; y: number; power: number; z?: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }
