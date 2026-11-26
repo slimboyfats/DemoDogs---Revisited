@@ -133,6 +133,7 @@ export class GroundLayer {
     ] as const) {
       if (!M) continue;
       const t = texture(gl, gl.LINEAR);
+      M.settle();
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, M.gw, M.gh, 0, gl.RGBA, gl.UNSIGNED_BYTE, M.data);
       M.dirty = null;
       if (pools) this.poolTex = t;
@@ -178,6 +179,7 @@ export class GroundLayer {
       [this.ground.water, this.waterTex],
       [this.ground.pools, this.poolTex],
     ] as const) {
+      M?.settle();
       if (!M?.dirty || !tex) continue;
       // water that was poured or has spread: the rows of its box, whole
       const gl = this.gl;
