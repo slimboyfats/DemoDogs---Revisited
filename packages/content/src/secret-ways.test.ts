@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { PLUNGE_TIME, inPit, jumpGaps, ventOpen, type StaticProp, type World } from '@demodogs/sim';
+import {
+  PLUNGE_TIME,
+  inPit,
+  jumpGaps,
+  pumpUp,
+  ventOpen,
+  type StaticProp,
+  type World,
+} from '@demodogs/sim';
 import { loadContent } from './index';
 import { makeWorld, put } from './testing';
 
@@ -29,7 +37,13 @@ function jump(id: string) {
  * straight before it, boosting or not, with the way's gate open or shut, and say whether it came
  * down on the landing. `after` more ticks are run once it is down.
  */
-function leap(id: string, boost: boolean, open = true, after = 0): { made: boolean; w: World } {
+function leap(
+  id: string,
+  boost: boolean,
+  open = true,
+  after = 0,
+  flat = false,
+): { made: boolean; w: World } {
   const { w, x0, y0, a, gap } = jump(id);
   const R = w.relief!;
   if (open)
@@ -42,6 +56,13 @@ function leap(id: string, boost: boolean, open = true, after = 0): { made: boole
   if (vent)
     for (let t = 0; t < 600; t++) {
       if ([0.9, 1.1, 1.3].every((s) => ventOpen(w, vent, 0, w.time + s) === boost)) break;
+      w.step();
+    }
+  // (a takeoff that pumps is come at while its flap is up, unless `flat`)
+  const pump = w.leaps.find((s) => s.def.leap!.pump);
+  if (pump)
+    for (let t = 0; t < 600; t++) {
+      if ([0.8, 1, 1.2].every((s) => pumpUp(w, pump, w.time + s) === !flat)) break;
       w.step();
     }
   const c = w.player;
@@ -85,7 +106,25 @@ describe('secret ways', () => {
     const ramp = v.scenery.some(
       (r) => r.rule === 'place' && r.items.some((i) => C.prop.get(i.prop)?.leap?.way === 'up'),
     );
-    it.skipIf(!ramp)(
+    const gated = v.scenery.some(
+      (r) =>
+        r.rule === 'place' &&
+        r.items.some((i) => {
+          const d = C.prop.get(i.prop)!;
+          return d.gate || d.made === 'material.cracked-rock';
+        }),
+    );
+    const pumps = v.scenery.some(
+      (r) => r.rule === 'place' && r.items.some((i) => C.prop.get(i.prop)?.leap?.pump),
+    );
+    it.skipIf(!pumps)(
+      `${v.id}: with the takeoff's flap flat even a boosted car falls short`,
+      () => {
+        expect(leap(v.id, true, true, 0, true).made).toBe(false);
+      },
+    );
+
+    it.skipIf(!gated)(
       `${v.id}: the gate stands across the takeoff where its sides are too high to climb`,
       () => {
         const { w, x0, y0, a } = jump(v.id);

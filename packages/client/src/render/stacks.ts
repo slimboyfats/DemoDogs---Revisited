@@ -5,6 +5,7 @@ import {
   moundAt,
   pressOpen,
   pressWarning,
+  pumpUp,
   ventOpen,
   type Bot,
   type Car,
@@ -205,6 +206,7 @@ function queueStatic(
   P: Car,
   still?: StaticHook,
 ): void {
+  if (s.def.leap?.pump) queueFlap(R, art, w, s);
   if (s.def.pad) {
     queuePad(R, art, w, s);
     return;
@@ -313,6 +315,32 @@ function queueGate(R: StackSink, art: Art, w: World, s: StaticProp): void {
   }
 }
 
+/** How far a pump takeoff's flap has risen (0 flat, 1 up), eased from tick to tick. */
+const flaps = new WeakMap<StaticProp, number>();
+/** How high the flap's front stands when up (art px), and the seconds it takes to rise or fall. */
+const FLAP_HIGH = 9;
+const FLAP_SWING = 0.25;
+
+/**
+ * The flap across a pumping takeoff's lip: flat on the ramp while it throws short, tipped up at
+ * its front while it throws far (drawn as the plate lifted, each slice a little higher).
+ */
+function queueFlap(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  const L = s.def.leap!;
+  const want = pumpUp(w, s) ? 1 : 0;
+  const was = flaps.get(s) ?? want;
+  const step = 1 / 60 / FLAP_SWING;
+  const k = want > was ? Math.min(want, was + step) : Math.max(want, was - step);
+  flaps.set(s, k);
+  // on the last of the ramp before its lip
+  const u = L.long / 2 - 12;
+  const x = s.x + Math.cos(s.rot) * u;
+  const y = s.y + Math.sin(s.rot) * u;
+  if (!R.visible(x, y, 40, 16)) return;
+  R.group(y);
+  R.stack(art.prop(L.pump!.plate), x, y, 0.6 + k * FLAP_HIGH, s.rot);
+}
+
 /** Seconds before the beat turns that a signal lamp shows amber. */
 const SIGNAL_WARN = 0.7;
 
@@ -321,7 +349,8 @@ const reads = new WeakMap<StaticProp, StaticProp | null>();
 
 /** Is the thing a signal reads open (a gate down, a vent blowing) at time t? */
 function beatOpen(w: World, o: StaticProp, t: number): boolean {
-  return o.def.gate ? gateOpen(w, o, t) : ventOpen(w, o, 0, t);
+  if (o.def.gate) return gateOpen(w, o, t);
+  return o.def.leap ? pumpUp(w, o, t) : ventOpen(w, o, 0, t);
 }
 
 /**
@@ -334,8 +363,12 @@ function queueSignal(R: StackSink, art: Art, w: World, s: StaticProp): void {
   if (o === undefined) {
     o = null;
     let near = s.def.signal!.reach;
-    for (const g of [...w.gates, ...w.pads]) {
-      const beat = g.def.gate ? g.def.gate.period > 0 : g.def.pad?.kind === 'vent';
+    for (const g of [...w.gates, ...w.pads, ...w.leaps]) {
+      const beat = g.def.gate
+        ? g.def.gate.period > 0
+        : g.def.leap
+          ? !!g.def.leap.pump
+          : g.def.pad?.kind === 'vent';
       const d = Math.hypot(g.x - s.x, g.y - s.y);
       if (!beat || d >= near) continue;
       near = d;

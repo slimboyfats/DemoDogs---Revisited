@@ -146,6 +146,29 @@
       "rule": "place",
       "items": [
         {
+          "prop": "prop.crusher",
+          "x": -1137.4,
+          "y": 835.9,
+          "rot": -2.9766
+        },
+        {
+          "prop": "prop.crusher-post",
+          "x": -1140.7,
+          "y": 855.6,
+          "rot": -2.9766
+        },
+        {
+          "prop": "prop.crusher-post",
+          "x": -1134.1,
+          "y": 816.2,
+          "rot": 0.2
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
           "prop": "prop.jump-takeoff",
           "x": -764.1,
           "y": 545.6,

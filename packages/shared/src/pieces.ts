@@ -110,6 +110,19 @@ export const LeapSchema = z.strictObject({
   high: z.number().positive().max(60),
   lift: z.number().min(0).default(0),
   min: z.number().min(0).default(80),
+  /**
+   * A takeoff whose lip pumps on a beat: a flap across it (the prop `plate`, drawn by the client,
+   * never placed) stands up for `up` seconds of every `period` and then throws at `lift`; while
+   * it lies flat the takeoff throws only `low` of that, which falls short.
+   */
+  pump: z
+    .strictObject({
+      period: z.number().positive(),
+      up: z.number().positive(),
+      low: unit.default(0.5),
+      plate: z.string().regex(/^prop\.[a-z0-9-]+$/, 'a prop.* id'),
+    })
+    .optional(),
 });
 export type LeapManifest = z.infer<typeof LeapSchema>;
 
@@ -190,7 +203,7 @@ export const pieceFields = {
   gate: GateSchema.optional(),
   /**
    * A signal: a lamp that shows the beat of the nearest thing on a beat within `reach` art px (a
-   * gate with a `period`, a vent), so a driver can read it from far off. Looks only: the client
+   * gate with a `period`, a vent, a takeoff that pumps), so a driver can read it from far off. Looks only: the client
    * flips its look's poses, red while that is shut, amber when it is about to change, green
    * while it is open. The sim does nothing with it.
    */
