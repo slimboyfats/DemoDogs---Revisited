@@ -1,6 +1,7 @@
 import { fitted, mounts, place } from './addon-mounts';
 import { wayPainted } from './ways';
 import {
+  SINK_TIME,
   moundAt,
   pressOpen,
   pressWarning,
@@ -162,6 +163,14 @@ export function queueStacks(
     R.group(r.y);
     R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
+  // a hunting rocket, high over the road: twice the size of the thing itself, to be seen from afar
+  for (const H of w.hunters)
+    if (R.visible(H.x, H.y, 20, H.z + 10)) {
+      R.group(H.y + 40);
+      R.zoom(2);
+      R.stack(art.prop(H.def.id), H.x, H.y, H.z, H.h);
+      R.zoom(1);
+    }
   queueArms(R, art, w);
   queueDecoys(R, art, w);
   queueTrickThings(R, art, w, fx.tricks);
@@ -449,7 +458,9 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   // the wheels go some of the way with a body that is tipping in
   const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.3;
   const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.3;
-  for (const wh of D.wheels)
+  // wading: its wheels and the foot of its body are under the water
+  const wet = !!fx.wetWas[c.index] && fall === 0 && !c.wrecked;
+  for (const wh of wet ? [] : D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];
       const wy = wh[1] * sg;
@@ -467,7 +478,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const rx = -sn;
   const ry = cs;
   const up = k * flat;
-  for (let i = 0; i < body.n; i++) {
+  for (let i = wet ? Math.min(body.n - 1, Math.round(1.2 * body.res)) : 0; i < body.n; i++) {
     const t = i / (body.n - 1);
     const o = roll * t * flat;
     const l = lurch * t * flat;
@@ -624,10 +635,12 @@ function rideLift(w: World, c: Car, k: number): number {
   return Math.max(axles, mid * 0.7);
 }
 
-/** How far down a pit a car is: 0 not at all, 1 out of sight. */
+/** How far down a pit (or under deep water) a car is: 0 not at all, 1 out of sight. */
 export function falling(c: Car): number {
   if (c.buried) return Math.min(1, c.wreckT / 0.5);
   if ((c.sunk ?? 0) > 0) return Math.min(1, ((c.sunkFrom ?? 0) - c.sunk!) / 0.5);
+  // (going under in deep water is the same sight, slower: smaller and dimmer till it is gone)
+  if ((c.drown ?? 0) > 0) return Math.min(0.97, (c.drown! / SINK_TIME) ** 1.4);
   return 0;
 }
 

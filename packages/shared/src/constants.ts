@@ -28,9 +28,17 @@ export const REBUILD_TIME = 2.4;
 /**
  * What is holding a car back this tick (`Car.held`, a set of these bits), for the HUD to name:
  * rough ground off the road, a hill it is climbing, something sticky under it (mud, glue, a
- * crater, a soft road), damage, and an item that slows it (a lead collar, a runt ray).
+ * crater, a soft road), water it is wading, damage, and an item that slows it (a lead collar, a runt ray).
  */
-export const HELD = { rough: 1, hill: 2, sticky: 4, hurt: 8, weighed: 16 } as const;
+export const HELD = {
+  rough: 1,
+  hill: 2,
+  sticky: 4,
+  hurt: 8,
+  weighed: 16,
+  wet: 32,
+  fresh: 64,
+} as const;
 
 /**
  * How hard the rivals are to beat. `pace` is added to every rival's skill (its top speed),

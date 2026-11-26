@@ -121,7 +121,7 @@
         },
         {
           "prop": "prop.cobbles",
-          "x": 471.0,
+          "x": 471,
           "y": 1131.6,
           "rot": -3.0351
         },
@@ -158,7 +158,7 @@
         {
           "prop": "prop.dirt-track",
           "x": -126.1,
-          "y": 1127.0,
+          "y": 1127,
           "rot": 2.8839
         },
         {
@@ -169,7 +169,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -180.0,
+          "x": -180,
           "y": 1134.8,
           "rot": -3.0903
         },
@@ -200,7 +200,7 @@
         {
           "prop": "prop.dirt-track",
           "x": -314.9,
-          "y": 1092.0,
+          "y": 1092,
           "rot": -2.9086
         },
         {
@@ -235,7 +235,7 @@
         {
           "prop": "prop.jump-takeoff",
           "x": 292.9,
-          "y": 1124.0,
+          "y": 1124,
           "rot": -3.1082
         },
         {
@@ -262,39 +262,27 @@
       "items": [
         {
           "prop": "prop.blast-wall",
-          "x": 593.4,
-          "y": 1185.7,
-          "rot": 3.106
+          "x": 282,
+          "y": 1150.7,
+          "rot": -3.1082
         },
         {
           "prop": "prop.blast-wall",
-          "x": 592.8,
-          "y": 1167.8,
-          "rot": 3.106
+          "x": 282.6,
+          "y": 1132.7,
+          "rot": -3.1082
         },
         {
           "prop": "prop.blast-wall",
-          "x": 592.1,
-          "y": 1149.8,
-          "rot": 3.106
+          "x": 283.2,
+          "y": 1114.7,
+          "rot": -3.1082
         },
         {
           "prop": "prop.blast-wall",
-          "x": 591.5,
-          "y": 1131.8,
-          "rot": 3.106
-        },
-        {
-          "prop": "prop.blast-wall",
-          "x": 590.9,
-          "y": 1113.8,
-          "rot": 3.106
-        },
-        {
-          "prop": "prop.blast-wall",
-          "x": 590.2,
-          "y": 1095.8,
-          "rot": 3.106
+          "x": 283.8,
+          "y": 1096.7,
+          "rot": -3.1082
         }
       ]
     },
@@ -342,6 +330,12 @@
           "x": 2080,
           "y": 1520,
           "r": 62
+        },
+        {
+          "material": "material.lava",
+          "x": 2054,
+          "y": 2519,
+          "r": 120
         }
       ]
     },
@@ -408,20 +402,20 @@
       "items": [
         {
           "prop": "prop.crater",
-          "x": 0.0,
-          "y": 20.0,
+          "x": 0,
+          "y": 20,
           "rot": 0
         },
         {
           "prop": "prop.crater",
-          "x": -340.0,
-          "y": -100.0,
+          "x": -340,
+          "y": -100,
           "rot": 1.2
         },
         {
           "prop": "prop.crater",
-          "x": 360.0,
-          "y": -60.0,
+          "x": 360,
+          "y": -60,
           "rot": 2.4
         }
       ]
@@ -598,7 +592,7 @@
       "items": [
         {
           "prop": "prop.lava-rock",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "prop": "prop.rock",
@@ -759,6 +753,8 @@
     "pickup.runt-ray",
     "pickup.second-wind",
     "pickup.lead-collar",
+    "pickup.bloodhound",
+    "pickup.sniffer-pack",
     "pickup.bone-shower",
     "pickup.fetch-magnet",
     "pickup.zoomies",

@@ -27,6 +27,18 @@ import {
  * band keeps the pack close to the humans. What kind of driver it is comes from the manifest's
  * `styles`.
  */
+const unit = (v: number) => Math.min(1, Math.max(0, v));
+
+/**
+ * The rubber band: the pace of a rival `gap` px of road ahead of the humans (behind, below 0).
+ * It comes in by degrees from 120 px, is all there by 420, and a rival far adrift is pressed
+ * harder still, so the field stays a pack round the humans instead of a string of lone cars.
+ */
+function band(gap: number, ease: number, press: number): number {
+  if (gap > 0) return 1 + (ease - 1) * unit((gap - 120) / 300);
+  return 1 + (press - 1) * (unit((-gap - 120) / 300) + 0.6 * unit((-gap - 600) / 900));
+}
+
 export default defineAi({
   id: 'ai.racer',
   drive(w, c) {
@@ -70,7 +82,7 @@ export default defineAi({
     // rubber band: rivals far ahead of the humans ease off, far behind push harder
     if (!c.isPlayer) {
       const gap = c.progress - w.humanProgress();
-      c.aiSpeed = ai.skill * (gap > 300 ? w.level.ease : gap < -300 ? w.level.press : 1);
+      c.aiSpeed = ai.skill * band(gap, w.level.ease, w.level.press);
     }
     return recover(c, out, d);
   },

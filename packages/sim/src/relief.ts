@@ -431,16 +431,31 @@ export function buildRelief(
       if (lift && near![k]! >= 0) {
         // the platform: the road's own height out to its shoulder, then down a steep side;
         // and beside it, where there is one, the lane of an on-ramp at the height it has climbed to
+        // (read between the samples either side of it, by how far along the road it lies: taken
+        // from the nearest sample alone a ramp is a flight of steps, and its light a lattice)
         const i = near![k]!;
-        const top = lift[i]!;
+        const N = track!.n;
+        const ca = Math.cos(track!.a[i]!);
+        const sa = Math.sin(track!.a[i]!);
+        const st = track!.step;
+        const along = Math.max(
+          -st,
+          Math.min(st, (x - track!.x[i]!) * ca + (y - track!.y[i]!) * sa),
+        );
+        const j = (i + (along < 0 ? N - 1 : 1)) % N;
+        const f = Math.abs(along) / st;
+        const top = lift[i]! + (lift[j]! - lift[i]!) * f;
         const edge = half + SHOULDER;
         const s = (edge + SIDE - dist[k]!) / SIDE;
         // (which side of the road this point is on says which lane it may be part of)
-        const a = track!.a[i]!;
-        const side =
-          (y - track!.y[i]!) * Math.cos(a) - (x - track!.x[i]!) * Math.sin(a) < 0 ? -1 : 1;
-        const wide = laneWide(lane!, i, side);
-        const low = wide > 0 ? top * lane!.rise[i]! : 0;
+        const side = (y - track!.y[i]!) * ca - (x - track!.x[i]!) * sa < 0 ? -1 : 1;
+        // (a lane's width and climb between samples too, where it runs past both of them)
+        const wi = laneWide(lane!, i, side);
+        const wj = laneWide(lane!, j, side);
+        const both = wi > 0 && wj > 0;
+        const wide = both ? wi + (wj - wi) * f : wi;
+        const rise = both ? lane!.rise[i]! + (lane!.rise[j]! - lane!.rise[i]!) * f : lane!.rise[i]!;
+        const low = wide > 0 ? top * rise : 0;
         if (wide > 0 && dist[k]! > half - 6 && dist[k]! < edge + wide + SIDE + 12)
           (R.slip ??= new Uint8Array(R.gw * R.gh))[k] =
             dist[k]! > edge - 4 && dist[k]! < edge + wide + 2 ? 2 : 1;

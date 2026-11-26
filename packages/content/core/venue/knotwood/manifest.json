@@ -66,6 +66,14 @@
     "spread": 90,
     "infield": false
   },
+  "weather": [
+    {
+      "x": 1414,
+      "y": 910,
+      "r": 4000,
+      "sky": "mist"
+    }
+  ],
   "scenery": [
     {
       "rule": "flyover",
@@ -332,6 +340,8 @@
     "pickup.runt-ray",
     "pickup.second-wind",
     "pickup.lead-collar",
+    "pickup.bloodhound",
+    "pickup.sniffer-pack",
     "pickup.bone-shower",
     "pickup.fetch-magnet",
     "pickup.zoomies",

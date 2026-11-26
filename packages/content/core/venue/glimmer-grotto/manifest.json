@@ -72,7 +72,7 @@
       "x": 1900,
       "y": 1300,
       "r": 4000,
-      "sky": "night"
+      "sky": "fog-night"
     }
   ],
   "scenery": [
@@ -135,7 +135,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": 556.0,
+          "x": 556,
           "y": 828.6,
           "rot": 1.1688
         },
@@ -191,46 +191,28 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.pop-bollard",
-          "x": 569.5,
-          "y": 707.1,
-          "rot": 1.9717
+          "prop": "prop.blast-wall",
+          "x": 810,
+          "y": 459.1,
+          "rot": 2.3813
         },
         {
-          "prop": "prop.pop-bollard",
-          "x": 557.6,
-          "y": 702.0,
-          "rot": 1.9717
+          "prop": "prop.blast-wall",
+          "x": 797.6,
+          "y": 446,
+          "rot": 2.3813
         },
         {
-          "prop": "prop.pop-bollard",
-          "x": 545.6,
-          "y": 697.0,
-          "rot": 1.9717
+          "prop": "prop.blast-wall",
+          "x": 785.2,
+          "y": 433,
+          "rot": 2.3813
         },
         {
-          "prop": "prop.pop-bollard",
-          "x": 533.6,
-          "y": 691.9,
-          "rot": 1.9717
-        },
-        {
-          "prop": "prop.pop-bollard",
-          "x": 521.6,
-          "y": 686.8,
-          "rot": 1.9717
-        },
-        {
-          "prop": "prop.pop-bollard",
-          "x": 509.7,
-          "y": 681.8,
-          "rot": 1.9717
-        },
-        {
-          "prop": "prop.pop-bollard",
-          "x": 497.7,
-          "y": 676.7,
-          "rot": 1.9717
+          "prop": "prop.blast-wall",
+          "x": 772.7,
+          "y": 419.9,
+          "rot": 2.3813
         }
       ]
     },
@@ -254,6 +236,12 @@
           "x": 1560,
           "y": 1420,
           "r": 170
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2598,
+          "y": 1828,
+          "r": 120
         }
       ]
     },
@@ -287,7 +275,7 @@
         {
           "prop": "prop.glow-shroom",
           "x": 733.7,
-          "y": 566.0,
+          "y": 566,
           "rot": 2
         },
         {
@@ -310,7 +298,7 @@
         },
         {
           "prop": "prop.glow-shroom",
-          "x": 683.0,
+          "x": 683,
           "y": 614.3,
           "rot": 4
         },
@@ -616,7 +604,7 @@
       "items": [
         {
           "prop": "prop.stalagmite",
-          "weight": 1.0
+          "weight": 1
         },
         {
           "prop": "prop.crystal",
@@ -756,6 +744,8 @@
     "pickup.runt-ray",
     "pickup.second-wind",
     "pickup.lead-collar",
+    "pickup.bloodhound",
+    "pickup.sniffer-pack",
     "pickup.bone-shower",
     "pickup.fetch-magnet",
     "pickup.zoomies",

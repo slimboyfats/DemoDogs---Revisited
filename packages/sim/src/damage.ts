@@ -1,6 +1,7 @@
 import { DT, GRAVITY, REBUILD_TIME, type CarPart, type MaterialManifest } from '@demodogs/shared';
 import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
+import { freshen } from './catchup';
 import { blastCritters } from './critters';
 import { LAMP, type Car, type LooseProp, type StaticProp } from './entities';
 import { topple } from './hazards';
@@ -131,7 +132,7 @@ export function respawn(w: World, c: Car): void {
   w.placeOnTrack(c, i, 0);
   c.vx = c.vy = c.vz = c.z = c.spin = 0;
   c.z = c.deck = w.deckAt(i);
-  c.invuln = 2.2;
+  freshen(w, c, 2.2);
   c.nitro = Math.max(c.nitro, 0.5);
   for (
     let tries = 0;
@@ -482,6 +483,24 @@ export function footing(w: World, x: number, y: number): [number, number, boolea
     drag = Math.max(drag, s.def.drag);
   }
   return [grip, drag, pit];
+}
+
+/**
+ * The water at (x, y): how far in from its shore the spot is (art px; 0 on dry ground), and
+ * whether that is too deep to wade. Pools of a material with `water` that touch are one water.
+ */
+export function waterAt(w: World, x: number, y: number): [number, boolean] {
+  let far = 0;
+  let deep = false;
+  for (const s of w.spills) {
+    const W = s.def.water;
+    if (!W || Math.abs(s.x - x) > s.r) continue;
+    const d = s.r - Math.hypot(s.x - x, s.y - y);
+    if (d <= 0) continue;
+    if (d > far) far = d;
+    if (W.deep !== undefined && d > W.deep) deep = true;
+  }
+  return [far, deep];
 }
 
 /** An exploding prop throws out what its manifest says: stars, burning fuel, blazing drums. */

@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Tailspin Funfair",
-    "description": "Race. A figure of eight through the fairground: over the flyover, round the big wheel, and a short way home through the bumpers.",
+    "description": "Race. A figure of eight through the fairground: over the flyover, round the big wheel, and a short way home over the duck pond, ringed with bumpers.",
     "since": "core@0.10.0"
   },
   "mode": "mode.race",
@@ -82,7 +82,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -772.0,
+          "x": -772,
           "y": 648.3,
           "rot": -2.9857
         },
@@ -101,7 +101,7 @@
         {
           "prop": "prop.dirt-track",
           "x": -853.2,
-          "y": 607.0,
+          "y": 607,
           "rot": -2.5096
         },
         {
@@ -160,7 +160,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1165.0,
+          "x": -1165,
           "y": -17.6,
           "rot": -1.8441
         },
@@ -172,7 +172,7 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1190.0,
+          "x": -1190,
           "y": -65.6,
           "rot": -2.5276
         },
@@ -190,13 +190,13 @@
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1288.0,
-          "y": -62.0,
+          "x": -1288,
+          "y": -62,
           "rot": 2.8574
         },
         {
           "prop": "prop.dirt-track",
-          "x": -1327.0,
+          "x": -1327,
           "y": -52.1,
           "rot": 3.0058
         },
@@ -239,7 +239,7 @@
         {
           "prop": "prop.dirt-track",
           "x": -1508.1,
-          "y": -136.0,
+          "y": -136,
           "rot": -1.8432
         }
       ]
@@ -277,45 +277,157 @@
       "items": [
         {
           "prop": "prop.switch-bollard",
-          "x": -914.4,
-          "y": 609.9,
-          "rot": -2.4787
+          "x": -1087.3,
+          "y": 326.5,
+          "rot": -1.8677
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -906.4,
-          "y": 599.6,
-          "rot": -2.4787
+          "x": -1074.9,
+          "y": 322.7,
+          "rot": -1.8677
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -898.4,
-          "y": 589.4,
-          "rot": -2.4787
+          "x": -1062.4,
+          "y": 318.9,
+          "rot": -1.8677
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -890.4,
-          "y": 579.1,
-          "rot": -2.4787
+          "x": -1050,
+          "y": 315.1,
+          "rot": -1.8677
         },
         {
           "prop": "prop.switch-bollard",
-          "x": -882.4,
-          "y": 568.9,
-          "rot": -2.4787
+          "x": -1037.6,
+          "y": 311.3,
+          "rot": -1.8677
+        }
+      ]
+    },
+    {
+      "rule": "pools",
+      "items": [
+        {
+          "material": "material.lagoon",
+          "x": 850,
+          "y": 1496,
+          "r": 120
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.bumper",
+          "x": -1082.4,
+          "y": 63.2,
+          "rot": 0
         },
         {
-          "prop": "prop.switch-bollard",
-          "x": -874.4,
-          "y": 558.6,
-          "rot": -2.4787
+          "prop": "prop.bumper",
+          "x": -1045.7,
+          "y": 73.5,
+          "rot": 0
         },
         {
-          "prop": "prop.switch-bollard",
-          "x": -866.4,
-          "y": 548.4,
-          "rot": -2.4787
+          "prop": "prop.bumper",
+          "x": -1013.4,
+          "y": 93.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -988.1,
+          "y": 122.3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -971.9,
+          "y": 156.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -966,
+          "y": 194.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -971,
+          "y": 232.3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -986.5,
+          "y": 267.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1011.1,
+          "y": 296.3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1117.6,
+          "y": 328.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1154.3,
+          "y": 318.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1186.6,
+          "y": 298.3,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1211.9,
+          "y": 269.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1228.1,
+          "y": 235.2,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1234,
+          "y": 197.5,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1229,
+          "y": 159.7,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1213.5,
+          "y": 124.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.bumper",
+          "x": -1188.9,
+          "y": 95.7,
+          "rot": 0
         }
       ]
     },
@@ -324,110 +436,9 @@
       "items": [
         {
           "prop": "prop.floor-switch",
-          "x": -649.2,
-          "y": 616.3,
-          "rot": 2.6155
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.bumper",
-          "x": -1149.5,
-          "y": 273.4,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1126.6,
-          "y": 266.4,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1038.6,
-          "y": 239.5,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1015.7,
-          "y": 232.5,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1161.3,
-          "y": 235.2,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1138.3,
-          "y": 228.2,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1050.3,
-          "y": 201.3,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1027.4,
-          "y": 194.2,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1173.0,
-          "y": 197.0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1150.0,
-          "y": 189.9,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1062.0,
-          "y": 163.0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1039.1,
-          "y": 156.0,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1184.7,
-          "y": 158.7,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1161.7,
-          "y": 151.7,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1073.7,
-          "y": 124.8,
-          "rot": 0
-        },
-        {
-          "prop": "prop.bumper",
-          "x": -1050.8,
-          "y": 117.7,
-          "rot": 0
+          "x": -893.4,
+          "y": 558.9,
+          "rot": -2.4643
         }
       ]
     },
@@ -494,50 +505,50 @@
       "items": [
         {
           "prop": "prop.ferris-wheel",
-          "x": 1010.0,
-          "y": 200.0,
+          "x": 1010,
+          "y": 200,
           "rot": 0
         },
         {
           "prop": "prop.big-top",
-          "x": -700.0,
-          "y": -50.0,
+          "x": -700,
+          "y": -50,
           "rot": 0
         },
         {
           "prop": "prop.big-top",
-          "x": 550.0,
-          "y": -740.0,
+          "x": 550,
+          "y": -740,
           "rot": 0
         },
         {
           "prop": "prop.carousel",
-          "x": 750.0,
-          "y": 200.0,
+          "x": 750,
+          "y": 200,
           "rot": 0
         },
         {
           "prop": "prop.carousel",
-          "x": -450.0,
-          "y": -250.0,
+          "x": -450,
+          "y": -250,
           "rot": 0
         },
         {
           "prop": "prop.carousel",
-          "x": 1200.0,
-          "y": 350.0,
+          "x": 1200,
+          "y": 350,
           "rot": 0
         },
         {
           "prop": "prop.big-top",
-          "x": -1350.0,
-          "y": 1050.0,
+          "x": -1350,
+          "y": 1050,
           "rot": 0
         },
         {
           "prop": "prop.ferris-wheel",
-          "x": -650.0,
-          "y": -400.0,
+          "x": -650,
+          "y": -400,
           "rot": 0
         }
       ]
@@ -896,6 +907,8 @@
     "pickup.runt-ray",
     "pickup.second-wind",
     "pickup.lead-collar",
+    "pickup.bloodhound",
+    "pickup.sniffer-pack",
     "pickup.bone-shower",
     "pickup.fetch-magnet",
     "pickup.zoomies",
