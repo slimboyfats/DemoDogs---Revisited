@@ -11,11 +11,16 @@ describe('track pieces', () => {
     for (const id of races) {
       const w = makeWorld({ venue: id });
       const T = w.track!;
-      const boosts = w.pads.filter((s) => s.def.pad!.kind === 'boost');
-      const ramps = w.pads.filter((s) => s.def.pad!.kind === 'jump');
+      // (a secret way's jump stands up on its raised trail, away from the road)
+      const road = w.pads.filter((s) => w.grid!.at(s.x, s.y) < w.road / 2 + 4);
+      for (const s of w.pads)
+        if (!road.includes(s))
+          expect(w.relief?.platAt(s.x, s.y) ?? 0, `${id} ${s.def.id}`).toBeGreaterThan(10);
+      const boosts = road.filter((s) => s.def.pad!.kind === 'boost');
+      const ramps = road.filter((s) => s.def.pad!.kind === 'jump');
       expect(boosts.length, id).toBeGreaterThanOrEqual(4);
       expect(ramps.length, id).toBeGreaterThanOrEqual(1);
-      for (const s of w.pads) {
+      for (const s of road) {
         expect(w.offroad(s.x, s.y), `${id} ${s.def.id}`).toBe(false);
         const i = w.grid!.nearest(s.x, s.y);
         // it points the way the road runs there
@@ -28,7 +33,7 @@ describe('track pieces', () => {
       // a ramp has room to land: the next tile is a good way on
       for (const r of ramps) {
         const i = w.grid!.nearest(r.x, r.y);
-        for (const o of w.pads) {
+        for (const o of road) {
           // (the ramps beside it in the same row are the same jump)
           if (o === r || (o.def.id === r.def.id && Math.hypot(o.x - r.x, o.y - r.y) < 80)) continue;
           const d = (w.grid!.nearest(o.x, o.y) - i + T.n) % T.n;

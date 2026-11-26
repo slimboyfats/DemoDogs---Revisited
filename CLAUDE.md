@@ -137,7 +137,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
 - **A course is a venue with one big idea**, and its pieces are plain props, so the track creator places them all.
   A shortcut is a run of path tiles (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`; kept in `w.paths`):
-  the ground under one is road to the sim (grip, speed, no off-course countdown) and scenery rules keep off it. A
+  the ground under one is road to the sim (grip, speed, no off-course countdown) and scenery rules keep off it. On
+  the big courses it is a secret way: path tiles up on relief `trails` (raised ways off the road, sheer-sided, in the
+  same height map as raised road), climbing only once clear of the road, with a gap (`gapsOf` in sim/scenery.ts,
+  kept clear of scenery) jumped from big ramps. A gap of 180 px is cleared with boost and not without
+  (`secret-ways.test.ts`); miss it and the car drops to the ground and back to the road. A
   pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
   back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.

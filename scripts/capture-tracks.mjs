@@ -2,7 +2,8 @@
 // all, at 1600x1000) and race frames at 844x390 dpr 2 with the camera set down at points round the
 // road, to compare a track before and after it is rebuilt.
 // `pnpm build && node scripts/capture-tracks.mjs [out-dir] [venue ...] [--dist=dir] [--map]
-// [--at=0,0.25,0.5,0.75]` (default captures/tracks/, every venue; --map shoots only the whole map;
+// [--at=0,0.25,0.5,0.75]` (default captures/tracks/, every venue; a spot can be x:y on the map;
+// --map shoots only the whole map;
 // --dist shoots another build).
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -34,7 +35,8 @@ const base = `http://localhost:${server.address().port}/`;
 const mapOnly = args.includes('--map');
 const rest = args.filter((a) => !a.startsWith('--'));
 const out = rest[0] ?? 'captures/tracks';
-const spots = (flag('at') ?? '0,0.25,0.5,0.75').split(',').map(Number);
+// a spot is a fraction of the way round, or x:y on the map
+const spots = (flag('at') ?? '0,0.25,0.5,0.75').split(',');
 const ALL = [
   'kennel-loop',
   'knotwood',
@@ -104,10 +106,15 @@ for (const venue of venues) {
   if (mapOnly) continue;
   page = await open({ width: 844, height: 390 }, 2, venue);
   for (let i = 0; i < spots.length; i++) {
-    const on = await page.evaluate((f) => {
+    const on = await page.evaluate((spot) => {
       const s = window.__dd.session;
       const w = s.world;
       const T = w.track;
+      if (spot.includes(':')) {
+        [s.cam.x, s.cam.y] = spot.split(':').map(Number);
+        return true;
+      }
+      const f = Number(spot);
       if (!T && f > 0) return false;
       const k = T ? Math.floor(f * T.n) % T.n : 0;
       s.cam.x = T ? T.x[k] : w.w / 2;

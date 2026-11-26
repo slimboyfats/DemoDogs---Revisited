@@ -82,4 +82,30 @@ describe('relief', () => {
     expect(R.at(400 + 240, 300)).toBe(0);
     expect(R.at(790, 590)).toBe(24);
   });
+
+  it('raises a trail off the road with sheer sides, climbing where its points say, and ending in a drop', () => {
+    const R = make({
+      ...spec,
+      banks: 0,
+      trails: [
+        {
+          wide: 40,
+          points: [
+            [260, 400, 0],
+            [400, 400, 30],
+            [500, 400, 30],
+          ],
+        },
+      ],
+    });
+    // half way up the climb, and level along the top
+    expect(R.at(330, 400)).toBeCloseTo(15, 0);
+    expect(R.at(450, 400)).toBeCloseTo(30, 0);
+    expect(R.at(450, 412)).toBeCloseTo(30, 0);
+    // the sides and the far end are sheer: full height, then nothing a few px on
+    expect(R.at(450, 400 + 20 + 12)).toBe(0);
+    expect(R.at(500 + 20 + 12, 400)).toBe(0);
+    expect(R.platAt(450, 400)).toBeCloseTo(30, 0);
+    expect(R.max).toBeCloseTo(30, 0);
+  });
 });

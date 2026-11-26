@@ -454,7 +454,10 @@ export const VenueSchema = z.strictObject({
    * road's edge (or a derby bowl's wall) and reaching full height `spread` further on. With
    * `outfield: false` they rise only inside the loop instead: a stepped hill the road runs round. With
    * `infield: false` they rise only outside the loop, so the ground inside it stays one clean
-   * level. Left out, the venue is flat.
+   * level. `trails` are raised ways of their own off the road: each a line of points (x, y, and
+   * how high the trail stands there, art px), `wide` across, with sheer sides; where a trail ends
+   * high it ends in a drop. A secret way is two of them with a gap between, jumped with a ramp.
+   * Left out, the venue is flat.
    */
   relief: z
     .strictObject({
@@ -466,6 +469,15 @@ export const VenueSchema = z.strictObject({
       step: z.number().positive().default(8),
       infield: z.boolean().default(true),
       outfield: z.boolean().default(true),
+      trails: z
+        .array(
+          z.strictObject({
+            wide: z.number().min(24).max(160).default(64),
+            points: z.array(z.tuple([z.number(), z.number(), z.number().min(0).max(80)])).min(2),
+          }),
+        )
+        .max(12)
+        .default([]),
     })
     .optional(),
   /**

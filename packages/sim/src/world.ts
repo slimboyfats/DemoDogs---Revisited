@@ -299,7 +299,8 @@ export class World {
     }
     if (venue.oval) this.oval = { ...venue.oval };
     const raised = venue.track?.raised ?? [];
-    if ((venue.relief && (venue.relief.hills > 0 || venue.relief.banks > 0)) || raised.length)
+    const R0 = venue.relief;
+    if ((R0 && (R0.hills > 0 || R0.banks > 0 || R0.trails.length)) || raised.length)
       this.relief = buildRelief(
         venue.relief ?? FLAT_RELIEF,
         venue.seed,
