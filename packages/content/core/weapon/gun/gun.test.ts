@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { ROUND_HIGH, ROUND_LOW, carGap, carPoint, newTouch, stand } from '@demodogs/sim';
+import { loadContent } from '../../../src/index';
 import { bench, openSpot, put } from '../../../src/testing';
 
 describe('weapon.gun', () => {
@@ -38,5 +40,46 @@ describe('weapon.gun', () => {
     for (let i = 0; i < 60; i++) b.w.step();
     expect(b.me.rounds).toBe(0);
     expect(b.them.hp).toBeGreaterThan(95);
+  });
+
+  it('lands its rounds on the bodywork of what it hits, not beside it', () => {
+    // the target a little off the line of fire, and bigger than it was built
+    const { w, me, them } = duel(6);
+    them.size = 1.6;
+    let hits = 0;
+    for (let i = 0; i < 60; i++) {
+      w.step();
+      for (const e of w.takeEvents())
+        if (e.t === 'shot' && e.hit === them.index) {
+          hits++;
+          // (its body as drawn at the height a round flies, which is nowhere outside its hull)
+          expect(
+            Math.abs(
+              carPoint(them, e.tx, e.ty, newTouch(), them.z + ROUND_LOW, them.z + ROUND_HIGH),
+            ),
+          ).toBeLessThan(0.01);
+          expect(carGap(them, e.tx, e.ty)).toBeLessThan(2);
+          // (on the side that faces the gun)
+          expect(Math.hypot(e.tx - me.x, e.ty - me.y)).toBeLessThan(
+            Math.hypot(them.x - me.x, them.y - me.y),
+          );
+        }
+    }
+    expect(hits).toBeGreaterThan(2);
+  });
+
+  it('does not fire through a wall', () => {
+    const { w, me, them } = duel();
+    stand(
+      w,
+      loadContent().prop.get('prop.concrete-wall')!,
+      (me.x + them.x) / 2,
+      me.y,
+      Math.PI / 2,
+      0,
+    );
+    for (let i = 0; i < 30; i++) w.step();
+    expect(me.rounds).toBe(50);
+    expect(them.hp).toBe(100);
   });
 });

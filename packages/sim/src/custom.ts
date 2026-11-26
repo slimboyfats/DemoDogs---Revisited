@@ -16,6 +16,7 @@ import {
 } from '@demodogs/shared';
 import { sceneryRefs, type Content } from './content';
 import { sampleTrack, type Track } from './track';
+import { EDGE } from './shapes';
 
 /**
  * Tracks built in the track creator. A saved track (TrackFile) is turned into an ordinary venue,
@@ -232,6 +233,37 @@ export function clampPoint(t: TrackFile, x: number, y: number): [number, number]
   ];
 }
 
+type Hit = NonNullable<PropManifest['hit']>;
+
+/** A hit shape at `k` times its size: every piece as far out, as big and as tall as that makes it. */
+function sizedHit(H: Hit, k: number): Hit {
+  if ('parts' in H) {
+    const parts = H.parts.map((P) => ({
+      ...P,
+      x: P.x * k,
+      y: P.y * k,
+      ...('radius' in P
+        ? { radius: P.radius * k }
+        : {
+            halfLength: P.halfLength * k,
+            halfWidth: P.halfWidth * k,
+            round: (P.round ?? EDGE) * k,
+          }),
+      ...(P.z ? { z: [P.z[0] * k, P.z[1] * k] as [number, number] } : {}),
+    }));
+    return { parts };
+  }
+  const top = H.top !== undefined ? { top: H.top * k } : {};
+  if ('radius' in H) return { ...H, radius: H.radius * k, ...top };
+  return {
+    ...H,
+    halfLength: H.halfLength * k,
+    halfWidth: H.halfWidth * k,
+    round: (H.round ?? EDGE) * k,
+    ...top,
+  };
+}
+
 /**
  * A prop at `k` times its size: as wide, as heavy and as hard to break as that makes it. The
  * client draws it from the same look with pixels `k` times as big.
@@ -241,6 +273,7 @@ export function sizedProp(def: PropManifest, id: string, k: number): PropManifes
     ...def,
     id,
     radius: def.radius * k,
+    ...(def.hit ? { hit: sizedHit(def.hit, k) } : {}),
     ...(def.mass !== undefined ? { mass: def.mass * k * k } : {}),
     ...(def.integrity !== undefined ? { integrity: def.integrity * k } : {}),
     ...(def.low !== undefined ? { low: def.low * k } : {}),

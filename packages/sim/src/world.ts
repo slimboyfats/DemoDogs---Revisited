@@ -58,6 +58,7 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
+import { phased, trickControls, updateTricks } from './tricks';
 import { updateRescue } from './rescue';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
@@ -68,6 +69,7 @@ import { FLAT_RELIEF, buildRelief, type Relief } from './relief';
 import { leapPieces } from './leaps';
 import { updateGates } from './gates';
 import { updateRivers } from './river';
+import { bound } from './shapes';
 import { updatePresses } from './hazards';
 import { updateGuards, type Decoy } from './guards';
 import { addModifier, updateModifiers, type Mod } from './modifiers';
@@ -559,7 +561,7 @@ export class World {
    * still beside where it now stands may have to make room (see `updateProps`).
    */
   stood = 0;
-  /** The widest static's radius among those in the cells. */
+  /** The widest static among those in the cells: the circle that holds its shape. */
   private widest = 0;
   private readonly freeNear: StaticProp[] = [];
 
@@ -587,7 +589,9 @@ export class World {
       const c = C[k];
       if (c) c.push(s);
       else C[k] = [s];
-      if (s.def.radius > this.widest) this.widest = s.def.radius;
+      // (its shape, or its size where that is the bigger: both are asked after)
+      const wide = Math.max(bound(s.def), s.def.radius);
+      if (wide > this.widest) this.widest = wide;
     }
     out.length = 0;
     const reach = r + this.widest;
@@ -666,6 +670,7 @@ export class World {
     const live = this.phase === 'race';
 
     updateCatchup(this);
+    updateTricks(this);
     for (const c of this.cars) {
       c.invuln = Math.max(0, c.invuln - DT);
       c.fireCd -= DT;
@@ -689,6 +694,7 @@ export class World {
         if (c.finished && c.isPlayer && !c.ai) ctl = { ...NO_CONTROLS, brake: true };
         ctl = blinded(this, c, ctl);
         ctl = stallControls(c, ctl);
+        ctl = trickControls(this, c, ctl);
       } else if (c.isPlayer) c.throttle = (seats[c.seat] ?? NO_CONTROLS).throttle;
       if (live || c.wrecked) drive(this, c, ctl);
       else {
@@ -717,6 +723,8 @@ export class World {
         const o = this.cars[j]!;
         // a car down a pit is not there to be hit
         if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
+        // nor is a ghost
+        if (phased(c) || phased(o)) continue;
         collideCars(this, c, o);
       }
     for (const c of this.cars) {

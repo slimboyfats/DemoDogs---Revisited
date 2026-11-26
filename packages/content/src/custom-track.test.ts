@@ -4,8 +4,11 @@ import {
   World,
   customVenueId,
   installTrack,
+  newTouch,
   newTrack,
   trackFromVenue,
+  propPoint,
+  sizedProp,
   trackProblems,
   type Content,
 } from '@demodogs/sim';
@@ -343,5 +346,27 @@ describe('custom tracks', () => {
     expect(Math.abs(a.statics.length - b.statics.length)).toBeLessThan(a.statics.length * 0.05);
     expect(b.paths.length).toBe(a.paths.length);
     expect(b.statics.filter((s) => s.def.id === 'prop.castle-arch').length).toBeGreaterThan(10);
+  });
+
+  it("sizes a thing's hit shape with it, piece by piece and height by height", () => {
+    const T = newTouch();
+    let seen = 0;
+    for (const def of C.prop.values()) {
+      if (!def.hit) continue;
+      seen++;
+      for (const k of [0.5, 2, 3]) {
+        const big = sizedProp(def, `${def.id}-sized`, k);
+        for (let z = 0; z < 30; z += 3)
+          for (let a = 0; a < 8; a++) {
+            const x = Math.cos(a) * (4 + a * 3);
+            const y = Math.sin(a) * (4 + a * 3);
+            const g = propPoint(def, 0, 0, 0.7, x, y, T, z, z + 1);
+            const G = propPoint(big, 0, 0, 0.7, x * k, y * k, T, z * k, (z + 1) * k);
+            if (g > 1e5) expect(G, def.id).toBeGreaterThan(1e5);
+            else expect(G, def.id).toBeCloseTo(g * k, 6);
+          }
+      }
+    }
+    expect(seen).toBeGreaterThan(30);
   });
 });

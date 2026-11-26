@@ -8,6 +8,12 @@
   },
   "body": "static",
   "radius": 4.4,
+  "hit": {
+    "halfLength": 4.5,
+    "halfWidth": 1,
+    "round": 0.5,
+    "top": 6
+  },
   "made": "material.steel",
   "integrity": 38
 }

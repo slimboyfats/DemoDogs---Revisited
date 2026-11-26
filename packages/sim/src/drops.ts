@@ -1,7 +1,7 @@
-import { CAR_RADIUS, DT, type Controls, type WeaponManifest } from '@demodogs/shared';
+import { DT, type Controls, type WeaponManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 import { damage, spill } from './damage';
-import { circles } from './physics';
+import { carGap } from './shapes';
 import type { World } from './world';
 
 /**
@@ -133,7 +133,8 @@ export function updateDrops(w: World): void {
     const victim = w.cars.find((c) => {
       if (c.wrecked || c.z > 4 || (c.index === s.owner && s.t < 1.5)) return false;
       if (Math.abs(c.x - s.x) > 16 || Math.abs(c.y - s.y) > 16) return false;
-      return circles(c).some(([x, y]) => Math.hypot(x - s.x, y - s.y) < CAR_RADIUS);
+      // (under the car, whichever part of it)
+      return carGap(c, s.x, s.y) < 0.5;
     });
     if (!victim) continue;
     w.spikes.splice(i, 1);

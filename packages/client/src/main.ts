@@ -10,7 +10,7 @@ import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
 import './theme.css';
-import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
+import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
 import {
@@ -35,6 +35,7 @@ import { Input } from './input/input';
 import { isKey } from './input/keys';
 import { Art } from './render/art';
 import { Hud, placeName } from './render/hud';
+import { HITBOX_MODES, HitboxView, type HitboxMode } from './render/hitbox-view';
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { groundMode } from './render/ground';
@@ -52,10 +53,20 @@ import { NameTags } from './ui/name-tags';
 import { Rivals } from './ui/rivals';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
+import { Tutor } from './ui/tutor';
+import { LESSON_KEY, STEPS, offerLesson } from './game/lesson';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
+import { BackgroundClock } from './game/bg-clock';
+import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
-import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
+import {
+  customVenueId,
+  installTrack,
+  rangeBlast,
+  type Content,
+  type Installed,
+} from '@demodogs/sim';
 import {
   linkedTrack,
   LocalTrackStore,
@@ -74,7 +85,7 @@ import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
  * and the test range. ?start=<venue>&car=<car>&autoplay&seed=<n> jumps straight into a race (autoplay drives the
  * player's car with the rivals' AI, &ghosts=<n> adds idle drivers so there is a race left to watch
  * once your car is scrapped); ?career opens the career, ?career=<easy|medium|hard|final>
- * enters that race; ?dev opens the test range; ?edit opens the track creator on a new track.
+ * enters that race; ?lesson gives the driving lesson; ?dev opens the test range; ?edit opens the track creator on a new track.
  * window.__dd exposes the running session, the
  * career and the test range's tools (`__dd.dev.use(x, y, 'blast')`).
  */
@@ -146,6 +157,9 @@ let lastVenue = venues[0]!.id;
 let screen: 'menu' | 'game' | 'results' | 'career' | 'loading' | 'online' | 'tracks' = 'menu';
 /** The game on screen is the test range. */
 let devMode = false;
+/** The game on screen is the driving lesson, and its last card is up. */
+let lessonMode = false;
+let lessonEnd = false;
 /** The game on screen is the track creator. */
 let editMode = false;
 /** The custom track in hand: being built, or being test driven from the editor. */
@@ -202,6 +216,27 @@ function openCareer(): void {
   careerScreen.open(loadCareer());
   setScreen('career');
 }
+/**
+ * The hitbox view (`?hitboxes`, `?hitboxes=heights`, or HITBOXES on the test range): every shape
+ * the rules use, drawn over whatever is on the screen, in a race as on the range.
+ */
+const hitboxes = new HitboxView();
+{
+  const want = params.get('hitboxes');
+  if (want !== null)
+    hitboxes.mode = HITBOX_MODES.includes(want as HitboxMode) ? (want as HitboxMode) : 'boxes';
+}
+// (the same view from the SETTINGS sheet's DEV tab, so it can be turned on in any race on a phone)
+function showHitboxes(): void {
+  for (const b of document.querySelectorAll<HTMLButtonElement>('.hitBtn'))
+    b.textContent = hitboxes.label;
+}
+for (const b of document.querySelectorAll<HTMLButtonElement>('.hitBtn'))
+  b.onclick = () => {
+    hitboxes.next();
+    showHitboxes();
+  };
+showHitboxes();
 const dev = new DevPanel($('devPanel'), $('devTap'), content, {
   view: () => ({ w: W, h: H, scale, dpr: DPR }),
   restart: startDev,
@@ -228,6 +263,11 @@ const dev = new DevPanel($('devPanel'), $('devTap'), content, {
     const next = order[i + 1] ?? null;
     scene.setHeat(next);
     return next ? `HEAT ${next.toUpperCase()}` : 'OVERDRAW NUMBERS';
+  },
+  hitboxes: () => {
+    hitboxes.next();
+    showHitboxes();
+    return hitboxes.label;
   },
   sky: () => {
     const names = Object.keys(SKIES);
@@ -650,6 +690,8 @@ function show(id: string | null): void {
     'results',
     'pauseMenu',
     'settings',
+    'tutAsk',
+    'tutEnd',
     'career',
     'loader',
     'online',
@@ -667,6 +709,11 @@ function setScreen(s: typeof screen): void {
   if (s !== 'game' && devMode) {
     devMode = false;
     dev.close();
+  }
+  if (s !== 'game' && lessonMode) {
+    lessonMode = lessonEnd = false;
+    tutor.close();
+    document.body.classList.remove('lessonEnd');
   }
   if (s !== 'game' && editMode) {
     editMode = false;
@@ -751,6 +798,17 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
         setTimeout(go, 60);
       });
     },
+    // the pixel engine gets the race's ground, shaders and atlas ready behind the loader
+    scene instanceof PixelScene
+      ? {
+          early: (w, g) => scene.early(w, g),
+          steps: 2,
+          ready: (s, say) => {
+            if (shown !== scale) scene.setScale((shown = scale));
+            return scene.prepare(s.world, s.fx, s.ground, s.cam, W, H, say);
+          },
+        }
+      : undefined,
   );
   if (mine !== launching || screen !== 'loading') return;
   session = made;
@@ -880,6 +938,66 @@ function startDev(car: string): void {
   );
 }
 
+/** The driving lesson was taken or turned down on this device: it is not offered again. */
+function lessonSeen(): void {
+  try {
+    safeStore()?.setItem(LESSON_KEY, '1');
+  } catch {
+    // (a full or locked store: it is offered again next visit)
+  }
+}
+
+const tutor = new Tutor(sound, {
+  skip: () => {
+    paused = false;
+    setScreen('menu');
+  },
+  finished: endLesson,
+});
+
+/**
+ * The driving lesson: a fenced lawn of its own, a test range like the dev panel's with two parked
+ * cars for targets, and the tutor saying what to do (`from`: begin at that step, for pictures).
+ */
+function startLesson(from = 0): void {
+  careerRace = null;
+  lessonSeen();
+  const car = cars[carIdx]!;
+  void launch(
+    {
+      venue: SCHOOL,
+      content: withSchool(content),
+      car: car.id,
+      seed: 1,
+      autopilot: false,
+      sandbox: true,
+      // (no rounds: the gun fires by itself, and the lesson's targets are for the rockets)
+      player: { rounds: 0 },
+      field: [1, 2].map((i) => {
+        const c = cars[(carIdx + i) % cars.length]!;
+        return { car: c.id, name: 'TARGET', paint: c.paint, rounds: 0 };
+      }),
+    },
+    'DRIVING LESSON',
+    (s) => {
+      lessonMode = true;
+      lessonEnd = false;
+      tutor.open(s, input, from);
+    },
+  );
+}
+
+/** The lesson's last card, over the lawn: the two kinds of event, and straight into one. */
+function endLesson(): void {
+  if (!lessonMode) return;
+  lessonEnd = paused = true;
+  tutor.close();
+  document.body.classList.add('lessonEnd');
+  show('tutEnd');
+  sound.engineStop();
+  sound.musicMuffle(true);
+}
+
 function finish(gaveUp = false): void {
   if (!session) return;
   const w = session.world;
@@ -986,7 +1104,7 @@ function finish(gaveUp = false): void {
 }
 
 function togglePause(): void {
-  if (screen !== 'game' || editMode) return;
+  if (screen !== 'game' || editMode || lessonEnd) return;
   paused = !paused;
   show(paused ? 'pauseMenu' : null);
   $('restart').classList.toggle('hidden', careerRace !== null || devMode || online.room !== null);
@@ -1164,6 +1282,36 @@ document.addEventListener('visibilitychange', () =>
 
 let last = performance.now();
 let meterFrames = 0;
+
+// the connection in an online race: bars and a ping in the corner, a banner when something is up
+let netShown = '';
+function showNet(now: number): void {
+  const n = online.bars();
+  const b = online.banner(now);
+  const key = `${n}|${online.status()}|${b?.text ?? ''}`;
+  if (key === netShown) return;
+  netShown = key;
+  const dot = $('netDot');
+  const bars = document.createElement('span');
+  bars.className = `bars ${n === 0 ? 'none' : n <= 2 ? 'weak' : ''}`;
+  for (let i = 1; i <= 4; i++) {
+    const bar = document.createElement('i');
+    bar.style.height = `${i * 25}%`;
+    if (i <= n) bar.className = 'on';
+    bars.append(bar);
+  }
+  dot.replaceChildren(bars, online.status());
+  const el = $('netBanner');
+  el.textContent = b?.text ?? '';
+  el.className = b ? `on ${b.good ? 'good' : 'bad'}` : '';
+}
+
+// an online host out of view keeps the race going for everyone (no drawing, only the ticks)
+const hostClock = new BackgroundClock((dt) => {
+  if (!document.hidden || screen !== 'game' || !session || !online.racing) return;
+  if (session.advance(dt)) finish();
+});
+let hiddenAt = 0;
 function frame(t: number): void {
   requestAnimationFrame(frame);
   const wall = t - last;
@@ -1191,16 +1339,18 @@ function frame(t: number): void {
     octx.setTransform(1, 0, 0, 1, 0, 0);
     octx.clearRect(0, 0, overlay.width, overlay.height);
     octx.setTransform(overK, 0, 0, overK, 0, 0);
-    drawOverlay(octx, scene, session.world, session.fx, W, H, DPR);
+    hitboxes.draw(octx, scene, art, session.world, W, H, DPR);
+    drawOverlay(octx, scene, session.world, session.fx, W, H, DPR, !lessonMode);
     if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
-    else if (nameTags.shown && !devMode)
+    else if (nameTags.shown && !devMode && !lessonMode)
       drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (editMode) editor.draw(octx, dt);
     else if (devMode) dev.frame(dt);
+    else if (lessonMode) tutor.frame(octx, scene, W, H, DPR, paused ? 0 : dt);
     else if (overview === null)
       hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
-    if (online.racing) $('netDot').textContent = online.status();
+    if (online.racing) showNet(t);
     // a device that keeps falling behind gets thinner fire and smoke, by itself, then fewer
     // pixels to fill (the bigger lever, but the one that shows), then thinner effects again
     if (!paused && slow.frame(t, wall)) {
@@ -1319,7 +1469,7 @@ function boot(): void {
   };
   $('pauseBtn').onclick = togglePause;
   $('resume').onclick = togglePause;
-  $('restart').onclick = () => startGame(lastVenue, lastCustom);
+  $('restart').onclick = () => (lessonMode ? startLesson() : startGame(lastVenue, lastCustom));
   $('quit').onclick = () => {
     paused = false;
     if (online.room) {
@@ -1355,6 +1505,18 @@ function boot(): void {
   label();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
+    if (document.hidden) {
+      hiddenAt = performance.now();
+      if (online.racing && online.isHost) hostClock.start();
+    } else {
+      hostClock.stop();
+      // a phone's connections often die quietly while the page is away: check them now
+      online.resume(performance.now() - hiddenAt > 3000);
+    }
+  });
+  addEventListener('online', () => online.resume(true));
+  addEventListener('pageshow', (e) => {
+    if (e.persisted) online.resume(true);
   });
   showCar();
   setScreen('menu');
@@ -1373,6 +1535,36 @@ function boot(): void {
     const c = params.get('car');
     startDev(cars.find((x) => x.id === c || x.id === `car.${c}`)?.id ?? cars[carIdx]!.id);
   }
+  // the driving lesson: from the menu at any time, and offered once to somebody new. The two
+  // cards it ends on start a first race and a first derby.
+  const first = (kind: 'race' | 'derby') =>
+    // (the gentlest of each, if it is still in the game)
+    venues.find((v) => v.id === (kind === 'race' ? 'venue.kennel-loop' : 'venue.the-pit')) ??
+    venues.find((v) => content.mode.get(v.mode)?.kind === kind) ??
+    venues[0]!;
+  const leave = (go: () => void) => () => {
+    paused = false;
+    go();
+  };
+  $('tutRace').prepend(venueThumb(first('race')));
+  $('tutDerby').prepend(venueThumb(first('derby')));
+  $('tutRace').onclick = leave(() => startGame(first('race').id));
+  $('tutDerby').onclick = leave(() => startGame(first('derby').id));
+  $('tutMenu').onclick = leave(() => setScreen('menu'));
+  $('toLesson').onclick = () => startLesson();
+  $('tutYes').onclick = () => startLesson();
+  $('tutNo').onclick = () => {
+    lessonSeen();
+    show('menu');
+  };
+  // ?lesson opens it (?lesson=3 at that step, ?lesson=ask shows the offer). A driven browser
+  // (the capture scripts) and an address that asks for something else are never offered it.
+  const lesson = params.get('lesson');
+  const busy = ['start', 'dev', 'edit', 'room', 'career'].some((k) => params.has(k));
+  if (lesson === 'ask' || (lesson === null && !busy && !navigator.webdriver && !location.hash))
+    if (lesson === 'ask' || offerLesson(safeStore())) show('tutAsk');
+  if (lesson !== null && lesson !== 'ask')
+    startLesson(Math.max(0, Math.min(STEPS.length - 1, Number(lesson) || 0)));
   if (params.has('edit')) void tracksScreen.create();
   // a track somebody sent as a link: kept with your tracks, ready to race or to change
   const linked = linkedTrack(location.hash);
@@ -1394,6 +1586,9 @@ function boot(): void {
     });
   }
   if (params.has('room')) openOnline(params.get('room') ?? '');
+  // a reload (or a tab the phone threw out and brought back) mid-race goes back to its seat
+  else if (savedRoom() && !st && !params.has('dev') && !params.has('edit'))
+    openOnline(savedRoom()!);
   if (params.has('career')) {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
@@ -1423,6 +1618,25 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** The hitbox view for scripts: `hitboxes.mode = 'off' | 'boxes' | 'heights'`. */
+      hitboxes,
+      /** The driving lesson for scripts: `step` is the one that is on, `state` where its things are, `end()` jumps to its last card. */
+      lesson: {
+        get step() {
+          return tutor.step;
+        },
+        get state() {
+          return tutor.state;
+        },
+        end: endLesson,
+      },
+      /** For the fight bench (scripts/perf-fight.mjs): a blast in any race, and one frame drawn now. */
+      blast: (x: number, y: number, power: number) => {
+        if (session) rangeBlast(session.world, x, y, power);
+      },
+      draw: () => {
+        if (session) scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
+      },
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
       /** Draw the race at k device px to an art px with no HUD, for pictures (null: as it was). */

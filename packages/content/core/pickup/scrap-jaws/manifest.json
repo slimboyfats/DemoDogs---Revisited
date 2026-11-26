@@ -13,5 +13,10 @@
   "trail": 0.1,
   "seconds": 14,
   "factor": 0.5,
-  "amount": 6
+  "amount": 6,
+  "hit": {
+    "halfLength": 2.1,
+    "halfWidth": 6,
+    "z": [0.7, 6.2]
+  }
 }

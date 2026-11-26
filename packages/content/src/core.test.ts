@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NO_CONTROLS } from '@demodogs/shared';
-import { Rng, putProp, stand } from '@demodogs/sim';
+import { Rng, girth, propGap, putProp, stand } from '@demodogs/sim';
 import { flatBench, makeWorld, testContent } from './testing';
 
 const C = testContent();
@@ -74,7 +74,8 @@ describe('props at rest', () => {
     expect(p.x).toBe(x);
     const wall = stand(w, C.prop.get('prop.barrier')!, x + 1, y, 0, 0);
     w.step(NO_CONTROLS);
-    const clear = wall.def.radius + drum.radius;
-    expect(Math.hypot(p.x - wall.x, p.y - wall.y)).toBeGreaterThanOrEqual(clear - 1e-6);
+    // (clear of the wall's own shape by its own width)
+    const gap = propGap(wall.def, wall.x, wall.y, wall.rot, p.x, p.y);
+    expect(gap).toBeGreaterThanOrEqual(girth(drum) - 1e-6);
   });
 });

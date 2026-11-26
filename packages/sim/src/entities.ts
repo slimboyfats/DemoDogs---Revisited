@@ -9,6 +9,7 @@ import type {
 import type { Fit } from './addons';
 import type { AiBehaviour } from './behaviours';
 import type { Guards } from './guards';
+import type { Tricks } from './tricks';
 
 /** What a rival's AI remembers between ticks. */
 export interface AiState {
@@ -237,6 +238,8 @@ export interface Car {
   fit: Fit;
   /** In a rival's wake with a scoop to feed on it, this tick. */
   draft: boolean;
+  /** Tricks at work on the car, its own or a rival's doing, by kind (see tricks.ts). */
+  tricks: Tricks;
 }
 
 export interface Bot {

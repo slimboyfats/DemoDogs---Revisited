@@ -1,0 +1,16 @@
+{
+  "id": "pickup.chasing-tails",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Chasing Tails",
+    "description": "Every rival ahead is sent dizzy: left is right and right is left until its head stops spinning.",
+    "since": "core@0.10.0"
+  },
+  "kind": "dizzy",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lead": 0.5,
+  "trail": 1.5,
+  "seconds": 4,
+  "radius": 300
+}

@@ -190,6 +190,11 @@ export const PeerMessageSchema = z.discriminatedUnion('type', [
     car: ContentId,
     /** The last tick this guest simulated, or -1 with no race (first join, or a reload). */
     haveTick: z.number().int(),
+    /**
+     * A secret this guest made up when it first joined: it claims the same seat again after the
+     * lobby server has forgotten the guest and given it a new id (a phone locked for a minute).
+     */
+    token: z.string().min(8).max(40).optional(),
   }),
   /** Guest → host: a new car or name in the lobby. */
   z.object({ type: z.literal('pick'), name: NameSchema, car: ContentId }),

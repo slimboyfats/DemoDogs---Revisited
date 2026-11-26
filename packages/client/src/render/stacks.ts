@@ -22,6 +22,7 @@ import { leanAt } from './rubble';
 import type { Lie } from './pixel/stack-batch';
 import { Builder } from './slice-fx';
 import { queueDecoys, queueGuards } from './guard-mounts';
+import { queueTrickThings, queueTricks, trickAlpha } from './tricks-fx';
 import { BREEZE, WIND } from './pixel/particles';
 
 const MINE_OFF = { minelit: 'black' };
@@ -93,7 +94,16 @@ export function queueStacks(
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
   tickBones(w.time);
-  for (const s of w.statics) if (!s.down || s.def.gate) queueStatic(R, art, w, fx, s, P, still);
+  // a rail up a ramp lies along the ramp, each length tipped as the road climbs, so the run of
+  // them is one line and not a flight of steps
+  const railId = w.relief ? w.venue.track?.rail : undefined;
+  for (const s of w.statics) {
+    if (s.down && !s.def.gate) continue;
+    const tip = s.def.id === railId && R.tilt ? sloped(w, s) : null;
+    if (tip) R.tilt!(tip);
+    queueStatic(R, art, w, fx, s, P, still);
+    if (tip) R.tilt!(null);
+  }
   queueToppling(R, fx.toppling);
   // what has just come down, whole for the moment before it cracks apart
   for (const f of fx.wreck.falling) {
@@ -154,6 +164,7 @@ export function queueStacks(
   }
   queueArms(R, art, w);
   queueDecoys(R, art, w);
+  queueTrickThings(R, art, w, fx.tricks);
   queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(built(R, fx, b, 16), art, fx, b);
   for (const k of w.critters) queueCritter(R, art, w, k);
@@ -420,12 +431,15 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const D = c.def;
   const cs = Math.cos(c.h) * k;
   const sn = Math.sin(c.h) * k;
+  // (a trick that makes the car safe from harm has a look of its own, not the blink)
   const alpha =
     fall > 0
       ? 1 - 0.85 * Math.max(0, (fall - 0.4) / 0.6)
-      : c.invuln > 0 && !((c.sunk ?? 0) > 0) && Math.floor(w.time * 12) % 2
-        ? 0.4
-        : 1;
+      : trickAlpha(c) !== undefined
+        ? trickAlpha(c)!
+        : c.invuln > 0 && !((c.sunk ?? 0) > 0) && Math.floor(w.time * 12) % 2
+          ? 0.4
+          : 1;
   // the end that went over first drops and the other end kicks up
   const tip = Math.sin(Math.min(1, fall * 1.8) * Math.PI * 0.5) * 3.5;
   const roll = c.roll + (c.sunkTip?.[1] ?? 0) * tip;
@@ -509,6 +523,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
       }
   }
   queueGuards(R, art, w, fx, c, alpha, k, up, z);
+  if (!c.wrecked && flat >= 1) queueTricks(R, art, w, c, alpha, k, up, z);
   if (c.springs && c.hop >= 0 && c.hop < 0.4) {
     const coil = art.prop(c.springs.def.id);
     const cz = Math.max(0, z - 4 * k);
@@ -542,6 +557,24 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   R.tilt?.(null);
   // your own car, when it is dark enough to lose it: a pale line round the whole of it
   if (from !== undefined) R.rim?.(from, RIM);
+}
+
+const slope: Lie = { tx: 0, ty: 0, ax: 0, ay: 0, px: 0, py: 0, pz: 0, lift: 0 };
+
+/** How a long thing standing on a slope lies along it (the way it points), or null on the flat. */
+function sloped(w: World, s: StaticProp): Lie | null {
+  const cs = Math.cos(s.rot);
+  const sn = Math.sin(s.rot);
+  const d = Math.max(3, s.def.radius);
+  const g =
+    (w.relief!.at(s.x + cs * d, s.y + sn * d) - w.relief!.at(s.x - cs * d, s.y - sn * d)) / (2 * d);
+  if (Math.abs(g) < 0.02) return null;
+  const k = Math.max(-0.6, Math.min(0.6, g));
+  slope.tx = slope.ax = k * cs;
+  slope.ty = slope.ay = k * sn;
+  slope.px = s.x;
+  slope.py = s.y;
+  return slope;
 }
 
 /** How much more a car is drawn tipped than the ground under it slopes: it has to be seen. */

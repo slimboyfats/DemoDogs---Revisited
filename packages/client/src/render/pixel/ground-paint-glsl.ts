@@ -207,6 +207,12 @@ vec3 country(vec2 p, ivec2 gc, vec4 F) {
 #endif
   return col * k;
 }
+// (the colour of a way's own earth in this look: the faces of a jump piece wear it too)
+#ifdef BRIGHT
+#define WAYSUN(x) sunny(x)
+#else
+#define WAYSUN(x) (x)
+#endif
 #ifdef WAYS
 uniform highp usampler2D u_wn;  // nearest sample of the ways' lines
 uniform sampler2D u_ws;         // their samples
@@ -214,11 +220,6 @@ uniform float u_wayN;
 vec4 wayOf(int i, int row) {
   return texelFetch(u_ws, ivec2(i, row), 0);
 }
-#ifdef BRIGHT
-#define WAYSUN(x) sunny(x)
-#else
-#define WAYSUN(x) (x)
-#endif
 // A way off the road laid over the country in c: a road like the main one in another surface
 // (packed dirt, planks, stone setts), unbroken along its line, up a takeoff and down a landing.
 void wayOver(inout vec3 c, vec2 wp, ivec2 gc) {

@@ -8,6 +8,7 @@
   },
   "body": "loose",
   "radius": 6,
+  "hit": { "halfLength": 6.5, "halfWidth": 4, "round": 1 },
   "mass": 3.2,
   "launch": 0.05,
   "crush": 32

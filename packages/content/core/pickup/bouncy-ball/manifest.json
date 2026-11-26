@@ -1,0 +1,15 @@
+{
+  "id": "pickup.bouncy-ball",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bouncy Ball",
+    "description": "The car is a pinball bumper for a while: anything that touches it is flung off with a boing.",
+    "since": "core@0.10.0"
+  },
+  "kind": "bumper",
+  "weight": 1,
+  "hurtWeight": 1,
+  "seconds": 8,
+  "amount": 7,
+  "factor": 230
+}

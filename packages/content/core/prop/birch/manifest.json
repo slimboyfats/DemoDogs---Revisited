@@ -8,11 +8,27 @@
   },
   "body": "static",
   "radius": 2.6,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.1,
+        "z": [0, 9]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.6,
+        "z": [9, 23]
+      }
+    ]
+  },
   "sway": true,
   "made": "material.wood",
   "integrity": 26,
   "crown": {
-    "trunk": 1.0,
+    "trunk": 1,
     "top": 19,
     "hold": 0.3,
     "flash": 0.15

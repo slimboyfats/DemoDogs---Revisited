@@ -167,6 +167,26 @@ export type SimEvent =
       x: number;
       y: number;
     }
+  /**
+   * A trick (pickup `id`, a TrickKind `kind`) set off by car `by`: it came to work on `car`
+   * (`on`), let go of it (`off`), or did something there and then at (x, y) (`use`). A `use` that
+   * reaches somewhere has that place in (tx, ty) (a dog door's way out), the other car in it in
+   * `to` (the car struck, robbed or tied to), and what changed hands in `label`.
+   */
+  | {
+      t: 'trick';
+      kind: string;
+      what: 'on' | 'off' | 'use';
+      car: number;
+      by: number;
+      id: string;
+      x: number;
+      y: number;
+      tx?: number;
+      ty?: number;
+      to?: number;
+      label?: string;
+    }
   /** A car's blade (pickup `id`) was bolted on (`on`) or wore out and fell off, at (x, y). */
   | { t: 'blade'; car: number; id: string; on: boolean; x: number; y: number }
   /** A car's springs threw it up at (x, y) to clear the ground ahead. */
