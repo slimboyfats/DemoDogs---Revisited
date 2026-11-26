@@ -1,0 +1,14 @@
+{
+  "id": "prop.parasol",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Parasol",
+    "description": "A striped beach parasol stuck in the sand. Anything knocks it over.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 1.6,
+  "hardness": 0.3,
+  "made": "material.wood",
+  "integrity": 5
+}

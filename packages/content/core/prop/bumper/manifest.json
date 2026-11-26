@@ -1,0 +1,13 @@
+{
+  "id": "prop.bumper",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bumper",
+    "description": "A sprung fairground bumper under a spotted cap. It does not hurt: whatever touches it is thrown straight back off it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "hardness": 0,
+  "bounce": 190
+}

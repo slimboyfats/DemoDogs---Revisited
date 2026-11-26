@@ -306,6 +306,13 @@ export function updatePickups(w: World): void {
       if (far > plain) w.emit({ t: 'fetch', car: c.index, x: p.x, y: p.y });
       p.on = false;
       p.t = 0;
+      // a secret way's crate: all it holds, every time
+      if (p.gives) {
+        const got = p.gives.map((id) => w.content.pickup.get(id)!);
+        const label = got.map((g) => grant(w, c, g)).join(' + ');
+        w.emit({ t: 'pickup', car: c.index, x: p.x, y: p.y, label, kind: got[0]!.kind });
+        break;
+      }
       const hurt = c.hp < 70;
       const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
       // where the car is running leans the odds: the back of the field rolls the strong ones

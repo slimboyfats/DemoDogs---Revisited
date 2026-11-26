@@ -1,0 +1,14 @@
+{
+  "id": "prop.banner",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Banner",
+    "description": "A long red and gold pennant on a pole, streaming in the wind.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 1.2,
+  "hardness": 0.3,
+  "made": "material.wood",
+  "integrity": 6
+}

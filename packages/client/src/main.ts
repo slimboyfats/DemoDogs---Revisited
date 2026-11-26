@@ -1168,7 +1168,7 @@ function buildMenu(): void {
     b.append(
       venueThumb(v),
       Object.assign(document.createElement('em'), {
-        textContent: mode.kind === 'race' ? `RACE · ${mode.laps} LAPS` : 'DERBY',
+        textContent: mode.kind === 'race' ? `RACE · ${v.laps ?? mode.laps} LAPS` : 'DERBY',
       }),
       Object.assign(document.createElement('b'), { textContent: v.meta.name.toUpperCase() }),
       Object.assign(document.createElement('small'), {

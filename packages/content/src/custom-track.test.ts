@@ -6,6 +6,7 @@ import {
   installTrack,
   newTouch,
   newTrack,
+  trackFromVenue,
   propPoint,
   sizedProp,
   trackProblems,
@@ -312,6 +313,39 @@ describe('custom tracks', () => {
     expect(w.phase).toBe('over');
     expect(w.player.finished).toBe(true);
     for (const c of w.cars) expect(c.lap).toBeGreaterThanOrEqual(1);
+  });
+
+  it('every race venue of the game can be copied as a track, and the copy installs and races', () => {
+    const C = loadContent();
+    for (const v of C.venue.values()) {
+      const t = trackFromVenue(C, v, 'copy-0001', `${v.meta.name} copy`);
+      if (!v.track) {
+        expect(t).toBeNull();
+        continue;
+      }
+      const parsed = parseTrackFile(JSON.stringify(t));
+      expect(parsed.ok, v.id).toBe(true);
+      if (!parsed.ok) continue;
+      expect(trackProblems(parsed.track), v.id).toEqual([]);
+      const made = installTrack(C, parsed.track);
+      expect(made.dropped, v.id).toEqual([]);
+      const copy = made.content.venue.get(made.venue)!;
+      expect(copy.track!.points, v.id).toEqual(v.track.points);
+      expect(copy.relief, v.id).toEqual(v.relief);
+      expect(copy.track!.raised?.length ?? 0, v.id).toBe(v.track.raised?.length ?? 0);
+      expect(made.laps).toBe(v.laps ?? C.mode.get(v.mode)!.laps);
+    }
+  });
+
+  it('a copied venue has as much standing on it as the venue has, and races', () => {
+    const C = loadContent();
+    const v = C.venue.get('venue.castle-growl')!;
+    const made = installTrack(C, trackFromVenue(C, v, 'copy-0002', 'Castle copy')!);
+    const a = new World({ content: C, venue: v.id, car: 'car.mutt', seed: 1 });
+    const b = new World({ content: made.content, venue: made.venue, car: 'car.mutt', seed: 1 });
+    expect(Math.abs(a.statics.length - b.statics.length)).toBeLessThan(a.statics.length * 0.05);
+    expect(b.paths.length).toBe(a.paths.length);
+    expect(b.statics.filter((s) => s.def.id === 'prop.castle-arch').length).toBeGreaterThan(10);
   });
 
   it("sizes a thing's hit shape with it, piece by piece and height by height", () => {

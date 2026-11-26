@@ -7,7 +7,9 @@ import type { Relief } from '@demodogs/sim';
  * `h * rise` art px further up the screen than flat ground would be. The ground canvas stays a
  * flat map; this is the map from the picture back to it: for every px of the picture, how many
  * rows further south the ground it shows lies (red), how the light falls on it (green, 128 is
- * flat ground) and whether it is the steep face of a drop seen from the front (blue). The shader
+ * flat ground) and whether it is the steep face of a drop seen from the front (blue), and for
+ * the face of a jump piece its look and turn (alpha, see leaps.ts), or on a slope the part of a
+ * row the shift is out by. The shader
  * reads one texel of it and looks the colour up that far down the canvas, so hills, banks and
  * cliffs cost nothing a frame beyond that one read.
  *
@@ -26,10 +28,26 @@ export const FAR_DARK = 0.62;
 const REACH = 20;
 const SOUTH = 56;
 
-export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8Array {
+export function bakeRelief(
+  R: Relief,
+  w: number,
+  h: number,
+  rise: number,
+  faces: ((x: number, y: number) => number) | null = null,
+  blocks: ((x: number, y: number) => number) | null = null,
+): Uint8Array {
   // the height of every px, read between the grid's points a row at a time
   const hh = new Float32Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) hh[y * w + x] = R.at(x + 0.5, y + 0.5);
+  // (the ground at a jump piece's foot: it lies as it would with no piece there)
+  const foot = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      // (a jump piece from its own shape, not the grid's: its edges are straight lines)
+      const b = blocks ? blocks(x + 0.5, y + 0.5) : -1;
+      const g = R.at(x + 0.5, y + 0.5);
+      hh[y * w + x] = b < 0 ? g : g - R.platAt(x + 0.5, y + 0.5) + b;
+      if (b === 0) foot[y * w + x] = 1;
+    }
   const out = new Uint8Array(w * h * 4);
   for (let i = 0; i < w * h; i++) out[i * 4 + 1] = 128;
   const last = new Int32Array(w).fill(-1);
@@ -109,7 +127,9 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
       const sx = (at(x + 1, y) - at(x - 1, y)) / 2;
       const sy = (at(x, y + 1) - at(x, y - 1)) / 2;
       const slope = Math.hypot(sx, sy);
-      let steep = slope > 1;
+      // (a jump piece's side is wall from where it leaves the ground, however low it is there)
+      const code = faces ? faces(x + 0.5, y + 0.5) : 0;
+      let steep = slope > (code ? 0.45 : 1);
       // the side of a platform eases out at its foot, and the foot is still wall: a gentle
       // slope there with the steep of the side just above it is face too, or grass shows in it
       if (!steep && slope > 0.04 && R.plat && R.platAt(x + 0.5, y + 0.5) > 0.1)
@@ -118,12 +138,21 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
           const uy = Math.round(y + (sy / slope) * d);
           steep = Math.hypot(at(ux + 1, uy) - at(ux - 1, uy), at(ux, uy + 1) - at(ux, uy - 1)) > 2;
         }
-      let shade = steep
-        ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
-        : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
+      // (the ground at the foot of a jump piece is not lit by the piece's own rise)
+      let shade = foot[y * w + x]
+        ? 1
+        : steep
+          ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
+          : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
       // and higher ground up and to the left throws its shadow here
-      if (at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17)
-        shade *= 0.64;
+      let dark =
+        at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17;
+      // (a jump piece's shadow is traced a px at a time, so its edge is a straight line)
+      if (foot[y * w + x]) {
+        dark = false;
+        for (let d = 1; d <= 30 && !dark; d++) dark = at(x - d, y - d) - v > d * 0.85 + 1;
+      }
+      if (dark) shade *= 0.64;
       // the lip of a drop catches the light
       else if (v - Math.min(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) > 4)
         shade *= 1.16;
@@ -152,6 +181,18 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
         out[k] = Math.min(255, y - j);
         out[k + 1] = g;
         out[k + 2] = face ? 255 : 0;
+        // (and the face of a jump piece is in the piece's own look: alpha says which)
+        // (and on a slope that is no face, how far between two rows of the map this row of the
+        // picture falls, so a line painted up a ramp is straight and not a stair: 1 to 255)
+        out[k + 3] = face
+          ? code
+          : slope > 0.02
+            ? 128 +
+              Math.round(
+                127 *
+                  Math.max(-1, Math.min(1, (j - (y - v * rise)) / Math.max(0.3, 1 - sy * rise))),
+              )
+            : 0;
       }
     }
   // the near edge of raised ground: its cut face down to the bottom of the map

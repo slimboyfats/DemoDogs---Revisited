@@ -1,6 +1,8 @@
 import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
+import { pathAt } from './pads';
+import { leapGaps, leapPieces } from './leaps';
 import { putProp, stand } from './stand';
 import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
@@ -33,8 +35,35 @@ export function buildScenery(w: World, rng: Rng): void {
     onSide(x, y) || R?.slipAt(x, y) ? null : putProp(w, prop(id), x, y, rot, rng);
   // (nor, unless it was put there by hand, on the shoulder of raised road: that is the road's room)
   const half = w.road / 2;
+  // (nor on a path laid off the road, which is road; nor out in a lake of something deep)
+  // (nor in the way of a car leaping the gap from a takeoff to its landing)
+  const leaps = leapGaps(leapPieces(w.venue, w.content));
+  const blocked = (id: string, x: number, y: number): boolean => {
+    const def = prop(id);
+    if (def.pad || !def.solid) return false;
+    const r = def.radius + 8;
+    for (const [ax, ay, bx, by, wide] of leaps) {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const u = Math.max(
+        0,
+        Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)),
+      );
+      if (Math.hypot(ax + dx * u - x, ay + dy * u - y) < wide / 2 + r) return true;
+    }
+    if (w.paths.length)
+      for (let k = 0; k < 5; k++)
+        if (
+          pathAt(w, x + (k ? Math.cos(k * 1.5708) * r : 0), y + (k ? Math.sin(k * 1.5708) * r : 0))
+        )
+          return true;
+    return w.spills.some(
+      (p) =>
+        p.fixed && p.r > DEEP_FROM && p.def.drag >= 1.5 && Math.hypot(p.x - x, p.y - y) < p.r - 4,
+    );
+  };
   const add: Add = (id, x, y, rot) =>
-    R?.plat && w.grid && R.platAt(x, y) > 0.5 && w.grid.at(x, y) > half
+    (R?.plat && w.grid && R.platAt(x, y) > 0.5 && w.grid.at(x, y) > half) || blocked(id, x, y)
       ? null
       : loose(id, x, y, rot);
   const weighted = (items: { prop: string; weight: number }[]): string => {
@@ -49,6 +78,9 @@ export function buildScenery(w: World, rng: Rng): void {
   for (const rule of w.venue.scenery)
     apply(w, rng, rule, rule.rule === 'place' ? loose : add, weighted, prop);
 }
+
+/** A pool laid with the map that is wider than this (px) and drags hard is a lake: nothing is stood in it. */
+const DEEP_FROM = 60;
 
 /** How high road must stand to be railed, and how far in from the platform's edge the rail runs (px). */
 const RAIL_FROM = 7;

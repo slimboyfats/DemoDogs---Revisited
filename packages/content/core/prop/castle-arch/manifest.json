@@ -1,0 +1,14 @@
+{
+  "id": "prop.castle-arch",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Castle gate arch",
+    "description": "A block of the arch over a castle gate: stone high across the road with battlements on it, and the teeth of a portcullis hanging under. Cars drive through.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 5,
+  "solid": false,
+  "made": "material.stone",
+  "integrity": 110
+}

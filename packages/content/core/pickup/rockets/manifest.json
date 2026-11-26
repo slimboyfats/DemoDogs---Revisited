@@ -1,0 +1,13 @@
+{
+  "id": "pickup.rockets",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Rockets",
+    "description": "A rack of rockets, from a secret way's crate: enough to blow a cracked wall out of the way.",
+    "since": "core@0.10.0"
+  },
+  "kind": "arms",
+  "weight": 0.01,
+  "hurtWeight": 0.01,
+  "weapons": ["weapon.rocket"]
+}

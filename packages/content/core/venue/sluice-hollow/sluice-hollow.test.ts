@@ -93,9 +93,11 @@ describe(venue, () => {
     P.y = s.y;
     P.vx = P.vy = 0;
     const y0 = P.y;
-    runUntil(w, () => R.front > R.bridge.indexOf(1), 600);
+    // (how far it was carried: a car left off the course is put back on the road in the end)
+    let far = y0;
+    runUntil(w, () => (far = Math.max(far, P.y)) < 0 || R.front > R.bridge.indexOf(1), 600);
     // the river runs south here
-    expect(P.y).toBeGreaterThan(y0 + 10);
+    expect(far).toBeGreaterThan(y0 + 10);
   });
 
   it('a race still finishes with the dam gone and the plank bridge out', () => {

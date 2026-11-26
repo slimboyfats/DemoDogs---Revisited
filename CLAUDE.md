@@ -167,6 +167,30 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   sides, so nothing else needs to know about it. The platform is wider than the road (`SHOULDER`), its edges are
   railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
   that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
+- **A course is a venue with one big idea**, and its pieces are plain props, so the track creator places them all.
+  A shortcut is a run of path pieces (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`, `prop.cobbles`,
+  `prop.rickety-boards`, its `skin` saying what it is laid in; kept in `w.paths`): the ground under one is road to
+  the sim (grip, speed, no off-course countdown) and scenery rules keep off it. A pad's `wobble` makes it loose
+  underfoot: as fast as road, but a car on it wags and rocks (`wobbleAt`, `Car.sway`). The client draws a run of
+  them as a road, not as pieces (render/ways.ts joins the pieces that follow one another into one smoothed line,
+  and the ground's painter lays a road surface along it, `wayOver`, forking out from under the main road); a piece
+  is drawn as its own stack only where the ground is not painted in the shader, or it was put down after the
+  ground was made. On the big courses it is a secret way. Its jump is two props
+  with a `leap` (`prop.jump-takeoff`, `prop.jump-landing`): each is raised ground in the one height map, square and
+  sheer-sided, laid before anything else from the venue's `place` rules (sim/leaps.ts); the takeoff throws a car off
+  its lip, and a takeoff with a landing ahead is a gap scenery keeps out of (`leapGaps`). A gap of 150 px is cleared
+  with boost and not without (`secret-ways.test.ts`). The client draws no stack for them: their tops are part of
+  the way the painter lays (a hazard band at the drop, arrows up the takeoff) and their faces are painted by the
+  ground's shader, in the look of the way each joins (a path's skin, the road's tarmac or dirt, else rock;
+  render/leaps.ts paints the top on the ground canvas only for a piece on no way). A way can be shut by a `gate` (`prop.pop-bollard` keeps a
+  beat; `prop.switch-bollard` sinks for a few seconds when a `switch` pad near it, `prop.floor-switch`, is driven
+  over; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
+  `prop.secret-crate` (`gives`) is a yellow crate that hands over all it lists (a boost refill and rockets). A
+  pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
+  back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
+  raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.
+  Sights stand close beside the road (about 50 px off its edge), since that is all a phone shows. Every built-in
+  track opens in the track creator as a copy (`trackFromVenue` in sim/custom.ts, COPY THIS TRACK on the tracks screen).
 - **Rule numbers tuned by hand are in one list** (`TUNABLES` in shared/tuning.ts): the DEV SETTINGS pane (menu and
   pause menu) draws a slider for each, a `World` takes them as `tuning`, and a rule reads `world.tuning`. A new one is
   an entry in that list and a read in its rule. They are saved on the device and never used in an online race, so

@@ -332,7 +332,7 @@ export const PROP_GROUPS: [PropGroup, string][] = [
 
 /** Which group of the palette a prop is shown in: by what it does, never by its name. */
 export function propGroup(p: PropManifest): PropGroup {
-  if (p.pad) return 'pieces';
+  if (p.pad || p.bounce) return 'pieces';
   if (p.critter) return 'animals';
   if (p.crown || p.sway || p.trample) return 'plants';
   if (p.explodesAt || p.blast || p.throws || p.spills) return 'bangs';

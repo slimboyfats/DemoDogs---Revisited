@@ -254,13 +254,16 @@ export type SimEvent =
   | { t: 'splash'; x: number; y: number; lit: boolean }
   /** A round from a car's gun, from (x, y) to (tx, ty); `hit` is the car it struck, or -1. */
   | { t: 'shot'; car: number; x: number; y: number; tx: number; ty: number; hit: number }
+  /** A car was thrown back off a sprung prop (world.statics[prop]) at (x, y), at `power` px a second. */
+  | { t: 'bounce'; car: number; prop: number; x: number; y: number; power: number }
   /**
    * A car drove onto a track tile (world.statics[prop]) at (x, y): a boost tile kicked it on, or
-   * a ramp threw it up. `power` is the push, or the speed it left the ramp at.
+   * a ramp threw it up, or a vent blew under it, or it pressed a switch. `power` is the push, the
+   * speed it left the ramp at, the vent's lift, or (a switch) how many gates it opened.
    */
   | {
       t: 'pad';
-      kind: 'boost' | 'jump';
+      kind: 'boost' | 'jump' | 'vent' | 'switch';
       car: number;
       prop: number;
       x: number;

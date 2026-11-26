@@ -27,6 +27,8 @@ export class ReliefLayer {
     w = 1,
     h = 1,
     rise = 1,
+    faces: ((x: number, y: number) => number) | null = null,
+    blocks: ((x: number, y: number) => number) | null = null,
   ) {
     this.heights = texture(gl, gl.LINEAR);
     if (!relief) {
@@ -53,7 +55,7 @@ export class ReliefLayer {
     }
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.gw, this.gh * 2, 0, gl.RGBA, gl.FLOAT, all);
     this.map = texture(gl, gl.NEAREST);
-    const px = bakeRelief(relief, w, h, rise);
+    const px = bakeRelief(relief, w, h, rise, faces, blocks);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
   }

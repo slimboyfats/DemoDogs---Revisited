@@ -1,0 +1,15 @@
+{
+  "id": "prop.pop-bollard",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pop-up bollard",
+    "description": "A striped steel post that sinks into the ground and rises again on a beat: two seconds down in every four. A row of them across a path is a gate to time.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "gate": {
+    "period": 4,
+    "open": 2
+  }
+}

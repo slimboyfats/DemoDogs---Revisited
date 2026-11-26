@@ -38,7 +38,7 @@ import { DistanceGrid, sampleTrack, type Track } from './track';
 import { racingLine, type Line } from './line';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
-import { updatePads } from './pads';
+import { pathAt, updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
 import { collideCars, collideProps, collideWorld, drive, hemmed, makeCar } from './physics';
@@ -66,6 +66,8 @@ import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
 import { newWild, type Wild } from './wild';
 import { newArms, updateArms, type Arms } from './arms';
 import { FLAT_RELIEF, buildRelief, type Relief } from './relief';
+import { leapPieces } from './leaps';
+import { updateGates } from './gates';
 import { updateRivers } from './river';
 import { bound } from './shapes';
 import { updatePresses } from './hazards';
@@ -195,6 +197,14 @@ export class World {
   readonly statics: StaticProp[] = [];
   /** The statics that are track tiles (boost tiles, ramps): see pads.ts. */
   readonly pads: StaticProp[] = [];
+  /** The statics that are pieces of track laid off the road (a dirt path, a boardwalk). */
+  readonly paths: StaticProp[] = [];
+  /** Is any of them loose underfoot (a pad with `wobble`)? */
+  wobbly = false;
+  /** The statics that are takeoffs that throw a car up off their lip (see leaps.ts, pads.ts). */
+  readonly leaps: StaticProp[] = [];
+  /** The statics that are gates that sink to let cars by (see gates.ts). */
+  readonly gates: StaticProp[] = [];
   /** The statics that are shapes in the road (speed bumps, dips, potholes): see mounds.ts. */
   readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
@@ -314,7 +324,9 @@ export class World {
     }
     if (venue.oval) this.oval = { ...venue.oval };
     const raised = venue.track?.raised ?? [];
-    if ((venue.relief && (venue.relief.hills > 0 || venue.relief.banks > 0)) || raised.length)
+    const R0 = venue.relief;
+    const leaps = leapPieces(venue, C);
+    if ((R0 && (R0.hills > 0 || R0.banks > 0)) || raised.length || leaps.length)
       this.relief = buildRelief(
         venue.relief ?? FLAT_RELIEF,
         venue.seed,
@@ -325,9 +337,14 @@ export class World {
         this.oval,
         raised,
         this.tuning,
+        leaps,
       );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
+    // a secret way's crates float over their stands
+    for (const s of this.statics)
+      if (s.def.gives)
+        this.pickups.push({ x: s.x, y: s.y, z: 0, on: true, t: 0, gives: s.def.gives });
 
     // the field: the player and rivals in other cars and paint
     const types = [...C.car.keys()].sort();
@@ -483,7 +500,7 @@ export class World {
   }
 
   get laps(): number {
-    return this.lapsOpt ?? this.mode.laps ?? 0;
+    return this.lapsOpt ?? this.venue.laps ?? this.mode.laps ?? 0;
   }
 
   emit(e: SimEvent): void {
@@ -499,7 +516,9 @@ export class World {
 
   /** Is (x, y) off the road? Always false in an arena. */
   offroad(x: number, y: number): boolean {
-    return this.grid !== null && this.grid.at(x, y) > this.road / 2 + 3;
+    return (
+      this.grid !== null && this.grid.at(x, y) > this.road / 2 + 3 && pathAt(this, x, y) === null
+    );
   }
 
   /**
@@ -507,7 +526,7 @@ export class World {
    * `OFF_SOFT` px past its edge to all of it. Always 0 in an arena.
    */
   offness(x: number, y: number): number {
-    if (!this.grid) return 0;
+    if (!this.grid || (this.paths.length && pathAt(this, x, y))) return 0;
     return Math.min(1, Math.max(0, (this.grid.at(x, y) - this.road / 2) / OFF_SOFT));
   }
 
@@ -719,6 +738,7 @@ export class World {
     updateProps(this);
     updatePresses(this);
     updatePickups(this);
+    if (this.gates.length) updateGates(this);
     updateDefence(this);
     updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateAddons(this);

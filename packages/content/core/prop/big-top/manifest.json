@@ -1,0 +1,14 @@
+{
+  "id": "prop.big-top",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Big top",
+    "description": "A striped circus tent with a flag on its pole. Canvas and timber: it can be brought down.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 14,
+  "hardness": 0.6,
+  "made": "material.wood",
+  "integrity": 260
+}

@@ -1,5 +1,5 @@
 import type { TrackFile } from '@demodogs/shared';
-import { newTrack, sampleTrack, type Content } from '@demodogs/sim';
+import { newTrack, sampleTrack, trackFromVenue, type Content } from '@demodogs/sim';
 import {
   copyTrack,
   newTrackId,
@@ -77,6 +77,9 @@ export class TracksScreen {
     if (content.venue.has('venue.kennel-loop')) this.look.value = 'venue.kennel-loop';
     const make = el('button', { className: 'go', id: 'newTrack' }, 'NEW TRACK');
     make.onclick = () => void this.create();
+    // a copy of the game's own track, whole, to change and race as one's own
+    const copy = el('button', { id: 'copyTrack' }, 'COPY THIS TRACK');
+    copy.onclick = () => void this.copy();
     const load = el('button', { id: 'loadTrack' }, 'LOAD A FILE');
     load.onclick = () =>
       void pickTrackFile().then(async (r) => {
@@ -98,7 +101,7 @@ export class TracksScreen {
           'Build a track of your own: bend the road, put things down, race it. Tracks are kept ' +
           'on this device, and go to a friend as a link or a file.',
       }),
-      el('div', { className: 'row newRow' }, this.look, make, load, back),
+      el('div', { className: 'row newRow' }, this.look, make, copy, load, back),
       this.msg,
       this.list,
     );
@@ -120,6 +123,15 @@ export class TracksScreen {
     if (!v) return;
     const n = (await this.store.list()).length + 1;
     const t = newTrack(v, newTrackId(Math.random), `My Track ${n}`);
+    await this.store.put(t);
+    this.hooks.edit(t);
+  }
+
+  /** The chosen venue itself as a track of one's own, saved and opened in the editor. */
+  async copy(): Promise<void> {
+    const v = this.content.venue.get(this.look.value);
+    const t = v && trackFromVenue(this.content, v, newTrackId(Math.random), `${v.meta.name} copy`);
+    if (!t) return;
     await this.store.put(t);
     this.hooks.edit(t);
   }

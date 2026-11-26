@@ -1,0 +1,13 @@
+{
+  "id": "prop.lighthouse",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Lighthouse",
+    "description": "A red and white lighthouse whose lamp goes round. Solid stone: it takes a great deal to bring it down.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 8,
+  "made": "material.stone",
+  "integrity": 300
+}

@@ -1,0 +1,13 @@
+{
+  "id": "prop.stalagmite",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Stalagmite",
+    "description": "A spike of cave rock standing out of the floor, with a smaller one beside it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 4.6,
+  "made": "material.stone",
+  "integrity": 150
+}

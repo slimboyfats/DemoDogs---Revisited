@@ -1,0 +1,13 @@
+{
+  "id": "prop.glow-shroom",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glowcap",
+    "description": "A toadstool taller than a car, its violet cap dotted with spots that glow in the dark.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 2.8,
+  "made": "material.wood",
+  "integrity": 50
+}

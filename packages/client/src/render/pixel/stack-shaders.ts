@@ -547,6 +547,8 @@ void main() {
   vec4 rl = texelFetch(u_map, ivec2(clamp(floor((cell + 0.5) / u_fine), vec2(0.0), u_size - 1.0)), 0);
   float shift = floor(rl.r * 255.0 + 0.5);
   p.y += shift;
+  // (on a slope, the part of a row the whole shift is out by: lines up a ramp come out straight)
+  if (rl.b <= 0.75 && rl.a > 0.0) p.y += (rl.a * 255.0 - 128.0) / 127.0;
 #endif
   ivec2 ci = ivec2(cell);
 #ifdef PAINT
@@ -556,6 +558,8 @@ void main() {
   vec2 gp = p + 0.5;
   vec3 c = groundPaint(gp, ivec2(floor(gp * u_fine)));
   vec4 mk = texture(u_tex, gp / u_size);
+  // (planks stand over whatever lies on the ground: a pool is under them, not on them)
+  if ((g_way > 1.5 && g_way < 2.5) || g_way > 4.5) mk = vec4(0.0);
   c = c * (1.0 - mk.a) + mk.rgb;
 #else
   vec2 i = floor(p);
@@ -627,9 +631,50 @@ void main() {
   if (rl.b > 0.75) {
     float bed = mod(shift, 4.0) < 1.0 ? 0.72 : 1.0;
     float lum = dot(c, vec3(0.3, 0.5, 0.2));
+    // a jump piece's face is in its own look (leaps.ts): stone, timber, earth or concrete
+    float code = floor(rl.a * 255.0 + 0.5);
+    float sk = floor(code / 32.0);
+    if (sk > 0.5) {
+      // along the wall, whichever of the piece's sides it is, and up it
+      float turn = (code - sk * 32.0) * 0.19634954;
+      vec2 dir = vec2(cos(turn), sin(turn));
+      float ac = dot(wp, dir) + dot(wp, vec2(-dir.y, dir.x)) + 800.0;
+      if (sk < 1.5) {
+        // coursed stone: blocks in rows, every other row half a block over
+        float row = floor(shift / 5.0);
+        float sv = ac + mod(row, 2.0) * 5.0;
+        float st = hash(vec2(floor(sv / 10.0), row));
+        c = mod(shift, 5.0) < 1.0 || mod(sv, 10.0) < 1.0 ? vec3(0.36, 0.35, 0.33) : vec3(0.62, 0.60, 0.56) * (0.86 + 0.22 * st);
+      } else if (sk < 2.5) {
+        // a timber frame: boards on edge between stout posts
+        float post = mod(ac, 18.0);
+        float st = hash(vec2(floor(shift / 4.0), floor(ac / 18.0)));
+        c = vec3(0.66, 0.51, 0.33) * (0.9 + 0.16 * st);
+        if (mod(shift, 4.0) < 1.0) c = vec3(0.34, 0.25, 0.16);
+        if (post < 3.4) c = post < 0.7 || post > 2.7 ? vec3(0.30, 0.22, 0.14) : vec3(0.50, 0.38, 0.25);
+      } else if (sk < 3.5) {
+        // a bank of the same packed earth as the way, darker, in beds
+        float st = hash(vec2(floor(ac / 6.0), floor(shift / 3.0)));
+#ifdef PAINT
+        c = WAYSUN(u_cD) / 255.0 * 0.66 * (0.92 + 0.14 * st);
+#else
+        c = vec3(0.55, 0.42, 0.28) * (0.9 + 0.14 * st);
+#endif
+        if (mod(shift + floor(st * 2.0), 6.0) < 1.0) c *= 0.82;
+      } else {
+        // poured concrete in panels
+        c = vec3(0.60, 0.60, 0.62);
+        if (mod(ac, 26.0) < 1.0 || mod(shift, 9.0) < 1.0) c = vec3(0.44, 0.44, 0.46);
+      }
+    } else
     c = mix(c, mix(vec3(0.38, 0.29, 0.21), vec3(0.34, 0.35, 0.38), tar) * (0.75 + 0.5 * lum), 0.85) * bed;
   }
-  c = min(vec3(1.0), c * rl.g * (255.0 / 128.0));
+  float shd = rl.g * (255.0 / 128.0);
+#ifdef PAINT
+  // (the top of a jump is a road: it keeps its colours up the slope)
+  if (g_way > 0.5 && rl.b <= 0.75) shd = mix(1.0, shd, 0.3);
+#endif
+  c = min(vec3(1.0), c * shd);
   gl_FragDepth = clamp(1.0 - (wp.y * u_depth.x + shift * u_hk * u_depth.y - 4.0 - u_depth.z) * u_depth.w, 0.0, 1.0);
 #endif
   // Snow settles in patches, a cell at a time, and last on the tarmac where the cars keep it off.
