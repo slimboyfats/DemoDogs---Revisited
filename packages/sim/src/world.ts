@@ -3,6 +3,9 @@ import { updateDefence } from './defence';
 import {
   DT,
   DEFAULT_TUNING,
+  DIFFICULTY,
+  type Difficulty,
+  type DriverStyle,
   FIELD_SIZE,
   ADDON_KINDS,
   NO_CONTROLS,
@@ -33,6 +36,7 @@ import type {
 import { Hasher, TAU, angDiff, clamp } from './math';
 import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
+import { racingLine, type Line } from './line';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { updatePads } from './pads';
@@ -105,6 +109,8 @@ export interface WorldOptions {
   playOn?: boolean;
   /** Laps, instead of the mode's. */
   laps?: number;
+  /** How hard the rivals are to beat (default normal). Online, every peer gets the same. */
+  difficulty?: Difficulty;
   /**
    * A test range: no countdown and no end, and the rivals are parked targets that nobody drives.
    * See range.ts for what can be done to them.
@@ -154,6 +160,11 @@ export class World {
   readonly w: number;
   readonly h: number;
   readonly track: Track | null = null;
+  /** How hard the rivals are set to be (shared/constants.ts `DIFFICULTY`). */
+  readonly level: (typeof DIFFICULTY)[Difficulty];
+  private racing: Line | null = null;
+  /** The kinds of driver still to be dealt to rivals with no kind of their own (see `character`). */
+  styleDeck: DriverStyle[] = [];
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
   /** The lie of the land, or null where the venue is flat. */
@@ -266,6 +277,7 @@ export class World {
     this.venue = venue;
     this.mode = mode;
     this.rng = new Rng(opts.seed);
+    this.level = DIFFICULTY[opts.difficulty ?? 'normal'];
     this.w = venue.size.w;
     this.h = venue.size.h;
     this.road = venue.track?.road ?? 0;
@@ -449,6 +461,12 @@ export class World {
     const a = T.a[i]!;
     const off = -(c.x - T.x[i]!) * Math.sin(a) + (c.y - T.y[i]!) * Math.cos(a);
     return Math.abs(off) > this.road / 2 + 2 ? 0 : h;
+  }
+
+  /** The racing line round the track (see line.ts), worked out the first time a driver asks. */
+  get line(): Line | null {
+    if (!this.track) return null;
+    return (this.racing ??= racingLine(this.track, this.road / 2));
   }
 
   get kind(): 'race' | 'derby' {
