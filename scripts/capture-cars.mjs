@@ -2,7 +2,8 @@
 // on, with every add-on fitted at three sizes and tipped on ramps, and each one driven round a
 // track for a video. Headless Chromium at 844x390, dpr 2.
 // `pnpm build && node scripts/capture-cars.mjs [out-dir] [car ...] [--only=scene] [--frames]
-// [--dpr=1] [--dist=dir]` (default captures/cars/, every car). Scenes: lineup, night, gear, drive.
+// [--dpr=1] [--dist=dir] [--query=&gi=0]` (default captures/cars/, every car; the query goes on every
+// page). Scenes: lineup, night, gear, drive.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -31,6 +32,7 @@ const base = `http://localhost:${server.address().port}/`;
 const args = process.argv.slice(2);
 const frames = args.includes('--frames');
 const only = args.find((a) => a.startsWith('--only='))?.slice(7);
+const extra = args.find((a) => a.startsWith('--query='))?.slice(8) ?? '';
 const [out = 'captures/cars', ...picked] = args.filter((a) => !a.startsWith('--'));
 await mkdir(out, { recursive: true });
 
@@ -51,7 +53,7 @@ page.on('pageerror', (e) => errors.push(String(e)));
  */
 const range = async (query, per, gapX, gapY, h = 0) => {
   // (the player's own car is one of the row: cars far from it are drawn flat)
-  await page.goto(`${base}?dev&car=${picked[0] ?? 'mutt'}&zoom=close${query}`);
+  await page.goto(`${base}?dev&car=${picked[0] ?? 'mutt'}&zoom=close${query}${extra}`);
   await page.waitForFunction(() => window.__dd?.session, null, { timeout: 180000 });
   await page.waitForTimeout(2500);
   await page.evaluate(
@@ -61,7 +63,8 @@ const range = async (query, per, gapX, gapY, h = 0) => {
       dd.session.fx.quality = 1;
       document.getElementById('devPanel').style.visibility = 'hidden';
       const w = dd.session.world;
-      for (const c of w.cars) c.ai = null;
+      // nobody drives and nobody shoots: the guns are there to be looked at
+      for (const c of w.cars) Object.assign(c, { ai: null, rounds: 0 });
       for (const p of w.props) p.alive = false;
       const P = (dd.home = { x: w.player.x, y: w.player.y });
       for (const s of w.statics)
@@ -115,7 +118,7 @@ const shot = async (name) => {
 };
 const scene = (name) => !only || only === name;
 
-/** Fit every add-on and guard there is to each car of the row, and make car i `sizes[i]` times its size. */
+/** Fit every add-on there is to each car of the row, and make car i `sizes[i]` times its size. */
 const dress = (sizes) =>
   page.evaluate((sizes) => {
     const dd = window.__dd;
@@ -125,8 +128,6 @@ const dress = (sizes) =>
       const scale = sizes[i % sizes.length];
       for (const d of w.content.pickup.values()) {
         if (addons.includes(d.kind)) c.fit[d.kind] = { def: d, t: 0, n: d.charges ?? 0, cd: 0 };
-        else if (c.guards && ['flak', 'pads', 'mirror'].includes(d.kind))
-          c.guards[d.kind] = { def: d, n: d.charges ?? 1, t: 999, cd: 0 };
         if ((scale > 1 && d.kind === 'grow') || (scale < 1 && d.kind === 'shrink'))
           c.morph = { def: d, t: 999 };
       }
@@ -153,9 +154,9 @@ if (scene('night')) {
   await shot('night');
 }
 
-// 3: every add-on and guard bolted on, at full size, grown and shrunk, and nose up on a ramp
+// 3: every add-on bolted on, at full size, grown and shrunk, and nose up on a ramp
 if (scene('gear')) {
-  await range('', 6, 48, 52);
+  await range('', 6, 50, 52);
   await page.evaluate(() => {
     const dd = window.__dd;
     dd.row.forEach((c, i) => {
@@ -172,7 +173,7 @@ if (scene('gear')) {
 if (scene('drive')) {
   const ids = picked.length ? picked : ['mutt'];
   for (const id of ids) {
-    await page.goto(`${base}?start=kennel-loop&car=${id}&autoplay&seed=7`);
+    await page.goto(`${base}?start=kennel-loop&car=${id}&autoplay&seed=7${extra}`);
     await page.waitForFunction(() => window.__dd?.session, null, { timeout: 180000 });
     await page.waitForTimeout(2500);
     await page.evaluate(() => (window.__dd.session.rate = 0));
@@ -181,11 +182,11 @@ if (scene('drive')) {
       const s = window.__dd.session;
       for (let i = 0; i < 420; i++) s.step();
     });
-    for (let f = 0; f < (frames ? 150 : 1); f++) {
+    // three ticks a frame: 20 frames a second of game time
+    for (let f = 0; f < (frames ? 60 : 1); f++) {
       await page.evaluate(() => {
         const s = window.__dd.session;
-        s.step();
-        s.step();
+        for (let i = 0; i < 3; i++) s.step();
       });
       await page.waitForTimeout(60);
       if (frames)
