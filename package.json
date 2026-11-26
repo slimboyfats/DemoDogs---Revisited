@@ -38,6 +38,7 @@
     "cars": "pnpm build && node scripts/capture-cars.mjs",
     "tracks": "pnpm build && node scripts/capture-tracks.mjs",
     "world": "pnpm build && node scripts/capture-world.mjs",
+    "water": "pnpm build && node scripts/capture-water.mjs",
     "bridge": "pnpm build && node scripts/capture-bridge.mjs",
     "res": "pnpm build && node scripts/resolution.mjs",
     "perf:start": "pnpm build && node scripts/perf-start.mjs",

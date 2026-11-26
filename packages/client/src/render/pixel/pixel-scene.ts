@@ -523,6 +523,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const s of fx.changed) this.atlas.refresh(s);
     fx.changed.clear();
     this.groundLayer!.sync();
+    // (the water moves with the race's own clock: stopped, it is a still picture like the rest)
+    this.groundLayer!.waterTime = w.time % 3600;
 
     // the view: the camera point in the middle, origin snapped to whole device pixels (as mudders' Camera)
     const cx = cam.x + ((Math.random() - 0.5) * cam.shake) / S;
