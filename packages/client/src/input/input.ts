@@ -1,5 +1,6 @@
 import type { Controls } from '@demodogs/shared';
 import { toControls, type RawInput } from './controls';
+import type { Pads } from './gamepad';
 import { isKey, KEYS } from './keys';
 
 /** CSS pixels from the stick's centre to its edge. */
@@ -26,7 +27,10 @@ export class Input {
   /** The controls as last read: what is held now, for whoever teaches or shows them. */
   last: Controls = { steer: 0, throttle: 0, brake: false, boost: false, fire: false };
 
-  constructor(private readonly onGesture: () => void) {
+  constructor(
+    private readonly onGesture: () => void,
+    private readonly pads?: Pads,
+  ) {
     const $ = (id: string) => document.getElementById(id)!;
     const zone = $('stickZone');
     const base = $('stickBase');
@@ -146,7 +150,12 @@ export class Input {
     r.right = held(KEYS.right);
     r.brake = b.brake;
     r.boost = b.boost || held(KEYS.boost);
-    const out = toControls(r, heading);
+    let out = toControls(r, heading);
+    // a gamepad drives while the keys and the screen are left alone
+    const pad = this.pads?.controls(heading);
+    if (pad && !out.throttle && !out.steer && !out.brake && !out.boost)
+      out = { ...pad, fire: out.fire };
+    if (this.pads?.takeFire()) out.fire = true;
     r.fire = false;
     this.last = out;
     return out;

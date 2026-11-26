@@ -1,0 +1,15 @@
+{
+  "id": "pickup.sniffer-pack",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sniffer Pack",
+    "description": "Three seeker rockets for a car in the pack: each takes the scent of the next car up the road and follows the road round to it.",
+    "since": "core@0.11.0"
+  },
+  "kind": "arms",
+  "weight": 0.12,
+  "hurtWeight": 0.09,
+  "lead": 0.1,
+  "trail": 2.2,
+  "weapons": ["weapon.sniffer"]
+}

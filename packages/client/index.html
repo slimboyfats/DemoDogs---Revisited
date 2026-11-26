@@ -236,6 +236,7 @@
           <button data-tab="view">VIEW</button>
           <button data-tab="sound">SOUND</button>
           <button data-tab="hud">HUD</button>
+          <button data-tab="feel">FEEL</button>
           <button data-tab="dev" class="tuneBtn">DEV</button>
         </nav>
         <div class="setBody">
@@ -274,6 +275,26 @@
             </label>
             <button class="namesBtn tog">NAMES ON</button>
             <button class="hintsBtn tog">KEY HINTS ON</button>
+          </div>
+          <div data-pane="feel" class="hidden">
+            <label class="slide">
+              <span>SCREEN SHAKE <b class="shakeName">100%</b></span>
+              <input class="shakeRange" type="range" min="0" max="2" step="0.1" value="1" />
+            </label>
+            <label class="slide">
+              <span>HIT-STOP <b class="stopName">100%</b></span>
+              <input class="stopRange" type="range" min="0" max="2" step="0.1" value="1" />
+            </label>
+            <label class="slide">
+              <span>VIBRATION <b class="buzzName">100%</b></span>
+              <input class="buzzRange" type="range" min="0" max="1" step="0.1" value="1" />
+            </label>
+            <button class="padBtn tog">GAMEPAD ON</button>
+            <p class="note">
+              Hit-stop holds the race still for a blink on a big blow (never online). Gamepad: left
+              stick drives, or right trigger gas and left trigger brake; A boost, X fire, B brake,
+              START pause. The stick and A work the menus too.
+            </p>
           </div>
           <div data-pane="dev" class="hidden">
             <button id="toDev">TEST RANGE</button>

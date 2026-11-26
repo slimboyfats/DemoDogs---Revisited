@@ -739,7 +739,7 @@ export class Effects {
   }
 
   text(x: number, y: number, text: string, col = '#fff', big = false): void {
-    this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
+    this.texts.push({ x, y, z: 26, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
   fling(
@@ -1282,14 +1282,20 @@ export class Effects {
             this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
             this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
           });
-          if (c === w.player && e.amount > 6)
-            this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
+          // a blow to this screen's car is felt hard; one it lands on another, a little
+          if (c === w.player && e.amount > 3)
+            this.shake = Math.max(this.shake, Math.min(12, 2 + e.amount * 0.6));
+          else if (e.by === w.player.index && e.amount > 6)
+            this.shake = Math.max(this.shake, Math.min(6, 1.5 + e.amount * 0.3));
           break;
         }
         case 'crash': {
           for (let i = 0; i < 6; i++) this.spark(e.x, e.y, 3, e.impact * 0.4);
           const v = this.vol(e.x, e.y);
           if (v > 0) S.crash(e.impact * v);
+          // driving into something hard jolts the picture, whether or not it cost anything
+          if (e.player && e.impact > 25)
+            this.shake = Math.max(this.shake, Math.min(8, e.impact * 0.07));
           break;
         }
         case 'press': {
@@ -1404,6 +1410,20 @@ export class Effects {
           if (e.car === w.player.index) this.setMsg('TOO DEEP!', 1.2);
           break;
         }
+        case 'plunge': {
+          // short of the jump and down in the pool under it: a fountain of what the pool is made of
+          const pit = w.pits.find((p) => Math.hypot(p.x - e.x, p.y - e.y) < p.r);
+          const rgb = pit ? parseInt(pit.def.colour.slice(1, 7), 16) : 0x36b4d2;
+          for (let k = 0; k < 16; k++)
+            this.spray(e.x + rand(-7, 7), e.y + rand(-7, 7), rgb, 0, 0, 70);
+          for (let k = 0; k < 6; k++) this.puff(e.x, e.y, 2, 'smoke');
+          if (this.near(e.x, e.y, 320)) S.crash(8);
+          if (e.car === w.player.index) {
+            this.shake = Math.max(this.shake, 4);
+            this.setMsg('FELL SHORT!', 1.6);
+          } else if (this.near(e.x, e.y, 300)) this.text(e.x, e.y, 'FELL SHORT', '#9fe8ff');
+          break;
+        }
         case 'rescue': {
           const c = w.cars[e.car]!;
           // gone from where it sat in a burst (out of water, in a last ring of foam), and put
@@ -1412,7 +1432,8 @@ export class Effects {
           else for (let k = 0; k < 10; k++) this.puff(e.x, e.y, 3, 'smoke');
           this.slices.start(c, c.z);
           if (this.near(c.x, c.y, 320)) S.whoosh();
-          if (e.car === w.player.index) this.setMsg('BACK ON THE ROAD', 1.4);
+          if (e.car === w.player.index)
+            this.setMsg(e.fell ? 'BACK WHERE YOU LEFT THE ROAD' : 'BACK ON THE ROAD', 1.4);
           else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'LIFTED BACK', '#9fe8ff');
           break;
         }
@@ -2466,7 +2487,7 @@ export class Effects {
     this.shock.step(DT);
     howlTick(this, w);
     guardTick(this, w, this.sound);
-    this.catchup.step(this, w);
+    this.catchup.step(this, w, this.sound);
     this.tricks.step(this, w);
     this.life.step(this, w);
     // hollows in the road are light and shade on the ground: each painted once, as it is laid

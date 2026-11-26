@@ -63,6 +63,8 @@ describe('content validate', () => {
           p.kind === 'blade' ||
           p.kind === 'springs' ||
           p.kind === 'collar' ||
+          // (the rocket that hunts the car in front)
+          p.kind === 'hunt' ||
           isAddon(p.kind) ||
           // tricks that put something on a car, or stand something in the world
           ['balloons', 'door', 'splat', 'steal', 'pair', 'bumper'].includes(p.kind) ||

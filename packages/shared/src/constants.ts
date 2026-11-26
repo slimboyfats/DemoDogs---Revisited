@@ -37,7 +37,8 @@ export const HELD = {
   hurt: 8,
   weighed: 16,
   wet: 32,
-  hot: 64,
+  fresh: 64,
+  hot: 128,
 } as const;
 
 /**

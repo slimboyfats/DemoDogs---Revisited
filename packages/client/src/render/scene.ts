@@ -19,7 +19,9 @@ interface Baked {
 export interface Camera {
   x: number;
   y: number;
-  shake: number;
+  /** The shake: art pixels the picture is off by just now (game/feel.ts). */
+  ox: number;
+  oy: number;
 }
 
 /**
@@ -115,9 +117,7 @@ export class Scene implements WorldRenderer {
     ctx.globalAlpha = 1;
     ctx.fillStyle = w.venue.colors.outside;
     ctx.fillRect(0, 0, W, H);
-    const shx = (Math.random() - 0.5) * cam.shake;
-    const shy = (Math.random() - 0.5) * cam.shake;
-    R.begin(cam.x + shx / S, cam.y + shy / S, W, H);
+    R.begin(cam.x + cam.ox, cam.y + cam.oy, W, H);
 
     // the ground: only the part on screen, scaled up with hard pixels
     const vw = W / S;

@@ -8,25 +8,39 @@ const GO = { steer: 0, throttle: 1, brake: false, boost: false, fire: false };
 const def = () => loadContent().pickup.get('pickup.runt-ray')!;
 
 describe('pickup.runt-ray', () => {
-  it('in a race, zaps every rival ahead and nobody behind', () => {
+  it('in a race, zaps every other car, behind as well as ahead, and slows them', () => {
     const w = startRace(makeWorld());
     for (let i = 0; i < 30; i++) w.step();
     const c = w.player;
-    const ahead = w.cars.filter((o) => o.progress > c.progress);
-    const behind = w.cars.filter((o) => o !== c && o.progress <= c.progress);
-    expect(ahead.length).toBeGreaterThan(0);
-    expect(behind.length).toBeGreaterThan(0);
+    const others = w.cars.filter((o) => o !== c);
+    expect(others.some((o) => o.progress > c.progress)).toBe(true);
+    expect(others.some((o) => o.progress < c.progress)).toBe(true);
     w.takeEvents();
-    expect(grant(w, c, def())).toBe(`RUNT RAY x${ahead.length}`);
-    for (const o of ahead) expect(o.morph?.def.id).toBe('pickup.runt-ray');
-    for (const o of [c, ...behind]) expect(o.morph).toBeNull();
+    expect(grant(w, c, def())).toBe(`RUNT RAY x${others.length}`);
+    for (const o of others) expect(o.morph?.def.id).toBe('pickup.runt-ray');
+    expect(c.morph).toBeNull();
     // each one is struck by a bolt
-    expect(w.takeEvents().filter((e) => e.t === 'arc')).toHaveLength(ahead.length);
+    expect(w.takeEvents().filter((e) => e.t === 'arc')).toHaveLength(others.length);
     for (let i = 0; i < 30; i++) w.step();
-    for (const o of ahead) {
+    for (const o of others) {
       expect(o.size).toBeCloseTo(def().scale!, 5);
       expect(o.pace).toBeLessThan(0.8);
     }
+  });
+
+  it('holds the car in front the longest and the car at the back the least', () => {
+    const w = startRace(makeWorld());
+    for (let i = 0; i < 30; i++) w.step();
+    const order = w.standings();
+    const c = order[3]!;
+    grant(w, c, def());
+    const first = order[0]!.morph!.t;
+    const last = order[order.length - 1]!.morph!.t;
+    expect(first).toBeCloseTo(def().seconds!, 5);
+    expect(last).toBeCloseTo(def().seconds! * def().tail!, 5);
+    for (let i = 1; i < order.length; i++)
+      if (order[i] !== c && order[i - 1] !== c)
+        expect(order[i]!.morph!.t).toBeLessThanOrEqual(order[i - 1]!.morph!.t);
   });
 
   it('in a derby, takes the rivals within its reach', () => {

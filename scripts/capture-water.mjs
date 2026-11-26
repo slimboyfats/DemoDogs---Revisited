@@ -37,6 +37,8 @@ const seconds = Number(flag('seconds') ?? 9);
 const still = args.includes('--still');
 const only = flag('only');
 const dpr = Number(flag('dpr') ?? 2);
+// (--deep=2 makes for the dark water after 2 s instead: a clip of the car going under)
+const deepAt = Number(flag('deep') ?? 4.6);
 await mkdir(out, { recursive: true });
 
 const browser = await chromium.launch();
@@ -71,7 +73,7 @@ const step = (page, n) =>
 // into the lagoon off the beach: along the pale shallows, wading, then out into the dark water
 if (!args.includes('--spots') && (!only || only === 'bonefish-bay')) {
   const page = await open('bonefish-bay');
-  await page.evaluate(() => {
+  await page.evaluate((deepAt) => {
     const s = window.__dd.session;
     const w = s.world;
     const c = w.player;
@@ -84,19 +86,23 @@ if (!args.includes('--spots') && (!only || only === 'bonefish-bay')) {
     const t0 = w.time;
     s.o.input.read = () => {
       const t = w.time - t0;
-      // hold a line 26 px in from the shore, then make for the deep
-      const want = t < 4.6 ? 26 : 200;
-      // (too deep ahead: turn one way; too shallow: the other. That goes round the shore.)
+      // hold a line 26 px in from the shore, then make for the middle of the pool, the deep
       const ahead = M?.depth(c.x + Math.cos(c.h) * 22, c.y + Math.sin(c.h) * 22) ?? 0;
+      // (too deep ahead: turn one way; too shallow: the other. That goes round the shore.)
+      let steer = (ahead - 26) / 8;
+      if (t >= deepAt) {
+        const to = Math.atan2(1530 - c.y, 890 - c.x) - c.h;
+        steer = Math.atan2(Math.sin(to), Math.cos(to)) * 2;
+      }
       return {
-        steer: Math.max(-1, Math.min(1, (ahead - want) / 8)),
+        steer: Math.max(-1, Math.min(1, steer)),
         throttle: t < 0.3 ? 0.5 : 1,
         brake: false,
         boost: false,
         fire: false,
       };
     };
-  });
+  }, deepAt);
   let n = 0;
   const ticks = Math.round(seconds * 60);
   const stills = [0.25, 0.45, 0.62].map((f) => Math.round((ticks * f) / 2) * 2);
