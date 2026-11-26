@@ -141,17 +141,20 @@ const finger = (type, p) =>
   });
 /** Drag a finger across the screen (CSS px), resting on the spot first if asked to. */
 const drag = async (a, b, { rest = 0, steps = 8 } = {}) => {
-  await finger('touchStart', a);
-  // (a frame takes long enough to count as resting a finger: none before one that is not to)
+  const to = (k) => [a[0] + ((b[0] - a[0]) * k) / steps, a[1] + ((b[1] - a[1]) * k) / steps];
   if (rest) {
+    await finger('touchStart', a);
     await page.waitForTimeout(rest);
     await frame();
+    await finger('touchMove', to(1));
+  } else {
+    // a slow headless frame between the touch and its first move would count as resting the
+    // finger: the two are sent together
+    await Promise.all([finger('touchStart', a), finger('touchMove', to(1))]);
   }
-  for (let k = 1; k <= steps; k++) {
-    await finger('touchMove', [
-      a[0] + ((b[0] - a[0]) * k) / steps,
-      a[1] + ((b[1] - a[1]) * k) / steps,
-    ]);
+  await frame();
+  for (let k = 2; k <= steps; k++) {
+    await finger('touchMove', to(k));
     await frame();
   }
   await finger('touchEnd');
