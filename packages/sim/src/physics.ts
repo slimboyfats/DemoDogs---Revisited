@@ -1,4 +1,5 @@
 import { batter, footing } from './damage';
+import { wading } from './rescue';
 import {
   BASE_SPEED,
   DT,
@@ -390,7 +391,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     : (harsh > 0.2 && T.offroadPace < 1 ? HELD.rough : 0) |
       // (a climb is named once it costs something: a pull of 20 px/s² is about a tenth off)
       (uphill * T.hillPull > 20 ? HELD.hill : 0) |
-      (bog > 0.3 ? HELD.sticky : 0) |
+      (bog > 0.3 ? (wading(w, c)[0] > 0 ? HELD.wet : HELD.sticky) : 0) |
       (weak < 1 ? HELD.hurt : 0) |
       (c.pace < 1 ? HELD.weighed : 0);
   c.vf = vf;
