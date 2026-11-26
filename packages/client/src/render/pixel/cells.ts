@@ -1,3 +1,4 @@
+import { roll } from '../dice';
 import { Shape } from './batch';
 import { shade, WIND, type Put } from './particles';
 import type { GasGpu } from './gas-gpu';
@@ -138,7 +139,7 @@ export class Cells {
 
   constructor(
     readonly cap: number,
-    private readonly rand: () => number = Math.random,
+    private readonly rand: () => number = roll,
   ) {
     this.x = new Float32Array(cap);
     this.y = new Float32Array(cap);
@@ -169,6 +170,55 @@ export class Cells {
   /** Cells alive: here, and about how many on the GPU. */
   get live(): number {
     return this.n + (this.gpu?.live ?? 0);
+  }
+
+  /** The cell `one` lets go: x, y, z, vx, vy, vz, life. */
+  readonly q = new Float64Array(7);
+
+  /**
+   * Let go the cell written into `q` (`split` of them for gas). For whoever lets go hundreds in
+   * a loop: the numbers go by way of `q` and not as arguments, which leaves no garbage behind.
+   */
+  one(kind: CKind, rgb = 0): void {
+    const q = this.q;
+    if (this.gpu && kind !== CKind.Leaf) this.gpu.take(kind, q, rgb, this.split, this.rand);
+    else this.add(kind, q[0]!, q[1]!, q[2]!, q[3]!, q[4]!, q[5]!, q[6]!, rgb);
+  }
+
+  /**
+   * `n` cells let go at once round (x, y, z): each up to `r` away along the ground and up to `rz`
+   * above, thrown at (vx, vy, vz) give or take `jv` (and `jvz` upward), to last between `life0`
+   * and `life1` seconds.
+   */
+  spray(
+    kind: CKind,
+    n: number,
+    x: number,
+    y: number,
+    z: number,
+    r: number,
+    rz: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    jv: number,
+    jvz: number,
+    life0: number,
+    life1: number,
+    rgb = 0,
+  ): void {
+    const q = this.q;
+    const rand = this.rand;
+    for (let i = 0; i < n; i++) {
+      q[0] = x + (rand() * 2 - 1) * r;
+      q[1] = y + (rand() * 2 - 1) * r;
+      q[2] = z + rand() * rz;
+      q[3] = vx + (rand() * 2 - 1) * jv;
+      q[4] = vy + (rand() * 2 - 1) * jv;
+      q[5] = vz + (rand() * 2 - 1) * jvz;
+      q[6] = life0 + rand() * (life1 - life0);
+      this.one(kind, rgb);
+    }
   }
 
   /** Let go one cell (`split` of them for gas). When full, one of the cells already burning is replaced. */
@@ -281,7 +331,7 @@ export class Cells {
       const dx = px - g.x;
       const dy = py - g.y;
       const dz = pz - g.z;
-      const len = Math.hypot(dx, dy, dz);
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
       const q = len / g.R;
       if (q > 4 || len < 0.01) continue;
       const s = (g.v * q * 1.9) / (1 + q * q * q) / len;
@@ -294,10 +344,10 @@ export class Cells {
       const dy = py - g.y;
       const reach = g.R + g.r * 3;
       if (dx > reach || dx < -reach || dy > reach || dy < -reach) continue;
-      const rho = Math.hypot(dx, dy);
+      const rho = Math.sqrt(dx * dx + dy * dy);
       const dr = rho - g.R;
       const dh = pz - g.z;
-      const d = Math.hypot(dr, dh) + 0.001;
+      const d = Math.sqrt(dr * dr + dh * dh) + 0.001;
       const q = d / g.r;
       // fastest at the roll's own radius, falling off inside and outside it
       const fall = 2 / (1 + q * q);

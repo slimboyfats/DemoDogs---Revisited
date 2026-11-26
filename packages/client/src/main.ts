@@ -59,7 +59,13 @@ import { OnlineScreen } from './ui/online';
 import { BackgroundClock } from './game/bg-clock';
 import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
-import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
+import {
+  customVenueId,
+  installTrack,
+  rangeBlast,
+  type Content,
+  type Installed,
+} from '@demodogs/sim';
 import {
   linkedTrack,
   LocalTrackStore,
@@ -1593,6 +1599,13 @@ function boot(): void {
           return tutor.state;
         },
         end: endLesson,
+      },
+      /** For the fight bench (scripts/perf-fight.mjs): a blast in any race, and one frame drawn now. */
+      blast: (x: number, y: number, power: number) => {
+        if (session) rangeBlast(session.world, x, y, power);
+      },
+      draw: () => {
+        if (session) scene.draw(session.world, session.fx, session.ground, session.cam, W, H, DPR);
       },
       /** What the screen shows: device px size, device px per art px as drawn, device px per CSS px. */
       view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),

@@ -1,6 +1,8 @@
 import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
 import type { Car, StaticProp, World } from '@demodogs/sim';
+import { roll } from './dice';
 import { SliceFx } from './slice-fx';
+import { Spread } from './spread';
 import { createWalker, place, step, type Walker } from './rig';
 import type { Art } from './art';
 import { markGround, paintHollow, type Ground } from './ground';
@@ -12,8 +14,9 @@ import {
   dent,
   pixels,
   stripOf,
+  blowApart,
+  dropLoose,
   restore,
-  shatter,
   stripCrown,
   voxelsOf,
   type Chip,
@@ -21,7 +24,7 @@ import {
 import {
   launch,
   launchTogether,
-  sample,
+  pickSome,
   shards,
   stepVoxel,
   type Burst,
@@ -53,9 +56,13 @@ import { WeatherFx } from './weather-fx';
 import { wildEvent } from './wild-fx';
 
 const TAU = Math.PI * 2;
+/** The dents and wrecks have been run in on this visit (see the constructor). */
+let ranIn = false;
+/** The page's clock, for sharing a tick's time out (never for anything the sim sees). */
+const now = (): number => performance.now();
 const hex = (rgb: number) => '#' + rgb.toString(16).padStart(6, '0');
-const rand = (a: number, b: number) => a + Math.random() * (b - a);
-const pick = <T>(a: readonly T[]): T => a[Math.floor(Math.random() * a.length)]!;
+const rand = (a: number, b: number) => a + roll() * (b - a);
+const pick = <T>(a: readonly T[]): T => a[Math.floor(roll() * a.length)]!;
 const clamp = (v: number, a: number, b: number) => (v < a ? a : v > b ? b : v);
 
 export type { FxKind, Particle };
@@ -112,6 +119,11 @@ const BIG_STRIP = 120_000;
 const big = (s: Strip): boolean => s.cw * s.ch * s.n >= BIG_STRIP;
 /** mudders' soot tones: what a blast's smoke is made of. */
 const SMOKE_TONES = [0x4e4648, 0x625a5c, 0x777073, 0x5a4e48] as const;
+/**
+ * Milliseconds a tick given to dents, wrecks and the like that are waiting their turn (see
+ * `Spread`); more when a lot is waiting.
+ */
+const HEAVY_MS = 2;
 /** The most particles alive at once. */
 const MAX_FX = 1800;
 
@@ -148,6 +160,8 @@ const TERRAIN_FROM = 90;
 
 export class Effects {
   readonly fx: Particle[] = [];
+  /** Particles that have burnt out, kept to be used again (see `emit`). */
+  private readonly spent: Particle[] = [];
   readonly debris: Debris[] = [];
   /** Buildings falling over (see collapse.ts), and those that went that way. */
   readonly toppling: Toppling[] = [];
@@ -177,8 +191,16 @@ export class Effects {
       },
       soak: (g) => this.soak(g.x, g.y, g.s, g.rgb),
     },
-    Math.random,
+    roll,
   );
+  /**
+   * Dents, wrecks and scars waiting their turn, each about the strip it changes: a big blast
+   * asks for a dozen in one tick, and they are done a few a tick instead. Whatever reads or
+   * replaces a strip that may have some waiting calls `heavy.settle(strip)` first.
+   */
+  private readonly heavy = new Spread<Strip>();
+  /** Shared art not yet cut into the blocks it bursts into: done one a tick while nothing waits. */
+  private readonly unCut: Strip[] = [];
   /** Pieces told to mend this step: they rebuild as one, so the sweep runs across them all. */
   private mends: { s: StaticProp; in: number }[] = [];
   /** Scenery that has had a bite taken out of it: its own copy of the art, with the hole. */
@@ -315,6 +337,28 @@ export class Effects {
       (x, y) => this.vol(x, y),
       (k) => (this.shake = Math.max(this.shake, k)),
     );
+    // the first dents and the first wreck of a visit are not the slow ones: the code that does
+    // them has been run in, on a copy of a body, before the race (once a visit, about 0.2 s)
+    if (!ranIn && w.cars[0]) {
+      ranIn = true;
+      const whole = this.carArt(w.cars[0]).body;
+      const spare = clone(whole);
+      // (several times over: the engine only settles on its fast code after a few goes)
+      for (let go = 0; go < 5; go++) {
+        restore(spare, whole);
+        for (let i = 0; i < 10; i++)
+          dent(spare, rand(-8, 8), rand(-4, 4), rand(1.3, 7), rand(0.05, 0.6), roll, 1);
+        blowApart(spare, 0.5, roll);
+        dropLoose(spare);
+        char(spare);
+      }
+    }
+    // what can burst in a race is cut into its blocks before it does, one kind a tick (the
+    // countdown is long enough for all of them): the loose props, and what scenery leaves behind
+    const kinds = new Set<string>();
+    for (const p of w.props) kinds.add(p.def.id);
+    for (const s of w.statics) if (s.def.rubble) kinds.add(s.def.rubble.prop);
+    for (const id of kinds) this.unCut.push(art.prop(id));
     // the pools the map starts with
     for (const s of w.spills)
       if (s.fixed) {
@@ -364,12 +408,28 @@ export class Effects {
     rgb = 0,
   ): void {
     if (this.fx.length >= MAX_FX) return;
-    this.fx.push({ kind, x, y, z, vx, vy, vz, life, max: life, size, rgb });
+    // a particle that has burnt out is used again: a new one is a dozen objects to clear away
+    const p = this.spent.pop();
+    if (!p) {
+      this.fx.push({ kind, x, y, z, vx, vy, vz, life, max: life, size, rgb });
+      return;
+    }
+    p.kind = kind;
+    p.x = x;
+    p.y = y;
+    p.z = z;
+    p.vx = vx;
+    p.vy = vy;
+    p.vz = vz;
+    p.life = p.max = life;
+    p.size = size;
+    p.rgb = rgb;
+    this.fx.push(p);
   }
 
   spark(x: number, y: number, z: number, sp = 0): void {
     const a = rand(0, TAU);
-    const v = rand(20, 60) + sp * Math.random();
+    const v = rand(20, 60) + sp * roll();
     this.emit(
       'spark',
       x,
@@ -380,7 +440,7 @@ export class Effects {
       rand(30, 110),
       rand(0.25, 0.55),
       1,
-      Math.random() < 0.5 ? 0xfff6c0 : 0xffb03a,
+      roll() < 0.5 ? 0xfff6c0 : 0xffb03a,
     );
   }
 
@@ -389,21 +449,24 @@ export class Effects {
    * its own, so a puff frays out cell by cell instead of fading as one blob.
    */
   puff(x: number, y: number, z: number, kind: 'smoke' | 'dust', vx = 0, vy = 0): void {
-    const rgb = kind === 'smoke' ? 0x8a8680 : 0x9a8460;
     const dust = kind === 'dust';
-    const n = Math.max(1, Math.round(4 * this.quality));
-    for (let i = 0; i < n; i++)
-      this.cells.add(
-        CKind.Wisp,
-        x + rand(-2.5, 2.5),
-        y + rand(-2.5, 2.5),
-        z + rand(0, 1.5),
-        vx + rand(-8, 8),
-        vy + rand(-8, 8),
-        dust ? rand(-4, 4) : rand(4, 12),
-        dust ? rand(0.5, 1.1) : rand(0.8, 1.6),
-        rgb,
-      );
+    this.cells.spray(
+      CKind.Wisp,
+      Math.max(1, Math.round(4 * this.quality)),
+      x,
+      y,
+      z,
+      2.5,
+      1.5,
+      vx,
+      vy,
+      dust ? 0 : 8,
+      8,
+      4,
+      dust ? 0.5 : 0.8,
+      dust ? 1.1 : 1.6,
+      kind === 'smoke' ? 0x8a8680 : 0x9a8460,
+    );
   }
 
   /**
@@ -413,35 +476,14 @@ export class Effects {
   flame(x: number, y: number, z: number, size: number, vx = 0, vy = 0, vz = rand(20, 45)): void {
     const n = Math.max(1, Math.round(size * size * 0.45 * this.quality));
     const r = size * 0.5;
-    for (let i = 0; i < n; i++)
-      this.cells.add(
-        CKind.Bang,
-        x + rand(-r, r),
-        y + rand(-r, r),
-        z + rand(0, r),
-        vx + rand(-8, 8),
-        vy + rand(-8, 8),
-        vz + rand(-10, 10),
-        rand(0.25, 0.6),
-      );
+    this.cells.spray(CKind.Bang, n, x, y, z, r, r, vx, vy, vz, 8, 10, 0.25, 0.6);
   }
 
   /** A puff of a smoke column: a clutch of smoke cells that the air and the wind carry off. */
   plume(x: number, y: number, z: number, size: number, rgb = SOOT, vz = rand(26, 44)): void {
     const n = Math.max(1, Math.round(size * size * 0.5 * this.quality));
     const r = size * 0.5;
-    for (let i = 0; i < n; i++)
-      this.cells.add(
-        CKind.Wisp,
-        x + rand(-r, r),
-        y + rand(-r, r),
-        z + rand(0, r),
-        rand(-6, 6),
-        rand(-6, 6),
-        vz + rand(-8, 8),
-        rand(1.2, 2.6),
-        rgb,
-      );
+    this.cells.spray(CKind.Wisp, n, x, y, z, r, r, 0, 0, vz, 6, 8, 1.2, 2.6, rgb);
   }
 
   ember(x: number, y: number, z: number): void {
@@ -495,22 +537,22 @@ export class Effects {
     // the bang: a packed ball that fills the blast radius in a few ticks and burns out fast
     const nBang = Math.min(4000, Math.round(r * r * 7 * den));
     const vMax = r * 2.9;
+    // (each cell is written into the cells' own scratch and let go from there: see `Cells.one`)
+    const Q = C.q;
     for (let i = 0; i < nBang; i++) {
       const a = rand(0, TAU);
       const u = high ? rand(-1, 1) : rand(0, 1);
       const flat = Math.sqrt(1 - u * u);
-      const sp = Math.cbrt(Math.random()) * vMax;
+      const sp = Math.cbrt(roll()) * vMax;
       const d = rand(0, r * 0.2);
-      C.add(
-        CKind.Bang,
-        x + Math.cos(a) * flat * d,
-        y + Math.sin(a) * flat * d,
-        z + 1 + Math.abs(u) * d,
-        Math.cos(a) * flat * sp,
-        Math.sin(a) * flat * sp,
-        u * sp * 0.8,
-        rand(0.23, 0.73),
-      );
+      Q[0] = x + Math.cos(a) * flat * d;
+      Q[1] = y + Math.sin(a) * flat * d;
+      Q[2] = z + 1 + Math.abs(u) * d;
+      Q[3] = Math.cos(a) * flat * sp;
+      Q[4] = Math.sin(a) * flat * sp;
+      Q[5] = u * sp * 0.8;
+      Q[6] = rand(0.23, 0.73);
+      C.one(CKind.Bang);
     }
     this.blasts.push({
       x,
@@ -543,7 +585,7 @@ export class Effects {
         rand(high ? -80 : 60, 260),
         rand(0.5, 1.1),
         1,
-        Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
+        roll() < 0.5 ? 0xfff0a0 : 0xffa020,
       );
     }
     // a burst high in the air leaves no fire on the ground under it
@@ -589,6 +631,7 @@ export class Effects {
   /** Let go this tick's share of each blast's burning gas and soot into its turning air. */
   private feed(): void {
     const C = this.cells;
+    const Q = C.q;
     const den = this.density();
     for (let i = this.blasts.length - 1; i >= 0; i--) {
       const b = this.blasts[i]!;
@@ -605,18 +648,15 @@ export class Effects {
         const rise = (0.55 + r * 0.03) * 45;
         for (let p = 0; p < puffs; p++) {
           const a = rand(0, TAU);
-          const d = Math.sqrt(Math.random()) * r * 0.8;
-          C.add(
-            CKind.Wisp,
-            b.x + Math.cos(a) * d,
-            b.y + Math.sin(a) * d,
-            b.z + rand(0, r * 0.7) + b.age * 0.25,
-            Math.cos(a) * 15,
-            Math.sin(a) * 15,
-            (b.high ? rand(-0.2, 0.2) : rand(0.2, 0.6)) * rise,
-            rand(2.6, 6.2),
-            b.tones[(Math.random() * 4) | 0]!,
-          );
+          const d = Math.sqrt(roll()) * r * 0.8;
+          Q[0] = b.x + Math.cos(a) * d;
+          Q[1] = b.y + Math.sin(a) * d;
+          Q[2] = b.z + rand(0, r * 0.7) + b.age * 0.25;
+          Q[3] = Math.cos(a) * 15;
+          Q[4] = Math.sin(a) * 15;
+          Q[5] = (b.high ? rand(-0.2, 0.2) : rand(0.2, 0.6)) * rise;
+          Q[6] = rand(2.6, 6.2);
+          C.one(CKind.Wisp, b.tones[(roll() * 4) | 0]!);
         }
       }
       if (b.ticks <= 0) continue;
@@ -629,31 +669,27 @@ export class Effects {
         const a = rand(0, TAU);
         if (k < heart) {
           // packed over the impact and thrown up into the cap
-          const d = Math.sqrt(Math.random()) * r * 0.75;
-          C.add(
-            CKind.Fire,
-            b.x + Math.cos(a) * d,
-            b.y + Math.sin(a) * d,
-            b.z + rand(0, r * 0.8) * (1 - (d / r) * 0.8),
-            Math.cos(a) * d * 1.6,
-            Math.sin(a) * d * 1.6,
-            b.high ? rand(-20, 20) : rand(20, 47) * out,
-            rand(1.17, 3.3),
-          );
+          const d = Math.sqrt(roll()) * r * 0.75;
+          Q[0] = b.x + Math.cos(a) * d;
+          Q[1] = b.y + Math.sin(a) * d;
+          Q[2] = b.z + rand(0, r * 0.8) * (1 - (d / r) * 0.8);
+          Q[3] = Math.cos(a) * d * 1.6;
+          Q[4] = Math.sin(a) * d * 1.6;
+          Q[5] = b.high ? rand(-20, 20) : rand(20, 47) * out;
+          Q[6] = rand(1.17, 3.3);
+          C.one(CKind.Fire);
         } else {
           // a sheet thrown out along the ground, into the underside of the ground roll
           const d = r * rand(0.25, 0.6);
           const v = rand(30, 75) * out;
-          C.add(
-            CKind.Fire,
-            b.x + Math.cos(a) * d,
-            b.y + Math.sin(a) * d,
-            b.z + rand(0, 3),
-            Math.cos(a) * v,
-            Math.sin(a) * v,
-            rand(0, 10),
-            rand(1.17, 3.3),
-          );
+          Q[0] = b.x + Math.cos(a) * d;
+          Q[1] = b.y + Math.sin(a) * d;
+          Q[2] = b.z + rand(0, 3);
+          Q[3] = Math.cos(a) * v;
+          Q[4] = Math.sin(a) * v;
+          Q[5] = rand(0, 10);
+          Q[6] = rand(1.17, 3.3);
+          C.one(CKind.Fire);
         }
       }
     }
@@ -701,7 +737,7 @@ export class Effects {
     const sn = Math.sin(s.rot);
     const keep = Math.min(1, (max * Math.max(0.35, this.quality)) / (off.length || 1));
     for (const c of off) {
-      if (Math.random() >= keep) continue;
+      if (roll() >= keep) continue;
       const k = rand(0.35, 1.2);
       this.cells.add(
         CKind.Leaf,
@@ -726,8 +762,7 @@ export class Effects {
         (c) => Math.hypot(c.x, c.y) > C.trunk || c.z > C.top,
       );
       t = [];
-      for (let i = 0; i < 12 && all.length; i++)
-        t.push(all[Math.floor(Math.random() * all.length)]!.rgb);
+      for (let i = 0; i < 12 && all.length; i++) t.push(all[Math.floor(roll() * all.length)]!.rgb);
       this.tones.set(s.def.id, t);
     }
     return t;
@@ -735,12 +770,12 @@ export class Effects {
 
   /** Now and then a leaf lets go of a tree near the player and drifts off on the wind. */
   private leafFall(): void {
-    if (Math.random() > 0.3 * this.quality) return;
+    if (roll() > 0.3 * this.quality) return;
     const P = this.w.player;
     const list = this.w.near(P.x, P.y, 230);
-    const s = list[Math.floor(Math.random() * list.length)];
+    const s = list[Math.floor(roll() * list.length)];
     const C = s?.def.crown;
-    if (!s || !C || s.down || !s.leaves || Math.random() > s.leaves) return;
+    if (!s || !C || s.down || !s.leaves || roll() > s.leaves) return;
     const t = this.leafTones(s);
     if (!t.length) return;
     const a = rand(0, TAU);
@@ -786,8 +821,8 @@ export class Effects {
     if (!byBlock) this.bits.set(art, (byBlock = new Map()));
     let c = byBlock.get(block);
     if (!c) byBlock.set(block, (c = voxelsOf(art, block)));
-    // a copy: `sample` shuffles and trims what it is given
-    return c.slice();
+    // the list itself, not a copy: `burst` picks from it in place and trims nothing
+    return c;
   }
 
   /**
@@ -919,11 +954,16 @@ export class Effects {
       const k = Math.min(1, (s.def.radius * 0.8) / (d || 1));
       const lx = (dx * cs + dy * sn) * k;
       const ly = (-dx * sn + dy * cs) * k;
-      const broke = dent(strip, lx, ly, 2.5 + 2.5 * power, 0.85, Math.random, 1);
-      this.changed.add(strip);
-      const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: x, oy: y, vx: 0, vy: 0 };
-      this.burst(broke.chips, 60, { ...from, speed: 70 + 50 * power });
-      this.burst(broke.loose, 50, { ...from, speed: 30 }, true);
+      const mine = strip;
+      this.heavy.later(mine, () => {
+        // (unless it has come down or been rebuilt in the meantime)
+        if (this.scarred.get(s) !== mine) return;
+        const broke = dent(mine, lx, ly, 2.5 + 2.5 * power, 0.85, roll, 1);
+        this.changed.add(mine);
+        const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: x, oy: y, vx: 0, vy: 0 };
+        this.burst(broke.chips, 60, { ...from, speed: 70 + 50 * power });
+        this.burst(broke.loose, 50, { ...from, speed: 30 }, true);
+      });
     }
   }
 
@@ -942,6 +982,8 @@ export class Effects {
   handle(events: SimEvent[]): void {
     this.read(events);
     if (this.mends.length) this.mendAll();
+    if (this.heavy.waiting) this.heavy.work(now, HEAVY_MS);
+    else if (this.unCut.length) this.chipsOf(this.unCut.pop()!);
   }
 
   private read(events: SimEvent[]): void {
@@ -954,20 +996,23 @@ export class Effects {
       switch (e.t) {
         case 'hit': {
           const c = w.cars[e.car]!;
-          const broke = dent(
-            this.bodies[e.car]!,
-            e.lx * 0.9,
-            e.ly * 0.85,
-            clamp(1.3 + e.amount * 0.2, 1.3, 7),
-            clamp(e.amount / 45, 0.05, 0.6),
-            Math.random,
-            1,
-          );
-          this.changed.add(this.bodies[e.car]!);
-          // what the blow knocked off flies away from the hit; what it cut loose drops in a piece
-          const from = { ...this.carBurst(c), ox: e.x, oy: e.y };
-          this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
-          this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
+          const body = this.bodies[e.car]!;
+          this.heavy.later(body, () => {
+            const broke = dent(
+              body,
+              e.lx * 0.9,
+              e.ly * 0.85,
+              clamp(1.3 + e.amount * 0.2, 1.3, 7),
+              clamp(e.amount / 45, 0.05, 0.6),
+              roll,
+              1,
+            );
+            this.changed.add(body);
+            // what the blow knocked off flies away from the hit; what it cut loose drops in a piece
+            const from = { ...this.carBurst(c), ox: e.x, oy: e.y };
+            this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
+            this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
+          });
           if (c === w.player && e.amount > 6)
             this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
           break;
@@ -1025,12 +1070,33 @@ export class Effects {
         case 'wreck': {
           const c = w.cars[e.car]!;
           // the car bursts: about half of what is left of the body flies off, the rest is a burnt hull
-          const broke = shatter(this.bodies[e.car]!, 0.5, Math.random);
-          const from = { ...this.carBurst(c), ox: c.x, oy: c.y };
-          this.burst(broke.chips, 260, { ...from, speed: 110 });
-          this.burst(broke.loose, 80, { ...from, speed: 60 }, true);
-          char(this.bodies[e.car]!);
-          this.changed.add(this.bodies[e.car]!);
+          const body = this.bodies[e.car]!;
+          // (in three goes, each a tick's work of its own for a body this size: blown apart,
+          // then what that left hanging, then charred. It is drawn changed once all three are done)
+          this.heavy.later(
+            body,
+            () => {
+              const from = { ...this.carBurst(c), ox: c.x, oy: c.y };
+              this.burst(blowApart(body, 0.5, roll), 260, { ...from, speed: 110 });
+            },
+            true,
+          );
+          this.heavy.later(
+            body,
+            () => {
+              const from = { ...this.carBurst(c), ox: c.x, oy: c.y };
+              this.burst(dropLoose(body), 80, { ...from, speed: 60 }, true);
+            },
+            true,
+          );
+          this.heavy.later(
+            body,
+            () => {
+              char(body);
+              this.changed.add(body);
+            },
+            true,
+          );
           const A = this.carArt(c);
           for (let i = 0; i < 4; i++)
             this.fling(
@@ -1054,6 +1120,7 @@ export class Effects {
           const c = w.cars[e.car]!;
           // paint the fresh body back into the same strip, so renderers keep their copy of it
           const body = this.bodies[e.car]!;
+          this.heavy.settle(body);
           restore(body, this.carArt(c).body);
           this.changed.add(body);
           for (let k = 0; k < 6; k++) this.puff(c.x, c.y, 2, 'smoke');
@@ -1121,13 +1188,13 @@ export class Effects {
             blast ? (dx * cs + dy * sn) / d : 0,
             blast ? (-dx * sn + dy * cs) / d : 0,
             e.amount / (e.left + e.amount),
-            Math.random,
+            roll,
           );
           this.changed.add(strip);
           if (e.by === 'heat') {
             // burnt off: the crown is in flames, and a few leaves get away alight
             for (let i = 0; i < 3; i++) {
-              const c = off[Math.floor(Math.random() * off.length)];
+              const c = off[Math.floor(roll() * off.length)];
               if (c) this.flame(s.x + c.x, s.y + c.y, c.z + (s.lift ?? 0), rand(3, 5));
             }
             this.leaves(s, off, 12, 0, 0, 18);
@@ -1178,13 +1245,13 @@ export class Effects {
             -dx * sn + dy * cs,
             clamp(1.2 + part * s.def.radius * 2.2, 1.2, 7),
             e.by === 'heat' ? 0.35 : 0.9,
-            Math.random,
+            roll,
             e.by === 'heat' ? 1 : 0.4,
           );
           this.changed.add(strip);
           const from = { x: s.x, y: s.y, h: s.rot, z: s.lift ?? 0, ox: e.x, oy: e.y, vx: 0, vy: 0 };
           if (e.by === 'heat') {
-            if (Math.random() < 0.5)
+            if (roll() < 0.5)
               this.flame(
                 e.x + rand(-3, 3),
                 e.y + rand(-3, 3),
@@ -1248,7 +1315,7 @@ export class Effects {
             // a tree: what leaves it still has drift down while the wood flies apart
             if (!this.scarred.has(s)) strip = clone(strip);
             const C = s.def.crown;
-            this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, Math.random), 220, 0, 0, 30);
+            this.leaves(s, stripCrown(strip, C.trunk, C.top, 0, 0, 1, roll), 220, 0, 0, 30);
           }
           const own = this.scarred.delete(s) || strip !== this.art.prop(s.def.id);
           if (Wreckage.cracks(strip)) {
@@ -1288,7 +1355,7 @@ export class Effects {
             for (let i = 0; i < 16; i++) {
               const a = rand(0, TAU);
               const d = rand(0, 1) * (r + 1);
-              const q = Math.random() < 0.3 ? 2 : 1;
+              const q = roll() < 0.3 ? 2 : 1;
               g.fillRect(
                 Math.round(s.x + Math.cos(a) * d),
                 Math.round(s.y + Math.sin(a) * d),
@@ -1314,7 +1381,7 @@ export class Effects {
                 const d = Math.hypot(px + 0.5 - x, py + 0.5 - y) / r + rand(-0.12, 0.12);
                 if (d > 1.28) continue;
                 if (d > 1) {
-                  if (Math.random() < 0.55) {
+                  if (roll() < 0.55) {
                     g.fillStyle = hex(shade(top, rand(1.12, 1.4)));
                     g.fillRect(px, py, 1, 1);
                   }
@@ -1336,7 +1403,7 @@ export class Effects {
               x: Math.cos(a) * d,
               y: Math.sin(a) * d,
               z: rand(0, 2),
-              s: Math.random() < 0.12 ? 1 : Math.random() < 0.4 ? 2 / 3 : 1 / 3,
+              s: roll() < 0.12 ? 1 : roll() < 0.4 ? 2 / 3 : 1 / 3,
               rgb: shade(dirt, rand(0.6, 1.2)),
             });
           }
@@ -1752,9 +1819,9 @@ export class Effects {
    */
   private burst(chips: Chip[], max: number, b: Burst, asOne = false): void {
     const room = Math.max(0, MAX_VOXELS - this.voxels.length);
-    const some = sample(chips, Math.min(max, room), Math.random);
-    if (asOne) this.voxels.push(...launchTogether(some, b, Math.random));
-    else for (const c of some) this.voxels.push(launch(c, b, Math.random));
+    const n = pickSome(chips, Math.min(max, room), roll);
+    if (asOne) for (const v of launchTogether(chips, b, roll, n)) this.voxels.push(v);
+    else for (let i = 0; i < n; i++) this.voxels.push(launch(chips[i]!, b, roll));
   }
 
   /** A loose block that has stopped becomes a mark on the ground: a crumb a speck, a block its own size. */
@@ -1864,6 +1931,9 @@ export class Effects {
   afterStep(): void {
     const w = this.w;
     this.weather.tick();
+    // a weld is planned from the body as it stands: with every dent it is owed
+    if (this.heavy.waiting)
+      for (const c of w.cars) if (c.weldT > 0) this.heavy.settle(this.bodies[c.index]!);
     this.defence.afterStep();
     this.addons.afterStep();
     this.fallen();
@@ -1902,7 +1972,7 @@ export class Effects {
       if (fate === 'fly') continue;
       if (fate === 'split') {
         if (this.voxels.length + 8 > MAX_VOXELS) continue;
-        const bits = shards(v, Math.random);
+        const bits = shards(v, roll);
         for (const b of bits) {
           b.z += floor;
           if (v.pile) b.pile = true;
@@ -1932,8 +2002,8 @@ export class Effects {
           this.ground.g.fillRect(mx - 1, my - 1, 2, 2);
           markGround(this.ground, mx, my, 1);
         }
-      if (c.sliding && Math.random() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
-      if (c.offroad && Math.abs(c.vf) > 50 && Math.random() < 0.25)
+      if (c.sliding && roll() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
+      if (c.offroad && Math.abs(c.vf) > 50 && roll() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
       if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
@@ -1947,7 +2017,7 @@ export class Effects {
           this.plume(ex, ey, c.z + 6, burning ? rand(4, 6) : rand(2.5, 4), burning ? SOOT : HAZE);
           if (burning) {
             this.flame(ex, ey, c.z + 5, rand(3, 5.5), c.vx * 0.5, c.vy * 0.5);
-            if (Math.random() < 0.25) this.ember(ex, ey, c.z + 7);
+            if (roll() < 0.25) this.ember(ex, ey, c.z + 7);
           }
         }
       }
@@ -1966,7 +2036,7 @@ export class Effects {
           -rand(30, 80),
         );
       this.plume(p.x, p.y, p.z - 3, 3.5, HAZE, 4);
-      if (Math.random() < 0.5) this.spark(p.x, p.y, p.z, 30);
+      if (roll() < 0.5) this.spark(p.x, p.y, p.z, 30);
     }
     // burning bits falling out of a burst: stars glitter, fuel burns and smokes on its way down
     for (const e of w.embers) {
@@ -1981,12 +2051,12 @@ export class Effects {
           rand(-10, 10),
           rand(0.15, 0.35),
           1,
-          Math.random() < 0.5 ? 0xfff0a0 : 0xffa020,
+          roll() < 0.5 ? 0xfff0a0 : 0xffa020,
         );
-        if (Math.random() < 0.35) this.flame(e.x, e.y, e.z, rand(1.5, 2.5), 0, 0, 0);
+        if (roll() < 0.35) this.flame(e.x, e.y, e.z, rand(1.5, 2.5), 0, 0, 0);
       } else {
         this.flame(e.x, e.y, e.z, rand(2.5, 4), 0, 0, 0);
-        if (Math.random() < 0.4) this.plume(e.x, e.y, e.z, 2.5, SOOT, 6);
+        if (roll() < 0.4) this.plume(e.x, e.y, e.z, 2.5, SOOT, 6);
       }
     }
     // a rocket rides a tail of fire and leaves a thin smoke trail
@@ -1996,7 +2066,7 @@ export class Effects {
       const bx = r.x - Math.cos(r.h) * (small ? 2 : 5);
       const by = r.y - Math.sin(r.h) * (small ? 2 : 5);
       this.flame(bx, by, 5, small ? rand(1, 1.8) : rand(2, 3.5), 0, 0, 0);
-      if (Math.random() < (small ? 0.25 : 0.6)) this.plume(bx, by, 5, small ? 1.5 : 2.5, HAZE, 6);
+      if (roll() < (small ? 0.25 : 0.6)) this.plume(bx, by, 5, small ? 1.5 : 2.5, HAZE, 6);
       // a seeker paints its target: a ring of red cells turning round the car it is chasing
       const tg = r.target !== undefined ? w.cars[r.target] : undefined;
       // (every few ticks, cells that last a few frames, so slow phones still see it)
@@ -2034,10 +2104,10 @@ export class Effects {
       const x = f.x + Math.cos(a) * d;
       const y = f.y + Math.sin(a) * d;
       for (let n = 0; n < 2; n++)
-        if (Math.random() < k + 0.2)
+        if (roll() < k + 0.2)
           this.flame(x + rand(-2, 2), y + rand(-2, 2), rand(1, 4), rand(4, 7) * (0.5 + k * 0.5));
-      if (Math.random() < 0.45) this.plume(x, y, rand(5, 10), rand(4, 7));
-      if (Math.random() < 0.2) this.ember(x, y, 5);
+      if (roll() < 0.45) this.plume(x, y, rand(5, 10), rand(4, 7));
+      if (roll() < 0.2) this.ember(x, y, 5);
     }
     armsTick(this, w, this.sound);
     arsenalTick(this, w, this.sound);
@@ -2062,6 +2132,7 @@ export class Effects {
     this.litter();
     for (let i = this.fx.length - 1; i >= 0; i--) {
       if (stepParticle(this.fx[i]!, DT)) continue;
+      this.spent.push(this.fx[i]!);
       this.fx[i] = this.fx[this.fx.length - 1]!;
       this.fx.pop();
     }

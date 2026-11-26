@@ -34,6 +34,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
+| `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -170,6 +171,12 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   every pass in it before the race is shown. A strip is built with its lighting bytes (`Strip.aux`) and the part of
   each slice that has anything in it (`Strip.trim`, all that is drawn); what changes a strip's shape goes through
   `edit` in render/strips.ts, which clears the one and notes what changed (`Strip.touched`) for the atlas.
+- **A fight's heavy work is spread over ticks.** What a hit, a wreck or a scar does to a strip (dents, blowing a
+  body apart, dropping what hangs loose, charring) is looks only, so effects queue it on `heavy` (a `Spread`,
+  render/spread.ts: about 2 ms a tick, more when a crowd waits, never two big jobs in one tick) and `settle` a strip
+  before anything reads it whole (a respawn, a weld). Effects throw their dice with `roll` (render/dice.ts), never
+  `Math.random`, which makes garbage on every call; a loop that lets go many cells fills `Cells.q` and calls `one`,
+  or calls `spray`, and spent particles go back to a pool. Judge a change there with `pnpm perf:fight`.
 - **The menus wear one look** (client `theme.css`, loaded after `styles.css`): paper cards and sunny buttons with
   an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
   `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
