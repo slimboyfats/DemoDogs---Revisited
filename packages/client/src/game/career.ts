@@ -309,7 +309,8 @@ function rivalEntry(c: Content, d: Driver, i: number): Entrant {
   const cars = shop(c);
   const tier = 2 - Math.floor(i / 4);
   const seat = 3 - (i % 4);
-  const car = cars[Math.min(cars.length - 1, tier * 2 + (seat > 1 ? 1 : 0))]!;
+  // six steps up the price list, from the cheapest car to the dearest, however long the list is
+  const car = cars[Math.round(((tier * 2 + (seat > 1 ? 1 : 0)) / 5) * (cars.length - 1))]!;
   const lv = Math.min(TUNE_MAX, Math.floor((tier + seat) / 2));
   return {
     car: car.id,
