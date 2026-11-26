@@ -42,6 +42,10 @@ export class WaterMap {
   /** The colour of the water's own material at each texel. */
   private readonly tint: Uint8Array;
   private land: Float32Array | null = null;
+  /** How far each texel is in from the edge of all the water together (see `settle`). */
+  private readonly inn: Float32Array;
+  /** The texels poured on since the map was last settled, or null. */
+  private pending: Box | null = null;
 
   constructor(
     readonly w: number,
@@ -53,21 +57,20 @@ export class WaterMap {
     this.far = new Float32Array(this.gw * this.gh).fill(-WATER_OUT);
     this.deep = new Float32Array(this.gw * this.gh);
     this.tint = new Uint8Array(this.gw * this.gh * 3);
+    this.inn = new Float32Array(this.gw * this.gh);
   }
 
   /** The water a world starts with, and what stands in it. */
   static of(w: World): WaterMap {
     const M = new WaterMap(w.w, w.h);
-    for (const s of w.spills) if (s.def.water) M.pour(s.def, s.x, s.y, s.r, false);
-    if (M.any) {
-      M.stand(w);
-      M.write(0, 0, M.gw, M.gh);
-    }
+    for (const s of w.spills) if (s.def.water) M.pour(s.def, s.x, s.y, s.r);
+    if (M.any) M.stand(w);
+    M.settle();
     return M;
   }
 
   /** A pool of water of radius r at (x, y): new, or one that has grown. */
-  pour(m: MaterialManifest, x: number, y: number, r: number, write = true): void {
+  pour(m: MaterialManifest, x: number, y: number, r: number): void {
     const rgb = parseInt(m.colour.slice(1), 16);
     const col = [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255] as const;
     const deepFrom = m.water?.deep;
@@ -93,7 +96,64 @@ export class WaterMap {
         T[k * 3 + 2] = col[2];
       }
     this.any = true;
-    if (write) this.write(x0, y0, x1, y1);
+    const P = this.pending;
+    if (!P) this.pending = [x0, y0, x1, y1];
+    else {
+      P[0] = Math.min(P[0], x0);
+      P[1] = Math.min(P[1], y0);
+      P[2] = Math.max(P[2], x1);
+      P[3] = Math.max(P[3], y1);
+    }
+  }
+
+  /**
+   * Work out the shore of all the water together where water has been poured, and lay it out for
+   * the shader. A stretch of water is often many round pools side by side (a river, a dock, a
+   * flood), and inside it the places where two pools meet are not shore: so how far in a texel is
+   * goes by its distance from the nearest dry texel, and only near the real shore by the pools'
+   * own round edges, which are finer than the map. A renderer calls this before it takes the map.
+   */
+  settle(): void {
+    const P = this.pending;
+    if (!P) return;
+    this.pending = null;
+    const { gw, gh, far, inn } = this;
+    // (what is poured changes how far in everything round it is, as far as the map tells apart)
+    const m = Math.ceil(WATER_IN / WATER_Q) + 1;
+    const x0 = Math.max(0, P[0] - m);
+    const y0 = Math.max(0, P[1] - m);
+    const x1 = Math.min(gw, P[2] + m);
+    const y1 = Math.min(gh, P[3] + m);
+    const A = WATER_Q;
+    const B = WATER_Q * Math.SQRT2;
+    for (let y = y0; y < y1; y++)
+      for (let x = x0; x < x1; x++) {
+        const k = y * gw + x;
+        // (dry is well clear of the water: a crack between two pools is not)
+        let v = far[k]! < -3 ? 0 : 1e4;
+        if (v > 0) {
+          if (x > x0) v = Math.min(v, inn[k - 1]! + A);
+          if (y > y0) {
+            v = Math.min(v, inn[k - gw]! + A);
+            if (x > x0) v = Math.min(v, inn[k - gw - 1]! + B);
+            if (x < x1 - 1) v = Math.min(v, inn[k - gw + 1]! + B);
+          }
+        }
+        inn[k] = v;
+      }
+    for (let y = y1 - 1; y >= y0; y--)
+      for (let x = x1 - 1; x >= x0; x--) {
+        const k = y * gw + x;
+        let v = inn[k]!;
+        if (x < x1 - 1) v = Math.min(v, inn[k + 1]! + A);
+        if (y < y1 - 1) {
+          v = Math.min(v, inn[k + gw]! + A);
+          if (x < x1 - 1) v = Math.min(v, inn[k + gw + 1]! + B);
+          if (x > x0) v = Math.min(v, inn[k + gw - 1]! + B);
+        }
+        inn[k] = v;
+      }
+    this.write(x0, y0, x1, y1);
   }
 
   /**
@@ -167,7 +227,9 @@ export class WaterMap {
 
   /** Px in from the shore at a texel, what stands in the water counted as shore. */
   private at(k: number): number {
-    const d = this.far[k]!;
+    // (the nearest dry texel is itself a few px past the shore, and a texel coarse)
+    const d =
+      this.inn[k]! > 0 ? Math.max(this.far[k]!, this.inn[k]! - 3 - WATER_Q * 1.5) : this.far[k]!;
     const L = this.land;
     // (a little short of it: the thing's own foot is the shore)
     return L ? Math.min(d, L[k]! - 3) : d;
@@ -175,6 +237,7 @@ export class WaterMap {
 
   /** How far in from the shore the map says (x, y) is: under 0 on dry ground. */
   depth(x: number, y: number): number {
+    this.settle();
     const gx = Math.min(this.gw - 1, Math.max(0, Math.round(x / WATER_Q)));
     const gy = Math.min(this.gh - 1, Math.max(0, Math.round(y / WATER_Q)));
     return this.at(gy * this.gw + gx);

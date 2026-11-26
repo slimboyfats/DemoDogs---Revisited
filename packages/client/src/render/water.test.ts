@@ -8,6 +8,7 @@ const water = (deep?: number): MaterialManifest =>
 
 /** The map's texel at (x, y): colour, and px in from the shore as the shader reads it. */
 function texel(M: WaterMap, x: number, y: number): [number, number, number, number] {
+  M.settle();
   const k = (Math.round(y / WATER_Q) * M.gw + Math.round(x / WATER_Q)) * 4;
   return [M.data[k]!, M.data[k + 1]!, M.data[k + 2]!, M.data[k + 3]! / 2 - WATER_OUT];
 }
@@ -27,16 +28,24 @@ describe('the water map', () => {
     expect(texel(M, 20, 20)[3]).toBe(-WATER_OUT);
   });
 
-  it('makes one water of pools that touch, and notes only what changed', () => {
-    const M = new WaterMap(400, 300);
+  it('makes one water of pools that touch: where two meet is not shore', () => {
+    const M = new WaterMap(1200, 300);
     M.pour(water(), 160, 152, 40);
+    M.settle();
     M.dirty = null;
     M.pour(water(), 220, 152, 40);
     // between the two middles it is deeper than either pool alone makes it at its edge
     expect(M.depth(192, 152)).toBeGreaterThan(8);
+    // a row of small pools side by side is one stretch of water, deep along its middle: the
+    // cusps between them are not shore
+    for (let x = 500; x <= 700; x += 20) M.pour(water(), x, 152, 14);
+    for (let x = 500; x <= 700; x += 20) M.pour(water(), x, 172, 14);
+    expect(M.depth(610, 162)).toBeGreaterThan(8);
+    expect(M.depth(610, 130)).toBeLessThan(0);
+    // and only what is near what was poured is noted changed
     const B = M.dirty!;
-    expect(B[0] * WATER_Q).toBeGreaterThan(150);
-    expect(B[2] * WATER_Q).toBeLessThan(290);
+    expect(B[0]).toBeGreaterThan(0);
+    expect(B[2] * WATER_Q).toBeLessThan(900);
   });
 
   it('is darker where it is too deep to wade', () => {

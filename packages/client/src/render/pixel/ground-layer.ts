@@ -129,6 +129,7 @@ export class GroundLayer {
     const M = ground.water;
     if (M) {
       this.waterTex = texture(gl, gl.LINEAR);
+      M.settle();
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, M.gw, M.gh, 0, gl.RGBA, gl.UNSIGNED_BYTE, M.data);
       M.dirty = null;
     }
@@ -169,6 +170,7 @@ export class GroundLayer {
   /** Copy up whatever was painted since the last frame. */
   sync(): void {
     const M = this.ground.water;
+    M?.settle();
     if (M?.dirty && this.waterTex) {
       // water that was poured or has spread: the rows of its box, whole
       const gl = this.gl;
