@@ -23,6 +23,7 @@ import {
   type Outcome,
   type RaceId,
 } from './game/career';
+import { MEDALS, clock, cupRound, settleCup } from './game/cups';
 import { Session, type SessionOptions } from './game/session';
 import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
 import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
@@ -150,7 +151,7 @@ let lastCustom: Installed | null = null;
 const SAVE = 'dd-career-v1';
 let career: Career | null = null;
 /** The career race being run, or null in a quick race. */
-let careerRace: RaceId | null = null;
+let careerRace: RaceId | 'cup' | null = null;
 
 /** World modifiers picked for quick races: ?mods= wins, otherwise what was picked last time. */
 const MODS = 'dd-mods-v1';
@@ -183,6 +184,7 @@ function loadCareer(): Career {
 const careerScreen = new CareerScreen($('careerPanel'), content, art, {
   change: saveCareer,
   race: startCareerRace,
+  cup: startCupRound,
   back: () => setScreen('menu'),
   reset: () => {
     saveCareer(newCareer(content, Math.floor(Math.random() * 2 ** 31)));
@@ -718,6 +720,7 @@ let launching = 0;
  */
 async function launch(o: Launch, title: string, ready?: (s: Session) => void): Promise<void> {
   const mine = ++launching;
+  hud.aim = null;
   sound.init();
   goFullscreen();
   $('loadTitle').textContent = title;
@@ -756,12 +759,57 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
 
 function startCareerRace(race: RaceId): void {
   const k = loadCareer();
+  // a tournament is finished or left before the ladder is raced again
+  if (k.cup) return openCareer();
   const s = raceSetup(content, k, race);
   careerRace = race;
   const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
   void launch(
     { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
     venue,
+  );
+}
+
+/** The next round of the tournament the career is entered in. */
+function startCupRound(): void {
+  const k = loadCareer();
+  const r = cupRound(content, k);
+  if (!r) return openCareer();
+  careerRace = 'cup';
+  const d = r.def;
+  const venue = content.venue.get(r.venue)!.meta.name.toUpperCase();
+  const par = r.par;
+  const mark = r.mark;
+  void launch(
+    {
+      venue: r.venue,
+      car: k.car,
+      seed: r.seed,
+      field: r.field,
+      player: r.player,
+      knockout: true,
+      modifiers: r.modifiers,
+      ...(r.laps ? { laps: r.laps } : {}),
+    },
+    `${d.name} ${r.round + 1}/${d.rounds} · ${venue}${modLine(content, r.modifiers)}`,
+    () => {
+      // beside the clock: the medal still to be had, the wanted car, or what the round is for
+      hud.aim = par
+        ? (w) => {
+            const at = par.findIndex((t) => w.raceTime <= t);
+            return at < 0
+              ? { text: 'NO MEDAL', colour: '#ff7a6a' }
+              : {
+                  text: `${MEDALS[3 - at]} ${clock(par[at]!)}`,
+                  colour: ['#ffd24a', '#dfe6ee', '#e09a5a'][at]!,
+                };
+          }
+        : mark
+          ? () => ({ text: `WANTED: ${mark}`, colour: '#ff6a7a' })
+          : d.kind === 'last'
+            ? () => ({ text: 'LAST HOME IS OUT', colour: '#c58cff' })
+            : null;
+    },
   );
 }
 
@@ -843,13 +891,28 @@ function finish(gaveUp = false): void {
   if (careerRace) {
     // settle once: the race is spent, so leaving the results cannot pay twice
     const o: Outcome = gaveUp ? forfeit(w) : readOutcome(w);
-    const { career: next, payout } = settle(loadCareer(), careerRace, o);
+    const k = loadCareer();
+    const cup = careerRace === 'cup' ? settleCup(content, k, o) : null;
+    const { career: next, payout } =
+      cup ?? settle(k, careerRace === 'cup' ? 'easy' : careerRace, o);
     saveCareer(next);
     careerRace = null;
     lastCareer = true;
+    const rep = cup?.payout.cup;
     if (payout.champion) $('resTitle').textContent = 'TOP DOG!';
+    else if (rep?.place)
+      $('resTitle').textContent =
+        rep.place === 1
+          ? `${rep.name} WON!`
+          : rep.place <= 3
+            ? `${placeName(rep.place)} IN THE ${rep.name}`
+            : rep.kind === 'last'
+              ? 'ELIMINATED'
+              : `${rep.name}: NO TROPHY`;
     else if (gaveUp) $('resTitle').textContent = 'GAVE UP';
-    else if (o.wrecked) $('resTitle').textContent = 'WRECKED';
+    else if (o.wrecked && rep?.kind !== 'derby') $('resTitle').textContent = 'WRECKED';
+    else if (rep?.medal !== undefined) $('resTitle').textContent = MEDALS[rep.medal]!;
+    if (rep) sub = `${rep.name} · ROUND ${rep.round} OF ${rep.rounds} · ${sub}`;
     const line = (label: string, cash: string, cls = '') => {
       const d = document.createElement('div');
       d.className = cls;
@@ -863,6 +926,25 @@ function finish(gaveUp = false): void {
     if (payout.lines.length === 0)
       line(o.wrecked ? 'A WRECK EARNS NOTHING' : 'OUT OF THE MONEY', money(0));
     line(`CASH ${money(next.cash)} · +${payout.points} PTS`, money(payout.total), 'sum');
+    if (rep) {
+      // the tournament's table under the money: who leads, who went home
+      line(rep.place ? 'FINAL TABLE' : `AFTER ROUND ${rep.round} OF ${rep.rounds}`, '', 'cupHead');
+      if (rep.kind === 'trial')
+        line(
+          rep.time === undefined ? 'NO TIME' : `YOUR TIME ${clock(rep.time)}`,
+          MEDALS[rep.medal ?? 0]!,
+          `cupRow m${rep.medal ?? 0}`,
+        );
+      else
+        rep.table.forEach((s, i) =>
+          line(
+            `${i + 1}  ${s.name}`,
+            rep.kind === 'last' ? (s.out ? 'OUT' : 'IN') : `${s.points} PTS`,
+            `cupRow ${s.me ? 'me' : ''} ${s.out ? 'gone' : ''}`,
+          ),
+        );
+      if (rep.cut) line(`${rep.cut} GOES HOME`, '', 'cupRow');
+    }
   } else lastCareer = false;
   if (!lastCareer)
     try {
@@ -1304,6 +1386,7 @@ function boot(): void {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
       startCareerRace(race);
+    else if (race === 'cup' && loadCareer().cup) startCupRound();
     else openCareer();
   }
   Object.assign(window, {
