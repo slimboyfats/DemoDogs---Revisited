@@ -153,3 +153,19 @@ export const SKIES: Record<string, { dark: number; wet: number; snow: number; fo
   dawn: { dark: 0.3, wet: 0, snow: 0, fog: 1 },
   'fog-night': { dark: 1, wet: 0, snow: 0, fog: 0.85 },
 };
+
+type Sky = { dark: number; wet: number; snow: number; fog: number };
+
+/**
+ * The sky inside a weather area: the area's weather laid over the sky the race has. An area
+ * brings rain or snow or its own dusk, but it never takes the dark away: a night race stays a
+ * night race all the way round.
+ */
+export function skyOver(base: Sky, area: Sky): Sky {
+  return {
+    dark: Math.max(base.dark, area.dark),
+    wet: Math.max(base.wet, area.wet),
+    snow: Math.max(base.snow, area.snow),
+    fog: Math.max(base.fog, area.fog),
+  };
+}
