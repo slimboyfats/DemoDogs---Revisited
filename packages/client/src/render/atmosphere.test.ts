@@ -101,6 +101,6 @@ describe('a weather area', () => {
     expect(skyOver(SKIES['snow-night']!, SKIES.snow!)).toEqual(SKIES['snow-night']);
     expect(skyOver(SKIES.day!, SKIES.snow!)).toEqual(SKIES.snow);
     expect(skyOver(SKIES.day!, SKIES.storm!)).toEqual(SKIES.storm);
-    expect(skyOver(SKIES.night!, SKIES.rain!)).toEqual({ dark: 1, wet: 1, snow: 0 });
+    expect(skyOver(SKIES.night!, SKIES.rain!)).toEqual({ dark: 1, wet: 1, snow: 0, fog: 0 });
   });
 });
