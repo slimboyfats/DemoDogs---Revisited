@@ -45,10 +45,10 @@ const ok = <T extends { ok: boolean }>(r: T) => {
 };
 
 describe('career', () => {
-  it('starts in the cheapest of six cars, at the bottom of the ladder', () => {
+  it('starts in the cheapest of the eleven cars, at the bottom of the ladder', () => {
     const k = fresh();
     const cars = shop(C);
-    expect(cars).toHaveLength(6);
+    expect(cars).toHaveLength(11);
     expect(k.car).toBe(cars[0]!.id);
     expect(cars[0]!.price).toBe(0);
     expect(rank(k)).toBe(13);
