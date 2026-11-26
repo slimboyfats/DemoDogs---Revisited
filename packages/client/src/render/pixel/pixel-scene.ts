@@ -279,10 +279,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const L = this.lights;
     L.clear();
     const t = w.time;
-    // the darker it is the further every light carries: by night they are the picture
+    // the darker it is the further a light carries, a little
     const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
-    // (less far on a phone that is struggling: a wide light is a lot of ground to work out)
-    L.spread = this.sky.flat ? 1 : 1 + (fx.quality > 0.6 ? 0.8 : 0.4) * night;
+    L.spread = this.sky.flat ? 1 : 1 + 0.25 * night;
+    // and in daylight a fire, a flash or a lamp is no match for the sun: none of them lights the
+    // ground or anything else. They come up as the light goes, from dusk on
+    L.gain = this.sky.flat ? 1 : Math.max(0, Math.min(1, (this.sky.now.dark - 0.25) / 0.35));
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
@@ -290,7 +292,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.add(b.x, b.y, b.r * 7, (1.8 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
     }
     for (const c of w.cars)
-      if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
+      // (not from a car up on a deck: these lights lie on the ground, which there is the road
+      // under the bridge)
+      if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);
@@ -308,7 +312,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const p of w.pickups)
       if (p.on && this.visible(p.x, p.y, 30))
         L.add(p.x, p.y, p.gives ? 26 : 20, p.gives ? 0.6 : 0.45, p.gives ? 0xffd040 : 0x60f0ff);
-    this.glances(w, fx);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
@@ -352,7 +355,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const k = (this.sky.now.dark - 0.42) / 0.58;
     // and every running car's two tail lamps each lay a small red glow on the ground right at
     // its own corner of the bumper, as a car's do: dim while it runs, bright while it brakes
-    // (it is slowing hard, backing up or on the handbrake). None from a car in the air.
+    // (it is slowing hard, backing up or on the handbrake). None from a car in the air or on a deck.
     const dt = Math.max(0, t - this.tailT);
     this.tailT = t;
     for (const c of w.cars) {
@@ -366,7 +369,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (c.wrecked || !this.visible(c.x, c.y, 60)) continue;
       // (your own only, on a phone that is struggling)
       if (c !== w.player && fx.quality <= 0.6) continue;
-      if (c.z - c.deck > 1) continue;
+      if (c.z - c.deck > 1 || c.deck >= 1) continue;
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
       const back = (c.def.body.halfLength + 1.5) * c.size;
@@ -394,43 +397,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         if (Math.abs(lit[n]! - s.x) + Math.abs(lit[n + 1]! - s.y) < 70) near = true;
       if (near) continue;
       lit.push(s.x, s.y);
-      L.add(s.x, s.y, 54, 0.6 * k, 0xffd890);
-    }
-  }
-
-  /**
-   * Sunlight thrown off bodywork: a car with a side turned to the sun lays a patch of the sun's
-   * own light on the ground beside it, that flares and dies as the car turns and shimmers as
-   * it goes. Weak lights, so they are the first to make way for a blast's.
-   */
-  private glances(w: World, fx: Effects): void {
-    const A = this.sky;
-    if (!this.sunCast || this.shade < 0.2 || fx.quality <= 0.5) return;
-    const rx = A.reach[0]!;
-    const ry = A.reach[1]!;
-    const len = Math.hypot(rx, ry);
-    if (len < 0.01) return;
-    const sx = -rx / len;
-    const sy = -ry / len;
-    const rgb =
-      (Math.min(255, Math.round(A.sun[0]! * 400)) << 16) |
-      (Math.min(255, Math.round(A.sun[1]! * 400)) << 8) |
-      Math.min(255, Math.round(A.sun[2]! * 400));
-    for (const c of w.cars) {
-      if (c.wrecked || !this.visible(c.x, c.y, 40)) continue;
-      // how square a side of it is to the sun
-      const side = Math.abs(-Math.sin(c.h) * sx + Math.cos(c.h) * sy);
-      const flare = side * side * side;
-      if (flare < 0.15) continue;
-      const out = (c.def.body.halfWidth + 5) * c.size;
-      const shimmer = 0.85 + 0.15 * Math.sin(w.time * 19 + c.index * 2.4 + (c.x + c.y) * 0.21);
-      this.lights.add(
-        c.x + sx * out,
-        c.y + sy * out,
-        15 * c.size,
-        0.4 * flare * shimmer * this.shade,
-        rgb,
-      );
+      L.add(s.x, s.y, 44, 0.6 * k, 0xffd890);
     }
   }
 

@@ -35,6 +35,8 @@ export class Lights {
    * In the dark a lamp, a muzzle or a fire washes the whole road with its colour.
    */
   spread = 1;
+  /** How strong every light added is, against the daylight: under the sun they are nothing. */
+  gain = 1;
 
   clear(): void {
     this.count = 0;
@@ -59,10 +61,10 @@ export class Lights {
 
   /** Add a light; when full, it replaces the weakest one if it is stronger. */
   add(x: number, y: number, r: number, strength: number, rgb: number): void {
-    if (strength <= 0.01 || r < 1) return;
+    if (strength * this.gain <= 0.01 || r < 1) return;
     // (wider, and a little weaker with it, so its heart does not burn out to white)
     r *= this.spread;
-    strength /= 1 + 0.3 * (this.spread - 1);
+    strength = (strength * this.gain) / (1 + 0.3 * (this.spread - 1));
     let i = this.count;
     if (i >= MAX_LIGHTS) {
       let weak = 0;
