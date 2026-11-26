@@ -23,7 +23,7 @@ const pick = (c: readonly number[]) => c[(Math.random() * c.length) | 0]!;
 const PARTY = [0xff4058, 0x3a96ff, 0xffd428, 0x5fe06a, 0xffffff] as const;
 const DOOR = [0xff60ff, 0xd040ff, 0xffd0ff] as const;
 const FIRE = [0xfff6c0, 0xffc040, 0xff7a20] as const;
-const MUD = [0x553a1c, 0x7c5a30, 0x402a13] as const;
+const MUD = [0x4e3317, 0x6e4a24, 0x3a240f, 0x85603a] as const;
 const STAR = [0xfff3a0, 0xffd428, 0xffffff] as const;
 const RED = [0xff5a4a, 0xff2a2a, 0xffb0a0] as const;
 const BLUE = [0x5aa8ff, 0x2a6aff, 0xb0d8ff] as const;
@@ -58,6 +58,21 @@ interface Paw {
   /** Going out to rob (it turns round for home when it gets there), or coming back with it. */
   home: number;
 }
+/** A mud pie in flight, from the car that threw it to the car it is going to land on. */
+interface Pie {
+  from: number;
+  to: number;
+  /** Where it set off (the thrower may have moved on since). */
+  x0: number;
+  y0: number;
+  z0: number;
+  x: number;
+  y: number;
+  z: number;
+  t: number;
+  dur: number;
+  spin: number;
+}
 /** A splat of mud on the screen: where (0 to 1 each way), how big, and its ragged edge. */
 export interface Splat {
   x: number;
@@ -80,6 +95,21 @@ function dot(
   fat = 2,
 ): void {
   fx.emit('glitter', x, y, z, vx, vy, vz, life, fat, rgb);
+}
+
+/** One solid drop of mud: it is not lit, it falls and it lands. */
+function gob(
+  fx: Effects,
+  x: number,
+  y: number,
+  z: number,
+  vx: number,
+  vy: number,
+  vz: number,
+  life: number,
+  size: number,
+): void {
+  fx.emit('pip', x, y, z, vx, vy, vz, life, size, pick(MUD));
 }
 
 /** A ring of fat cells thrown out along the ground from (x, y). */
@@ -176,6 +206,9 @@ function line(
 export class TrickFx {
   readonly doors: Door[] = [];
   readonly paws: Paw[] = [];
+  readonly pies: Pie[] = [];
+  /** Where each pied car last dropped a spot of mud on the ground. */
+  private readonly trail = new Map<number, number>();
   /** Mud on your own screen (the HUD draws it), and how long it has left to run off. */
   readonly splats: Splat[] = [];
   mud = 0;
@@ -184,8 +217,10 @@ export class TrickFx {
   /** Where each car was heading a tick ago: a door stands the way the car went in. */
   private readonly was = new Map<number, number>();
   private tick = 0;
+  private sound: Sound | null = null;
 
   handle(fx: Effects, w: World, e: TrickEvent, S: Sound, art: Art): void {
+    this.sound = S;
     const c = w.cars[e.car]!;
     const mine = c === w.player;
     const v = fx.vol(e.x, e.y);
@@ -262,29 +297,35 @@ export class TrickFx {
         break;
       case 'splat':
         if (e.what === 'on') {
-          // the pie arrives: a brown burst all over the car, and all over your screen if it is yours
-          burst(fx, e.x, e.y, c.z + 6, 130, 90, MUD, 2.6);
-          for (let i = 0; i < 14; i++) fx.puff(e.x, e.y, 3, 'dust', rand(-60, 60), rand(-60, 60));
-          flash(0x7c5a30, 80, 0.35);
-          fx.text(e.x, e.y - 12, mine ? 'MUD PIE!' : `${c.name} GOT PIED!`, '#c89a5a', true);
-          shake(12, 4);
-          if (mine) {
-            const secs = c.tricks.splat?.t ?? 4;
-            this.mud = this.mudFor = secs;
-            this.splats.length = 0;
-            // (the middle of the screen first, where the road is)
-            for (let i = 0; i < 9; i++)
-              this.splats.push({
-                x: i < 3 ? rand(0.3, 0.7) : rand(0.05, 0.95),
-                y: i < 3 ? rand(0.25, 0.7) : rand(0.05, 0.95),
-                r: i < 3 ? rand(0.2, 0.28) : rand(0.09, 0.2),
-                seed: rand(0, 100),
-              });
-          }
-          if (v > 0) {
-            S.thud(v);
-            S.hiss(v, false);
-          }
+          // a pie is thrown: it flies over from the car that threw it and lands with the splash
+          const from = w.cars[e.by];
+          if (from && from !== c) {
+            const d = Math.hypot(c.x - from.x, c.y - from.y);
+            this.pies.push({
+              from: from.index,
+              to: c.index,
+              x0: from.x,
+              y0: from.y,
+              z0: from.z + 8,
+              x: from.x,
+              y: from.y,
+              z: from.z + 8,
+              t: 0,
+              dur: Math.min(0.7, Math.max(0.3, d / 260)),
+              spin: rand(-14, 14),
+            });
+            if (this.pies.filter((q) => q.from === from.index).length === 1) {
+              fx.text(
+                from.x,
+                from.y - 12,
+                from === w.player ? 'PIE AWAY!' : `${from.name} THROWS A PIE!`,
+                '#e8b878',
+                true,
+              );
+              const u = fx.vol(from.x, from.y);
+              if (u > 0) S.whoosh(u);
+            }
+          } else this.splash(fx, w, c, S);
         } else if (mine) this.mud = Math.min(this.mud, 0.4);
         break;
       case 'steal': {
@@ -406,6 +447,61 @@ export class TrickFx {
     void art;
   }
 
+  /** A pie lands on car c: mud everywhere, and over your screen if c is yours. */
+  private splash(fx: Effects, w: World, c: Car, S: Sound): void {
+    const mine = c === w.player;
+    const v = fx.vol(c.x, c.y);
+    // a crown of mud thrown up and out, heavy drops that fall back, and a brown cloud
+    const top = c.z + 7 * c.size;
+    const m = Math.ceil(70 * Math.max(0.5, fx.quality));
+    for (let i = 0; i < m; i++) {
+      const a = rand(0, TAU);
+      const sp = rand(40, 170);
+      gob(
+        fx,
+        c.x + Math.cos(a) * 3,
+        c.y + Math.sin(a) * 3,
+        top,
+        c.vx * 0.6 + Math.cos(a) * sp,
+        c.vy * 0.6 + Math.sin(a) * sp,
+        rand(40, 150),
+        rand(0.7, 1.3),
+        rand(1.2, 2.4),
+      );
+    }
+    for (let i = 0; i < 16; i++) fx.puff(c.x, c.y, 3, 'dust', rand(-70, 70), rand(-70, 70));
+    // the mud it threw lands round the car
+    const M = w.content.material.get('material.mud');
+    if (M)
+      for (let i = 0; i < 6; i++)
+        fx.pool(M, c.x + rand(-16, 16), c.y + rand(-16, 16), rand(1.5, 3.5));
+    fx.flashes.push({ x: c.x, y: c.y, r: 90, life: 0.35, max: 0.35, rgb: 0x9c6c3a });
+    fx.text(c.x, c.y - 12, mine ? 'SPLAT! MUD PIE!' : `${c.name} GOT PIED!`, '#e8b878', true);
+    fx.shake = Math.max(fx.shake, mine ? 12 : 4 * v);
+    if (mine) {
+      const secs = c.tricks.splat?.t ?? 4;
+      this.mud = this.mudFor = secs;
+      this.splats.length = 0;
+      // one great splat over the middle of the screen, where the road is, and smaller ones round it
+      this.splats.push({ x: rand(0.42, 0.58), y: rand(0.36, 0.5), r: 0.3, seed: rand(0, 100) });
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * TAU + rand(-0.4, 0.4);
+        this.splats.push({
+          x: 0.5 + Math.cos(a) * rand(0.26, 0.4),
+          y: 0.45 + Math.sin(a) * rand(0.25, 0.38),
+          r: rand(0.1, 0.17),
+          seed: rand(0, 100),
+        });
+      }
+    }
+    if (v > 0 || mine) {
+      const k = Math.max(v, mine ? 1 : 0);
+      S.thud(k);
+      S.hiss(k * 0.7, false);
+      S.pop(k * 0.8);
+    }
+  }
+
   /** Per tick: the steady sign of every trick at work, the doors, and the paws in flight. */
   step(fx: Effects, w: World): void {
     this.tick++;
@@ -470,10 +566,25 @@ export class TrickFx {
         glow(c, 0xffa030, 70);
         if (speed > 60 && this.tick % 3 === 0) fx.shake = Math.max(fx.shake, 2 * fx.vol(c.x, c.y));
       }
+      if (T.splat && speed > 25) {
+        // it leaves a trail of brown spots on the road behind it
+        const last = this.trail.get(c.index) ?? 0;
+        if (w.time - last > 0.09) {
+          this.trail.set(c.index, w.time);
+          const M = w.content.material.get('material.mud');
+          if (M)
+            fx.pool(
+              M,
+              c.x - cs * L * 0.8 + rand(-W, W) * 0.6,
+              c.y - sn * L * 0.8 + rand(-W, W) * 0.6,
+              rand(1.2, 2.4),
+            );
+        }
+      }
       if (T.splat && this.tick % 2 === 0) {
         // it runs off the car in fat brown drops
         const a = rand(0, TAU);
-        dot(
+        gob(
           fx,
           c.x + Math.cos(a) * W,
           c.y + Math.sin(a) * W,
@@ -481,9 +592,8 @@ export class TrickFx {
           c.vx * 0.5 + Math.cos(a) * 30,
           c.vy * 0.5 + Math.sin(a) * 30,
           rand(10, 40),
-          rand(0.4, 0.7),
-          pick(MUD),
-          2,
+          rand(0.5, 0.8),
+          rand(1.2, 2),
         );
       }
       if (T.dizzy) {
@@ -617,6 +727,24 @@ export class TrickFx {
       }
       if (beat) fx.flashes.push({ x: d.x, y: d.y, r: 60, life: 0.16, max: 0.16, rgb: 0xf048ff });
     }
+    for (let i = this.pies.length - 1; i >= 0; i--) {
+      const p = this.pies[i]!;
+      const c = w.cars[p.to]!;
+      p.t += DT;
+      const k = Math.min(1, p.t / p.dur);
+      // it goes where the car is now, high over everything between
+      p.x = p.x0 + (c.x - p.x0) * k;
+      p.y = p.y0 + (c.y - p.y0) * k;
+      p.z = p.z0 + (c.z + 7 - p.z0) * k + Math.sin(k * Math.PI) * 34;
+      if (k >= 1) {
+        this.pies.splice(i, 1);
+        if (!c.wrecked) this.splash(fx, w, c, this.sound!);
+        continue;
+      }
+      // a few drops shaken off it on the way
+      if (this.tick % 2 === 0)
+        gob(fx, p.x, p.y, p.z - 1, rand(-20, 20), rand(-20, 20), rand(-30, 0), 0.6, 1.6);
+    }
     for (let i = this.paws.length - 1; i >= 0; i--) {
       const p = this.paws[i]!;
       const c = w.cars[p.to]!;
@@ -729,6 +857,14 @@ export function queueTrickThings(R: StackSink, art: Art, w: World, fx: TrickFx):
     const rise = Math.min(1, (1.5 - d.t) / 0.12, d.t / 0.2);
     R.stack(art.prop('pickup.dog-door'), d.x, d.y, d.z - (1 - rise) * 14, d.h);
   }
+  for (const p of fx.pies) {
+    if (!R.visible(p.x, p.y, 14, 20 + p.z)) continue;
+    R.group(p.y);
+    // twice life size and turning over as it flies
+    R.zoom(2);
+    R.stack(art.prop('pickup.mud-pie', undefined, 1), p.x, p.y, p.z, p.t * p.spin);
+    R.zoom(1);
+  }
   for (const p of fx.paws) {
     if (!R.visible(p.x, p.y, 14, 20)) continue;
     const c = w.cars[p.to]!;
@@ -742,9 +878,18 @@ export function queueTrickThings(R: StackSink, art: Art, w: World, fx: TrickFx):
   }
 }
 
+/** A number from 0 to 1 that is always the same for the same seed and index. */
+function hash(seed: number, i: number): number {
+  const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453;
+  return v - Math.floor(v);
+}
+
 /**
- * Mud on the glass: each splat a ragged brown blot with runs going down from it, sliding down
- * the screen as it thins, gone in the last moments of its `left` seconds out of `all`.
+ * Mud on the glass. Each splat is a wet blot thrown hard at the screen: a heavy body darker at
+ * its edge, tongues of mud sprayed out from it with a drop at the end of each, drops flung
+ * further, a wet shine across the top, and runs down from its foot that lengthen and taper as
+ * the mud slides. It all slides down the glass as it thins, and is gone in the last moments of
+ * its `left` seconds out of `all`.
  */
 export function drawMud(
   ctx: CanvasRenderingContext2D,
@@ -755,40 +900,153 @@ export function drawMud(
   H: number,
 ): void {
   const gone = 1 - left / all;
-  const fade = Math.min(1, left / 0.5);
+  const fade = Math.min(1, left / 0.6);
   const S = Math.min(W, H);
+  const DARK = '#2b1a0a';
+  const MID = '#4e3317';
+  const WET = '#6e4a24';
   ctx.save();
   for (const p of splats) {
     const x = p.x * W;
-    const y = p.y * H + gone * H * 0.12;
-    const r = p.r * S * (1 - gone * 0.25);
-    for (const [k, col, a] of [
-      [1, '#33210f', 0.96],
-      [0.8, '#553a1c', 0.96],
-      [0.45, '#7c5a30', 0.9],
-    ] as const) {
-      ctx.globalAlpha = a * fade;
-      ctx.fillStyle = col;
+    const y = p.y * H + gone * gone * H * 0.1;
+    const r = p.r * S;
+    const h = (i: number) => hash(p.seed, i);
+    ctx.globalAlpha = 0.97 * fade;
+    // the tongues and the drops flung off (under the body, so that it sits on them)
+    ctx.fillStyle = DARK;
+    // it hit the glass going one way: most of what sprays out goes on that way, and furthest
+    const way = h(7) * TAU;
+    const rays = 6 + Math.floor(h(0) * 4);
+    for (let i = 0; i < rays; i++) {
+      const a = way + (h(i + 1) - 0.5) * (i < rays - 2 ? 2.2 : TAU);
+      const on = Math.cos(a - way);
+      const len = r * (1 + Math.max(0, on) * 0.55 + h(i + 20) * 0.35);
+      const wd = r * (0.1 + h(i + 40) * 0.09);
+      const ca = Math.cos(a);
+      const sa = Math.sin(a);
+      const ex = x + ca * len;
+      const ey = y + sa * len * 0.92;
+      // a tapered tongue from the body out to the drop
       ctx.beginPath();
-      const n = 22;
-      for (let i = 0; i <= n; i++) {
-        const t = (i / n) * Math.PI * 2;
-        const q =
-          r * k * (1 + 0.22 * Math.sin(t * 3 + p.seed) + 0.14 * Math.sin(t * 7 + p.seed * 2.3));
-        ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(t) * q, y + Math.sin(t) * q * 0.9);
+      ctx.moveTo(x - sa * wd * 2.2, y + ca * wd * 2.2);
+      ctx.quadraticCurveTo(x + ca * len * 0.6 - sa * wd, y + sa * len * 0.55 + ca * wd, ex, ey);
+      ctx.quadraticCurveTo(
+        x + ca * len * 0.6 + sa * wd,
+        y + sa * len * 0.55 - ca * wd,
+        x + sa * wd * 2.2,
+        y - ca * wd * 2.2,
+      );
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(ex, ey, wd * 1.5, 0, TAU);
+      ctx.fill();
+      // and a drop or two that flew on past it
+      if (h(i + 60) > 0.45 && on > 0) {
+        const far = len * (1.2 + h(i + 80) * 0.35);
+        ctx.beginPath();
+        ctx.arc(x + ca * far, y + sa * far * 0.92, wd * (0.6 + h(i + 90) * 0.7), 0, TAU);
+        ctx.fill();
       }
+    }
+    // the body: dark at its edge, wetter and lighter towards the middle
+    const blob = (k: number) => {
+      ctx.beginPath();
+      const n = 40;
+      for (let i = 0; i <= n; i++) {
+        const t = (i / n) * TAU;
+        const q =
+          r *
+          k *
+          (1 +
+            0.13 * Math.sin(t * 3 + p.seed) +
+            0.08 * Math.sin(t * 5 + p.seed * 1.7) +
+            0.05 * Math.sin(t * 9 + p.seed * 2.9));
+        const px = x + Math.cos(t) * q;
+        const py = y + Math.sin(t) * q * 0.9;
+        if (i) ctx.lineTo(px, py);
+        else ctx.moveTo(px, py);
+      }
+      ctx.closePath();
+    };
+    const g = ctx.createRadialGradient(x - r * 0.2, y - r * 0.25, r * 0.1, x, y, r * 1.1);
+    g.addColorStop(0, WET);
+    g.addColorStop(0.55, MID);
+    g.addColorStop(1, DARK);
+    ctx.fillStyle = g;
+    blob(1);
+    ctx.fill();
+    // the runs: tapered, a round drop at the foot of each, longer as it slides
+    const runs = 2 + Math.floor(h(100) * 3);
+    for (let i = 0; i < runs; i++) {
+      const dx = x + (h(110 + i) - 0.5) * r * 1.3;
+      const wd = r * (0.09 + h(120 + i) * 0.07);
+      const len = r * (0.4 + h(130 + i) * 0.7) * (0.35 + gone * 1.9);
+      const top = y + r * 0.55;
+      const run = ctx.createLinearGradient(dx - wd, 0, dx + wd, 0);
+      run.addColorStop(0, DARK);
+      run.addColorStop(0.45, WET);
+      run.addColorStop(1, DARK);
+      ctx.fillStyle = run;
+      ctx.beginPath();
+      ctx.moveTo(dx - wd * 1.6, top);
+      ctx.quadraticCurveTo(dx - wd * 0.7, top + len * 0.6, dx - wd * 0.55, top + len);
+      ctx.lineTo(dx + wd * 0.55, top + len);
+      ctx.quadraticCurveTo(dx + wd * 0.7, top + len * 0.6, dx + wd * 1.6, top);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(dx, top + len, wd * 1.05, 0, TAU);
+      ctx.fill();
+      // its shine
+      ctx.fillStyle = 'rgba(255,236,200,0.35)';
+      ctx.beginPath();
+      ctx.arc(dx - wd * 0.35, top + len - wd * 0.3, wd * 0.3, 0, TAU);
       ctx.fill();
     }
-    // the runs: three fat drips that lengthen as it slides
-    ctx.globalAlpha = 0.94 * fade;
-    ctx.fillStyle = '#402a13';
-    for (let i = -1; i <= 1; i++) {
-      const dx = x + i * r * 0.5 + Math.sin(p.seed + i) * r * 0.15;
-      const len = r * (0.7 + 0.5 * Math.abs(Math.sin(p.seed * 3 + i))) * (0.5 + gone * 1.6);
-      const wd = r * 0.13;
-      ctx.fillRect(dx - wd, y, wd * 2, len);
+    // the wet shine across the top of the body: a soft crescent and a few bright points
+    ctx.save();
+    blob(0.92);
+    ctx.clip();
+    const shine = ctx.createRadialGradient(
+      x - r * 0.35,
+      y - r * 0.45,
+      0,
+      x - r * 0.35,
+      y - r * 0.45,
+      r * 0.75,
+    );
+    shine.addColorStop(0, 'rgba(255,240,215,0.42)');
+    shine.addColorStop(0.5, 'rgba(255,240,215,0.12)');
+    shine.addColorStop(1, 'rgba(255,240,215,0)');
+    ctx.fillStyle = shine;
+    ctx.fillRect(x - r * 1.2, y - r * 1.2, r * 2.4, r * 2.4);
+    // lumps in it: darker hollows with a light lip above each
+    for (let i = 0; i < 5; i++) {
+      const lx = x + (h(150 + i) - 0.5) * r * 1.2;
+      const ly = y + (h(160 + i) - 0.4) * r * 1.0;
+      const lr = r * (0.08 + h(170 + i) * 0.1);
+      ctx.fillStyle = 'rgba(30,18,6,0.45)';
       ctx.beginPath();
-      ctx.arc(dx, y + len, wd * 1.25, 0, Math.PI * 2);
+      ctx.ellipse(lx, ly + lr * 0.25, lr, lr * 0.7, 0, 0, TAU);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,236,200,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(lx - lr * 0.2, ly - lr * 0.45, lr * 0.55, lr * 0.22, -0.3, 0, TAU);
+      ctx.fill();
+    }
+    ctx.restore();
+    ctx.fillStyle = 'rgba(255,248,232,0.85)';
+    for (let i = 0; i < 3; i++) {
+      ctx.globalAlpha = 0.9 * fade;
+      ctx.beginPath();
+      ctx.ellipse(
+        x - r * (0.3 + h(180 + i) * 0.3),
+        y - r * (0.35 + h(190 + i) * 0.25),
+        r * 0.05 * (1 + i * 0.4),
+        r * 0.03 * (1 + i * 0.4),
+        -0.5,
+        0,
+        TAU,
+      );
       ctx.fill();
     }
   }

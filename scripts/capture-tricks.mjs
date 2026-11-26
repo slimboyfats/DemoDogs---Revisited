@@ -186,7 +186,9 @@ const scenes = {
     play: async () => {
       await roll(16, IDLE);
       await page.evaluate(() => window.__dd.give(0, 'mud-pie'));
-      await roll(40, IDLE);
+      await roll(9, IDLE);
+      await shot('mud-pie-flying');
+      await roll(31, IDLE);
       await shot('mud-pie');
       await roll(60, IDLE);
       await page.evaluate(() => {
@@ -197,7 +199,9 @@ const scenes = {
       });
       await roll(50, { ...GO, steer: 0.2 });
       await shot('mud-pie-on-you');
-      await roll(240, { ...GO, steer: 0.2 });
+      await roll(120, { ...GO, steer: 0.2 });
+      await shot('mud-pie-sliding');
+      await roll(120, { ...GO, steer: 0.2 });
     },
   },
   'sticky-paws': {
