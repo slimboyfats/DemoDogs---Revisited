@@ -34,7 +34,16 @@ export {
 export type { Pulse } from './shock';
 export { howl, howlWants, type Howl } from './howl';
 export { fitMover, nose } from './movers';
-export { MINE_TRIGGER, PICKUP_REACH, ROCKET_REACH, grant, gunSight, muzzle } from './things';
+export {
+  MINE_TRIGGER,
+  PICKUP_REACH,
+  ROCKET_REACH,
+  ROUND_HIGH,
+  ROUND_LOW,
+  grant,
+  gunSight,
+  muzzle,
+} from './things';
 export * from './guards';
 export * from './arms';
 export { light } from './damage';

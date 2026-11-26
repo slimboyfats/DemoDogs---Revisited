@@ -24,6 +24,25 @@ const base = {
   extends: z.string().optional(),
 };
 
+/** One piece of a hit shape in several: a circle or a box set off from the thing's middle and turned, standing from `z[0]` up to `z[1]`. */
+const HitPiece = z.union([
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    radius: z.number().positive(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    rot: z.number().optional(),
+    halfLength: z.number().positive(),
+    halfWidth: z.number().positive(),
+    round: z.number().min(0).optional(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+]);
+
 export const CarSchema = z.strictObject({
   ...base,
   id: id('car'),
@@ -51,6 +70,12 @@ export const CarSchema = z.strictObject({
     .max(3),
   /** Where the roof piece sits: x along the car, z its underside. */
   top: z.strictObject({ x: z.number(), z: z.number() }),
+  /**
+   * What a shot meets: a hitbox a slice of the body, stacked as the slices are, baked from the
+   * look by `pnpm hitboxes:bake`. x runs along the car, heights are over the body's underside.
+   * Bumping into things goes by the one hull (`body`), which this does not change.
+   */
+  hit: z.strictObject({ parts: z.array(HitPiece).min(1).max(32) }).optional(),
 });
 export type CarManifest = z.infer<typeof CarSchema>;
 
@@ -899,28 +924,7 @@ export const PropSchema = z.strictObject({
       // `z[1]` (roots spread low about a trunk, a tank up on legs). Baked from the look's slices
       // by `pnpm hitboxes:bake`, so that what is hit is what is drawn at every height
       z.strictObject({
-        parts: z
-          .array(
-            z.union([
-              z.strictObject({
-                x: z.number(),
-                y: z.number(),
-                radius: z.number().positive(),
-                z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
-              }),
-              z.strictObject({
-                x: z.number(),
-                y: z.number(),
-                rot: z.number().optional(),
-                halfLength: z.number().positive(),
-                halfWidth: z.number().positive(),
-                round: z.number().min(0).optional(),
-                z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
-              }),
-            ]),
-          )
-          .min(1)
-          .max(32),
+        parts: z.array(HitPiece).min(1).max(32),
       }),
     ])
     .optional(),

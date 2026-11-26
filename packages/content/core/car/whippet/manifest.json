@@ -26,5 +26,83 @@
   "top": {
     "x": -10.6,
     "z": 4
+  },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 12,
+        "halfWidth": 5.6,
+        "z": [0, 3]
+      },
+      {
+        "x": 0,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 9.3,
+        "halfWidth": 5,
+        "round": 5,
+        "z": [3, 4]
+      },
+      {
+        "x": -10.2,
+        "y": -0.4,
+        "rot": 1.31,
+        "halfLength": 3.4,
+        "halfWidth": 1.2,
+        "round": 1.2,
+        "z": [3, 4]
+      },
+      {
+        "x": 9.8,
+        "y": 0,
+        "rot": 1.57,
+        "halfLength": 2.8,
+        "halfWidth": 1,
+        "round": 1,
+        "z": [3, 4]
+      },
+      {
+        "x": -2.2,
+        "y": -0.2,
+        "rot": 0,
+        "halfLength": 7.5,
+        "halfWidth": 5,
+        "round": 5,
+        "z": [4, 5]
+      },
+      {
+        "x": 6.3,
+        "y": 0,
+        "rot": 1.18,
+        "halfLength": 1.8,
+        "halfWidth": 1,
+        "round": 1,
+        "z": [4, 5]
+      },
+      {
+        "x": 2.3,
+        "y": 6.3,
+        "radius": 0.5,
+        "z": [4, 5]
+      },
+      {
+        "x": -2.2,
+        "y": 0,
+        "halfLength": 3.3,
+        "halfWidth": 4.5,
+        "round": 1,
+        "z": [5, 6]
+      },
+      {
+        "x": -2.2,
+        "y": 0,
+        "halfLength": 0.8,
+        "halfWidth": 3,
+        "round": 0.5,
+        "z": [6, 7]
+      }
+    ]
   }
 }

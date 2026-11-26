@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { carGap, stand } from '@demodogs/sim';
+import { ROUND_HIGH, ROUND_LOW, carGap, carPoint, newTouch, stand } from '@demodogs/sim';
 import { loadContent } from '../../../src/index';
 import { bench, openSpot, put } from '../../../src/testing';
 
@@ -52,7 +52,13 @@ describe('weapon.gun', () => {
       for (const e of w.takeEvents())
         if (e.t === 'shot' && e.hit === them.index) {
           hits++;
-          expect(Math.abs(carGap(them, e.tx, e.ty))).toBeLessThan(0.01);
+          // (its body as drawn at the height a round flies, which is nowhere outside its hull)
+          expect(
+            Math.abs(
+              carPoint(them, e.tx, e.ty, newTouch(), them.z + ROUND_LOW, them.z + ROUND_HIGH),
+            ),
+          ).toBeLessThan(0.01);
+          expect(carGap(them, e.tx, e.ty)).toBeLessThan(2);
           // (on the side that faces the gun)
           expect(Math.hypot(e.tx - me.x, e.ty - me.y)).toBeLessThan(
             Math.hypot(them.x - me.x, them.y - me.y),

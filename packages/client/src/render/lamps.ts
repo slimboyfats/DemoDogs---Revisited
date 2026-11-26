@@ -1,4 +1,4 @@
-import type { Part } from '@demodogs/shared';
+import { BODY_UP, type Part } from '@demodogs/shared';
 import type { Car } from '@demodogs/sim';
 
 /** Where a car's head lamps are in its look: art px ahead of its middle, out to each side, and up. */
@@ -32,8 +32,7 @@ export function findLamp(body: Part): LampSpot | null {
   return n ? { x: sx / n, y: sy / n, z: sz / n } : null;
 }
 
-/** How far over the wheels' foot a car's body is drawn (see `queueCar`). */
-export const BODY_UP = 0.6;
+export { BODY_UP };
 
 /**
  * Car c's two head lamps in the world, left then right: (x, y) on the map and how high over the

@@ -11,6 +11,7 @@ import {
   moundHeight,
   muzzle,
   newShape,
+  bodyOf,
   pieceFoot,
   pieceTop,
   pieces,
@@ -77,6 +78,8 @@ const COL = {
 } as const;
 
 const S = newShape();
+/** A second shape, for a piece of something whose whole shape is still wanted. */
+const PIECE = newShape();
 
 export class HitboxView {
   mode: HitboxMode = 'off';
@@ -573,7 +576,23 @@ export class HitboxView {
     const roof = heights
       ? (BODY_UP + this.art.carHeight(c.def.id, this.art.carRoof(c.def.id), 0)) * c.size
       : 0;
-    this.block(Q, c.z, roof, col, 1.6);
+    this.block(Q, c.z, heights && c.def.hit ? 0 : roof, col, 1.6);
+    // (and with HEIGHTS on, what a shot meets: its body slice by slice, each in its height's colour)
+    if (heights && c.def.hit && !c.wrecked) {
+      const B = bodyOf(c.def);
+      const k = c.size;
+      for (let i = 0; i < pieces(B); i++) {
+        const P = propShape(B, c.x, c.y, c.h, PIECE, i);
+        P.x = c.x + (P.x - c.x) * k;
+        P.y = c.y + (P.y - c.y) * k;
+        P.a *= k;
+        P.b *= k;
+        P.r *= k;
+        const foot = (BODY_UP + pieceFoot(B, i)) * k;
+        const top = (BODY_UP + pieceTop(B, i)) * k;
+        this.block(P, c.z + foot, top - foot, col, 0.8, foot);
+      }
+    }
     // which end is the nose
     const n = (c.def.body.halfLength + 0.5) * c.size;
     this.line(c.x, c.y, c.z, c.x + Math.cos(c.h) * n, c.y + Math.sin(c.h) * n, c.z);

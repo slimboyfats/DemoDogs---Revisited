@@ -569,6 +569,44 @@ describe.runIf(on)('bake hit shapes', () => {
       );
     }
     console.log(`\n${rows.join('\n')}\n`);
-    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.length + ONLY.length).toBeGreaterThan(0);
+  });
+
+  // a car's body the same way, for what is shot at it (it bumps with its one hull)
+  it("writes the cars' into theirs", () => {
+    const C = loadContent();
+    const L = loadLooks();
+    const rows: string[] = [];
+    for (const [id, def] of C.car) {
+      const lm = L.get(id);
+      if (ONLY.length && !ONLY.includes(id.slice(4))) continue;
+      if (!lm || lm.look.kind !== 'car') continue;
+      const as = {
+        id,
+        radius: def.body.halfLength,
+        hit: { halfLength: def.body.halfLength, halfWidth: def.body.halfWidth },
+      } as unknown as PropManifest;
+      const hit = bake(as, { kind: 'prop', part: lm.look.body });
+      if (!hit) continue;
+      const parts = (
+        'parts' in hit
+          ? hit.parts
+          : [{ ...hit, x: 0, y: 0, z: [0, hit.top ?? lm.look.body.layers] }]
+      ) as Piece[];
+      for (const P of parts) delete (P as { top?: number }).top;
+      expect(parts.length, id).toBeLessThanOrEqual(32);
+      const file = fileURLToPath(
+        new URL(`../core/car/${id.slice(4)}/manifest.json`, import.meta.url),
+      );
+      const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
+      delete raw.hit;
+      raw.hit = { parts };
+      writeFileSync(file, `${JSON.stringify(raw, null, 2)}\n`);
+      rows.push(
+        `${id.padEnd(26)} ${parts.length} pieces: ${parts.map((P) => `${P.z![0]}-${P.z![1]}`).join(' ')}`,
+      );
+    }
+    console.log(`\n${rows.join('\n')}\n`);
+    expect(rows.length + ONLY.length).toBeGreaterThan(0);
   });
 });

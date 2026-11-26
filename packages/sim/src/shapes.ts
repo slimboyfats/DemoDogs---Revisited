@@ -1,4 +1,4 @@
-import type { PropManifest } from '@demodogs/shared';
+import { BODY_UP, type CarManifest, type PropManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 
 /**
@@ -409,6 +409,52 @@ export function propTouch(
  */
 export function carGap(c: Car, x: number, y: number): number {
   return pointGap(carShape(c, CAR), x, y, HIT);
+}
+
+/**
+ * A car's stacked pieces as a thing `propPoint`, `pieces` and `propShape` can be asked about (at
+ * the car's usual size): one a kind of car, made when first asked.
+ */
+const BODIES = new WeakMap<CarManifest, PropManifest>();
+export function bodyOf(def: CarManifest): PropManifest {
+  let B = BODIES.get(def);
+  if (!B) {
+    B = { hit: def.hit, radius: def.body.halfLength } as unknown as PropManifest;
+    BODIES.set(def, B);
+  }
+  return B;
+}
+
+/**
+ * How far point (x, y) is from car c's bodywork between heights `lo` and `hi` over the ground the
+ * car is on: for a shot, which meets the car as it is drawn at the height it flies (over a low
+ * bonnet, into a cab), where `carGap` is the one hull a car bumps with. The way out and the
+ * nearest point of the body are left in `T`. Nothing of the car at that height: no touch at all.
+ * A kind of car with no pieces baked is its hull, wheels to roof.
+ */
+export function carPoint(c: Car, x: number, y: number, T: Touch, lo: number, hi: number): number {
+  const k = c.size;
+  const foot = c.z + BODY_UP * k;
+  if (!c.def.hit) {
+    if (hi <= c.z || lo >= c.z + CAR_HIGH * k) return (T.gap = CLEAR);
+    return pointGap(carShape(c, CAR), x, y, T);
+  }
+  // (the pieces are a car of its usual size: the question is shrunk to that, and the answer grown)
+  const g = propPoint(
+    bodyOf(c.def),
+    c.x,
+    c.y,
+    c.h,
+    c.x + (x - c.x) / k,
+    c.y + (y - c.y) / k,
+    T,
+    (lo - foot) / k,
+    (hi - foot) / k,
+  );
+  if (g >= CLEAR) return g;
+  T.px = c.x + (T.px - c.x) * k;
+  T.py = c.y + (T.py - c.y) * k;
+  return (T.gap = g * k);
 }
 
 /**

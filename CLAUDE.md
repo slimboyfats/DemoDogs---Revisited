@@ -134,9 +134,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **What is hit is what is drawn.** Every rule that asks whether two things touch asks `sim/shapes.ts` (`carGap`,
   `propGap`, `thingGap`, `propTouch`, `carsGap`), never a distance between middles. A car's hull comes from its own
   body and `size`. A prop's `hit` is a circle, a box, or `parts`: pieces with a foot and a top (`z`), baked from the
-  look's slices by `pnpm hitboxes:bake` in bands at wheel height, body height and over the roof, so run it after a
-  standing prop's look changes (`hitboxes.test.ts` fails when a shape no longer fits). A rule says how high the thing
+  look's slices by `pnpm hitboxes:bake`, a hitbox a slice stacked as the slices are, so run it after a standing
+  prop's or a car's look changes (`hitboxes.test.ts` fails when a shape no longer fits). A rule says how high the thing
   it asks about is (a car `c.z` to its roof, a rocket `ROCKET_HIGH`). `radius` stays for layout, blasts and drivers.
+  A car bumps with its one hull, and a shot meets its body slice by slice (`carPoint`, the car manifest's `hit`).
   The HITBOXES view (`render/hitbox-view.ts`) draws these same shapes: a new thing that can be hit is drawn there too.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world

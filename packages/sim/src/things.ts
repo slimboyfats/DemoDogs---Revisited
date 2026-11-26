@@ -4,12 +4,10 @@ import { fitCatchup, odds, place } from './catchup';
 import {
   bound,
   carGap,
-  carShape,
+  carPoint,
   hull,
   girth,
-  newShape,
   newTouch,
-  pointGap,
   propGap,
   propPoint,
   reach,
@@ -283,6 +281,9 @@ export const MINE_TRIGGER = 5;
 export const ROCKET_REACH = 3;
 /** How high over the ground (or its deck) a rocket flies: what stands lower than that it goes over. */
 export const ROCKET_HIGH = 4;
+/** The heights a gun's round flies between, art px over the ground. */
+export const ROUND_LOW = 3.5;
+export const ROUND_HIGH = 5;
 
 export function updatePickups(w: World): void {
   for (const p of w.pickups) {
@@ -448,13 +449,11 @@ function walled(w: World, x: number, y: number, tx: number, ty: number): boolean
     const py = y + ((ty - y) * i) / n;
     for (const s of w.near(px, py, 1))
       if (!s.down && s.def.solid && !s.def.mound && !s.def.pad) {
-        if (propPoint(s.def, s.x, s.y, s.rot, px, py, AT, 3.5, 5) < 0.5) return true;
+        if (propPoint(s.def, s.x, s.y, s.rot, px, py, AT, ROUND_LOW, ROUND_HIGH) < 0.5) return true;
       }
   }
   return false;
 }
-
-const TARGET = newShape();
 
 export function shoot(w: World, c: Car): void {
   const g = c.gun;
@@ -495,11 +494,14 @@ export function shoot(w: World, c: Car): void {
     const uy = (best.y - y) / (Math.hypot(best.x - x, best.y - y) || 1);
     const out = reach(best) * 2;
     const side = (off / 3) * hull(best) * 0.7;
-    pointGap(
-      carShape(best, TARGET),
+    // (as it is drawn at the height the round flies: `carPoint`)
+    carPoint(
+      best,
       best.x - ux * out - uy * side,
       best.y - uy * out + ux * side,
       AT,
+      best.z + ROUND_LOW,
+      best.z + ROUND_HIGH,
     );
     tx = AT.px;
     ty = AT.py;
@@ -550,7 +552,7 @@ export function updateRockets(w: World): void {
           c.z - c.deck < 10 &&
           Math.abs(c.deck - r.z) < 8 &&
           Math.abs(c.x - r.x) < 40 &&
-          carGap(c, r.x, r.y) < ROCKET_REACH,
+          carPoint(c, r.x, r.y, AT, r.z + ROCKET_HIGH - 1, r.z + ROCKET_HIGH + 1) < ROCKET_REACH,
       );
     // a rocket fired off a deck flies over what stands on the ground
     if (!hit && armed && r.z < 4)

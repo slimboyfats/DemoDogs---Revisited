@@ -44,3 +44,6 @@ export const DIFFICULTY = {
 } as const;
 export type Difficulty = keyof typeof DIFFICULTY;
 export const DIFFICULTIES = Object.keys(DIFFICULTY) as Difficulty[];
+
+/** How far a car's body rides over the ground its wheels are on, art px on a car of its own size. */
+export const BODY_UP = 0.6;

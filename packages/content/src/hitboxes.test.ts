@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import type { PropLook } from '@demodogs/shared';
-import { bound, newShape, newTouch, pieces, pointGap, propPoint, propShape } from '@demodogs/sim';
+import type { CarLook, PropLook } from '@demodogs/shared';
+import {
+  bound,
+  carGap,
+  carPoint,
+  newShape,
+  newTouch,
+  pieces,
+  pointGap,
+  propPoint,
+  propShape,
+} from '@demodogs/sim';
+import { makeWorld } from './testing';
 import { loadContent, loadLooks } from './index';
 
 /**
@@ -122,4 +133,78 @@ describe('hit shapes stand out of no slice', () => {
       expect(empty / Math.max(1, inside)).toBeLessThan(0.25);
     });
   }
+});
+
+/**
+ * Cars: what a shot meets is the body as it is drawn at the height the shot flies, slice by
+ * slice (`carPoint`), at whatever size and heading the car has. What it bumps with stays its hull.
+ */
+describe('a shot meets a car as it is drawn', () => {
+  const T = newTouch();
+  const UP = 0.6;
+  for (const [id, def] of C.car) {
+    const lm = L.get(id);
+    if (!lm || lm.look.kind !== 'car') continue;
+    it(id, () => {
+      expect(def.hit, 'baked: pnpm hitboxes:bake').toBeDefined();
+      const p = (lm.look as CarLook).body;
+      for (const [size, h] of [
+        [1, 0],
+        [2, 0.9],
+        [0.5, -2],
+      ] as const) {
+        const w = makeWorld({ car: id });
+        const c = w.cars.find((o) => o.isPlayer)!;
+        c.size = size;
+        c.h = h;
+        c.z = 3;
+        const cs = Math.cos(h);
+        const sn = Math.sin(h);
+        let out = 0;
+        let over = 0;
+        for (let z = 0; z < p.layers; z++) {
+          const lo = c.z + (UP + z + 0.25) * size;
+          const hi = c.z + (UP + z + 0.75) * size;
+          const drawn: [number, number][] = [];
+          for (let x = -p.w / 2 + 0.25; x < p.w / 2; x += 0.5)
+            for (let y = -p.h / 2 + 0.25; y < p.h / 2; y += 0.5)
+              if (p.fn(x, y, p.smooth ? z + 0.5 : z)) drawn.push([x, y]);
+          // (a speck is no slice: the baker leaves it out)
+          if (drawn.length < 2) continue;
+          for (const [x, y] of drawn) {
+            const wx = c.x + (x * cs - y * sn) * size;
+            const wy = c.y + (x * sn + y * cs) * size;
+            out = Math.max(out, carPoint(c, wx, wy, T, lo, hi) / size);
+          }
+          // and nothing of it far from what is drawn in that slice
+          for (let x = -p.w / 2; x < p.w / 2; x += 1)
+            for (let y = -p.h / 2; y < p.h / 2; y += 1) {
+              const wx = c.x + (x * cs - y * sn) * size;
+              const wy = c.y + (x * sn + y * cs) * size;
+              if (carPoint(c, wx, wy, T, lo, hi) >= 0) continue;
+              let d = Infinity;
+              for (const [vx, vy] of drawn) d = Math.min(d, Math.hypot(vx - x, vy - y));
+              over = Math.max(over, d);
+            }
+        }
+        expect(out).toBeLessThan(OUT);
+        // (a hollow walled all round is filled: the bed of a truck, hit at its walls anyway)
+        expect(over).toBeLessThan(6);
+        // over its roof, and under its wheels, nothing
+        expect(carPoint(c, c.x, c.y, T, c.z + 12 * size, c.z + 13 * size)).toBeGreaterThan(1e5);
+        expect(carPoint(c, c.x, c.y, T, c.z - 2, c.z - 1)).toBeGreaterThan(1e5);
+      }
+    });
+  }
+
+  it("a rocket over the pickup's open bed is in it, not against it", () => {
+    const w = makeWorld({ car: 'car.mutt' });
+    const c = w.cars.find((o) => o.isPlayer)!;
+    c.h = 0;
+    // (the bed: behind the cab, cut out above its floor)
+    expect(carGap(c, c.x - 7, c.y)).toBeLessThan(0);
+    expect(carPoint(c, c.x - 7, c.y, T, c.z + 3.6, c.z + 5)).toBeGreaterThan(0);
+    // the cab is there at that height
+    expect(carPoint(c, c.x + 1, c.y, T, c.z + 3.6, c.z + 5)).toBeLessThan(0);
+  });
 });

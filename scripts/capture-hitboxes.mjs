@@ -122,6 +122,9 @@ if (scene('cars')) {
   await settle(30);
   await view('boxes');
   await shot('cars');
+  // (and what a shot meets: each body slice by slice)
+  await view('heights');
+  await shot('cars-heights');
 }
 
 // 2: scenery and loose props in rows, each with its hit shape, a car beside them for size
