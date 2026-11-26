@@ -254,6 +254,8 @@ export class Effects {
   msg = '';
   msgT = 0;
   private readonly smokeT: number[] = [];
+  /** Where each car's two back wheels last marked the ground (x, y, x, y) and whether they did. */
+  private readonly ruts: number[][] = [];
 
   /** Shield bubbles and field welding. */
   readonly defence: DefenceFx;
@@ -470,6 +472,42 @@ export class Effects {
       dust ? 1.1 : 1.6,
       kind === 'smoke' ? 0x8a8680 : 0x9a8460,
     );
+  }
+
+  /**
+   * What a wheel throws up off soft ground: a few single cells of the ground's own colour, flung
+   * back and out from where it turns, that hang a moment and fall.
+   */
+  spray(x: number, y: number, rgb: number, vx: number, vy: number, wide: number): void {
+    const n = Math.max(1, Math.round(3 * this.quality));
+    // pale ground (snow, sand) flies as bright grains that arc and drop; dark ground as dust
+    const pale = ((rgb >> 16) & 255) + ((rgb >> 8) & 255) + (rgb & 255) > 480;
+    for (let i = 0; i < n; i++)
+      if (pale)
+        this.emit(
+          'spark',
+          x + rand(-1.5, 1.5),
+          y + rand(-1.5, 1.5),
+          rand(0.5, 2),
+          vx * 0.3 + rand(-wide, wide),
+          vy * 0.3 + rand(-wide, wide),
+          rand(25, 70),
+          rand(0.3, 0.7),
+          1,
+          rgb,
+        );
+      else
+        this.cells.add(
+          CKind.Wisp,
+          x + rand(-1.5, 1.5),
+          y + rand(-1.5, 1.5),
+          rand(0.5, 2.5),
+          vx * 0.25 + rand(-wide, wide),
+          vy * 0.25 + rand(-wide, wide),
+          rand(6, 20),
+          rand(0.35, 0.8),
+          rgb,
+        );
   }
 
   /**
@@ -1997,17 +2035,47 @@ export class Effects {
     w.cars.forEach((c, i) => {
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
-      // up on a deck, the marks would land on the ground below it
-      if (c.sliding && c.deck < 1)
+      // the car draws on the world: its back wheels lay a line each wherever it slides, and all
+      // the way over soft ground (grass, dirt, sand, snow), so a chase can be read off the ground
+      // after it has gone by. Up on a deck or in the air there is no ground under it to mark.
+      const soft = c.offroad && Math.abs(c.vf) > 14;
+      const down = c.deck < 1 && c.z - c.deck < 0.5 && !c.wrecked;
+      const last = (this.ruts[i] ??= [0, 0, 0, 0, 0]);
+      if (down && (c.sliding || soft)) {
+        const g = this.ground.g;
+        let spray = 0x8a8680;
+        if (c.offroad) {
+          // a shade of the ground itself, deeper and a little blue: a rut in whatever it is
+          const [r, gr, b] = this.ground.tone(c.x, c.y);
+          g.strokeStyle = `rgba(${Math.round(r * 0.3)},${Math.round(gr * 0.33)},${Math.round(b * 0.48)},${c.sliding ? 1 : 0.85})`;
+          spray =
+            (Math.min(255, Math.round(r * 1.12 + 10)) << 16) |
+            (Math.min(255, Math.round(gr * 1.12 + 10)) << 8) |
+            Math.min(255, Math.round(b * 1.12 + 10));
+        } else g.strokeStyle = 'rgba(18,16,14,0.6)';
+        g.lineWidth = Math.max(1.5, 2 * c.size);
+        g.lineCap = 'round';
         for (const sgn of [-1, 1]) {
-          const wx = -7;
-          const wy = 5.4 * sgn;
-          this.ground.g.fillStyle = c.offroad ? 'rgba(60,40,20,0.3)' : 'rgba(18,16,14,0.3)';
-          const mx = Math.round(c.x + cs * wx - sn * wy);
-          const my = Math.round(c.y + sn * wx + cs * wy);
-          this.ground.g.fillRect(mx - 1, my - 1, 2, 2);
-          markGround(this.ground, mx, my, 1);
+          const wx = -7 * c.size;
+          const wy = 5.4 * sgn * c.size;
+          const mx = c.x + cs * wx - sn * wy;
+          const my = c.y + sn * wx + cs * wy;
+          const o = sgn < 0 ? 0 : 2;
+          // from where this wheel was a tick ago (or a dot, where the line starts or jumped)
+          const joined = last[4] === 1 && Math.hypot(mx - last[o]!, my - last[o + 1]!) < 14;
+          g.beginPath();
+          g.moveTo(joined ? last[o]! : mx, joined ? last[o + 1]! : my);
+          g.lineTo(mx, my + 0.01);
+          g.stroke();
+          markGround(this.ground, mx, my, 3);
+          last[o] = mx;
+          last[o + 1] = my;
+          // and what the wheel digs out flies off behind it, wide in a slide
+          if (c.offroad && roll() < (c.sliding ? 0.9 : Math.min(0.6, Math.abs(c.vf) / 260)))
+            this.spray(mx, my, spray, c.vx, c.vy, c.sliding ? 46 : 22);
         }
+        last[4] = 1;
+      } else last[4] = 0;
       if (c.sliding && roll() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
       if (c.offroad && Math.abs(c.vf) > 50 && roll() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');

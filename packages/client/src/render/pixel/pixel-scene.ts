@@ -255,10 +255,17 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     return this.relief ? this.relief.at(x, y) : 0;
   }
 
+  /** Where this frame's lamp pools are (x, y each), to keep a row of lamps from taking every light. */
+  private readonly lit: number[] = [];
+
   private gatherLights(w: World, fx: Effects): void {
     const L = this.lights;
     L.clear();
     const t = w.time;
+    // the darker it is the further every light carries: by night they are the picture
+    const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
+    // (less far on a phone that is struggling: a wide light is a lot of ground to work out)
+    L.spread = this.sky.flat ? 1 : 1 + (fx.quality > 0.6 ? 0.8 : 0.4) * night;
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
@@ -287,7 +294,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
-      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
+      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 150)) return;
       // (a beam from whichever head lamps are lit this instant: both, one to its side, or none)
       const out = lampsOut(c, w.time) & 3;
       if (out === 3) return;
@@ -317,12 +324,35 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // (a phone that is struggling gets your own beam and two more)
     const most = fx.quality > 0.6 ? MAX_CONES : 3;
     for (const c of w.cars) if (c !== w.player && L.coneCount < most) lamp(c);
-    // and scenery with a lamp in it lights the ground round its foot
     const k = (this.sky.now.dark - 0.42) / 0.58;
+    // and every running car's tail lamps lay a red pool behind it, brighter as it brakes
+    for (const c of w.cars) {
+      if (c.wrecked || !this.visible(c.x, c.y, 80)) continue;
+      // (your own only, on a phone that is struggling)
+      if (c !== w.player && fx.quality <= 0.6) continue;
+      const back = (c.def.body.halfLength + 9) * c.size;
+      L.add(
+        c.x - Math.cos(c.h) * back,
+        c.y - Math.sin(c.h) * back,
+        11 * c.size,
+        (c.handbrake || c.vf < -1 ? 0.8 : 0.35) * k,
+        0xff2838,
+      );
+    }
+    // and scenery with a lamp in it lights the ground round its foot. A row of lit things (a run
+    // of barriers) is a few pools, not one each: lights are few, and the cars' come first
+    const lit = this.lit;
+    lit.length = 0;
     for (const s of w.statics) {
+      if (lit.length >= 10) break;
       if (s.down || !this.visible(s.x, s.y, 50)) continue;
       if (!this.art.prop(s.def.id).glow) continue;
-      L.add(s.x, s.y, 44, 0.75 * k, 0xffd890);
+      let near = false;
+      for (let n = 0; n < lit.length; n += 2)
+        if (Math.abs(lit[n]! - s.x) + Math.abs(lit[n + 1]! - s.y) < 70) near = true;
+      if (near) continue;
+      lit.push(s.x, s.y);
+      L.add(s.x, s.y, 54, 0.6 * k, 0xffd890);
     }
   }
 

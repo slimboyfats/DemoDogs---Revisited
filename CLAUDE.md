@@ -17,6 +17,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm speed [out-dir] [--frames] [--only=scene]`                | what slows a car (off road, hill, mud road, damage) and the speedometer naming it (`captures/speed/`)         |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
+| `pnpm chase [out-dir] [venue] [sky] [--seconds=8]`              | a night chase to judge the feel by: beams, tail lamps, tracks and spray in one clip (`captures/chase/`)       |
 | `pnpm traced [out-dir] [venue ...]`; `?gi=0`, `?flames=0`       | the traced light on, off and as a field by day, dusk and night, and its cost (`captures/traced/`)             |
 | `pnpm ground [out-dir] [venue ...] [--maps]`                    | every venue's painted ground as one picture, a close-up and a race frame (`captures/ground/`)                 |
 | `pnpm bridge [out-dir] [--only=scene] [--frames]`               | knocks the legs out from under the overpass and the flyover and shoots the collapse (`captures/bridge/`)      |
