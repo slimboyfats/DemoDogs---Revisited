@@ -32,6 +32,7 @@ const PADS: Partial<Record<StepId, { pad: string; hint: string }>> = {
   drive: { pad: '', hint: '.khDrive' },
   brake: { pad: 'btnBrake', hint: '.khRow:not(.fire):not(.boost):not(.names)' },
   boost: { pad: 'btnBoost', hint: '.khRow.boost' },
+  drift: { pad: 'btnBrake', hint: '.khRow:not(.fire):not(.boost):not(.names)' },
   fire: { pad: 'btnFire', hint: '#khFire' },
 };
 
@@ -136,6 +137,7 @@ export class Tutor {
       h: P.h,
       brake: this.input?.last.brake ?? false,
       boosting: P.boosting,
+      charge: P.charge,
       armed: P.weapon !== null && P.ammo > 0,
       wrecks: this.targets.reduce((n, c) => n + (c.wrecked ? 1 : 0), 0),
     };

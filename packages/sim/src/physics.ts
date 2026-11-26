@@ -328,7 +328,9 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   if (!airborne) c.pit = pit;
   // what the tyres can pull the car sideways with, px a second squared: at speed it is less than
   // the wheels ask for, and the car runs wide of where its nose points
-  const pull = T.cornerGrip * (0.4 + 0.6 * S.grip) * hold * (1 - 0.45 * harsh);
+  // (a comet runs as if on rails: it goes faster than any tyre could turn)
+  const pull =
+    T.cornerGrip * (0.4 + 0.6 * S.grip) * hold * (1 - 0.45 * harsh) * (c.tricks.dash ? 4 : 1);
   let turn =
     ctl.steer *
     3.0 *
@@ -410,11 +412,11 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     const rate = drifting
       ? DRIFT.hold
       : 8 * S.grip * hold * (1 - 0.45 * harsh) * (c.handbrake ? 0.22 : 1);
-    const side = clamp(
-      vl * (1 - Math.exp(-rate * DT)),
-      -pull * T.driftGrip * DT,
-      pull * (drifting ? T.driftGrip : 1) * DT,
-    );
+    // (it is at speed that the tyres run out: a car standing or crawling is not shoved about
+    // like one on ice)
+    const most =
+      pull * (drifting ? T.driftGrip : 1 + 3 * (1 - clamp(Math.abs(vf) / 100, 0, 1))) * DT;
+    const side = clamp(vl * (1 - Math.exp(-rate * DT)), -most, most);
     if (drifting) {
       // a held slide keeps most of the speed a loose one would scrub off
       const v0 = Math.hypot(vf, vl);

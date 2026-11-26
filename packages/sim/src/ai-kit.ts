@@ -389,11 +389,13 @@ const BRAKING = 280;
 
 /** What the tyres of car c pull it round a bend with on a dry road here, art px/s² (see `drive`). */
 export function cornerPull(w: World, c: Car): number {
-  return w.tuning.cornerGrip * (0.4 + 0.6 * c.stats.grip) * w.grip;
+  // (a stretch of road with a surface of its own, ice or dirt, holds as it does)
+  const road = w.roadSurface && !c.offroad ? w.roadSurface[c.idx] : null;
+  return w.tuning.cornerGrip * (0.4 + 0.6 * c.stats.grip) * w.grip * (road ? road.grip : 1);
 }
 
 /** A bend of the racing line tighter than this radius (art px) is one to drift round. */
-const DRIFT_BEND = 1 / 190;
+const DRIFT_BEND = 1 / 240;
 
 /**
  * Does a driver as sharp as this one drift? The easy field never does; the rest do, the ones
@@ -418,7 +420,7 @@ export function cornerSpeed(w: World, c: Car): number {
   // harder still)
   const pull =
     cornerPull(w, c) *
-    (drifts(w, c) ? 0.8 + 0.25 * w.tuning.driftGrip : 1.3) *
+    (drifts(w, c) ? 0.6 + 0.25 * w.tuning.driftGrip : 1.05) *
     (0.78 + 0.3 * c.ai!.traits.nerve);
   const v = Math.max(0, c.vf);
   const far = (v * v) / (2 * BRAKING) + 50;

@@ -51,6 +51,7 @@ import { howlEvent, howlTick, type Ripple } from './howl-fx';
 import { GuardState, guardEvent, guardTick } from './guards-fx';
 import { CatchupFx } from './catchup-fx';
 import { TrickFx } from './tricks-fx';
+import { DriftFx } from './drift-fx';
 import { LifeFx } from './life-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
@@ -270,6 +271,7 @@ export class Effects {
   readonly slices = new SliceFx();
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
   readonly life = new LifeFx();
+  readonly drift = new DriftFx();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
   readonly weather: WeatherFx;
   /** Add-ons going on, coming off and at work. */
@@ -1780,6 +1782,9 @@ export class Effects {
             this.text(e.x, e.y, e.label, big ? '#ff6a3d' : '#ffd24a', big);
           }
           break;
+        case 'drift':
+          this.drift.handle(this, w, e, S);
+          break;
         case 'pad':
         case 'bounce':
         case 'critter':
@@ -2208,6 +2213,7 @@ export class Effects {
     this.catchup.step(this, w);
     this.tricks.step(this, w);
     this.life.step(this, w);
+    this.drift.step(this, w, DT);
     // hollows in the road are light and shade on the ground: each painted once, as it is laid
     for (; this.hollows < w.mounds.length; this.hollows++) {
       const s = w.mounds[this.hollows]!;

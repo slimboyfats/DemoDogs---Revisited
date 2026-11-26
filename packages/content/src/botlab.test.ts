@@ -37,6 +37,8 @@ interface Row {
   fires: number;
   pickups: number;
   pads: number;
+  /** Drifts let go for a burst. */
+  drifts: number;
   speed: number;
   /** Seconds a car spun off the road takes to be back on it and under way (see `knocked`). */
   back: number;
@@ -62,6 +64,7 @@ function race(venue: string, seed: number): Row {
     fires: 0,
     pickups: 0,
     pads: 0,
+    drifts: 0,
     speed: 0,
     back: 0,
   };
@@ -87,6 +90,7 @@ function race(venue: string, seed: number): Row {
       else if (e.t === 'fire') r.fires++;
       else if (e.t === 'pickup') r.pickups++;
       else if (e.t === 'pad') r.pads++;
+      else if (e.t === 'drift' && e.go) r.drifts++;
     }
     if (w.phase !== 'race') continue;
     if (w.kind === 'race') raced++;

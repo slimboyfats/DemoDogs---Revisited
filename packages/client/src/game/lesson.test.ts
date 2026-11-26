@@ -20,6 +20,7 @@ const car = (o: Partial<Seen> = {}): Seen => ({
   y: 450,
   h: 0,
   brake: false,
+  charge: 0,
   boosting: false,
   armed: false,
   wrecks: 0,
@@ -75,7 +76,7 @@ describe('where a step puts its things', () => {
 });
 
 describe('the driving lesson', () => {
-  it('goes through its five steps, each done by doing it, and then is over', () => {
+  it('goes through its six steps, each done by doing it, and then is over', () => {
     const L = new Lesson(LAWN, car());
     expect(L.step).toBe('drive');
     expect(L.spots).toHaveLength(3);
@@ -101,6 +102,17 @@ describe('the driving lesson', () => {
     expect(L.step).toBe('boost');
     expect(until(L, car({ brake: true }), 2)).toBeNull();
     expect(until(L, car({ boosting: true }), 2)).toBe('cheer');
+    expect(next(L, car())).toBe('step');
+
+    // the drift: held until it has earned its burst, done when it is let go
+    expect(L.step).toBe('drift');
+    expect(until(L, car({ brake: true }), 2)).toBeNull();
+    expect(L.update(car({ charge: 0.3 }), 0.1)).toBeNull();
+    // (let go too soon: nothing earned)
+    expect(L.update(car(), 0.1)).toBeNull();
+    expect(L.update(car({ charge: 0.7 }), 0.1)).toBeNull();
+    expect(L.progress).toBeGreaterThan(0.8);
+    expect(L.update(car(), 0.1)).toBe('cheer');
     expect(next(L, car())).toBe('step');
 
     // the crate: one thing put down ahead, done when the car is armed
