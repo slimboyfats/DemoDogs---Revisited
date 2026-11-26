@@ -1,0 +1,30 @@
+{
+  "id": "car.corgi",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Corgi",
+    "description": "Bubble car. Turns on a biscuit, bounces off everything.",
+    "since": "core@0.4.0"
+  },
+  "paint": "#3fc7b0",
+  "price": 4500,
+  "stats": {
+    "speed": 0.93,
+    "accel": 1.24,
+    "grip": 1.25,
+    "mass": 0.7,
+    "armor": 0.8
+  },
+  "body": {
+    "halfLength": 8.6,
+    "halfWidth": 5.3
+  },
+  "wheels": [
+    [5.1, 3.95],
+    [-5.1, 3.95]
+  ],
+  "top": {
+    "x": -1.2,
+    "z": 8.0
+  }
+}
