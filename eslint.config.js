@@ -108,6 +108,11 @@ export default tseslint.config(
     languageOptions: { globals: globals.browser },
   },
   {
+    // the worker that keeps the game on the phone; the build puts KEEP above it
+    files: ['packages/client/build/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker, KEEP: 'readonly' } },
+  },
+  {
     files: ['scripts/**/*.{js,mjs,ts}', '*.{js,ts}', 'packages/*/*.{js,ts}'],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },

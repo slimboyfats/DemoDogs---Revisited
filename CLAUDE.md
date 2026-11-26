@@ -31,6 +31,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm load [--json]`; `NEXT=<dist>`, `NET=4g`; `?fresh`         | what a phone downloads and waits for: first visit, a later one, a new build, no line (scripts/load.mjs)       |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `pnpm feel [out-dir] [--frames] [--only=scene]`                 | a ram and a blast through the game's own loop: shake, hit-stop, buzzes; a made-up gamepad (`captures/feel/`)  |
@@ -214,6 +215,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 - **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
   `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
   built-in track can be rebuilt without touching tests. A test about a real venue names it.
+- **The game is kept on the phone.** The build writes a worker (`build/sw.js`, listed by `build/keep.ts`, registered
+  by `src/keep.ts`) that stores every file of the build after one visit: the next visit opens from the phone, with
+  no line too, and a newer build is noticed behind the menu and loaded at once (`?fresh` forgets what is kept). The
+  build is four files by how often each changes (`lib`, `rules`, `content`, the client), so a phone fetches only what
+  a build changed. A file the game needs at run time must be in the build (imported, or in `public/` and in `PUBLIC`
+  in build/keep.ts), or it is missing with no line. Shaders ship without comments and indent (`build/glsl.ts`, the
+  build only): a shader is a template string, and a `//` comment in one never holds a `${}` that matters.
 - **Nothing is done for the first time in a race.** Shaders start building when the page opens (`prelink` in
   pixel/gl.ts: a new pass adds its sources to its file's `*_PROGRAMS` list; `compile` keeps every program, so never
   delete one). A race's art is built on workers behind the loader (render/art-pool.ts; the same `Art` runs there),

@@ -50,6 +50,7 @@
     "play:lesson": "pnpm build && node scripts/play-lesson.mjs",
     "bots": "node scripts/bot-lab.mjs",
     "bots:clip": "pnpm build && node scripts/capture-bots.mjs",
+    "load": "pnpm build && node scripts/load.mjs",
     "verify": "pnpm check && pnpm play:smoke",
     "deploy:pages": "bash scripts/deploy-pages.sh",
     "signal": "pnpm --filter @demodogs/signal start",

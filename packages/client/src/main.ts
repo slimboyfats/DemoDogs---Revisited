@@ -11,6 +11,7 @@ import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
 import './theme.css';
 import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
+import { keepGame } from './keep';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
 import {
@@ -1781,3 +1782,4 @@ function boot(): void {
 }
 
 boot();
+keepGame();
