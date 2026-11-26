@@ -561,6 +561,17 @@ void main() {
   // (planks stand over whatever lies on the ground: a pool is under them, not on them)
   if ((g_way > 1.5 && g_way < 2.5) || g_way > 4.5) mk = vec4(0.0);
   c = c * (1.0 - mk.a) + mk.rgb;
+  // water lies over the ground and what is marked on it, but not over a way (which is built
+  // over it or through it), nor on the face of ground raised out of it
+#ifdef RELIEF
+  if (g_way < 0.5 && rl.b <= 0.75) {
+#else
+  if (g_way < 0.5) {
+#endif
+    vec3 wc = c * 255.0;
+    waterOver(wc, gp, ivec2(floor(gp * u_fine)));
+    c = clamp(wc / 255.0, 0.0, 1.0);
+  }
 #else
   vec2 i = floor(p);
   vec2 f = p - i;
@@ -618,6 +629,13 @@ void main() {
   float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
   float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
   float m = grass * g + tar * t + dirt * pebble * grit;
+#ifdef PAINT
+  // (water has no grain: what moves on it is its own)
+  if (g_water > 0.5) {
+    k = 1.0;
+    m = 1.0;
+  }
+#endif
 #ifdef BRIGHT
   // (the bright look is plain: only a breath of grain)
   c = clamp(c * (1.0 + (k * m - 1.0) * 0.25), 0.0, 1.0);
@@ -684,6 +702,10 @@ void main() {
     float drift = soft(wp / 16.0 + 40.0);
     float fine = bayer(ci);
     float lie = mix(drift * 0.55 + soft(wp / 4.0 + 7.0) * 0.25 + fine * 0.2, drift * 0.3 + h1 * 0.35 + fine * 0.35, tar);
+#ifdef PAINT
+    // (it does not lie on water)
+    lie += g_water * 9.0;
+#endif
     if (lie < u_snow * (1.3 - 0.86 * tar) - 0.12) {
       // snow in two close tones dithered into each other (hollows a little blue), a fleck of
       // shadow here and there, and grass tips showing through until it lies deep

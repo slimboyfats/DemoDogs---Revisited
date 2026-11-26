@@ -38,6 +38,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm hitboxes [dir]`; `?hitboxes=heights`; `hitboxes:bake`     | hit shapes drawn over cars, scenery, guns and roads (`captures/hitboxes/`); bake them from the looks          |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
+| `pnpm water [out-dir] [--clip] [--spots] [--only=venue]`        | a car wading the lagoon and going under in the deep, and a still of every water (`captures/water/`)           |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -154,6 +155,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it, so a change to how the ground looks is made in both. A venue's `colors.terrain` (grass, dirt, sand, snow,
   gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are optional and looks only, so the sim never
   reads them. Light is smooth and shadows soft-edged; `?light=bands` is the older dithered look.
+- **Water is a material with `water`** (lagoon, river, brine, water): the sim's pools of it are the water, and
+  nothing else is. A car in it wades (`wading` in sim/rescue.ts: slow by the material's own `drag`, no tyre tracks);
+  `water.deep` px in from the shore it is too deep, dark water, and a racing car that goes in sinks and is put back
+  on the road it left (`drown`, the `sink` event; where nobody is put back it is waded). The client draws it from
+  one map of those same pools (`render/water.ts`: how far in from the shore, what colour, what stands in it), read
+  by the ground's painter (`waterOver`): the moving surface, the foam along the shore and round what stands in it
+  are all worked out there from the race's clock, so water costs nothing where there is none. Wakes and splashes
+  are effects (`wade`, `splash` in effects.ts, the `foam` particle). The canvas fallback still blots it on.
 - **The look is bright and plain** (`groundMode.bright`, `#define BRIGHT` in the painter): sunny colours, a mown
   lawn, one flat pale tarmac with whole white lines, bold kerbs, no grit or specks, lighter shadows. The worn, gritty
   look it replaced is `?look=classic`; a change to the ground is made for both.

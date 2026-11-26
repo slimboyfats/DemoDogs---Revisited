@@ -27,6 +27,9 @@ export class GroundLayer {
   private readonly u;
   /** The textures a ground the shader paints itself is painted from: noise, nearest, samples, far. */
   private readonly paintTex: WebGLTexture[] = [];
+  private waterTex: WebGLTexture | null = null;
+  /** The water's clock, s: the page's own, wrapped so the shader's sums stay small. */
+  waterTime = 0;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
@@ -122,6 +125,13 @@ export class GroundLayer {
       }
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     }
+    // the water: read between its texels, so a shore is a smooth line
+    const M = ground.water;
+    if (M) {
+      this.waterTex = texture(gl, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, M.gw, M.gh, 0, gl.RGBA, gl.UNSIGNED_BYTE, M.data);
+      M.dirty = null;
+    }
     this.prog = compile(gl, ...groundSources(ground, !!relief?.map));
     this.u = uniforms(gl, this.prog, [
       ...PAINT_UNIFORMS,
@@ -158,6 +168,28 @@ export class GroundLayer {
 
   /** Copy up whatever was painted since the last frame. */
   sync(): void {
+    const M = this.ground.water;
+    if (M?.dirty && this.waterTex) {
+      // water that was poured or has spread: the rows of its box, whole
+      const gl = this.gl;
+      const [x0, y0, x1, y1] = M.dirty;
+      M.dirty = null;
+      gl.bindTexture(gl.TEXTURE_2D, this.waterTex);
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, M.gw);
+      gl.texSubImage2D(
+        gl.TEXTURE_2D,
+        0,
+        x0,
+        y0,
+        x1 - x0,
+        y1 - y0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        M.data,
+        (y0 * M.gw + x0) * 4,
+      );
+      gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    }
     const D = this.ground.dirty;
     if (!D) return;
     this.ground.dirty = null;
@@ -253,6 +285,12 @@ export class GroundLayer {
         gl.uniform2f(u.u_wild, L.wildFrom, L.wildTo);
       }
       if (P.oval) gl.uniform4f(u.u_oval, P.oval.cx, P.oval.cy, P.oval.rx, P.oval.ry);
+      const M = this.ground.water;
+      gl.activeTexture(gl.TEXTURE13);
+      gl.bindTexture(gl.TEXTURE_2D, this.waterTex ?? this.tex);
+      gl.uniform1i(u.u_wm, 13);
+      gl.uniform2f(u.u_wmSize, M?.gw ?? 1, M?.gh ?? 1);
+      gl.uniform2f(u.u_wt, this.waterTime, M?.any ? 1 : 0);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
@@ -276,6 +314,7 @@ export class GroundLayer {
   dispose(): void {
     this.gl.deleteTexture(this.tex);
     for (const t of this.paintTex) this.gl.deleteTexture(t);
+    this.gl.deleteTexture(this.waterTex);
     this.gl.deleteVertexArray(this.vao);
   }
 }
