@@ -242,6 +242,35 @@
       "rule": "place",
       "items": [
         {
+          "prop": "prop.signal-lamp",
+          "x": 680.2,
+          "y": 1061.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 736.2,
+          "y": 1118.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 441.8,
+          "y": 1089.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 437.8,
+          "y": 1169.1,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
           "prop": "prop.launch-geyser",
           "x": 248.9,
           "y": 1122.5,

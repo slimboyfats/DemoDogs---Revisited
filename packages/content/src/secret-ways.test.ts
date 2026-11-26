@@ -147,7 +147,8 @@ describe('secret ways', () => {
       expect(back).toBe(1);
       expect(fell).toBeLessThan(2);
       expect(w.grid!.at(c.x, c.y)).toBeLessThan(w.road / 2);
-      expect(Math.abs(c.idx - left)).toBeLessThan(30);
+      const n = w.track!.n;
+      expect(Math.min((c.idx - left + n) % n, (left - c.idx + n) % n)).toBeLessThan(30);
     });
   }
 

@@ -189,6 +189,13 @@ export const pieceFields = {
   leap: LeapSchema.optional(),
   gate: GateSchema.optional(),
   /**
+   * A signal: a lamp that shows the beat of the nearest thing on a beat within `reach` art px (a
+   * gate with a `period`, a vent), so a driver can read it from far off. Looks only: the client
+   * flips its look's poses, red while that is shut, amber when it is about to change, green
+   * while it is open. The sim does nothing with it.
+   */
+  signal: z.strictObject({ reach: z.number().positive() }).optional(),
+  /**
    * A crate stand for a secret way (a yellow crate floats over it): a car that drives through it
    * gets every pickup listed, and it comes back as the mode's pickups do. Not solid.
    */
