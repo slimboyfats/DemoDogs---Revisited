@@ -325,17 +325,20 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const most = fx.quality > 0.6 ? MAX_CONES : 3;
     for (const c of w.cars) if (c !== w.player && L.coneCount < most) lamp(c);
     const k = (this.sky.now.dark - 0.42) / 0.58;
-    // and every running car's tail lamps lay a red pool behind it, brighter as it brakes
+    // and every running car's tail lamps lay a red pool on the ground at its tail, brighter as it
+    // brakes: right at the bumper, spilling out from under it, so it is seen to be the car's own
+    // (further back it is a loose blob that follows the car about). None from a car in the air.
     for (const c of w.cars) {
       if (c.wrecked || !this.visible(c.x, c.y, 80)) continue;
       // (your own only, on a phone that is struggling)
       if (c !== w.player && fx.quality <= 0.6) continue;
-      const back = (c.def.body.halfLength + 9) * c.size;
+      if (c.z - c.deck > 1) continue;
+      const back = (c.def.body.halfLength + 2) * c.size;
       L.add(
         c.x - Math.cos(c.h) * back,
         c.y - Math.sin(c.h) * back,
-        11 * c.size,
-        (c.handbrake || c.vf < -1 ? 0.8 : 0.35) * k,
+        9 * c.size,
+        (c.handbrake || c.vf < -1 ? 0.9 : 0.45) * k,
         0xff2838,
       );
     }
