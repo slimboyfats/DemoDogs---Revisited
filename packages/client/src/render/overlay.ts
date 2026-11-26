@@ -2,6 +2,7 @@ import type { Car, World } from '@demodogs/sim';
 import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { Camera } from './scene';
+import { drawMud } from './tricks-fx';
 
 /** World to device pixels, for drawing flat things over the world. */
 export interface Projector {
@@ -27,6 +28,9 @@ export function drawOverlay(
   H: number,
   dpr: number,
 ): void {
+  // a mud pie in the face goes on first, so that the words and the dials are read over it
+  const K = fx.tricks;
+  if (K.mud > 0) drawMud(ctx, K.splats, K.mud, K.mudFor, W, H);
   // floating words
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

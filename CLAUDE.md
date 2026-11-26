@@ -27,6 +27,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
+| `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -108,6 +109,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `finishBox`; the name is the colour's with `@finish` after it. Without one a material shines as the palette's
   `GLOSS` and `GLOWS` lists say. A material named for fire or light (fire, flame, ember, lava, lamp, light, glow,
   neon, torch in its name) gives light off without being listed, so do not name a dull colour that way. Looks only: the client reads it when it builds the strip (`shineOf`).
+- **Tricks are pickups that go off when picked up** (`TRICK_KINDS` in shared/manifests.ts, sim/tricks.ts,
+  `Car.tricks`): they come out of one crate, `pickup.bag-of-tricks`, which rolls its `kits` by their own odds, so a
+  new trick is a pickup folder and a line in that list, not a line in every venue. The client's side is
+  render/tricks-fx.ts (one `trick` SimEvent: on, off, use).
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

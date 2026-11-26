@@ -36,7 +36,8 @@ const page = await browser.newPage({
   viewport: { width: 844, height: 390 },
   isMobile: true,
   hasTouch: true,
-  deviceScaleFactor: 2,
+  // (frames for a video are taken at 1: a frame at 2 costs several seconds in software GL)
+  deviceScaleFactor: frames ? 1 : 2,
 });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
@@ -110,13 +111,13 @@ const shot = async (name) => {
   await page.screenshot({ path: `${out}/${name}.png` });
 };
 let reel = 0;
-/** Run n ticks; with --frames, save a frame every other tick for the video. */
+/** Run n ticks; with --frames, save a frame every third tick for the video (20 a second). */
 const roll = async (n, ctl) => {
   if (!frames) return step(n, ctl);
-  for (let i = 0; i < n; i += 2) {
-    await step(2, ctl);
-    await page.waitForTimeout(60);
-    await page.screenshot({ path: `${out}/f${String(reel++).padStart(4, '0')}.png`, scale: 'css' });
+  for (let i = 0; i < n; i += 3) {
+    await step(3, ctl);
+    await page.waitForTimeout(40);
+    await page.screenshot({ path: `${out}/f${String(reel++).padStart(4, '0')}.jpg`, quality: 92 });
   }
 };
 const GO = { steer: 0, throttle: 1, brake: false, boost: false, fire: false };
@@ -311,6 +312,7 @@ const scenes = {
     play: async () => {
       await page.evaluate(() => window.__dd.give(0, 'ghost-dog'));
       await roll(40, IDLE);
+      await shot('ghost-dog');
       await page.evaluate(() => {
         const dd = window.__dd;
         const c = dd.session.world.cars[1];
@@ -323,8 +325,8 @@ const scenes = {
           c.spin = 0;
         };
       });
-      await roll(64, IDLE);
-      await shot('ghost-dog');
+      await roll(56, IDLE);
+      await shot('ghost-dog-through');
       await roll(70, IDLE);
     },
   },
@@ -354,5 +356,5 @@ await browser.close();
 server.close();
 if (frames)
   console.log(
-    `frames in ${out}: ffmpeg -framerate 30 -i ${out}/f%04d.png -pix_fmt yuv420p ${out}/tricks.mp4`,
+    `frames in ${out}: ffmpeg -framerate 20 -i ${out}/f%04d.jpg -pix_fmt yuv420p ${out}/tricks.mp4`,
   );

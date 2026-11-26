@@ -37,7 +37,9 @@ const BUNCH: readonly [number, number, number, Record<string, string> | undefine
   [-0.4, 2.6, 1.2, { balloon: 'balloony' }],
 ];
 /** How far over a car's roof its balloons ride, at the car's own size (art px). */
-const STRING = 9;
+const STRING = 14;
+/** How much bigger than their art the balloons are drawn: nobody is to miss them. */
+const FAT = 1.5;
 
 /** A dog door standing in the world for a moment. */
 interface Door {
@@ -196,7 +198,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 110, 70, PARTY);
           flash(0xff6a78);
-          fx.text(e.x, e.y, mine ? 'UP YOU GO!' : `${c.name} FLOATS OFF!`, '#ff6a78', true);
+          fx.text(e.x, e.y - 12, mine ? 'UP YOU GO!' : `${c.name} FLOATS OFF!`, '#ff6a78', true);
           shake(8, 3);
           if (v > 0) {
             S.boing(v);
@@ -238,7 +240,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 160, 100, FIRE, 2.4);
           flash(0xffa030, 130, 0.5);
-          fx.text(e.x, e.y, mine ? 'GREYHOUND!' : `${c.name}: GREYHOUND!`, '#ffc040', true);
+          fx.text(e.x, e.y - 12, mine ? 'GREYHOUND!' : `${c.name}: GREYHOUND!`, '#ffc040', true);
           shake(12, 6);
           if (v > 0) {
             S.howl(v);
@@ -264,7 +266,7 @@ export class TrickFx {
           burst(fx, e.x, e.y, c.z + 6, 130, 90, MUD, 2.6);
           for (let i = 0; i < 14; i++) fx.puff(e.x, e.y, 3, 'dust', rand(-60, 60), rand(-60, 60));
           flash(0x7c5a30, 80, 0.35);
-          fx.text(e.x, e.y, mine ? 'MUD PIE!' : `${c.name} GOT PIED!`, '#c89a5a', true);
+          fx.text(e.x, e.y - 12, mine ? 'MUD PIE!' : `${c.name} GOT PIED!`, '#c89a5a', true);
           shake(12, 4);
           if (mine) {
             const secs = c.tricks.splat?.t ?? 4;
@@ -354,7 +356,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 120, 70, BALL, 2.4);
           flash(0xff6a6a);
-          fx.text(e.x, e.y, mine ? 'BOUNCY BALL!' : `${c.name}: BOUNCY!`, '#ff8a8a', true);
+          fx.text(e.x, e.y - 12, mine ? 'BOUNCY BALL!' : `${c.name}: BOUNCY!`, '#ff8a8a', true);
           if (v > 0) S.boing(v);
         } else if (e.what === 'use') {
           burst(fx, e.x, e.y, c.z + 4, 200, 50, BALL, 2.6);
@@ -371,7 +373,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 110, 60, STAR);
           for (let i = 0; i < 20; i++) fx.puff(e.x, e.y, 1, 'dust', rand(-70, 70), rand(-70, 70));
-          fx.text(e.x, e.y, mine ? 'BELLY FLOP!' : `${c.name}: BELLY FLOP!`, '#ffe870', true);
+          fx.text(e.x, e.y - 12, mine ? 'BELLY FLOP!' : `${c.name}: BELLY FLOP!`, '#ffe870', true);
           if (v > 0) {
             S.boing(v);
             S.whistle(0.9, v * 0.8);
@@ -390,7 +392,7 @@ export class TrickFx {
         if (e.what === 'on') {
           ring(fx, e.x, e.y, c.z, 100, 70, GHOST, 2.4);
           flash(0xc8f0ff, 110, 0.5);
-          fx.text(e.x, e.y, mine ? 'GHOST DOG!' : `${c.name}: GHOST DOG!`, '#d8f6ff', true);
+          fx.text(e.x, e.y - 12, mine ? 'GHOST DOG!' : `${c.name}: GHOST DOG!`, '#d8f6ff', true);
           if (v > 0) {
             S.whistle(0.8, v * 0.7);
             S.howl(v * 0.5);
@@ -421,15 +423,15 @@ export class TrickFx {
       const speed = Math.hypot(c.vx, c.vy);
       if (T.balloons) {
         // the strings, from the roof up to each knot (the balloons themselves are stacks)
-        const top = c.z + (STRING + 5) * c.size;
+        const top = c.z + STRING * c.size;
         for (const [bx, by, bz] of BUNCH)
           line(
             fx,
             c.x,
             c.y,
             c.z + 6 * c.size,
-            c.x + bx * c.size,
-            c.y + by * c.size,
+            c.x + bx * FAT * c.size,
+            c.y + by * FAT * c.size,
             top + bz * c.size,
             [0xffffff],
             0,
@@ -439,16 +441,16 @@ export class TrickFx {
       }
       if (T.dash) {
         // a comet: fire off the tail, a streak of light down each flank, the ground lit under it
-        for (let i = 0; i < 2; i++)
+        for (let i = 0; i < 5; i++)
           fx.flame(
             c.x - cs * (L + rand(0, 6)) - sn * rand(-W, W),
             c.y - sn * (L + rand(0, 6)) + cs * rand(-W, W),
             c.z + rand(1, 4),
-            3 * c.size,
+            4.5 * c.size,
             -c.vx * 0.2,
             -c.vy * 0.2,
           );
-        const n = Math.ceil(4 * Math.max(0.5, fx.quality));
+        const n = Math.ceil(7 * Math.max(0.5, fx.quality));
         for (let i = 0; i < n; i++) {
           const o = (Math.random() < 0.5 ? -1 : 1) * (W + rand(0, 2));
           const back = rand(-L, L);
@@ -566,7 +568,7 @@ export class TrickFx {
       }
       if (T.ghost) {
         // wisps that rise off it, and a cold light on the ground it crosses
-        const n = Math.ceil(3 * Math.max(0.5, fx.quality));
+        const n = Math.ceil(6 * Math.max(0.5, fx.quality));
         for (let i = 0; i < n; i++) {
           const a = rand(0, TAU);
           const ex = Math.cos(a) * (L + 1);
@@ -581,7 +583,7 @@ export class TrickFx {
             rand(30, 70),
             rand(0.3, 0.6),
             pick(GHOST),
-            2,
+            2.6,
           );
         }
         glow(c, 0xa8e4ff, 54);
@@ -676,17 +678,19 @@ export function queueTricks(
   if (T.balloons) {
     // three of them over the car, nodding against each other
     const id = T.balloons.def.id;
+    R.zoom(k * FAT);
     BUNCH.forEach(([bx, by, bz, swap], i) => {
       const nod = Math.sin(w.time * 3.1 + i * 2.1 + c.index) * 0.7;
       R.stack(
         art.prop(id, swap),
-        c.x + (bx + nod) * k,
-        c.y + (by + Math.cos(w.time * 2.3 + i) * 0.5) * k,
-        base + (STRING + 5 + bz) * up,
+        c.x + (bx * FAT + nod) * k,
+        c.y + (by * FAT + Math.cos(w.time * 2.3 + i) * 0.5) * k,
+        base + (STRING + bz) * up,
         i * 2.1,
         alpha,
       );
     });
+    R.zoom(k);
   }
   if (T.splat) R.stack(art.prop(T.splat.def.id), rx, ry, top - 0.4 * up, c.h, alpha);
   if (T.pair) {
@@ -736,4 +740,57 @@ export function queueTrickThings(R: StackSink, art: Art, w: World, fx: TrickFx):
     R.stack(art.prop('pickup.sticky-paws'), p.x, p.y, 9 + Math.sin(p.t * 20) * 1.5, a);
     R.zoom(1);
   }
+}
+
+/**
+ * Mud on the glass: each splat a ragged brown blot with runs going down from it, sliding down
+ * the screen as it thins, gone in the last moments of its `left` seconds out of `all`.
+ */
+export function drawMud(
+  ctx: CanvasRenderingContext2D,
+  splats: readonly Splat[],
+  left: number,
+  all: number,
+  W: number,
+  H: number,
+): void {
+  const gone = 1 - left / all;
+  const fade = Math.min(1, left / 0.5);
+  const S = Math.min(W, H);
+  ctx.save();
+  for (const p of splats) {
+    const x = p.x * W;
+    const y = p.y * H + gone * H * 0.12;
+    const r = p.r * S * (1 - gone * 0.25);
+    for (const [k, col, a] of [
+      [1, '#33210f', 0.96],
+      [0.8, '#553a1c', 0.96],
+      [0.45, '#7c5a30', 0.9],
+    ] as const) {
+      ctx.globalAlpha = a * fade;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      const n = 22;
+      for (let i = 0; i <= n; i++) {
+        const t = (i / n) * Math.PI * 2;
+        const q =
+          r * k * (1 + 0.22 * Math.sin(t * 3 + p.seed) + 0.14 * Math.sin(t * 7 + p.seed * 2.3));
+        ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(t) * q, y + Math.sin(t) * q * 0.9);
+      }
+      ctx.fill();
+    }
+    // the runs: three fat drips that lengthen as it slides
+    ctx.globalAlpha = 0.94 * fade;
+    ctx.fillStyle = '#402a13';
+    for (let i = -1; i <= 1; i++) {
+      const dx = x + i * r * 0.5 + Math.sin(p.seed + i) * r * 0.15;
+      const len = r * (0.7 + 0.5 * Math.abs(Math.sin(p.seed * 3 + i))) * (0.5 + gone * 1.6);
+      const wd = r * 0.13;
+      ctx.fillRect(dx - wd, y, wd * 2, len);
+      ctx.beginPath();
+      ctx.arc(dx, y + len, wd * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
