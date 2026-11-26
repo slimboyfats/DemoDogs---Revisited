@@ -31,6 +31,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
+| `pnpm ghost [out-dir] [venue] [--frames]`, `?ghost=1`           | a derby where the player is scrapped and drives on as a ghost car, by touch (`captures/ghost/`)               |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
@@ -140,6 +141,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it asks about is (a car `c.z` to its roof, a rocket `ROCKET_HIGH`). `radius` stays for layout, blasts and drivers.
   A car bumps with its one hull, and a shot meets its body slice by slice (`carPoint`, the car manifest's `hit`).
   The HITBOXES view (`render/hitbox-view.ts`) draws these same shapes: a new thing that can be hit is drawn there too.
+- **A scrapped driver can come back as a ghost car** (sim/haunt.ts, `Car.haunt`): the wreck gets up when its
+  driver touches the gas, and goes away when left alone. It stays `wrecked`, so every rule that leaves wrecks alone
+  leaves it alone (no score, no pickups, no target, no win); all it does is shove running cars, never hurting them
+  (`collideCars`), and it goes through wrecks, loose props and breaks nothing. It is asked for with the seat's own
+  controls, so an online race needs nothing more on the wire; the client sends none while its driver watches
+  (`Session.ghost`, the GHOST CAR button on the spectator's bar). A rule that asks whether a wreck is there to be
+  hit or seen asks `away(c)` too.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

@@ -57,10 +57,26 @@
         <button id="specZoom">
           <small>ZOOM</small><span id="specZoomLabel">CLOSE</span><kbd data-act="zoom"></kbd>
         </button>
+        <button id="specGhost" class="hidden">
+          <small>DRIVE A</small><span>GHOST CAR</span><kbd data-act="ghost"></kbd>
+        </button>
         <button id="specSkip">
           <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
         </button>
       </div>
+    </div>
+    <!-- driving the ghost of your scrapped car: the driving controls stay, this bar goes back -->
+    <div id="ghostBar" class="hidden">
+      <div id="ghostWho">
+        <small>GHOST CAR · YOU DO NO DAMAGE</small>
+        <b id="ghostSay">GET IN THEIR WAY</b>
+      </div>
+      <button id="ghostWatch">
+        <small>JUST</small><span>WATCH</span><kbd data-act="ghost"></kbd>
+      </button>
+      <button id="ghostSkip">
+        <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
+      </button>
     </div>
     <button id="pauseBtn" aria-label="Pause">II</button>
     <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>

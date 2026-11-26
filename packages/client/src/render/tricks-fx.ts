@@ -1,5 +1,5 @@
 import { DT, type SimEvent } from '@demodogs/shared';
-import type { Car, World } from '@demodogs/sim';
+import { haunting, type Car, type World } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Art } from './art';
 import type { Effects } from './effects';
@@ -15,6 +15,7 @@ import type { StackSink } from './stacks';
  */
 
 type TrickEvent = Extract<SimEvent, { t: 'trick' }>;
+type HauntEvent = Extract<SimEvent, { t: 'haunt' | 'spook' }>;
 
 const TAU = Math.PI * 2;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -502,6 +503,42 @@ export class TrickFx {
     }
   }
 
+  /**
+   * A scrapped driver's ghost car (sim/haunt.ts): it gets up out of its wreck in a ring of cold
+   * light, goes in a puff, and whatever it shoves gets a BOO.
+   */
+  haunt(fx: Effects, w: World, e: HauntEvent, S: Sound): void {
+    if (e.t === 'spook') {
+      const v = fx.vol(e.x, e.y);
+      burst(fx, e.x, e.y, 4, 14, 90, GHOST, 2.2);
+      fx.flashes.push({ x: e.x, y: e.y, r: 60, life: 0.25, max: 0.25, rgb: 0xc8f0ff });
+      const mine = e.ghost === w.player.index || e.car === w.player.index;
+      if (e.impact > 30 && (mine || v > 0.3)) fx.text(e.x, e.y - 10, 'BOO!', '#d8f6ff', true);
+      if (e.car === w.player.index) fx.shake = Math.max(fx.shake, Math.min(8, e.impact * 0.08));
+      if (v > 0) {
+        S.pop(v * 0.7);
+        S.whoosh(v * 0.5);
+      }
+      return;
+    }
+    const c = w.cars[e.car]!;
+    const mine = c === w.player;
+    const v = Math.max(fx.vol(c.x, c.y), mine ? 1 : 0);
+    if (e.on) {
+      ring(fx, c.x, c.y, c.z, 110, 80, GHOST, 2.6);
+      burst(fx, c.x, c.y, c.z + 4, 30, 70, GHOST, 2.4);
+      fx.flashes.push({ x: c.x, y: c.y, r: 120, life: 0.6, max: 0.6, rgb: 0xc8f0ff });
+      fx.text(c.x, c.y - 14, mine ? 'GHOST CAR!' : `${c.name}'S GHOST!`, '#d8f6ff', true);
+      if (v > 0) {
+        S.whistle(0.8, v * 0.7);
+        S.howl(v * 0.6);
+      }
+    } else {
+      ring(fx, c.x, c.y, c.z, 60, 34, GHOST, 2.2);
+      if (v > 0) S.pop(v * 0.6);
+    }
+  }
+
   /** Per tick: the steady sign of every trick at work, the doors, and the paws in flight. */
   step(fx: Effects, w: World): void {
     this.tick++;
@@ -676,6 +713,24 @@ export class TrickFx {
         if (this.tick % 2 === 0)
           dot(fx, c.x, c.y, c.z, rand(-20, 20), rand(-20, 20), 0, 0.5, pick(STAR), 2);
       }
+      if (haunting(c)) {
+        // a scrapped driver's ghost car: the car itself is what is to be seen, so only a thin
+        // trail of cold cells off its tail, and a cold light on the ground under it
+        if (speed > 20 || beat)
+          dot(
+            fx,
+            c.x - cs * L + rand(-W, W) * sn,
+            c.y - sn * L - rand(-W, W) * cs,
+            c.z + rand(1, 5),
+            c.vx * 0.2,
+            c.vy * 0.2,
+            rand(20, 50),
+            rand(0.3, 0.6),
+            pick(GHOST),
+            1.6,
+          );
+        glow(c, 0xa8e4ff, 60);
+      }
       if (T.ghost) {
         // wisps that rise off it, and a cold light on the ground it crosses
         const n = Math.ceil(6 * Math.max(0.5, fx.quality));
@@ -776,6 +831,8 @@ export class TrickFx {
 export function trickAlpha(c: Car): number | undefined {
   const T = c.tricks;
   if (T.ghost) return 0.45;
+  // a scrapped driver's ghost car: paler still, and it breathes
+  if (haunting(c)) return 0.62 + Math.sin(c.wreckT * 5) * 0.1;
   if (T.dash || T.flop) return 1;
   return undefined;
 }

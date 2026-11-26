@@ -30,7 +30,7 @@ import { CameraZoom, VIEWS, zoomSides, zoomStops } from './game/zoom';
 import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
 import { TuningStore } from './game/tuning';
 import { devSettings } from './ui/dev-settings';
-import { Spectator, scrapped, zooms, type Zoom } from './game/spectate';
+import { Spectator, canGhost, scrapped, zooms, type Zoom } from './game/spectate';
 import { Input } from './input/input';
 import { isKey } from './input/keys';
 import { Art } from './render/art';
@@ -62,6 +62,7 @@ import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
 import {
   customVenueId,
+  haunting,
   installTrack,
   rangeBlast,
   type Content,
@@ -448,6 +449,8 @@ const online = new OnlineScreen(
           modifiers: s.mods,
           humans: s.seats.slice(1).map((x) => ({ car: x.car, name: x.name, paint: x.paint })),
           you: s.you,
+          // a derby runs on after its drivers are scrapped: they are in it as ghost cars
+          playOn: true,
         },
         `ONLINE · ${(s.track?.name ?? content.venue.get(s.venue)?.meta.name ?? '').toUpperCase()}${modLine(content, s.mods)}`,
         (made) => {
@@ -491,7 +494,27 @@ const specBar = new SpectateBar({
   skip: () => {
     if (screen === 'game' && spectator.active && !online.room) finish();
   },
+  ghost: (on) => {
+    ghostMode = on;
+    try {
+      localStorage.setItem(GHOST, on ? '1' : '0');
+    } catch {
+      // (a browser that keeps nothing: the choice lasts the visit)
+    }
+  },
 });
+/**
+ * Scrapped for good, this screen's driver drives the ghost of the car instead of watching: what
+ * they chose last time, kept on the device. `ghosting` is that choice at work in this race.
+ */
+const GHOST = 'demodogs.ghost';
+let ghostMode = params.get('ghost') === '1';
+try {
+  ghostMode ||= localStorage.getItem(GHOST) === '1';
+} catch {
+  // (nothing kept)
+}
+let ghosting = false;
 
 /** How much of the screen's height the whole-arena view may fill. */
 const ARENA_FILL = 0.86;
@@ -502,7 +525,16 @@ function spectate(dt: number): void {
   if (!s) return;
   const w = s.world;
   if (!paused || online.racing) spectator.update(w, dt);
-  const on = spectator.active;
+  // out for good, the driver watches the others or drives the ghost of the car
+  const can = spectator.active && canGhost(w);
+  ghosting = can && ghostMode;
+  s.ghost = ghosting;
+  const on = spectator.active && !ghosting;
+  specBar.setGhost(
+    can,
+    ghosting && !paused,
+    haunting(w.player) ? 'GET IN THEIR WAY' : 'DRIVE TO RISE',
+  );
   if (on && specZooms.length === 0)
     // the arena view keeps clear of the bar along the bottom
     specZooms = zooms(w.w, w.h, W / scale, (H / scale / Math.sin(PITCH)) * ARENA_FILL);
@@ -1341,7 +1373,8 @@ function frame(t: number): void {
     octx.setTransform(overK, 0, 0, overK, 0, 0);
     hitboxes.draw(octx, scene, art, session.world, W, H, DPR);
     drawOverlay(octx, scene, session.world, session.fx, W, H, DPR, !lessonMode);
-    if (spectator.active) drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
+    if (spectator.active && !ghosting)
+      drawNames(octx, scene, session.world, spectator.target, W, H, DPR);
     else if (nameTags.shown && !devMode && !lessonMode)
       drawNames(octx, scene, session.world, null, W, H, DPR, session.world.player);
     if (editMode) editor.draw(octx, dt);

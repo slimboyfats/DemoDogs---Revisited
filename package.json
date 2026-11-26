@@ -44,6 +44,7 @@
     "perf:fight": "pnpm build && node scripts/perf-fight.mjs",
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "tricks": "pnpm build && node scripts/capture-tricks.mjs",
+    "ghost": "pnpm build && node scripts/capture-ghost.mjs",
     "ui": "pnpm build && node scripts/capture-ui.mjs",
     "hitboxes": "pnpm build && node scripts/capture-hitboxes.mjs",
     "play:lesson": "pnpm build && node scripts/play-lesson.mjs",

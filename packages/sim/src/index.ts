@@ -19,6 +19,7 @@ export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
 export { rescueIn } from './rescue';
+export { away, canHaunt, haunting, HAUNT_AFTER, HAUNT_REST, type Haunt } from './haunt';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';

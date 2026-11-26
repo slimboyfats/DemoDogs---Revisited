@@ -59,6 +59,7 @@ import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
 import { phased, trickControls, updateTricks } from './tricks';
+import { away, haunt } from './haunt';
 import { updateRescue } from './rescue';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
@@ -685,6 +686,8 @@ export class World {
           c.wreckT > this.mode.respawnSeconds
         )
           respawn(this, c);
+        // a driver who is out for good can still drive the ghost of the car
+        else if (c.isPlayer) ctl = haunt(this, c, seats[c.seat] ?? NO_CONTROLS);
       } else if (live) {
         ctl = c.ai
           ? c.ai.behaviour.drive(this, c)
@@ -723,8 +726,8 @@ export class World {
         const o = this.cars[j]!;
         // a car down a pit is not there to be hit
         if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
-        // nor is a ghost
-        if (phased(c) || phased(o)) continue;
+        // nor is a ghost, nor a scrapped driver's ghost car that has gone away
+        if (phased(c) || phased(o) || away(c) || away(o)) continue;
         collideCars(this, c, o);
       }
     for (const c of this.cars) {
@@ -807,7 +810,7 @@ export class World {
         .num(c.nitro)
         .num(c.cash)
         .num(fitHash(c))
-        .num(c.wrecked ? 1 : 0);
+        .num(c.wrecked ? (c.haunt ? (c.haunt.up ? 3 : 2) : 1) : 0);
     for (const b of this.bots)
       H.num(b.x)
         .num(b.y)

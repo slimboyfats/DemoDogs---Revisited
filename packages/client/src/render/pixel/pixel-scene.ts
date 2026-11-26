@@ -284,7 +284,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const c of w.cars)
       // (not from a car up on a deck: these lights lie on the ground, which there is the road
       // under the bridge)
-      if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
+      if ((c.wrecked || c.hp < 20) && !c.haunt && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);

@@ -1043,33 +1043,37 @@ tr.me td {
 body.driven #stickZone .hint {
   opacity: 0;
 }
-#specBar button,
-#specWho {
+:is(#specBar, #ghostBar) button,
+:is(#specWho, #ghostWho) {
   color: var(--ink);
   border: var(--line) solid var(--ink);
   border-radius: 14px;
   background: var(--paper);
   box-shadow: var(--drop);
 }
-#specBar button {
+:is(#specBar, #ghostBar) button {
   min-width: 48px;
   min-height: 46px;
 }
-#specBar button:active {
+:is(#specBar, #ghostBar) button:active {
   background: var(--sun);
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
 }
-#specWho {
+:is(#specWho, #ghostWho) {
   border-color: var(--ink);
   background: var(--sun);
 }
-#specBar #specSkip {
+:is(#specBar #specSkip, #ghostBar #ghostSkip) {
   border-color: var(--ink);
   background: var(--orange);
 }
-#specBar small {
+:is(#specBar, #ghostBar) small {
   opacity: 0.85;
+}
+#specBar #specGhost,
+#ghostWho {
+  background: #d8f6ff;
 }
 
 /* ---- a phone held upright: the stick has the left of the screen, the buttons stand in a
@@ -1093,7 +1097,7 @@ body.driven #stickZone .hint {
   #stickZone .hint {
     bottom: calc(126px + env(safe-area-inset-bottom));
   }
-  #specBar {
+  :is(#specBar, #ghostBar) {
     flex-wrap: wrap;
     justify-content: center;
     width: calc(100% - 16px);
