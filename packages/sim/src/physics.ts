@@ -174,18 +174,18 @@ export function makeCar(
 }
 
 /**
- * Who is driving: the kind of driver that lists the car's name, or one drawn by lot, and the
+ * Who is driving: the kind of driver that lists the car's name, or one picked by its name, and the
  * skill and aggression rolled for it. How hard the race is set (`world.level`) moves the skill.
  */
 function character(w: World, c: Car, ai: AiManifest, skill?: number): void {
   const A = c.ai!;
   const styles = ai.styles ?? [];
-  let style = styles.find((s) => s.drivers.includes(c.name)) ?? null;
-  if (!style && styles.length) {
-    // dealt from a shuffled deck, so a field is a mix and not five of a kind
-    if (!w.styleDeck.length) w.styleDeck = w.rng.shuffle(styles);
-    style = w.styleDeck.pop()!;
-  }
+  // (the same driver is the same kind in every race: by name, not by lot)
+  let h = 0;
+  for (let i = 0; i < c.name.length; i++) h = (h * 31 + c.name.charCodeAt(i)) >>> 0;
+  const style =
+    styles.find((s) => s.drivers.includes(c.name)) ??
+    (styles.length ? styles[h % styles.length]! : null);
   const aggro = style?.aggro ?? ai.aggro;
   A.skill = (skill ?? w.rng.range(ai.skill[0], ai.skill[1])) + (style?.pace ?? 0) + w.level.pace;
   A.aggro = w.rng.range(aggro[0], aggro[1]);

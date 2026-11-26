@@ -170,12 +170,10 @@ describe.runIf(on)('bot lab', () => {
         if (typeof row[k] === 'number') (row[k] as number) = Math.round(mean(k) * 100) / 100;
       row.back = Math.round(knocked(v, 1) * 100) / 100;
       rows.push(row);
-      console.log(JSON.stringify(row));
     }
     const out = process.env.BOTLAB_OUT ?? 'captures/bots';
     mkdirSync(out, { recursive: true });
     writeFileSync(`${out}/stats.json`, JSON.stringify(rows, null, 2));
-    console.table(rows);
     expect(rows.length).toBeGreaterThan(0);
   }, 3_600_000);
 });

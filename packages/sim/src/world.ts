@@ -5,7 +5,6 @@ import {
   DEFAULT_TUNING,
   DIFFICULTY,
   type Difficulty,
-  type DriverStyle,
   FIELD_SIZE,
   ADDON_KINDS,
   NO_CONTROLS,
@@ -163,8 +162,6 @@ export class World {
   /** How hard the rivals are set to be (shared/constants.ts `DIFFICULTY`). */
   readonly level: (typeof DIFFICULTY)[Difficulty];
   private racing: Line | null = null;
-  /** The kinds of driver still to be dealt to rivals with no kind of their own (see `character`). */
-  styleDeck: DriverStyle[] = [];
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
   /** The lie of the land, or null where the venue is flat. */

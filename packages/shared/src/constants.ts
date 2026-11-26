@@ -42,9 +42,9 @@ export const HELD = { rough: 1, hill: 2, sticky: 4, hurt: 8, weighed: 16 } as co
  * much a rival far ahead of the humans backs off and `press` how much one far behind is helped.
  */
 export const DIFFICULTY = {
-  easy: { pace: -0.07, wits: 0.45, ease: 0.86, press: 1.03 },
-  normal: { pace: 0, wits: 1, ease: 0.9, press: 1.07 },
-  hard: { pace: 0.05, wits: 1.4, ease: 0.97, press: 1.09 },
+  easy: { pace: -0.09, wits: 0.45, ease: 0.86, press: 1.03 },
+  normal: { pace: -0.03, wits: 1, ease: 0.9, press: 1.07 },
+  hard: { pace: 0.03, wits: 1.4, ease: 0.97, press: 1.09 },
 } as const;
 export type Difficulty = keyof typeof DIFFICULTY;
 export const DIFFICULTIES = Object.keys(DIFFICULTY) as Difficulty[];

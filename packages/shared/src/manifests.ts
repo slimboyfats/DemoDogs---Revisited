@@ -1019,7 +1019,7 @@ export const AiSchema = z.strictObject({
   aggro: z.tuple([unit, unit]),
   /**
    * The kinds of driver in the field. Each rival is one of them: the one that lists its name, or
-   * else one drawn by lot. Left out, every rival is the same plain driver.
+   * else one picked by its name (always the same one). Left out, every rival is the same plain driver.
    */
   styles: z.array(z.lazy(() => DriverStyleSchema)).optional(),
 });

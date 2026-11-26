@@ -532,7 +532,7 @@ export function wantsFire(w: World, c: Car): boolean {
     // carried long enough: a rival roughly in front will do
     want = front < (d.range ?? SHOT) && aim < 0.3 + 0.3 * trig;
   ai.aimT = want ? ai.aimT + DT : 0;
-  return want && ai.aimT >= 0.35 * (1 / Math.max(0.3, w.level.wits) - 0.7);
+  return want && ai.aimT >= 0.35 * Math.max(0, 1 / Math.max(0.3, w.level.wits) - 1);
 }
 
 /** A car's forward speed (it does not drop things behind it while it is standing). */

@@ -45,6 +45,7 @@ import { Garage } from './ui/garage';
 import { KeyHints } from './ui/key-hints';
 import { volumeSliders } from './ui/volume';
 import { NameTags } from './ui/name-tags';
+import { Rivals } from './ui/rivals';
 import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
@@ -77,6 +78,8 @@ if (params.get('tape')) sound.record(Number(params.get('tape')) || 30);
 const input = new Input(() => sound.init());
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
+// how hard the rival drivers are (EASY, NORMAL, HARD): ?rivals=hard picks one for a visit
+const rivals = new Rivals(params.get('rivals'));
 // how sharp the game is drawn: steps down by itself on a device that keeps falling behind. A
 // driven browser (the capture scripts) stays at full unless the address says otherwise, so a slow
 // headless frame never changes what a screenshot shows.
@@ -706,7 +709,16 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
   const t0 = performance.now();
   const built0 = art.built;
   const made = await Session.load(
-    { content, art, sound, input, autopilot: params.has('autoplay'), tuning: tune.values, ...o },
+    {
+      content,
+      art,
+      sound,
+      input,
+      autopilot: params.has('autoplay'),
+      tuning: tune.values,
+      difficulty: rivals.level,
+      ...o,
+    },
     (text, done, of) => {
       $('loadLine').textContent = `${text}…`;
       $('loadFill').style.width = `${Math.round((done / of) * 100)}%`;
