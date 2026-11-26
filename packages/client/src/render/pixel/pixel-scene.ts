@@ -272,9 +272,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // the darker it is the further a light carries, a little
     const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
     L.spread = this.sky.flat ? 1 : 1 + 0.25 * night;
-    // and in daylight a fire, a flash or a lamp is no match for the sun: it only tints the ground
-    // it stands on, never a bright patch of its own
-    L.gain = this.sky.flat ? 1 : 0.3 + 0.7 * night;
+    // and in daylight a fire, a flash or a lamp is no match for the sun: none of them lights the
+    // ground or anything else. They come up as the light goes, from dusk on
+    L.gain = this.sky.flat ? 1 : Math.max(0, Math.min(1, (this.sky.now.dark - 0.25) / 0.35));
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
