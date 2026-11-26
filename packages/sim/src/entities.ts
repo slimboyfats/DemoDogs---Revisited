@@ -25,6 +25,31 @@ export interface AiState {
   /** A car index being chased, or -1. */
   target: number;
   targetT: number;
+  /** The kind of driver it is (the AI manifest's `styles`), and what that makes of it. */
+  style: string;
+  traits: Traits;
+  /** How far off its line it has moved to get round something, art px across the road. */
+  side: number;
+  /** Where it last decided to move to, and how far off the first thing in its way was. */
+  want: number;
+  block: number;
+  /** Seconds it has held the weapon it has, and seconds it has wanted to fire it. */
+  heldT: number;
+  aimT: number;
+  /** Times in a row it has had to back out of something, and seconds since the last. */
+  tries: number;
+  freeT: number;
+  /** Seconds it has been backing without getting anywhere. */
+  jamT: number;
+}
+
+/** What kind of driver an AI is, each 0 to 1 (see `DriverStyleSchema`). */
+export interface Traits {
+  nerve: number;
+  greed: number;
+  block: number;
+  trigger: number;
+  wobble: number;
 }
 
 /** Upgrade levels, 0 (stock) to TUNE_MAX. */
@@ -290,6 +315,14 @@ export interface LooseProp {
   flying?: boolean;
   /** A falling heavy prop that has already come down on something (see `smash` in docks.ts). */
   crushed?: boolean;
+  /**
+   * Where it lay when a tick last left it exactly as it was, and what `World.stood` was then.
+   * While it still lies there, at rest, with no new scenery stood, a tick has nothing to do to
+   * it (see `updateProps`). No part of a race's result: only what lets most props be passed by.
+   */
+  restX?: number;
+  restY?: number;
+  restN?: number;
 }
 
 /** A burning bit thrown out of a burst: a star (pops where it lands) or a glob of fuel. */

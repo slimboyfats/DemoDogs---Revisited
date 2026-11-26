@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { TRACK_FORMAT, TRACK_VERSION, parseTrackFile, type TrackFile } from '@demodogs/shared';
-import { LocalTrackStore, newTrackId, trackFileName, trackFileText, type KeyValue } from './tracks';
+import {
+  copyTrack,
+  linkedTrack,
+  LocalTrackStore,
+  newTrackId,
+  packTrack,
+  sameTrack,
+  trackFileName,
+  trackFileText,
+  trackLink,
+  unpackTrack,
+  type KeyValue,
+} from './tracks';
 
 const track = (id: string, name = 'My Track'): TrackFile => ({
   format: TRACK_FORMAT,
@@ -90,5 +102,50 @@ describe('sizes of things', () => {
     expect(sizeStep(2.1)).toBe(2);
     expect(sizeStep(9)).toBe(3);
     expect(sizeStep(0.1)).toBe(0.5);
+  });
+});
+
+describe('a track in a link', () => {
+  it('goes out and comes back the same', async () => {
+    const t = { ...track('abcd1234'), updated: '2026-01-01T00:00:00Z' };
+    t.items.push({ prop: 'prop.cone', x: 10, y: 20, rot: 1.23456789, size: 2 });
+    const link = await trackLink(t, 'https://example.test/game/?edit#old');
+    expect(link.startsWith('https://example.test/game/#track=')).toBe(true);
+    const packed = linkedTrack(new URL(link).hash)!;
+    expect(packed).toMatch(/^[A-Za-z0-9_-]+$/);
+    const back = await unpackTrack(packed);
+    expect(back.ok).toBe(true);
+    if (!back.ok) return;
+    expect(back.track.updated).toBeUndefined();
+    // the same track to race, though it was saved at another time and its turns are rounded
+    expect(sameTrack(back.track, t)).toBe(true);
+    expect(sameTrack(back.track, { ...t, laps: 5 })).toBe(false);
+    expect(back.track.items[1]).toEqual({ prop: 'prop.cone', x: 10, y: 20, rot: 1.235, size: 2 });
+    expect({ ...back.track, items: [] }).toEqual({ ...track('abcd1234'), items: [] });
+  });
+
+  it('is much shorter than the file', async () => {
+    const t = track('abcd1234');
+    for (let i = 0; i < 300; i++) t.items.push({ prop: 'prop.cone', x: i * 3, y: i * 2, rot: 0 });
+    expect((await packTrack(t)).length).toBeLessThan(trackFileText(t).length / 5);
+  });
+
+  it('says so when the link holds no track', async () => {
+    expect(linkedTrack('#room=ABCD')).toBeNull();
+    expect(linkedTrack('')).toBeNull();
+    expect((await unpackTrack('not a track!')).ok).toBe(false);
+    expect((await unpackTrack('AAAA')).ok).toBe(false);
+    const other = await packTrack({ ...track('abcd1234'), format: 'something-else' } as never);
+    expect((await unpackTrack(other)).ok).toBe(false);
+  });
+
+  it('a copy is a track of its own', () => {
+    const t = { ...track('abcd1234', 'A'.repeat(32)), created: 'x' };
+    const c = copyTrack(t, 'wxyz9876');
+    expect(c.id).toBe('wxyz9876');
+    expect(c.name.length).toBeLessThanOrEqual(32);
+    expect(c.created).toBeUndefined();
+    c.items[0]!.x = -1;
+    expect(t.items[0]!.x).toBe(500);
   });
 });

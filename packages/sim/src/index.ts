@@ -45,3 +45,4 @@ export { inWater } from './docks';
 export * from './dmath';
 export { addModifier, removeModifier, rangeEvent, type Mod } from './modifiers';
 export * from './addons';
+export * from './line';
