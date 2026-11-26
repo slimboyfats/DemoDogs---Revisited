@@ -26,6 +26,8 @@ export function drawOverlay(
   W: number,
   H: number,
   dpr: number,
+  /** Point at rivals who are off the screen (a derby's way of finding them). */
+  arrows = true,
 ): void {
   // floating words
   ctx.textAlign = 'center';
@@ -44,7 +46,7 @@ export function drawOverlay(
   ctx.globalAlpha = 1;
 
   // off-screen rival arrows in the derby
-  if (w.kind === 'derby')
+  if (arrows && w.kind === 'derby')
     for (const c of w.cars) {
       if (c === w.player || c.wrecked) continue;
       const sx = P.sx(c.x);

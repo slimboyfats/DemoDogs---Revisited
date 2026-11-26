@@ -40,6 +40,7 @@
     "res": "pnpm build && node scripts/resolution.mjs",
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "ui": "pnpm build && node scripts/capture-ui.mjs",
+    "play:lesson": "pnpm build && node scripts/play-lesson.mjs",
     "bots": "node scripts/bot-lab.mjs",
     "bots:clip": "pnpm build && node scripts/capture-bots.mjs",
     "verify": "pnpm check && pnpm play:smoke",

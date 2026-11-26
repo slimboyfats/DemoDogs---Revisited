@@ -23,6 +23,8 @@ export class Input {
     fire: false,
   };
   private pausePressed = false;
+  /** The controls as last read: what is held now, for whoever teaches or shows them. */
+  last: Controls = { steer: 0, throttle: 0, brake: false, boost: false, fire: false };
 
   constructor(private readonly onGesture: () => void) {
     const $ = (id: string) => document.getElementById(id)!;
@@ -146,6 +148,7 @@ export class Input {
     r.boost = b.boost || held(KEYS.boost);
     const out = toControls(r, heading);
     r.fire = false;
+    this.last = out;
     return out;
   }
 
