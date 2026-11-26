@@ -163,6 +163,14 @@ export function queueStacks(
     R.group(r.y);
     R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
+  // a hunting rocket, high over the road: twice the size of the thing itself, to be seen from afar
+  for (const H of w.hunters)
+    if (R.visible(H.x, H.y, 20, H.z + 10)) {
+      R.group(H.y + 40);
+      R.zoom(2);
+      R.stack(art.prop(H.def.id), H.x, H.y, H.z, H.h);
+      R.zoom(1);
+    }
   queueArms(R, art, w);
   queueDecoys(R, art, w);
   queueTrickThings(R, art, w, fx.tricks);

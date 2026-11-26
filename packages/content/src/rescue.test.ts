@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_TUNING, NO_CONTROLS } from '@demodogs/shared';
-import { rescueIn, type World } from '@demodogs/sim';
+import { explode, rescueIn, type World } from '@demodogs/sim';
 import { bench, makeWorld, put, startRace } from './testing';
 
 const { rescueGrace: RESCUE_GRACE, rescueCount: RESCUE_COUNT } = DEFAULT_TUNING;
@@ -101,6 +101,44 @@ describe('back on the road', () => {
     idle(w, 200);
     w.tuning = { ...w.tuning, rescueCount: 2 };
     expect(idle(w, 20)).toBe(1);
+  });
+
+  it('a car put back finds its feet: it cannot be hurt and is slow, then it is itself again', () => {
+    const { freshSeconds, freshPace } = DEFAULT_TUNING;
+    const w = bench();
+    const T = w.track!;
+    const c = w.player;
+    idle(w, 5);
+    const k = (c.idx + 30) % T.n;
+    c.onIdx = k;
+    put(c, ...beside(w, k, w.road / 2 + 150), T.a[k]!, 0);
+    expect(idle(w, WAIT + 5)).toBe(1);
+    expect(c.fresh).toBeGreaterThan(freshSeconds - 0.2);
+    expect(c.invuln).toBeGreaterThan(freshSeconds - 0.2);
+    expect(c.pace).toBeLessThan(freshPace + 0.05);
+    // flat out it gets nowhere near its top speed at first
+    const GO = { ...NO_CONTROLS, throttle: 1 };
+    const hp = c.hp;
+    for (let i = 0; i < 60; i++) w.step(GO);
+    explode(w, c.x, c.y, 1, null);
+    expect(c.hp).toBe(hp);
+    expect(c.pace).toBeLessThan(0.85);
+    for (let i = 0; i < freshSeconds * 60; i++) w.step(GO);
+    expect(c.fresh).toBe(0);
+    expect(c.invuln).toBe(0);
+    expect(c.pace).toBe(1);
+  });
+
+  it('a wreck towed back to the road finds its feet the same way', () => {
+    const w = startRace(makeWorld());
+    const c = w.cars.find((o) => !o.isPlayer)!;
+    for (let i = 0; i < 8 && !c.wrecked; i++) explode(w, c.x, c.y, 2, null);
+    expect(c.wrecked).toBe(true);
+    for (let i = 0; i < 60 * (w.mode.respawnSeconds! + 0.2); i++) w.step(NO_CONTROLS);
+    expect(c.wrecked).toBe(false);
+    expect(c.fresh).toBeGreaterThan(DEFAULT_TUNING.freshSeconds - 0.5);
+    expect(c.invuln).toBeGreaterThan(c.fresh - 0.01);
+    expect(c.pace).toBeLessThan(0.7);
   });
 
   it('a derby has no course to leave', () => {

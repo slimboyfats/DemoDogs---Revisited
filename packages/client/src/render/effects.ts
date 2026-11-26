@@ -2399,7 +2399,7 @@ export class Effects {
     this.shock.step(DT);
     howlTick(this, w);
     guardTick(this, w, this.sound);
-    this.catchup.step(this, w);
+    this.catchup.step(this, w, this.sound);
     this.tricks.step(this, w);
     this.life.step(this, w);
     // hollows in the road are light and shade on the ground: each painted once, as it is laid

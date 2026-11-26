@@ -162,10 +162,24 @@ export type SimEvent =
    * (`grow`) or was zapped small (`shrink`), came back to its own size (`back`), was flattened
    * under a much bigger car (`squash`), got a second wind (`wind`), had a lead collar clamped on or
    * drop off (`collar`, `collar-off`; `id` is the pickup), or bones were called down on it (`bones`).
+   * A hunting rocket left car `car` (`hunt`), found the car in front and is coming down on it
+   * (`hunt-lock`), landed on it (`hunt-hit`) or burnt out with nobody to land on (`hunt-off`).
    */
   | {
       t: 'catchup';
-      what: 'grow' | 'shrink' | 'back' | 'squash' | 'wind' | 'collar' | 'collar-off' | 'bones';
+      what:
+        | 'grow'
+        | 'shrink'
+        | 'back'
+        | 'squash'
+        | 'wind'
+        | 'collar'
+        | 'collar-off'
+        | 'bones'
+        | 'hunt'
+        | 'hunt-lock'
+        | 'hunt-hit'
+        | 'hunt-off';
       car: number;
       by: number;
       id: string;

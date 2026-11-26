@@ -17,8 +17,9 @@ describe('online: several human drivers in one world', () => {
     const w = world('venue.kennel-loop');
     expect(w.humans.map((c) => c.seat)).toEqual([0, 1, 2]);
     expect(w.humans.every((c) => c.isPlayer && !c.ai)).toBe(true);
-    expect(w.cars).toHaveLength(FIELD_SIZE);
-    expect(w.cars.filter((c) => c.ai)).toHaveLength(FIELD_SIZE - 3);
+    const field = w.mode.field ?? FIELD_SIZE;
+    expect(w.cars).toHaveLength(field);
+    expect(w.cars.filter((c) => c.ai)).toHaveLength(field - 3);
   });
 
   it('runs the same race whichever seat the screen follows', () => {

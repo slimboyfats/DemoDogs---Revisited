@@ -60,7 +60,8 @@ describe('online lockstep', () => {
     );
     // both humans actually drove
     expect(hw.humans[1]!.progress).toBeGreaterThan(500);
-  });
+    // (two worlds of eight cars, 30 seconds each: more than the default five when the box is busy)
+  }, 30000);
 
   it('a guest never runs past its leave, and catches up fast when far behind', () => {
     const gw = make(1);

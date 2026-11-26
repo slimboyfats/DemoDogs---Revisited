@@ -62,6 +62,7 @@ import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
 import {
   customVenueId,
+  grant,
   installTrack,
   rangeBlast,
   type Content,
@@ -1687,6 +1688,12 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** For scripts: hand car `i` of the running race the pickup `id`, as if it had opened it. */
+      give(i: number, id: string) {
+        const w = session?.world;
+        const got = w?.content.pickup.get(id);
+        return w && got ? grant(w, w.cars[i]!, got) : null;
+      },
       /** The hitbox view for scripts: `hitboxes.mode = 'off' | 'boxes' | 'heights'`. */
       hitboxes,
       /** The driving lesson for scripts: `step` is the one that is on, `state` where its things are, `end()` jumps to its last card. */
