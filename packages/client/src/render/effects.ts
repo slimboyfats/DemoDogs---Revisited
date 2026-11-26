@@ -968,14 +968,20 @@ export class Effects {
           const from = { ...this.carBurst(c), ox: e.x, oy: e.y };
           this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
           this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
-          if (c === w.player && e.amount > 6)
-            this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
+          // a blow to this screen's car is felt hard; one it lands on another, a little
+          if (c === w.player && e.amount > 3)
+            this.shake = Math.max(this.shake, Math.min(12, 2 + e.amount * 0.6));
+          else if (e.by === w.player.index && e.amount > 6)
+            this.shake = Math.max(this.shake, Math.min(6, 1.5 + e.amount * 0.3));
           break;
         }
         case 'crash': {
           for (let i = 0; i < 6; i++) this.spark(e.x, e.y, 3, e.impact * 0.4);
           const v = this.vol(e.x, e.y);
           if (v > 0) S.crash(e.impact * v);
+          // driving into something hard jolts the picture, whether or not it cost anything
+          if (e.player && e.impact > 25)
+            this.shake = Math.max(this.shake, Math.min(8, e.impact * 0.07));
           break;
         }
         case 'press': {

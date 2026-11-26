@@ -416,8 +416,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.groundLayer!.sync();
 
     // the view: the camera point in the middle, origin snapped to whole device pixels (as mudders' Camera)
-    const cx = cam.x + ((Math.random() - 0.5) * cam.shake) / S;
-    const cy = cam.y + ((Math.random() - 0.5) * cam.shake) / S;
+    const cx = cam.x + cam.ox;
+    const cy = cam.y + cam.oy;
     this.vw = W;
     this.vh = H;
     this.ox = Math.round(W / 2 - cx * S);
