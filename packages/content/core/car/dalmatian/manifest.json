@@ -1,0 +1,30 @@
+{
+  "id": "car.dalmatian",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dalmatian",
+    "description": "Spotted coupe. Holds the road like it is on a lead.",
+    "since": "core@0.4.0"
+  },
+  "paint": "#f1eee4",
+  "price": 12000,
+  "stats": {
+    "speed": 1.04,
+    "accel": 1.06,
+    "grip": 1.2,
+    "mass": 0.92,
+    "armor": 0.95
+  },
+  "body": {
+    "halfLength": 11,
+    "halfWidth": 5.7
+  },
+  "wheels": [
+    [6.9, 4.4],
+    [-6.9, 4.4]
+  ],
+  "top": {
+    "x": -1.9,
+    "z": 7.3
+  }
+}
