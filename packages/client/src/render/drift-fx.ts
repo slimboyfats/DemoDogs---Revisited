@@ -97,7 +97,7 @@ export class DriftFx {
         T.t -= dt;
         if (T.t <= 0) this.trail.delete(c.index);
         for (const side of [-1, 1])
-          if (roll() < 0.5 + 0.4 * fx.quality)
+          for (let k = 0; k < 2; k++)
             fx.emit(
               'glitter',
               c.x - cs * (back + 3) - sn * side * wide * 0.6,
@@ -106,8 +106,8 @@ export class DriftFx {
               -cs * rand(30, 80),
               -sn * rand(30, 80),
               rand(-5, 15),
-              rand(0.25, 0.5),
-              1,
+              rand(0.3, 0.6),
+              roll() < 0.5 ? 2 : 1,
               pick(T.col),
             );
       }
@@ -116,7 +116,7 @@ export class DriftFx {
       const stage = driftStage(c);
       const col = TONES[stage]!;
       const out = -c.drift;
-      const many = (stage === 0 ? 0.45 : stage === 1 ? 1.1 : 1.8) * (0.4 + 0.6 * fx.quality);
+      const many = (stage === 0 ? 1 : stage === 1 ? 2.4 : 3.6) * (0.4 + 0.6 * fx.quality);
       for (const side of [-1, 1]) {
         const x = c.x - cs * back - sn * side * wide;
         const y = c.y - sn * back + cs * side * wide;
@@ -130,8 +130,8 @@ export class DriftFx {
             -cs * rand(10, 50) - sn * out * rand(20, 70) + c.vx * 0.2,
             -sn * rand(10, 50) + cs * out * rand(20, 70) + c.vy * 0.2,
             rand(15, 45),
-            rand(0.2, stage === 2 ? 0.55 : 0.4),
-            stage === 2 ? 2 : 1,
+            rand(0.25, stage === 0 ? 0.4 : 0.7),
+            stage === 0 ? (roll() < 0.4 ? 2 : 1) : roll() < 0.5 ? stage + 1 : stage,
             pick(col),
           );
       }
