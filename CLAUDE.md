@@ -12,7 +12,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev`, then `/?dev`                                        | the test range: fire weapons at parked cars and props, slow time, read the counters                           |
 | `/?dev&venue=knotwood`                                          | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap        |
 | `/?perf`, or RECORD PERFORMANCE when paused                     | the performance recorder: saves a log of what each second cost on that device                                 |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)                |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins, `?lag=160&jitter=120` a bad link. `pnpm play:net`: 2 phones                 |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm speed [out-dir] [--frames] [--only=scene]`                | what slows a car (off road, hill, mud road, damage) and the speedometer naming it (`captures/speed/`)         |
@@ -39,7 +39,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev`, then `/?dev`                                        | the test range: fire weapons at parked cars and props, slow time, read the counters                           |
 | `/?dev&venue=knotwood`                                          | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap        |
 | `/?perf`, or RECORD PERFORMANCE when paused                     | the performance recorder: saves a log of what each second cost on that device                                 |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)                |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins, `?lag=160&jitter=120` a bad link. `pnpm play:net`: 2 phones                 |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
@@ -56,7 +56,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev`, then `/?dev`                                        | the test range: fire weapons at parked cars and props, slow time, read the counters                           |
 | `/?dev&venue=knotwood`                                          | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap        |
 | `/?perf`, or RECORD PERFORMANCE when paused                     | the performance recorder: saves a log of what each second cost on that device                                 |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)                |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins, `?lag=160&jitter=120` a bad link. `pnpm play:net`: 2 phones                 |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |
@@ -73,7 +73,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm dev`, then `/?dev`                                        | the test range: fire weapons at parked cars and props, slow time, read the counters                           |
 | `/?dev&venue=knotwood`                                          | the test range on a race venue (a flyover and giant trees to break); BIG TREE plants one where you tap        |
 | `/?perf`, or RECORD PERFORMANCE when paused                     | the performance recorder: saves a log of what each second cost on that device                                 |
-| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins. `pnpm play:net` races two headless phones (direct and relay)                |
+| `pnpm dev` (also starts the lobby server), menu → ONLINE        | online races; `?room=CODE` joins, `?lag=160&jitter=120` a bad link. `pnpm play:net`: 2 phones                 |
 | `pnpm overdraw [venue ...]`, OVERDRAW in `/?dev`                | fragments per pixel on every venue at 844×390 dpr 2, and heat maps (`captures/overdraw/`)                     |
 | `pnpm look [out-dir]`                                           | the same race, blast and smoke shots at 844×390 dpr 2 plus 1:1 crops (`captures/look/`), for before/after     |
 | `pnpm sky [out-dir] [venue] [sky ...]`, SKY in `/?dev`          | one race frame under every sky (`captures/sky/`); `/?sky=night` (dusk, rain, storm, snow), `/?light=flat`     |

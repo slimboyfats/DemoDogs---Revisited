@@ -2,8 +2,8 @@ import { loadContent } from '@demodogs/content';
 import { packControls, type Controls, type PeerMessage } from '@demodogs/shared';
 import { World } from '@demodogs/sim';
 import { describe, expect, it } from 'vitest';
-import { linkPair } from './link';
-import { GuestRace, HASH_EVERY, HostRace, RESYNC, type Stepper } from './lockstep';
+import { linkPair, roughFlags, roughLink } from './link';
+import { GuestRace, HASH_EVERY, HostRace, RESYNC, RESYNC_GAP, type Stepper } from './lockstep';
 
 const content = loadContent();
 const humans = [{ car: 'car.whippet', name: 'TWO', paint: '#3fa9f5' }];
@@ -99,5 +99,92 @@ describe('online lockstep', () => {
     host.handle(1, { type: 'hash', t: HASH_EVERY, h: RESYNC });
     expect(host.desyncs).toBe(1);
     expect(got.at(-1)?.type).toBe('start');
+  });
+
+  it('sends the race again once, not for every hash already on its way', () => {
+    const [hl, gl] = linkPair('local', true);
+    const got: PeerMessage[] = [];
+    gl.onMessage = (m) => got.push(m);
+    const host = new HostRace(2, () => ({
+      type: 'start',
+      seed: 1,
+      venue: 'v',
+      seats: [],
+      you: 1,
+      log: [],
+      upTo: 0,
+    }));
+    host.attach(1, hl, 0);
+    const nothing: Stepper = { step: () => {}, hash: () => 'h' };
+    const starts = () => got.filter((m) => m.type === 'start').length;
+    host.handle(1, { type: 'hash', t: 0, h: RESYNC });
+    host.handle(1, { type: 'hash', t: 0, h: RESYNC });
+    expect(starts()).toBe(1);
+    expect(host.desyncs).toBe(1);
+    for (let i = 0; i < RESYNC_GAP; i++) host.stepOnce(nothing);
+    host.handle(1, { type: 'hash', t: 0, h: RESYNC });
+    expect(starts()).toBe(2);
+  });
+
+  /** A guest fed leaves in bursts (a jittery link), frame by frame: how many frames it stood still. */
+  const jittery = (burst: number) => {
+    const counter: Stepper = { step: () => {}, hash: () => '' };
+    const guest = new GuestRace(1, 2, [], 0, () => {});
+    let stood = 0;
+    let longest = 0;
+    let run = 0;
+    for (let f = 1; f <= 1200; f++) {
+      // the host is a tick a frame ahead; its leaves reach the guest only every `burst` frames
+      if (f % burst === 0) guest.receive(f, []);
+      const before = guest.t;
+      guest.pump(1 / 60, counter);
+      if (f > 300) {
+        if (guest.t === before) {
+          stood++;
+          run++;
+          longest = Math.max(longest, run);
+        } else run = 0;
+      }
+    }
+    return { guest, stood, longest };
+  };
+
+  it('rides out a jittery link by holding a few ticks back, instead of stopping and lurching', () => {
+    // leaves every 6 frames (100 ms apart): without a buffer the guest would stand 5 frames in 6
+    const { guest, stood } = jittery(6);
+    expect(stood).toBeLessThan(12);
+    // no further back than the jitter needs
+    expect(guest.lag).toBeLessThanOrEqual(12);
+    // and on a steady link it holds next to nothing back
+    const steady = jittery(2);
+    expect(steady.stood).toBeLessThan(12);
+    expect(steady.guest.lag).toBeLessThanOrEqual(4);
+  });
+
+  it('a rough link delivers late and in order', () => {
+    const [a, b] = linkPair('local', true);
+    const got: number[] = [];
+    b.onMessage = (m) => m.type === 'ping' && got.push(m.n);
+    let now = 0;
+    const queue: { at: number; fn: () => void }[] = [];
+    let seed = 7;
+    const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const rough = roughLink(
+      a,
+      roughFlags('?lag=100&jitter=80')!,
+      rand,
+      () => now,
+      (fn, ms) => queue.push({ at: now + ms, fn }),
+    );
+    for (let i = 0; i < 50; i++) {
+      now = i * 10;
+      rough.send({ type: 'ping', n: i });
+    }
+    expect(got).toEqual([]);
+    for (const q of queue) expect(q.at).toBeGreaterThanOrEqual(50);
+    queue.sort((x, y) => x.at - y.at);
+    for (const q of queue) q.fn();
+    expect(got).toEqual(Array.from({ length: 50 }, (_, i) => i));
+    expect(roughFlags('?room=ABCDEF')).toBeNull();
   });
 });

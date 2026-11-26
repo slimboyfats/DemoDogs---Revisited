@@ -49,6 +49,8 @@ import { results } from './ui/results';
 import { SpectateBar } from './ui/spectate';
 import { signalUrl } from './net/config';
 import { OnlineScreen } from './ui/online';
+import { BackgroundClock } from './game/bg-clock';
+import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
 import { customVenueId, installTrack, type Content, type Installed } from '@demodogs/sim';
 import { LocalTrackStore, type KeyValue } from './game/tracks';
@@ -1044,6 +1046,36 @@ document.addEventListener('visibilitychange', () =>
 
 let last = performance.now();
 let meterFrames = 0;
+
+// the connection in an online race: bars and a ping in the corner, a banner when something is up
+let netShown = '';
+function showNet(now: number): void {
+  const n = online.bars();
+  const b = online.banner(now);
+  const key = `${n}|${online.status()}|${b?.text ?? ''}`;
+  if (key === netShown) return;
+  netShown = key;
+  const dot = $('netDot');
+  const bars = document.createElement('span');
+  bars.className = `bars ${n === 0 ? 'none' : n <= 2 ? 'weak' : ''}`;
+  for (let i = 1; i <= 4; i++) {
+    const bar = document.createElement('i');
+    bar.style.height = `${i * 25}%`;
+    if (i <= n) bar.className = 'on';
+    bars.append(bar);
+  }
+  dot.replaceChildren(bars, online.status());
+  const el = $('netBanner');
+  el.textContent = b?.text ?? '';
+  el.className = b ? `on ${b.good ? 'good' : 'bad'}` : '';
+}
+
+// an online host out of view keeps the race going for everyone (no drawing, only the ticks)
+const hostClock = new BackgroundClock((dt) => {
+  if (!document.hidden || screen !== 'game' || !session || !online.racing) return;
+  if (session.advance(dt)) finish();
+});
+let hiddenAt = 0;
 function frame(t: number): void {
   requestAnimationFrame(frame);
   const wall = t - last;
@@ -1080,7 +1112,7 @@ function frame(t: number): void {
     else if (overview === null)
       hud.draw(session.world, session.fx, W, H, DPR, session.watch ?? session.world.player);
     updateFireButton();
-    if (online.racing) $('netDot').textContent = online.status();
+    if (online.racing) showNet(t);
     // a device that keeps falling behind gets thinner fire and smoke, by itself, then fewer
     // pixels to fill (the bigger lever, but the one that shows), then thinner effects again
     if (!paused && slow.frame(t, wall)) {
@@ -1237,6 +1269,18 @@ function boot(): void {
   label();
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && screen === 'game' && !paused && !online.racing) togglePause();
+    if (document.hidden) {
+      hiddenAt = performance.now();
+      if (online.racing && online.isHost) hostClock.start();
+    } else {
+      hostClock.stop();
+      // a phone's connections often die quietly while the page is away: check them now
+      online.resume(performance.now() - hiddenAt > 3000);
+    }
+  });
+  addEventListener('online', () => online.resume(true));
+  addEventListener('pageshow', (e) => {
+    if (e.persisted) online.resume(true);
   });
   showCar();
   setScreen('menu');
@@ -1257,6 +1301,9 @@ function boot(): void {
   }
   if (params.has('edit')) void tracksScreen.create();
   if (params.has('room')) openOnline(params.get('room') ?? '');
+  // a reload (or a tab the phone threw out and brought back) mid-race goes back to its seat
+  else if (savedRoom() && !st && !params.has('dev') && !params.has('edit'))
+    openOnline(savedRoom()!);
   if (params.has('career')) {
     const race = params.get('career');
     if (race === 'easy' || race === 'medium' || race === 'hard' || race === 'final')
