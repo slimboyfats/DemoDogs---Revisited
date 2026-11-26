@@ -116,3 +116,57 @@ export function linkPair(path: LinkPath = 'local', sync = false): [TextLink, Tex
   );
   return [a, b];
 }
+
+/** A bad connection to try the game on: `?lag=150&jitter=80` (ms, a round trip), `?stall=600`. */
+export interface Rough {
+  /** Round trip added, ms. */
+  lag: number;
+  /** Up to this much more on any one message, ms (a round trip's worth). */
+  jitter: number;
+  /** Now and then (about every four seconds) the line holds everything for this long, ms. */
+  stall: number;
+}
+
+/**
+ * Makes a link behave like a phone on a poor network: everything sent arrives late, by an amount
+ * that wanders, and still in order (as a data channel or a socket delivers it). Both ends wrap
+ * their link, so each direction gets half the round trip. For trying the game and for tests; a
+ * real race never has one.
+ */
+export function roughLink(
+  inner: Link,
+  rough: Rough,
+  rand: () => number = Math.random,
+  now: () => number = () => performance.now(),
+  later: (fn: () => void, ms: number) => void = (fn, ms) => void setTimeout(fn, ms),
+): Link {
+  let due = 0;
+  let held = 0;
+  const link: Link = {
+    path: inner.path,
+    get open() {
+      return inner.open;
+    },
+    send(msg) {
+      const t = now();
+      if (rough.stall > 0 && t > held && rand() < 0.004) held = t + rough.stall;
+      // never before the message ahead of it
+      due = Math.max(due, held, t + rough.lag / 2 + (rand() * rough.jitter) / 2);
+      later(() => inner.send(msg), due - t);
+    },
+    close: () => inner.close(),
+    onMessage: null,
+    onClose: null,
+  };
+  inner.onMessage = (m) => link.onMessage?.(m);
+  inner.onClose = () => link.onClose?.();
+  return link;
+}
+
+/** The bad connection asked for in the address, or null. */
+export function roughFlags(search: string): Rough | null {
+  const q = new URLSearchParams(search);
+  const n = (k: string) => Math.max(0, Math.min(5000, Number(q.get(k)) || 0));
+  const r = { lag: n('lag'), jitter: n('jitter'), stall: n('stall') };
+  return r.lag + r.jitter + r.stall > 0 ? r : null;
+}

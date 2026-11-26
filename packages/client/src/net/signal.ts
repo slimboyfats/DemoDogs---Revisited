@@ -36,6 +36,7 @@ export class SignalClient {
   private startedAt = 0;
   private retry = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
+  private openedAt = 0;
   private closed = false;
   private onWelcome: (() => void)[] = [];
 
@@ -68,6 +69,7 @@ export class SignalClient {
       return;
     }
     this.ws = ws;
+    this.openedAt = performance.now();
     const wakeTimer = setTimeout(() => {
       if (this.status === 'connecting') this.setStatus('waking');
     }, WAKING_AFTER_MS);
@@ -137,6 +139,30 @@ export class SignalClient {
       this.timer = null;
       this.open();
     }, delay);
+  }
+
+  /**
+   * Try the server again now: after giving up, or when the phone is back in view or back on a
+   * network (a socket that died while the page slept often never says so). A socket that is open
+   * is replaced only when forced; the server hands the same identity back.
+   */
+  wake(force = false): void {
+    if (this.closed || this.status === 'outdated') return;
+    if (this.status === 'open') {
+      if (!force) return;
+      this.setStatus('connecting');
+    }
+    this.startedAt = performance.now();
+    this.retry = 0;
+    if (this.status === 'offline') this.setStatus('connecting');
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = null;
+    const ws = this.ws;
+    // a socket still dialling after five seconds is not going to answer
+    if (ws && ws.readyState <= 1 && performance.now() - this.openedAt < 5000) return;
+    this.ws = null;
+    ws?.close();
+    this.open();
   }
 
   send(msg: ClientMessage): void {
