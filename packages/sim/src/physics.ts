@@ -145,6 +145,7 @@ export function makeCar(
     wrecked: false,
     wreckT: 0,
     downT: 0,
+    plunge: 0,
     onIdx: 0,
     onLap: 0,
     wreckTick: 0,
@@ -854,7 +855,20 @@ export function collideProps(w: World, c: Car): void {
     const pm = p.def.mass ?? 0.5;
     {
       // its shape against the hull: it is pushed out of the car the nearest way
-      const gap = propTouch(carShape(c, HULL), p.def, p.x, p.y, p.rot, OTHER, AT, true);
+      // (at the height the car is by it: one in the air goes over a barrel, and one on the ground
+      // under a cone that has been thrown up over it)
+      const gap = propTouch(
+        carShape(c, HULL),
+        p.def,
+        p.x,
+        p.y,
+        p.rot,
+        OTHER,
+        AT,
+        true,
+        c.z - p.z,
+        c.z - p.z + CAR_HIGH * c.size,
+      );
       if (gap >= 0) continue;
       const nx = AT.nx;
       const ny = AT.ny;

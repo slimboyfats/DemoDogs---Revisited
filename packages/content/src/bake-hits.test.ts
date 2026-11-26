@@ -572,6 +572,45 @@ describe.runIf(on)('bake hit shapes', () => {
     expect(rows.length + ONLY.length).toBeGreaterThan(0);
   });
 
+  // what lies loose keeps the one shape it has, and is given its height: a car in the air over
+  // it goes over it
+  it('gives loose things their height', () => {
+    const C = loadContent();
+    const L = loadLooks();
+    const rows: string[] = [];
+    for (const [id, def] of C.prop) {
+      const lm = L.get(id);
+      if (ONLY.length && !ONLY.includes(id.slice(5))) continue;
+      if (!lm || lm.look.kind !== 'prop' || def.body !== 'loose' || def.critter) continue;
+      if (def.hit && 'parts' in def.hit) continue;
+      const p = lm.look.part;
+      let top = 0;
+      for (let z = 0; z < p.layers; z++)
+        for (let x = -p.w / 2 + 0.25; x < p.w / 2 && top <= z; x += 0.5)
+          for (let y = -p.h / 2 + 0.25; y < p.h / 2; y += 0.5)
+            if (p.fn(x, y, p.smooth ? z + 0.5 : z)) {
+              top = z + 1;
+              break;
+            }
+      if (!top) continue;
+      const file = fileURLToPath(
+        new URL(`../core/prop/${id.slice(5)}/manifest.json`, import.meta.url),
+      );
+      const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
+      const hit = { ...((raw.hit as object | undefined) ?? { radius: def.radius }), top };
+      const next: Record<string, unknown> = {};
+      for (const [k, v] of Object.entries(raw)) {
+        if (k === 'hit') continue;
+        next[k] = v;
+        if (k === 'radius') next.hit = hit;
+      }
+      writeFileSync(file, `${JSON.stringify(next, null, 2)}\n`);
+      rows.push(`${id.padEnd(26)} top ${top}`);
+    }
+    console.log(`\n${rows.join('\n')}\n`);
+    expect(rows.length + ONLY.length).toBeGreaterThan(0);
+  });
+
   // a car's body the same way, for what is shot at it (it bumps with its one hull)
   it("writes the cars' into theirs", () => {
     const C = loadContent();

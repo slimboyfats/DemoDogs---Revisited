@@ -24,9 +24,14 @@ describe('the test range', () => {
     expect(w.phase).toBe('race');
     const [a, b] = w.cars.filter((c) => c !== w.player);
     const at = [a!.x, a!.y, b!.x, b!.y];
-    for (let i = 0; i < 60 * 200; i++) w.step({ ...NO_CONTROLS, throttle: 1 });
-    expect(w.phase).toBe('race');
+    // (nobody at their wheels, and they stand where they were put while nothing has run into them:
+    // the player's car, left to itself with its foot down, gets round to that in time)
+    expect(a!.ai).toBeNull();
+    expect(b!.ai).toBeNull();
+    for (let i = 0; i < 60 * 5; i++) w.step({ ...NO_CONTROLS, throttle: 1 });
     expect([a!.x, a!.y, b!.x, b!.y]).toEqual(at);
+    for (let i = 0; i < 60 * 195; i++) w.step({ ...NO_CONTROLS, throttle: 1 });
+    expect(w.phase).toBe('race');
     expect(Math.hypot(w.player.vx, w.player.vy)).toBeGreaterThan(0);
   });
 

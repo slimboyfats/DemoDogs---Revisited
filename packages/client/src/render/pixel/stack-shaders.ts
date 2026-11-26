@@ -201,7 +201,7 @@ float beam(vec2 wp, vec4 c, float gap) {
   float side = across / wide;
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
-  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.45;
+  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.25;
 }${BLOCK_GLSL}`;
 
 export const STACK_FS = `#version 300 es
@@ -652,7 +652,16 @@ void main() {
     // a jump piece's face is in its own look (leaps.ts): stone, timber, earth or concrete
     float code = floor(rl.a * 255.0 + 0.5);
     float sk = floor(code / 32.0);
-    if (sk > 0.5) {
+    if (sk > 6.5) {
+      // the side of raised road is a built wall: one plain face of concrete, lit as it lies,
+      // whatever lies at its foot and whichever way it runs (beds drawn by height come out as
+      // a checker on a wall seen end on)
+#ifdef BRIGHT
+      c = vec3(0.38, 0.39, 0.44);
+#else
+      c = vec3(0.27, 0.28, 0.31);
+#endif
+    } else if (sk > 0.5) {
       // along the wall, whichever of the piece's sides it is, and up it
       float turn = (code - sk * 32.0) * 0.19634954;
       vec2 dir = vec2(cos(turn), sin(turn));

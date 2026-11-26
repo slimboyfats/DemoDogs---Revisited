@@ -153,6 +153,8 @@ export interface Car {
   downT: number;
   onIdx: number;
   onLap: number;
+  /** Seconds it has lain in the pool under a jump it fell short of (see rescue.ts), 0 when not. */
+  plunge: number;
   /** Tick the car was wrecked, for derby placings. */
   wreckTick: number;
   idx: number;

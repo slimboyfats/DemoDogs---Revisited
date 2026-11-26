@@ -16,6 +16,7 @@ import { SUN_PROGRAMS, SunShadow } from './sun-shadow';
 import { LightBlock } from './light-block';
 import { TRACED_PROGRAMS, TracedLight } from './traced-light';
 import { BeamHaze, HAZE_PROGRAMS } from './beam-haze';
+import { FOG_PROGRAMS, FogFluid, FogPass, MAX_STIRS, type Stir } from './fog';
 import { SHADOW_PROGRAMS, ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
 import { leapFaces, leapHeights } from '../leaps';
@@ -42,6 +43,12 @@ const hex = (h: string) => parseInt(h.slice(1), 16);
  * Frame order: ground quad, cast shadows (ShadowLayer), soft shadows (QuadBatch), stacks (StackBatch, depth on), particles
  * (QuadBatch with mudders' pixel-blob and stipple shapes, then an additive pass for the glow). Words and the HUD go on the overlay.
  */
+/**
+ * A thing is taken to stand at least this high when its shadow is looked for (art px): for
+ * callers that give no height.
+ */
+const SHADOW_OVER = 12;
+
 /** Gas cells the GPU holds at once (a blast lets go thousands; a big fire tens of thousands). */
 const GAS_CAP = 131072;
 
@@ -108,6 +115,14 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   showTraced = false;
   private field: TracedLight | null = null;
   private haze: BeamHaze | null = null;
+  /** Ground fog (`sky.fog`): the sheets it is drawn as, and the air it is pushed about in. */
+  groundFog = true;
+  private fog: FogPass | null = null;
+  private fluid: FogFluid | null = null;
+  private readonly stirs: Stir[] = [];
+  /** Where each car was at the fluid's last step, and the race's clock then. */
+  private readonly stirAt = new Map<number, [number, number]>();
+  private fogT = 0;
   /** Draw wet ground's reflections (off on a weak phone: the stacks are drawn a second time). */
   reflections = true;
   /** A line round your own car: always, never, or only when it is dark enough to lose it. */
@@ -143,6 +158,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       ...GAS_PROGRAMS,
       ...SHADOW_PROGRAMS,
       ...HAZE_PROGRAMS,
+      ...FOG_PROGRAMS,
       ...POST_PROGRAMS,
       ...DUSK_PROGRAMS,
     );
@@ -219,8 +235,21 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     // (raised ground lifts things up the screen: allow for the highest it stands)
     ht += this.relief?.top ?? 0;
     const m = rad * this.scale;
-    return sx > -m && sx < this.vw + m && sy > -m && sy < this.vh + m + ht * this.scale * this.cosP;
+    // (and what stands off the screen on the sun's side still throws its shadow onto it: a
+    // thing is in view for as long as its shadow is, or the shadow goes out while it is watched)
+    const tall = ht + SHADOW_OVER;
+    const ex = this.throwX * tall * this.scale;
+    const ey = this.throwY * tall * this.scale * this.ys;
+    return (
+      sx > -m - Math.max(0, ex) &&
+      sx < this.vw + m + Math.max(0, -ex) &&
+      sy > -m - Math.max(0, ey) &&
+      sy < this.vh + m + ht * this.scale * this.cosP + Math.max(0, -ey)
+    );
   }
+  /** How far the sun throws a shadow this frame, ground px per px of height (0 when it casts none). */
+  private throwX = 0;
+  private throwY = 0;
   group(): void {}
   slice(
     s: Strip,
@@ -269,10 +298,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const L = this.lights;
     L.clear();
     const t = w.time;
-    // the darker it is the further every light carries: by night they are the picture
+    // the darker it is the further a light carries, a little
     const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
-    // (less far on a phone that is struggling: a wide light is a lot of ground to work out)
-    L.spread = this.sky.flat ? 1 : 1 + (fx.quality > 0.6 ? 0.8 : 0.4) * night;
+    L.spread = this.sky.flat ? 1 : 1 + 0.25 * night;
+    // and in daylight a fire, a flash or a lamp is no match for the sun: none of them lights the
+    // ground or anything else. They come up as the light goes, from dusk on
+    L.gain = this.sky.flat ? 1 : Math.max(0, Math.min(1, (this.sky.now.dark - 0.25) / 0.35));
     for (const f of fx.flashes) L.add(f.x, f.y, f.r, 1.6 * (f.life / f.max), f.rgb);
     // a blast's ball lights the ground and its own smoke for as long as it burns
     for (const b of fx.blasts) {
@@ -280,7 +311,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       L.add(b.x, b.y, b.r * 7, (1.8 + Math.sin(t * 37 + b.x) * 0.15) * k * k, 0xff9a38);
     }
     for (const c of w.cars)
-      if ((c.wrecked || c.hp < 20) && this.visible(c.x, c.y, 60))
+      // (not from a car up on a deck: these lights lie on the ground, which there is the road
+      // under the bridge)
+      if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
     armsLights(L, w);
@@ -298,7 +331,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const p of w.pickups)
       if (p.on && this.visible(p.x, p.y, 30))
         L.add(p.x, p.y, p.gives ? 26 : 20, p.gives ? 0.6 : 0.45, p.gives ? 0xffd040 : 0x60f0ff);
-    this.glances(w, fx);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
@@ -342,7 +374,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const k = (this.sky.now.dark - 0.42) / 0.58;
     // and every running car's two tail lamps each lay a small red glow on the ground right at
     // its own corner of the bumper, as a car's do: dim while it runs, bright while it brakes
-    // (it is slowing hard, backing up or on the handbrake). None from a car in the air.
+    // (it is slowing hard, backing up or on the handbrake). None from a car in the air or on a deck.
     const dt = Math.max(0, t - this.tailT);
     this.tailT = t;
     for (const c of w.cars) {
@@ -356,7 +388,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if (c.wrecked || !this.visible(c.x, c.y, 60)) continue;
       // (your own only, on a phone that is struggling)
       if (c !== w.player && fx.quality <= 0.6) continue;
-      if (c.z - c.deck > 1) continue;
+      if (c.z - c.deck > 1 || c.deck >= 1) continue;
       const cs = Math.cos(c.h);
       const sn = Math.sin(c.h);
       const back = (c.def.body.halfLength + 1.5) * c.size;
@@ -384,43 +416,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         if (Math.abs(lit[n]! - s.x) + Math.abs(lit[n + 1]! - s.y) < 70) near = true;
       if (near) continue;
       lit.push(s.x, s.y);
-      L.add(s.x, s.y, 54, 0.6 * k, 0xffd890);
-    }
-  }
-
-  /**
-   * Sunlight thrown off bodywork: a car with a side turned to the sun lays a patch of the sun's
-   * own light on the ground beside it, that flares and dies as the car turns and shimmers as
-   * it goes. Weak lights, so they are the first to make way for a blast's.
-   */
-  private glances(w: World, fx: Effects): void {
-    const A = this.sky;
-    if (!this.sunCast || this.shade < 0.2 || fx.quality <= 0.5) return;
-    const rx = A.reach[0]!;
-    const ry = A.reach[1]!;
-    const len = Math.hypot(rx, ry);
-    if (len < 0.01) return;
-    const sx = -rx / len;
-    const sy = -ry / len;
-    const rgb =
-      (Math.min(255, Math.round(A.sun[0]! * 400)) << 16) |
-      (Math.min(255, Math.round(A.sun[1]! * 400)) << 8) |
-      Math.min(255, Math.round(A.sun[2]! * 400));
-    for (const c of w.cars) {
-      if (c.wrecked || !this.visible(c.x, c.y, 40)) continue;
-      // how square a side of it is to the sun
-      const side = Math.abs(-Math.sin(c.h) * sx + Math.cos(c.h) * sy);
-      const flare = side * side * side;
-      if (flare < 0.15) continue;
-      const out = (c.def.body.halfWidth + 5) * c.size;
-      const shimmer = 0.85 + 0.15 * Math.sin(w.time * 19 + c.index * 2.4 + (c.x + c.y) * 0.21);
-      this.lights.add(
-        c.x + sx * out,
-        c.y + sy * out,
-        15 * c.size,
-        0.4 * flare * shimmer * this.shade,
-        rgb,
-      );
+      L.add(s.x, s.y, 44, 0.6 * k, 0xffd890);
     }
   }
 
@@ -462,6 +458,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.block ??= new LightBlock(gl);
     this.field ??= new TracedLight(gl);
     this.haze ??= new BeamHaze(gl);
+    this.fog ??= new FogPass(gl);
     this.lens ??= new LensPass(gl);
     this.dusk ??= new DuskPass(gl);
     this.warming = true;
@@ -514,6 +511,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       this.gas?.clear();
       fx.cells.gpu = this.gas;
+      // still air over the new map
+      this.fluid?.reset(w.w, w.h);
+      this.stirAt.clear();
+      this.fogT = w.time;
       // and its tall scenery throws its shadows anew, from its own shape
       this.shadowLayer?.dispose();
       const art = this.art;
@@ -539,6 +540,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const A = this.sky;
     A.ask.dark = fx.weather.dark;
     A.ask.wet = fx.weather.wet;
+    A.ask.fog = fx.weather.fog;
     A.update(dt);
     this.atlas.work(2.5, () => performance.now());
     const sky = this.stackSky;
@@ -560,8 +562,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     this.groundLayer!.waterTime = w.time % 3600;
 
     // the view: the camera point in the middle, origin snapped to whole device pixels (as mudders' Camera)
-    const cx = cam.x + ((Math.random() - 0.5) * cam.shake) / S;
-    const cy = cam.y + ((Math.random() - 0.5) * cam.shake) / S;
+    const cx = cam.x + cam.ox;
+    const cy = cam.y + cam.oy;
     this.vw = W;
     this.vh = H;
     this.ox = Math.round(W / 2 - cx * S);
@@ -589,6 +591,11 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       queueStacks(this, this.art, w, fx);
       this.atlas.pack();
       this.everything = false;
+    }
+    {
+      const casts = this.sunCast && sky.lit && A.shade > 0.03 && fx.quality > 0.3;
+      this.throwX = casts ? A.reach[0]! : 0;
+      this.throwY = casts ? A.reach[1]! : 0;
     }
     this.stacks.begin(view);
     queueStacks(this, this.art, w, fx);
@@ -667,6 +674,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       sky.traced = undefined;
     }
 
+    // ground fog: the air it lies in moves on, stirred by what drives and bursts in it
+    const foggy = this.groundFog && sky.lit ? (warm ? Math.max(A.now.fog, 0.5) : A.now.fog) : 0;
+    const drift: [number, number] = [7 + w.wind[0] * 0.5, 2.5 + w.wind[1] * 0.5];
+    if (foggy > 0.01) this.stir(w, fx, drift, W, H);
+    else this.fogT = w.time;
+
     // shockwaves bend the picture: while one is on screen the frame goes through the lens pass
     const lenses = this.gatherLenses(fx);
     const bent = lenses.length > 0 || warm;
@@ -727,6 +740,23 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     }
     this.stacks.flush(this.lights, sky);
     gl.disable(gl.DEPTH_TEST);
+    // the fog lies over the ground and the feet of everything on it; fire and smoke are over it
+    if (foggy > 0.01)
+      (this.fog ??= new FogPass(gl)).draw(
+        view,
+        this.lights,
+        this.relief!,
+        [w.w, w.h],
+        this.fluid!.pushed,
+        {
+          amount: foggy,
+          time: w.time,
+          wind: drift,
+          light: A.ground,
+          dark: A.now.dark,
+          sheets: fx.quality > 0.6 ? 3 : fx.quality > 0.35 ? 2 : 1,
+        },
+      );
 
     // particles: mudders' single cells, on the screen's fine grid (about 2 device px a cell).
     // Smoke first, fire over it, then the additive cells (sparks, embers, the hot core of a flame).
@@ -775,6 +805,81 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       }
       if (this.heat) this.meter.drawHeat(this.heat, W, H);
     }
+  }
+
+  /**
+   * Move the fog's air on to the race's clock (see FogFluid). Cars on the ground shove it aside
+   * and drag it after them, the faster the more; a rocket cuts a thin line; a blast blows a hole.
+   */
+  private stir(w: World, fx: Effects, wind: readonly [number, number], W: number, H: number): void {
+    const gl = this.gl;
+    if (!this.fluid) {
+      this.fluid = new FogFluid(gl);
+      this.fluid.reset(w.w, w.h);
+      this.fogT = w.time;
+    }
+    const S = this.stirs;
+    let n = 0;
+    const put = (
+      ax: number,
+      ay: number,
+      bx: number,
+      by: number,
+      vx: number,
+      vy: number,
+      r: number,
+      push: number,
+      clear: number,
+    ) => {
+      if (n >= MAX_STIRS) return;
+      const s = (S[n] ??= { ax: 0, ay: 0, bx: 0, by: 0, vx: 0, vy: 0, r: 0, push: 0, clear: 0 });
+      n++;
+      s.ax = ax;
+      s.ay = ay;
+      s.bx = bx;
+      s.by = by;
+      s.vx = vx;
+      s.vy = vy;
+      s.r = r;
+      s.push = push;
+      s.clear = clear;
+    };
+    for (const b of fx.blasts) if (b.age < 8) put(b.x, b.y, b.x, b.y, 0, 0, b.r * 3.4, 170, 1);
+    for (const c of w.cars) {
+      const speed = Math.hypot(c.vx, c.vy);
+      const was = this.stirAt.get(c.index);
+      // (not from the air, and a car put back on the road did not drive there)
+      if (c.z > 6 || speed < 10) continue;
+      const far = was ? Math.hypot(was[0] - c.x, was[1] - c.y) : 99;
+      const from = was && far < 70 ? was : [c.x, c.y];
+      put(
+        from[0]!,
+        from[1]!,
+        c.x,
+        c.y,
+        c.vx,
+        c.vy,
+        8 * c.size,
+        speed * 0.32,
+        Math.min(0.92, speed / 95),
+      );
+    }
+    for (const r of w.rockets) {
+      const vx = Math.cos(r.h) * r.v;
+      const vy = Math.sin(r.h) * r.v;
+      put(r.x - vx / 30, r.y - vy / 30, r.x, r.y, vx, vy, 4, 30, 0.6);
+    }
+    S.length = n;
+    const dt = Math.min(0.1, Math.max(0, w.time - this.fogT));
+    this.fogT = w.time;
+    if (this.fluid.advance(dt, S, wind, null, W, H, this.warming) > 0)
+      for (const c of w.cars) {
+        const at = this.stirAt.get(c.index);
+        if (at) {
+          at[0] = c.x;
+          at[1] = c.y;
+        } else this.stirAt.set(c.index, [c.x, c.y]);
+      }
   }
 
   /**

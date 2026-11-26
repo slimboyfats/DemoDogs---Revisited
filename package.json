@@ -46,6 +46,7 @@
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "tricks": "pnpm build && node scripts/capture-tricks.mjs",
     "ui": "pnpm build && node scripts/capture-ui.mjs",
+    "feel": "pnpm build && node scripts/capture-feel.mjs",
     "hitboxes": "pnpm build && node scripts/capture-hitboxes.mjs",
     "play:lesson": "pnpm build && node scripts/play-lesson.mjs",
     "bots": "node scripts/bot-lab.mjs",

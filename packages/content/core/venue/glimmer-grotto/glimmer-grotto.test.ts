@@ -12,7 +12,7 @@ describe('venue.glimmer-grotto', () => {
 
   it('is dark, and lit by what grows in it', () => {
     const w = makeWorld({ venue: 'venue.glimmer-grotto' });
-    expect(w.venue.weather?.[0]?.sky).toBe('night');
+    expect(w.venue.weather?.[0]?.sky).toBe('fog-night');
     const glow = w.statics.filter((s) => /crystal|glow-shroom|lantern/.test(s.def.id));
     expect(glow.length).toBeGreaterThan(300);
     expect(w.paths.length).toBeGreaterThan(4);
