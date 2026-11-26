@@ -4,6 +4,7 @@
 // road raises a new stretch; a stretch of surface, a bridge, an area and a pool are resized by
 // their handles. Screenshots go to captures/editor-drag/ (or the folder named), and with
 // --frames a frame for each step of every drag, made into drag.mp4.
+// The ground follows a raised stretch while the finger is still down, and that is checked too.
 // Run with `pnpm play:drag` (it builds first). DPR=2 for sharper pictures.
 import { createServer } from 'node:http';
 import { execFileSync } from 'node:child_process';
@@ -140,7 +141,7 @@ const finger = (type, p) =>
     touchPoints: p ? [{ x: p[0], y: p[1] }] : [],
   });
 /** Drag a finger across the screen (CSS px), resting on the spot first if asked to. */
-const drag = async (a, b, { rest = 0, steps = 8 } = {}) => {
+const drag = async (a, b, { rest = 0, steps = 8, mid = null } = {}) => {
   const to = (k) => [a[0] + ((b[0] - a[0]) * k) / steps, a[1] + ((b[1] - a[1]) * k) / steps];
   if (rest) {
     await finger('touchStart', a);
@@ -157,8 +158,16 @@ const drag = async (a, b, { rest = 0, steps = 8 } = {}) => {
     await finger('touchMove', to(k));
     await frame();
   }
+  // (what the world shows while the finger is still down)
+  if (mid) {
+    await page.waitForTimeout(150);
+    await mid();
+  }
   await finger('touchEnd');
-  await page.waitForTimeout(500);
+  // the world is built again from the track a moment after the finger lifts
+  await page.waitForTimeout(100);
+  await page.waitForFunction(() => window.__dd.editor.settled, null, { timeout: 120000 });
+  await page.waitForTimeout(200);
   await frame(4);
 };
 
@@ -177,6 +186,7 @@ await act('in');
 await act('in');
 
 // ---- raise a stretch, then drag its far end on down the road
+let live = 0;
 await tool('raise');
 const [r0, r1, r2] = [await road(0.3), await road(0.36), await road(0.46)];
 await centre(...(await road(0.38)));
@@ -185,7 +195,10 @@ await drag(await at(...r0), await at(...r1));
 let up = (await track()).raised;
 check(up.length === 1 && up[0].height === 20, `no stretch was raised: ${JSON.stringify(up)}`);
 await shot('1-raised-with-handles');
-await drag(await grip('to'), await at(...r2));
+await drag(await grip('to'), await at(...r2), {
+  mid: async () => (live = await stands(await road(0.42))),
+});
+check(live > 15, `the ground did not follow the end under the finger: it stood ${live}`);
 up = (await track()).raised;
 check(
   Math.hypot(up[0].x1 - r2[0], up[0].y1 - r2[1]) < 12 && up.length === 1,
@@ -203,7 +216,11 @@ check(
 
 // ---- lift it by its tab: up the screen is higher
 const tab = await grip('lift');
-await drag(tab, [tab[0], tab[1] - 62], { steps: 10 });
+await drag(tab, [tab[0], tab[1] - 62], {
+  steps: 10,
+  mid: async () => (live = await stands(await road(0.36))),
+});
+check(Math.abs(live - 32) < 1, `the ground did not rise under the finger: it stood ${live}`);
 check(
   (await track()).raised[0].height === 32,
   `the tab lifted it to ${(await track()).raised[0].height}`,

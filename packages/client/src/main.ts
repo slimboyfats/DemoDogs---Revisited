@@ -63,6 +63,7 @@ import type { TrackFile } from '@demodogs/shared';
 import {
   customVenueId,
   installTrack,
+  liftGround,
   rangeBlast,
   type Content,
   type Installed,
@@ -309,6 +310,11 @@ const editor = new TrackEditor(
       session = s;
       return s;
     },
+    ground: (t) =>
+      !!session &&
+      scene instanceof PixelScene &&
+      liftGround(session.world, t) &&
+      scene.reground(session.world),
     setZoom: (k) => {
       editShown = shown = k;
       scene.setScale(k);

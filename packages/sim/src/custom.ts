@@ -16,6 +16,9 @@ import {
 } from '@demodogs/shared';
 import { sceneryRefs, type Content } from './content';
 import { sampleTrack, type Track } from './track';
+import { leapPieces } from './leaps';
+import { FLAT_RELIEF, buildRelief } from './relief';
+import type { World } from './world';
 import { EDGE } from './shapes';
 
 /**
@@ -453,4 +456,46 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     laps: t.laps,
     dropped: [...dropped].sort(),
   };
+}
+
+/**
+ * The track creator, while a stretch of raised road is being dragged: the ground of a world built
+ * from this track, worked out again with the track's raised stretches as they are now, and put in
+ * the world's place of its own. The road must be the one the world was built on. Nothing else
+ * of the world changes (its rails and scenery stand where they stood), so the world is built
+ * again from the track when the drag is over. False when the world's ground cannot be raised
+ * this way: one with no road, or with flat ground and no height map at all.
+ */
+export function liftGround(w: World, t: TrackFile): boolean {
+  const T = w.track;
+  if (!T || !w.relief) return false;
+  const near = (x: number, y: number): number => {
+    let best = 0;
+    let bd = Infinity;
+    for (let i = 0; i < T.n; i++) {
+      const d = (T.x[i]! - x) ** 2 + (T.y[i]! - y) ** 2;
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    }
+    return best / T.n;
+  };
+  const raised = t.raised
+    .map((r) => ({ from: near(r.x0, r.y0), to: near(r.x1, r.y1), height: r.height }))
+    .filter((r) => r.from !== r.to);
+  const v = w.venue;
+  (w as { relief: World['relief'] }).relief = buildRelief(
+    v.relief ?? FLAT_RELIEF,
+    v.seed,
+    w.w,
+    w.h,
+    T,
+    w.road,
+    w.oval,
+    raised,
+    w.tuning,
+    leapPieces(v, w.content),
+  );
+  return true;
 }

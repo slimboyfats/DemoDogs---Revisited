@@ -140,6 +140,12 @@ export interface EditHooks {
   /** Race the track as it stands, then come back. */
   drive(t: TrackFile): void;
   exit(): void;
+  /**
+   * The raised stretches of the track have changed and nothing else has: raise and lower the
+   * ground of the world on show to match, there and then. False when that cannot be done in
+   * place (the world is then built again).
+   */
+  ground?(t: TrackFile): boolean;
   /** Whether things settle on the grid and the road's lanes, as last chosen on this device. */
   snap?: { get(): boolean; set(on: boolean): void };
 }
@@ -286,6 +292,15 @@ export class TrackEditor {
     to: [number, number];
   } | null = null;
   private hold: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * A drag has changed the track and the world is yet to be built again from it: that waits for
+   * a moment with no finger down, so letting go never stalls on it. (`settled` says it is done.)
+   */
+  private settling: ReturnType<typeof setTimeout> | null = null;
+  /** The raised road in hand has changed since the ground on show was last raised to match. */
+  private relift = false;
+  /** The ground on show is following the raised road in hand, so no stand-in is drawn for it. */
+  private lifted = false;
   /** The fingers on the map, and the two-finger pinch they make. */
   private readonly touches = new Map<number, { x: number; y: number }>();
   private pinch: { d: number; cx: number; cy: number } | null = null;
@@ -536,6 +551,8 @@ export class TrackEditor {
     this.carried = null;
     this.hover = null;
     this.unhold();
+    if (this.settling !== null) clearTimeout(this.settling);
+    this.settling = null;
     this.touches.clear();
     this.palette.show(null);
     this.root.classList.add('hidden');
@@ -810,7 +827,40 @@ export class TrackEditor {
     this.commit(light);
   }
 
-  private commit(light = false): void {
+  /** How long after a drag is let go the world is built again, if no finger comes down (ms). */
+  private static readonly SETTLE = 220;
+
+  /** Whether the world on show is built from the track as it stands (no build is waiting). */
+  get settled(): boolean {
+    return this.settling === null;
+  }
+
+  /** Build the world again soon: once no finger is down, and none has been for a moment. */
+  private settleSoon(): void {
+    if (this.settling !== null) clearTimeout(this.settling);
+    this.settling = setTimeout(() => {
+      this.settling = null;
+      if (this.drag || this.pinch || this.touches.size) this.settleSoon();
+      else this.build();
+    }, TrackEditor.SETTLE);
+  }
+
+  /**
+   * The ground on show follows the raised road in hand: lifted in place where that can be done
+   * (most of the time: a few ms), else the world is built again.
+   */
+  private reground(): void {
+    const t = this.track;
+    this.relift = false;
+    if (!t || !this.s || this.problems.length) return;
+    // (the world must be the track's own but for its raised road: a build that waits comes first)
+    if (this.settling !== null) this.build();
+    if (this.hooks.ground?.(t)) this.lifted = true;
+    else this.build();
+  }
+
+  /** `later`: the world is built again in a moment (after a drag), not before this returns. */
+  private commit(light = false, later = false): void {
     const t = this.track;
     if (!t) return;
     this.line = null;
@@ -821,13 +871,16 @@ export class TrackEditor {
     if (this.sel?.kind === 'area' && !t.areas[this.sel.index]) this.sel = null;
     this.problems = trackProblems(t);
     this.hooks.save(t);
-    if (!light) this.build();
+    if (later && !light && this.problems.length === 0) this.settleSoon();
+    else if (!light) this.build();
     this.showRow2();
   }
 
   /** Build the world again from the track. A road that cannot be raced keeps the old world. */
   private build(): void {
     const t = this.track;
+    if (this.settling !== null) clearTimeout(this.settling);
+    this.settling = null;
     if (!t || !this.s || this.problems.length) return;
     try {
       this.adopt(this.hooks.rebuild(installTrack(this.content, t)));
@@ -1259,6 +1312,7 @@ export class TrackEditor {
       this.history.remember(t);
       t.raised.push(raisedBetween(T, this.height, [x, y], [x, y]));
       d.changed = true;
+      this.relift = true;
       index = t.raised.length - 1;
     }
     if (this.tool !== 'raise' && this.tool !== 'hand') this.pick('raise');
@@ -1483,6 +1537,7 @@ export class TrackEditor {
         before();
         up.height = h;
         this.height = h;
+        this.relift = true;
         this.showRow2();
         return;
       }
@@ -1492,6 +1547,7 @@ export class TrackEditor {
       if (!moveEnd(T, tried, d.grip === 'from' ? 0 : 1, x, y, least)) return;
       before();
       Object.assign(s, tried);
+      if (g.kind === 'raised') this.relift = true;
     } else if (g.kind === 'bridge') {
       const b = t.bridges[g.index];
       if (!b) return;
@@ -1558,9 +1614,10 @@ export class TrackEditor {
     if (d.mode === 'pencil') {
       if (stroke) this.drawn(stroke);
     } else if (d.mode === 'lay' && d.moved) this.lay(d.from, d.to);
-    else if (d.changed) this.commit();
+    else if (d.changed) this.commit(false, true);
     else if (!d.moved && d.mode !== 'grip') this.use(...d.from);
     if (d.mode === 'grip') this.tap.style.cursor = '';
+    this.lifted = false;
   }
 
   private cancel(): void {
@@ -1568,7 +1625,8 @@ export class TrackEditor {
     this.drag = null;
     this.stroke = null;
     this.unhold();
-    if (d?.changed) this.commit();
+    this.lifted = false;
+    if (d?.changed) this.commit(false, true);
   }
 
   /** The pencil was lifted: make the line the road, if it can be one. */
@@ -1970,6 +2028,8 @@ export class TrackEditor {
     g.setLineDash([]);
 
     this.creep(dt);
+    // (once a frame at most, however many steps the finger took in it)
+    if (this.relift) this.reground();
     const all = this.tool === 'erase' || this.tool === 'hand';
     const road = this.tool === 'road' || all;
     const bad = this.problems.length > 0;
@@ -2072,8 +2132,9 @@ export class TrackEditor {
           const a = nearestSample(T, up.x0, up.y0).i;
           const b = nearestSample(T, up.x1, up.y1).i;
           const on = this.sel?.kind === 'raised' && this.sel.index === i;
-          if (on && this.drag?.grip === 'lift') {
-            // in hand: its shadow where it lies, and itself as high above it as it will stand
+          if (on && this.drag?.grip === 'lift' && !this.lifted) {
+            // in hand where the ground cannot follow it yet: its shadow where it lies, and
+            // itself as high above it as it will stand
             band(a, b, 'rgba(22,20,28,0.45)', false);
             band(a, b, '#ffd23d', true, up.height * v.scale * Math.cos(PITCH));
           } else band(a, b, '#ffd23d', on);

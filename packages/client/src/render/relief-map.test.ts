@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildRelief, sampleTrack } from '@demodogs/sim';
-import { bakeRelief } from './relief-map';
+import { bakeRelief, ReliefBake, reliefChange } from './relief-map';
 
 const W = 800;
 const T = sampleTrack(
@@ -48,5 +48,34 @@ describe('the picture-to-ground map', () => {
     for (let y = 0; y < 170; y++) if (px(400, y)[1]! < 100 && px(400, y)[2] === 0) dark++;
     expect(dark).toBeGreaterThan(2);
     expect(px(400, W - 1)[2]).toBe(255);
+  });
+
+  it('baked again in part after a stretch of road is raised, it is the map baked whole', () => {
+    const hilly = { hills: 14, wave: 300, banks: 24, from: 30, spread: 60, step: 12 };
+    const build = (raised: { from: number; to: number; height: number }[]) =>
+      buildRelief(hilly, 5, W, W, T, 60, null, raised);
+    const steps = [
+      [{ from: 0.05, to: 0.2, height: 20 }],
+      [{ from: 0.05, to: 0.2, height: 48 }],
+      [{ from: 0.05, to: 0.3, height: 12 }],
+      [{ from: 0.55, to: 0.7, height: 32 }],
+      [],
+    ];
+    const live = new ReliefBake(W, W, RISE);
+    let before = build([]);
+    live.bake(before);
+    for (const raised of steps) {
+      const now = build(raised);
+      const wrote = live.bake(now, reliefChange(before, now)!);
+      const whole = bakeRelief(now, W, W, RISE);
+      let off = 0;
+      for (let i = 0; i < whole.length; i++) if (whole[i] !== live.out[i]) off++;
+      expect(off).toBe(0);
+      // and where one stretch only changed its height, it was not the whole map that was gone over
+      if (raised[0]?.height === 48)
+        expect((wrote.x1 - wrote.x0) * (wrote.y1 - wrote.y0)).toBeLessThan(W * W * 0.6);
+      before = now;
+    }
+    expect(reliefChange(before, build([]))).toBeNull();
   });
 });
