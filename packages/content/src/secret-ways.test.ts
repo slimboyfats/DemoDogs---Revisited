@@ -1,60 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import type { World } from '@demodogs/sim';
+import { leapGaps, leapPieces, type World } from '@demodogs/sim';
 import { loadContent } from './index';
 import { makeWorld, put } from './testing';
 
-/** The race venues whose relief has a secret way: a raised trail that ends in a gap, and the trail past it. */
-const VENUES = [...loadContent().venue.values()].filter((v) => (v.relief?.trails.length ?? 0) >= 2);
+const C = loadContent();
+/** The race venues with a secret way: a takeoff, a gap and a landing across it. */
+const VENUES = [...C.venue.values()].filter((v) => leapGaps(leapPieces(v, C)).length > 0);
 
 /**
- * Drive the player up the trail before the first gap of venue `id` to its lip, flat out, boosting
- * over the last stretch or not, and say whether it came down on the far side or in the gap.
+ * Drive the player flat out up the takeoff of venue `id`'s first jump, from well back on the
+ * straight before it, boosting or not, and say whether it came down on the landing or in the gap.
  */
-function leap(id: string, boost: boolean): { far: boolean; gap: number } {
+function leap(id: string, boost: boolean): boolean {
   const w: World = makeWorld({ venue: id, rivals: 0 } as never);
   w.phase = 'race';
   const R = w.relief!;
-  const A = w.venue.relief!.trails[0]!.points;
-  const B = w.venue.relief!.trails[1]!.points;
-  const [lx, ly] = A[A.length - 1]!;
-  const [bx, by] = B[0]!;
-  // from where the trail leaves the road
-  const k = 0;
+  const [x0, y0, x1, y1] = leapGaps(leapPieces(w.venue, C))[0]!;
+  const a = Math.atan2(y1 - y0, x1 - x0);
+  const gap = Math.hypot(x1 - x0, y1 - y0);
   const c = w.player;
-  const [sx, sy] = A[k]!;
-  put(c, sx, sy, Math.atan2(A[k + 1]![1] - sy, A[k + 1]![0] - sx), 150);
-  const gap = Math.hypot(bx - lx, by - ly);
-  let j = k + 1;
-  for (let t = 0; t < 60 * 6; t++) {
-    while (j < A.length - 1 && Math.hypot(A[j]![0] - c.x, A[j]![1] - c.y) < 30) j++;
-    const past = (c.x - lx) * (bx - lx) + (c.y - ly) * (by - ly);
-    // (on the last straight, aim at the landing, as a driver would)
-    const close = Math.hypot(lx - c.x, ly - c.y) < 140;
-    const want = close
-      ? Math.atan2(by - c.y, bx - c.x)
-      : Math.atan2(A[j]![1] - c.y, A[j]![0] - c.x);
-    let d = want - c.h;
+  // a run-up as long as the straight before the lip: the takeoff and 60 px of path
+  put(c, x0 - Math.cos(a) * 188, y0 - Math.sin(a) * 188, a, 150);
+  for (let t = 0; t < 60 * 5; t++) {
+    const past = (c.x - x0) * Math.cos(a) + (c.y - y0) * Math.sin(a);
+    // (held on the line, as a driver would)
+    const off = -(c.x - x0) * Math.sin(a) + (c.y - y0) * Math.cos(a);
+    let d = a - c.h - off * 0.01;
     d = Math.atan2(Math.sin(d), Math.cos(d));
     w.step({
       steer: past > 0 ? 0 : Math.max(-1, Math.min(1, d * 3)),
       throttle: 1,
       brake: false,
-      boost: boost && past < 0 && Math.hypot(lx - c.x, ly - c.y) < 320,
+      boost: boost && past < 0,
       fire: false,
     });
-    if (past / gap > 24 && c.z < 0.5) {
-      const along = past / gap;
-      return { far: R.at(c.x, c.y) > 8, gap: along };
-    }
+    if (past > 24 && c.z < 0.5) return past > gap && R.at(c.x, c.y) > 6;
   }
-  return { far: false, gap };
+  return false;
 }
 
 describe('secret ways', () => {
   it('every big course has one', () => expect(VENUES.length).toBe(5));
   for (const v of VENUES)
     it(`${v.id}: the gap is cleared with boost and not without`, () => {
-      expect(leap(v.id, true).far).toBe(true);
-      expect(leap(v.id, false).far).toBe(false);
+      expect(leap(v.id, true)).toBe(true);
+      expect(leap(v.id, false)).toBe(false);
     });
 });

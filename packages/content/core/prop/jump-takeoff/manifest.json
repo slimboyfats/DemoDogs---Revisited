@@ -1,0 +1,25 @@
+{
+  "id": "prop.jump-takeoff",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Jump takeoff",
+    "description": "The first half of a jump: a block of raised ground that climbs to a sheer lip and throws a car off it. It looks like the way that leads onto it. Put a landing across a gap ahead of it.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 40,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 128,
+    "wide": 64
+  },
+  "leap": {
+    "way": "up",
+    "long": 128,
+    "wide": 64,
+    "high": 26,
+    "lift": 195,
+    "min": 80
+  }
+}

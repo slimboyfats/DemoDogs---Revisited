@@ -238,12 +238,12 @@ export type SimEvent =
   | { t: 'bounce'; car: number; prop: number; x: number; y: number; power: number }
   /**
    * A car drove onto a track tile (world.statics[prop]) at (x, y): a boost tile kicked it on, or
-   * a ramp threw it up, or a vent blew under it. `power` is the push, the speed it left the ramp
-   * at, or the vent's lift.
+   * a ramp threw it up, or a vent blew under it, or it pressed a switch. `power` is the push, the
+   * speed it left the ramp at, the vent's lift, or (a switch) how many gates it opened.
    */
   | {
       t: 'pad';
-      kind: 'boost' | 'jump' | 'vent';
+      kind: 'boost' | 'jump' | 'vent' | 'switch';
       car: number;
       prop: number;
       x: number;

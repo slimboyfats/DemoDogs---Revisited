@@ -190,6 +190,11 @@ export function resolveContent(src: ContentSource): Content {
   for (const p of out.prop.values()) {
     if (p.spills) need(p.id, 'material', p.spills.material);
     if (p.made) need(p.id, 'material', p.made);
+    for (const g of p.gives ?? []) need(p.id, 'pickup', g);
+    if (p.gate && (p.body !== 'static' || !p.solid))
+      problems.push(`${p.id}: a gate must be a solid static prop`);
+    if (p.leap && p.pad?.kind !== 'road')
+      problems.push(`${p.id}: a jump piece must be a piece of track (a pad of kind road)`);
     if (p.pad && (p.body !== 'static' || p.solid))
       problems.push(`${p.id}: a pad must be a static prop that is not solid`);
     if (p.trample && (p.body !== 'static' || p.solid))

@@ -30,6 +30,8 @@ export function stand(
   // (a piece of track laid off the road is ground, not a tile that does something)
   if (def.pad) (def.pad.kind === 'road' ? w.paths : w.pads).push(s);
   if (def.mound) w.mounds.push(s);
+  if (def.leap?.way === 'up' && def.leap.lift > 0) w.leaps.push(s);
+  if (def.gate) w.gates.push(s);
   return s;
 }
 

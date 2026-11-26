@@ -45,6 +45,8 @@ const scale = (hex: string, k: number): string =>
 export class Art {
   readonly wheels: Strip[];
   readonly pickup: Strip;
+  /** A secret way's crate (a pickup with `gives`). */
+  readonly secretPickup: Strip;
   readonly plank: Strip;
   /** A decoy thrown out for rockets to chase. */
   readonly squeaky: Strip;
@@ -68,6 +70,7 @@ export class Art {
   constructor(private readonly looks: Map<string, LookModule>) {
     this.wheels = [0, 1, 2].map((f) => this.make(kit.wheel(f), PALETTE, CAR_DETAIL));
     this.pickup = this.make(kit.PICKUP_BOX, PALETTE);
+    this.secretPickup = this.make(kit.SECRET_BOX, PALETTE);
     this.plank = this.make(kit.PLANK, PALETTE);
     this.squeaky = this.make(kit.SQUEAKY, PALETTE);
     this.link = this.make({ w: 2, h: 2, layers: 1, fn: () => 'bumper' }, PALETTE);

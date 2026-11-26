@@ -21,7 +21,11 @@ describe('venue.bonefish-bay', () => {
     for (const s of w.paths)
       expect(
         w.statics.some(
-          (o) => o.def.solid && !o.def.pad && Math.hypot(o.x - s.x, o.y - s.y) < o.def.radius + 6,
+          (o) =>
+            o.def.solid &&
+            !o.def.pad &&
+            !o.def.gate &&
+            Math.hypot(o.x - s.x, o.y - s.y) < o.def.radius + 6,
         ),
       ).toBe(false);
     expect(w.statics.filter((s) => s.def.id === 'prop.lighthouse').length).toBeGreaterThanOrEqual(

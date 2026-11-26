@@ -263,6 +263,8 @@ export interface StaticProp {
   hp?: number;
   /** It has come down: it is no longer in the way and no longer drawn. */
   down?: boolean;
+  /** A gate (see gates.ts): seconds it stays down for a switch that was pressed. */
+  openT?: number;
   /** Down, and to be built again (def.rebuild): seconds until it stands, and if it is on its way. */
   mendT?: number;
   mending?: boolean;
@@ -401,6 +403,8 @@ export interface Pickup {
   z: number;
   on: boolean;
   t: number;
+  /** A secret way's crate (a prop with `gives`): what it holds, every one, instead of a roll. */
+  gives?: readonly string[];
 }
 
 /** The bits of `Car.lamps`: head lamps left and right, tail lamps left and right. */

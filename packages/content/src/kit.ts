@@ -71,6 +71,22 @@ export const PICKUP_BOX: Part = {
   },
 };
 
+/** The crate of a secret way: bigger, yellow, black at its edges, a glowing band round it. */
+export const SECRET_BOX: Part = {
+  w: 11,
+  h: 11,
+  layers: 10,
+  fn: (x, y, z) => {
+    const ax = Math.abs(x);
+    const ay = Math.abs(y);
+    if (ax > 4.8 || ay > 4.8) return null;
+    const edge = Number(ax > 3.8) + Number(ay > 3.8) + Number(z === 0 || z === 9);
+    if (edge >= 2) return 'black';
+    if (z === 4 || z === 5) return 'light';
+    return 'hazard';
+  },
+};
+
 /** A decoy: a red rubber squeaky ball with a white band and a brass squeaker. */
 export const SQUEAKY: Part = {
   w: 4,

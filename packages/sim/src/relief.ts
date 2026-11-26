@@ -1,4 +1,5 @@
 import { DEFAULT_TUNING, type Tuning, type VenueManifest } from '@demodogs/shared';
+import type { LeapPiece } from './leaps';
 import type { Track } from './track';
 
 /**
@@ -180,10 +181,9 @@ const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
  * A venue's relief; banks rise in the infield too unless `infield` is false, and outside the loop
  * unless `outfield` is.
  */
-type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield' | 'outfield' | 'trails'> & {
+type Spec = Omit<NonNullable<VenueManifest['relief']>, 'infield' | 'outfield'> & {
   infield?: boolean;
   outfield?: boolean;
-  trails?: NonNullable<VenueManifest['relief']>['trails'];
 };
 type Raised = NonNullable<NonNullable<VenueManifest['track']>['raised']>[number];
 
@@ -361,6 +361,7 @@ export function buildRelief(
   oval: { cx: number; cy: number; rx: number; ry: number } | null,
   raised: readonly Raised[] = [],
   lanes: Lanes = DEFAULT_TUNING,
+  leaps: readonly LeapPiece[] = [],
 ): Relief {
   const R = new Relief(w, h);
   const C = Relief.CELL;
@@ -466,62 +467,56 @@ export function buildRelief(
       }
     }
   }
-  max = Math.max(max, layTrails(R, spec.trails ?? [], (half + SHOULDER + SIDE - reach) / SIDE));
+  max = Math.max(max, layLeaps(R, leaps, (half + SHOULDER + SIDE - reach) / SIDE));
   R.max = max + steps * spec.step;
   return R;
 }
 
 /**
- * Raised trails off the road, laid in the same grid as raised road (where both reach a point, the
- * higher wins): along each, its height between its points; across it, level to `wide` / 2 and
- * then down a sheer side. Where a trail ends high, the end is a sheer drop. The highest it stands.
+ * Jump pieces, laid in the same grid as raised road (where both reach a point, the higher wins):
+ * each a block `long` along its turn and `wide` across, square at its ends, level across and
+ * sheer at its sides; a takeoff climbs from nothing at its back to its height at its front, where
+ * it drops sheer, and a landing the other way about. The highest any stands.
  */
-function layTrails(R: Relief, trails: NonNullable<Spec['trails']>, far: number): number {
-  if (!trails.length) return 0;
+function layLeaps(R: Relief, leaps: readonly LeapPiece[], far: number): number {
+  if (!leaps.length) return 0;
   const C = Relief.CELL;
   const P = (R.plat ??= platOf(R, far));
   let max = 0;
-  for (const t of trails) {
-    const edge = t.wide / 2;
-    const rc = Math.ceil((edge + SIDE + 8) / C);
-    const pts = t.points;
-    // each point of the grid takes the height of the part of the trail it is nearest to
-    const near = new Map<number, [number, number]>();
-    for (let j = 0; j + 1 < pts.length; j++) {
-      const [ax, ay, ah] = pts[j]!;
-      const [bx, by, bh] = pts[j + 1]!;
-      const dx = bx - ax;
-      const dy = by - ay;
-      const L2 = dx * dx + dy * dy || 1;
-      const gx0 = Math.max(0, Math.floor(Math.min(ax, bx) / C) - rc);
-      const gx1 = Math.min(R.gw - 1, Math.ceil(Math.max(ax, bx) / C) + rc);
-      const gy0 = Math.max(0, Math.floor(Math.min(ay, by) / C) - rc);
-      const gy1 = Math.min(R.gh - 1, Math.ceil(Math.max(ay, by) / C) + rc);
-      for (let gy = gy0; gy <= gy1; gy++)
-        for (let gx = gx0; gx <= gx1; gx++) {
-          const x = gx * C;
-          const y = gy * C;
-          const u = clamp01(((x - ax) * dx + (y - ay) * dy) / L2);
-          const d = Math.hypot(ax + dx * u - x, ay + dy * u - y);
-          if (d > edge + SIDE * 2) continue;
-          const k = gy * R.gw + gx;
-          const had = near.get(k);
-          if (!had || d < had[0]) near.set(k, [d, ah + (bh - ah) * u]);
-        }
-    }
-    for (const [k, [d, top]] of near) {
-      const s = (edge + SIDE - d) / SIDE;
-      // (whichever stands higher here: this trail, or what is laid already)
-      const had =
-        P[k * 4 + 1]! * clamp01(P[k * 4]!) + P[k * 4 + 2]! * clamp01(P[k * 4]! + P[k * 4 + 3]!);
-      const v = top * clamp01(s);
-      if (v < had || (v === had && s <= P[k * 4]!)) continue;
-      P[k * 4] = s;
-      P[k * 4 + 1] = top;
-      P[k * 4 + 2] = 0;
-      P[k * 4 + 3] = 0;
-      if (R.hills[k]! + v > max) max = R.hills[k]! + v;
-    }
+  for (const p of leaps) {
+    const L = p.def.long / 2;
+    const W = p.def.wide / 2;
+    const cs = Math.cos(p.rot);
+    const sn = Math.sin(p.rot);
+    // (a landing is a takeoff turned about: along it from its tall end)
+    const dir = p.def.way === 'up' ? 1 : -1;
+    const rc = Math.ceil((Math.hypot(L, W) + SIDE * 2) / C);
+    const gx0 = Math.max(0, Math.round(p.x / C) - rc);
+    const gx1 = Math.min(R.gw - 1, Math.round(p.x / C) + rc);
+    const gy0 = Math.max(0, Math.round(p.y / C) - rc);
+    const gy1 = Math.min(R.gh - 1, Math.round(p.y / C) + rc);
+    for (let gy = gy0; gy <= gy1; gy++)
+      for (let gx = gx0; gx <= gx1; gx++) {
+        const dx = gx * C - p.x;
+        const dy = gy * C - p.y;
+        const u = (dx * cs + dy * sn) * dir;
+        const v = -dx * sn + dy * cs;
+        // how far inside the sides and the tall end (the low end meets the ground: no edge)
+        const e = Math.min(W - Math.abs(v), L - u);
+        if (e < -SIDE * 2 || u < -L - SIDE * 2) continue;
+        const s = (e + SIDE) / SIDE;
+        const top = p.def.high * clamp01((u + L) / (2 * L));
+        const k = gy * R.gw + gx;
+        const had =
+          P[k * 4 + 1]! * clamp01(P[k * 4]!) + P[k * 4 + 2]! * clamp01(P[k * 4]! + P[k * 4 + 3]!);
+        const h = top * clamp01(s);
+        if (h < had || (h === had && s <= P[k * 4]!)) continue;
+        P[k * 4] = s;
+        P[k * 4 + 1] = top;
+        P[k * 4 + 2] = 0;
+        P[k * 4 + 3] = 0;
+        if (R.hills[k]! + h > max) max = R.hills[k]! + h;
+      }
   }
   return max;
 }

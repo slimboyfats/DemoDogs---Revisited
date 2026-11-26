@@ -7,7 +7,8 @@ import type { Relief } from '@demodogs/sim';
  * `h * rise` art px further up the screen than flat ground would be. The ground canvas stays a
  * flat map; this is the map from the picture back to it: for every px of the picture, how many
  * rows further south the ground it shows lies (red), how the light falls on it (green, 128 is
- * flat ground) and whether it is the steep face of a drop seen from the front (blue). The shader
+ * flat ground) and whether it is the steep face of a drop seen from the front (blue), and for
+ * the face of a jump piece its look and turn (alpha, see leaps.ts). The shader
  * reads one texel of it and looks the colour up that far down the canvas, so hills, banks and
  * cliffs cost nothing a frame beyond that one read.
  *
@@ -22,7 +23,13 @@ import type { Relief } from '@demodogs/sim';
 export const FAR_SHADE = 26;
 export const FAR_DARK = 0.62;
 
-export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8Array {
+export function bakeRelief(
+  R: Relief,
+  w: number,
+  h: number,
+  rise: number,
+  faces: ((x: number, y: number) => number) | null = null,
+): Uint8Array {
   // the height of every px, read between the grid's points a row at a time
   const hh = new Float32Array(w * h);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) hh[y * w + x] = R.at(x + 0.5, y + 0.5);
@@ -86,6 +93,8 @@ export function bakeRelief(R: Relief, w: number, h: number, rise: number): Uint8
         out[k] = Math.min(255, y - j);
         out[k + 1] = g;
         out[k + 2] = face ? 255 : 0;
+        // (and the face of a jump piece is in the piece's own look: alpha says which)
+        out[k + 3] = face && faces ? faces(x + 0.5, y + 0.5) : 0;
       }
     }
   // the near edge of raised ground: its cut face down to the bottom of the map

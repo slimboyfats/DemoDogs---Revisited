@@ -16,6 +16,7 @@ import { TracedLight } from './traced-light';
 import { BeamHaze } from './beam-haze';
 import { ShadowLayer } from './shadow-layer';
 import { ReliefLayer } from './relief-layer';
+import { leapFaces } from '../leaps';
 import { ShadowMap, casts } from '../cast';
 import { pixels } from '../strips';
 import { Lights, MAX_CONES } from './lighting';
@@ -266,7 +267,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const m of w.mines)
       if (Math.floor(m.t * 4) % 2 && this.visible(m.x, m.y, 30)) L.add(m.x, m.y, 18, 0.8, 0xff2020);
     for (const p of w.pickups)
-      if (p.on && this.visible(p.x, p.y, 30)) L.add(p.x, p.y, 20, 0.45, 0x60f0ff);
+      if (p.on && this.visible(p.x, p.y, 30))
+        L.add(p.x, p.y, p.gives ? 26 : 20, p.gives ? 0.6 : 0.45, p.gives ? 0xffd040 : 0x60f0ff);
     this.glances(w, fx);
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
@@ -358,6 +360,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
         w.w,
         w.h,
         this.cosP / this.ys,
+        leapFaces(w),
       );
       this.stacks.relief = this.relief;
       this.groundLayer = new GroundLayer(gl, ground, this.relief);

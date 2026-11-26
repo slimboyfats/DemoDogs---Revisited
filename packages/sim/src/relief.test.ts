@@ -83,29 +83,31 @@ describe('relief', () => {
     expect(R.at(790, 590)).toBe(24);
   });
 
-  it('raises a trail off the road with sheer sides, climbing where its points say, and ending in a drop', () => {
-    const R = make({
-      ...spec,
-      banks: 0,
-      trails: [
-        {
-          wide: 40,
-          points: [
-            [260, 400, 0],
-            [400, 400, 30],
-            [500, 400, 30],
-          ],
-        },
-      ],
+  it('lays a jump: a takeoff climbing to a square, sheer lip, and a landing as high across the gap', () => {
+    const piece = (x: number, way: 'up' | 'down') => ({
+      x,
+      y: 400,
+      rot: 0,
+      def: { way, long: 120, wide: 60, high: 24, lift: 0, min: 80 },
     });
-    // half way up the climb, and level along the top
-    expect(R.at(330, 400)).toBeCloseTo(15, 0);
-    expect(R.at(450, 400)).toBeCloseTo(30, 0);
-    expect(R.at(450, 412)).toBeCloseTo(30, 0);
-    // the sides and the far end are sheer: full height, then nothing a few px on
-    expect(R.at(450, 400 + 20 + 12)).toBe(0);
-    expect(R.at(500 + 20 + 12, 400)).toBe(0);
-    expect(R.platAt(450, 400)).toBeCloseTo(30, 0);
-    expect(R.max).toBeCloseTo(30, 0);
+    const R = buildRelief({ ...spec, banks: 0 }, 1, 800, 800, null, 0, null, [], undefined, [
+      piece(300, 'up'),
+      piece(540, 'down'),
+    ]);
+    // the takeoff climbs from nothing at its back to its full height at its lip
+    expect(R.at(240, 400)).toBeCloseTo(0, 0);
+    expect(R.at(300, 400)).toBeCloseTo(12, 0);
+    expect(R.at(352, 400)).toBeGreaterThan(20);
+    // its sides and its lip are sheer, and square: a corner stands as high as the middle
+    expect(R.at(352, 400 + 24)).toBeGreaterThan(20);
+    expect(R.at(300, 400 + 30 + 12)).toBe(0);
+    expect(R.at(360 + 12, 400)).toBe(0);
+    expect(R.at(360 + 12, 400 + 24)).toBe(0);
+    // the gap, then the landing: full height at its back, down to nothing at its front
+    expect(R.at(420, 400)).toBe(0);
+    expect(R.at(488, 400)).toBeGreaterThan(20);
+    expect(R.at(540, 400)).toBeCloseTo(12, 0);
+    expect(R.at(600, 400)).toBeCloseTo(0, 0);
+    expect(R.max).toBeCloseTo(24, 0);
   });
 });

@@ -92,7 +92,7 @@ export function queueStacks(
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
   tickBones(w.time);
-  for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
+  for (const s of w.statics) if (!s.down || s.def.gate) queueStatic(R, art, w, fx, s, P, still);
   queueToppling(R, fx.toppling);
   // what has just come down, whole for the moment before it cracks apart
   for (const f of fx.wreck.falling) {
@@ -123,17 +123,12 @@ export function queueStacks(
   for (const p of w.pickups)
     if (p.on && R.visible(p.x, p.y, 8, 12 + p.z)) {
       R.group(p.y);
+      const box = p.gives ? art.secretPickup : art.pickup;
       // one that has just come back is built where it floats, slice by slice
-      const B = fx.slices.building(p, tall(art.pickup));
+      const B = fx.slices.building(p, tall(box));
       const z = p.z + 2.5 + Math.sin(t * 3 + p.x) * 1.5;
       if (B) B.base = z;
-      (B ? builder.into(R, B, fx.slices.now - B.t0) : R).stack(
-        art.pickup,
-        p.x,
-        p.y,
-        z,
-        t * 1.8 + p.y,
-      );
+      (B ? builder.into(R, B, fx.slices.now - B.t0) : R).stack(box, p.x, p.y, z, t * 1.8 + p.y);
     }
   for (const m of w.mines)
     if (R.visible(m.x, m.y, 6)) {
@@ -198,6 +193,10 @@ function queueStatic(
 ): void {
   if (s.def.pad) {
     queuePad(R, art, w, s);
+    return;
+  }
+  if (s.def.gate) {
+    queueGate(R, art, w, s);
     return;
   }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
@@ -270,6 +269,32 @@ function queueStatic(
   }
 }
 
+/** How far down each gate is drawn (0 standing, 1 sunk): it slides, where the sim just flips. */
+const sunk = new WeakMap<StaticProp, number>();
+/** How long a gate takes to sink or rise (s). */
+const GATE_SLIDE = 0.3;
+
+/**
+ * A gate (a pop-up bollard): sunk into the ground as far as it has slid, only what is above the
+ * ground drawn. It slides at its own pace from the client's clock, so it is ahead of the sim by
+ * nothing on the way down and lags it a little on the way up.
+ */
+function queueGate(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  const was = sunk.get(s) ?? (s.down ? 1 : 0);
+  const want = s.down ? 1 : 0;
+  const step = 1 / 60 / GATE_SLIDE;
+  const k = want > was ? Math.min(want, was + step) : Math.max(want, was - step);
+  sunk.set(s, k);
+  if (k >= 1 || !R.visible(s.x, s.y, s.def.radius + 4, 20)) return;
+  R.group(s.y);
+  const strip = art.prop(s.def.id);
+  const drop = (k * strip.n) / strip.res;
+  for (let i = 0; i < strip.n; i++) {
+    const z = i / strip.res - drop;
+    if (z >= 0) R.slice(strip, i, s.x, s.y, z, s.rot);
+  }
+}
+
 /** Steps of a tile's running light a second. */
 const PAD_RATE = 9;
 
@@ -278,6 +303,8 @@ const PAD_RATE = 9;
  * in turn); a ramp just stands there.
  */
 function queuePad(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  // (a jump piece is raised ground, painted with it: see leaps.ts)
+  if (s.def.leap) return;
   if (!R.visible(s.x, s.y, s.def.radius + 12, 12)) return;
   // under everything that drives over it
   R.group(s.y - 40);

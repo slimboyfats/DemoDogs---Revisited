@@ -2,6 +2,7 @@ import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/sha
 import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { pathAt } from './pads';
+import { leapGaps, leapPieces } from './leaps';
 import { putProp, stand } from './stand';
 import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
@@ -35,8 +36,8 @@ export function buildScenery(w: World, rng: Rng): void {
   // (nor, unless it was put there by hand, on the shoulder of raised road: that is the road's room)
   const half = w.road / 2;
   // (nor on a path laid off the road, which is road; nor out in a lake of something deep)
-  // (nor in the way of a car leaping a gap between two raised trails)
-  const leaps = gapsOf(w.venue.relief?.trails ?? []);
+  // (nor in the way of a car leaping the gap from a takeoff to its landing)
+  const leaps = leapGaps(leapPieces(w.venue, w.content));
   const blocked = (id: string, x: number, y: number): boolean => {
     const def = prop(id);
     if (def.pad || !def.solid) return false;
@@ -76,23 +77,6 @@ export function buildScenery(w: World, rng: Rng): void {
   layRails(w, rng);
   for (const rule of w.venue.scenery)
     apply(w, rng, rule, rule.rule === 'place' ? loose : add, weighted, prop);
-}
-
-/**
- * The gaps to be leapt between raised trails: from where one trail ends high to the start of the
- * next, which begins high (x0, y0, x1, y1, how wide).
- */
-export function gapsOf(
-  trails: readonly { wide: number; points: readonly (readonly [number, number, number])[] }[],
-): [number, number, number, number, number][] {
-  const out: [number, number, number, number, number][] = [];
-  for (let i = 0; i + 1 < trails.length; i++) {
-    const a = trails[i]!.points[trails[i]!.points.length - 1]!;
-    const b = trails[i + 1]!.points[0]!;
-    if (a[2] > 0 && b[2] > 0)
-      out.push([a[0], a[1], b[0], b[1], Math.max(trails[i]!.wide, trails[i + 1]!.wide)]);
-  }
-  return out;
 }
 
 /** A pool laid with the map that is wider than this (px) and drags hard is a lake: nothing is stood in it. */

@@ -1,5 +1,6 @@
 import { BASE_SPEED, DT } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
+import { pressSwitch } from './gates';
 import type { World } from './world';
 
 /**
@@ -53,12 +54,13 @@ export function ventOpen(w: World, s: StaticProp, lead = 0, t = w.time): boolean
 /** One tick of a car and the tiles: after it has driven, before it is collided. */
 export function updatePads(w: World, c: Car): void {
   if (c.surge > 0) c.surge = Math.max(0, c.surge - DT);
-  if (!w.pads.length) return;
+  if (!w.pads.length && !w.leaps.length) return;
   // in the air, or up on a deck: the tiles are on the ground
   if (c.wrecked || c.z - c.deck > 1.5 || c.deck > 0) {
     if (c.z - c.deck > 1.5) c.pad = -1;
     return;
   }
+  if (w.leaps.length && leapOff(w, c)) return;
   const s = padAt(w, c.x, c.y);
   if (!s) {
     c.pad = -1;
@@ -86,6 +88,11 @@ export function updatePads(w: World, c: Car): void {
   if (P.kind === 'road') return;
   if (c.pad === s.index) return;
   c.pad = s.index;
+  if (P.kind === 'switch') {
+    const n = pressSwitch(w, s.x, s.y, P.reach);
+    w.emit({ t: 'pad', kind: 'switch', car: c.index, prop: s.index, x: s.x, y: s.y, power: n });
+    return;
+  }
   const cs = Math.cos(s.rot);
   const sn = Math.sin(s.rot);
   const along = c.vx * cs + c.vy * sn;
@@ -103,6 +110,31 @@ export function updatePads(w: World, c: Car): void {
   c.vz = Math.max(c.vz, P.lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
   c.z = Math.max(c.z, c.deck + 0.7);
   w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
+}
+
+/** How far back from a takeoff's lip it throws a car (art px). */
+const LIP = 18;
+
+/**
+ * A takeoff's lip: a car on the last of it, going its way faster than its `min`, is thrown up
+ * at its `lift` (scaled by its speed as off a ramp tile). Whether it threw this one.
+ */
+function leapOff(w: World, c: Car): boolean {
+  for (const s of w.leaps) {
+    if (s.down || Math.abs(s.x - c.x) > 220 || Math.abs(s.y - c.y) > 220) continue;
+    const L = s.def.leap!;
+    const [u, v] = onPad(s, c.x, c.y);
+    if (u < L.long / 2 - LIP || u > L.long / 2 || Math.abs(v) > L.wide / 2) continue;
+    if (c.pad === s.index) return true;
+    const along = c.vx * Math.cos(s.rot) + c.vy * Math.sin(s.rot);
+    if (along < L.min) return false;
+    c.pad = s.index;
+    c.vz = Math.max(c.vz, L.lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
+    c.z = Math.max(c.z, c.deck + 0.7);
+    w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
+    return true;
+  }
+  return false;
 }
 
 /**

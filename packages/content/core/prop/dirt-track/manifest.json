@@ -12,6 +12,7 @@
   "pad": {
     "kind": "road",
     "long": 44,
-    "wide": 60
+    "wide": 60,
+    "skin": "dirt"
   }
 }

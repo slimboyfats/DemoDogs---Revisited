@@ -621,6 +621,26 @@ void main() {
   if (rl.b > 0.75) {
     float bed = mod(shift, 4.0) < 1.0 ? 0.72 : 1.0;
     float lum = dot(c, vec3(0.3, 0.5, 0.2));
+    // a jump piece's face is in its own look (leaps.ts): rock, wood, dirt or tarmac
+    float sk = floor(rl.a * 255.0 / 32.0 + 0.01);
+    if (sk > 0.5) {
+      // (across the face: along the ground, whichever way the piece is turned)
+      float ac = wp.x + wp.y * 0.35;
+      if (sk < 1.5) {
+        float row = floor(shift / 4.0);
+        float sv = ac + mod(row, 2.0) * 3.5;
+        float st = hash(vec2(floor(sv / 7.0), row));
+        c = mod(shift, 4.0) < 1.0 || mod(sv, 7.0) < 1.0 ? vec3(0.32, 0.31, 0.29) : vec3(0.58, 0.57, 0.53) * (0.82 + 0.3 * st);
+      } else if (sk < 2.5) {
+        float b = floor(ac / 5.0);
+        c = mod(ac, 5.0) < 0.9 ? vec3(0.24, 0.17, 0.11) : vec3(0.55, 0.41, 0.26) * (0.86 + 0.22 * hash(vec2(b, 3.0)));
+        if (mod(shift, 9.0) < 1.5) c = vec3(0.4, 0.3, 0.19);
+      } else if (sk < 3.5) {
+        c = vec3(0.47, 0.36, 0.24) * bed;
+      } else {
+        c = mod(shift, 6.0) < 1.0 ? vec3(0.42, 0.42, 0.43) : vec3(0.56, 0.56, 0.57);
+      }
+    } else
     c = mix(c, mix(vec3(0.38, 0.29, 0.21), vec3(0.34, 0.35, 0.38), tar) * (0.75 + 0.5 * lum), 0.85) * bed;
   }
   c = min(vec3(1.0), c * rl.g * (255.0 / 128.0));

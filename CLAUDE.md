@@ -150,12 +150,18 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
   that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
 - **A course is a venue with one big idea**, and its pieces are plain props, so the track creator places them all.
-  A shortcut is a run of path tiles (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`; kept in `w.paths`):
-  the ground under one is road to the sim (grip, speed, no off-course countdown) and scenery rules keep off it. On
-  the big courses it is a secret way: path tiles up on relief `trails` (raised ways off the road, sheer-sided, in the
-  same height map as raised road), climbing only once clear of the road, with a gap (`gapsOf` in sim/scenery.ts,
-  kept clear of scenery) jumped from big ramps. A gap of 180 px is cleared with boost and not without
-  (`secret-ways.test.ts`); miss it and the car drops to the ground and back to the road. A
+  A shortcut is a run of path tiles (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`, `prop.cobbles`, its
+  `skin` saying what it is laid in; kept in `w.paths`): the ground under one is road to the sim (grip, speed, no
+  off-course countdown) and scenery rules keep off it. On the big courses it is a secret way. Its jump is two props
+  with a `leap` (`prop.jump-takeoff`, `prop.jump-landing`): each is raised ground in the one height map, square and
+  sheer-sided, laid before anything else from the venue's `place` rules (sim/leaps.ts); the takeoff throws a car off
+  its lip, and a takeoff with a landing ahead is a gap scenery keeps out of (`leapGaps`). A gap of 150 px is cleared
+  with boost and not without (`secret-ways.test.ts`). The client draws no stack for them: their tops are painted on
+  the ground canvas and their faces by the ground's shader, in the look of the way each joins (render/leaps.ts:
+  a path's skin, the road's tarmac or dirt, else rock). A way can be shut by a `gate` (`prop.pop-bollard` keeps a
+  beat; `prop.switch-bollard` sinks for a few seconds when a `switch` pad near it, `prop.floor-switch`, is driven
+  over; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
+  `prop.secret-crate` (`gives`) is a yellow crate that hands over all it lists (a boost refill and rockets). A
   pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
   back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.

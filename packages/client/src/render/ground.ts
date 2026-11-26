@@ -20,6 +20,7 @@ import {
   type Rgb,
 } from './terrain';
 import { bakePaint, toneAt, type GroundPaint } from './ground-paint';
+import { paintLeaps } from './leaps';
 
 const TAU = Math.PI * 2;
 
@@ -281,6 +282,7 @@ export function makeGround(w: World): Ground {
     g.stroke();
   }
   dressVerge(g, w, r, F);
+  paintLeaps(g, w);
   if (paint) {
     const P = paint;
     return { cv, g, dirty: null, paint, tone: (x, y) => toneAt(w, P, F, x, y) };

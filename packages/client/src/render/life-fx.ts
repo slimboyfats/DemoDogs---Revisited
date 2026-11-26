@@ -154,6 +154,27 @@ export class LifeFx {
     if (e.t === 'pad') {
       const c = w.cars[e.car]!;
       const mine = c === w.player;
+      if (e.kind === 'switch') {
+        // a floor switch: a ring of blue sparks off the plate, and word that the gate is open
+        for (let i = 0; i < 36; i++) {
+          const a = (i / 36) * TAU;
+          const sp = rand(50, 90);
+          fx.emit(
+            'spark',
+            e.x,
+            e.y,
+            1,
+            Math.cos(a) * sp,
+            Math.sin(a) * sp,
+            rand(20, 60),
+            rand(0.4, 0.7),
+            1,
+            pick(BLUE),
+          );
+        }
+        if (mine) fx.text(e.x, e.y, e.power > 0 ? 'GATE OPEN!' : 'CLICK', '#6fd6ff', true);
+        return;
+      }
       if (e.kind === 'vent') {
         // thrown up by a geyser: the car goes up in a burst of water
         this.flying.add(c.index);
