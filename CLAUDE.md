@@ -28,6 +28,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
+| `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
