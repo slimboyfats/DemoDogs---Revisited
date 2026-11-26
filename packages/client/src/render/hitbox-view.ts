@@ -39,6 +39,20 @@ export type HitboxMode = 'off' | 'boxes' | 'heights';
 export const HITBOX_MODES: readonly HitboxMode[] = ['off', 'boxes', 'heights'];
 
 const TAU = Math.PI * 2;
+/** How high over a car's wheels a gun's round flies, art px: the middle of what the rule asks. */
+const ROUND_UP = 4.25;
+/** The heights the legend names, art px. */
+const LEVELS = [0, 2, 4, 7, 14, 28] as const;
+
+/**
+ * The colour of a height with HEIGHTS on: red on the ground, through yellow and green at a car's
+ * bonnet and roof, to blue and purple overhead. Two things in the same colour are at the same
+ * height, so one can hit the other.
+ */
+export function levelColour(z: number): string {
+  const hue = 300 * (1 - Math.exp(-Math.max(0, z) / 10));
+  return `hsl(${hue.toFixed(0)},100%,62%)`;
+}
 const COL = {
   car: '#ffe14a',
   solid: '#ff3b3b',
@@ -116,7 +130,7 @@ export class HitboxView {
     this.ground(w);
     this.statics(w, heights);
     this.loose(w, heights);
-    this.arms(w);
+    this.arms(w, heights);
     for (const c of w.cars) this.car(w, c, heights);
     this.legend(heights);
     ctx.restore();
@@ -176,28 +190,49 @@ export class HitboxView {
    * Shape Q as a thing with height: its outline on the ground, the same again `high` up, and
    * an upright at each corner between the two.
    */
-  private block(Q: Shape, z: number, high: number, col: string, wide: number): void {
+  private block(
+    Q: Shape,
+    z: number,
+    high: number,
+    col: string,
+    wide: number,
+    /** With this, coloured by height instead: how high its foot is over the thing's own. */
+    foot?: number,
+  ): void {
+    const tint = (up: number) => (foot === undefined ? col : levelColour(foot + up));
     this.outline(Q, z);
-    this.stroke(col, wide);
+    this.stroke(tint(0), wide);
     if (high < 1) return;
+    // (a tall thing coloured by height: a ring at each named height it passes on the way up)
+    if (foot !== undefined)
+      for (const L of LEVELS)
+        if (L > foot + 0.5 && L < foot + high - 0.5) {
+          this.outline(Q, z + L - foot);
+          this.stroke(levelColour(L), wide * 0.5);
+        }
     this.outline(Q, z + high);
-    this.stroke(col, wide * 0.6);
+    this.stroke(tint(high), wide * 0.6);
     const ctx = this.ctx;
-    ctx.beginPath();
-    for (let k = 0; k < 4; k++) {
-      // (a circle gets its four uprights at the quarters)
-      const round = Q.a === 0 && Q.b === 0;
-      const t = (k * Math.PI) / 2;
-      const lx = round ? Math.cos(t) * Q.r : (k & 1 ? -1 : 1) * (Q.a + Q.r * 0.7);
-      const ly = round ? Math.sin(t) * Q.r : (k & 2 ? -1 : 1) * (Q.b + Q.r * 0.7);
-      const x = Q.x + lx * Q.cs - ly * Q.sn;
-      const y = Q.y + lx * Q.sn + ly * Q.cs;
-      const a = this.at(x, y, z);
-      const b = this.at(x, y, z + high);
-      ctx.moveTo(a[0], a[1]);
-      ctx.lineTo(b[0], b[1]);
+    const steps = foot === undefined ? 1 : Math.min(12, Math.ceil(high / 2));
+    for (let n = 0; n < steps; n++) {
+      const lo = (high * n) / steps;
+      const hi = (high * (n + 1)) / steps;
+      ctx.beginPath();
+      for (let k = 0; k < 4; k++) {
+        // (a circle gets its four uprights at the quarters)
+        const round = Q.a === 0 && Q.b === 0;
+        const t = (k * Math.PI) / 2;
+        const lx = round ? Math.cos(t) * Q.r : (k & 1 ? -1 : 1) * (Q.a + Q.r * 0.7);
+        const ly = round ? Math.sin(t) * Q.r : (k & 2 ? -1 : 1) * (Q.b + Q.r * 0.7);
+        const x = Q.x + lx * Q.cs - ly * Q.sn;
+        const y = Q.y + lx * Q.sn + ly * Q.cs;
+        const a = this.at(x, y, z + lo);
+        const b = this.at(x, y, z + hi);
+        ctx.moveTo(a[0], a[1]);
+        ctx.lineTo(b[0], b[1]);
+      }
+      this.stroke(tint((lo + hi) / 2), wide * 0.5);
     }
-    this.stroke(col, wide * 0.5);
   }
 
   private ring(x: number, y: number, r: number, z = 0): void {
@@ -438,8 +473,8 @@ export class HitboxView {
       // its own top (a piece with no top: as tall as the thing is drawn)
       const drawn = heights ? Math.min(60, tall(this.art.prop(D.id))) : 0;
       for (let k = 0; k < pieces(D); k++) {
-        // (what a car cannot reach is drawn thinner, in the colour for things up off the ground,
-        // and only with HEIGHTS on)
+        // (what a car cannot reach is drawn thinner, and only with HEIGHTS on, where every piece
+        // is in the colour of its height)
         const up = pieceFoot(D, k) >= BODY_HIGH;
         if (!heights && up) continue;
         const foot = heights ? pieceFoot(D, k) : 0;
@@ -448,8 +483,9 @@ export class HitboxView {
           propShape(D, s.x, s.y, s.rot, S, k),
           lift + foot,
           heights ? Math.max(0, top - foot) : 0,
-          up ? COL.high : D.low !== undefined ? COL.low : COL.solid,
+          D.low !== undefined ? COL.low : COL.solid,
           up ? 1 : 1.5,
+          heights ? foot : undefined,
         );
       }
       if (heights && D.low !== undefined) this.text(`<${D.low}`, s.x, s.y, 0, COL.low, 7);
@@ -505,7 +541,7 @@ export class HitboxView {
   }
 
   /** Crates, mines and what is flying: how near a car has to come. */
-  private arms(w: World): void {
+  private arms(w: World, heights: boolean): void {
     for (const p of w.pickups)
       if (p.on && this.seen(p.x, p.y, 10)) {
         this.ring(p.x, p.y, PICKUP_REACH, p.z);
@@ -520,7 +556,7 @@ export class HitboxView {
     for (const r of w.rockets)
       if (this.seen(r.x, r.y, 10)) {
         this.ring(r.x, r.y, ROCKET_REACH, r.z);
-        this.stroke(COL.mine, 1.3);
+        this.stroke(heights ? levelColour(r.z) : COL.mine, 1.3);
       }
   }
 
@@ -568,7 +604,7 @@ export class HitboxView {
       for (const sg of [-1, 1]) {
         const off = sg * mount[1] * c.size;
         this.ring(mx - Math.sin(c.h) * off, my + Math.cos(c.h) * off, 0.6, mz);
-        this.stroke(COL.gun, 1.2);
+        this.stroke(levelColour(mz - c.z), 1.2);
       }
     }
     if (c !== w.player || !c.gun) return;
@@ -576,16 +612,17 @@ export class HitboxView {
     const ctx = this.ctx;
     ctx.beginPath();
     for (const sg of [-1, 1]) {
-      const a = this.at(c.x, c.y, c.z);
+      const a = this.at(c.x, c.y, c.z + ROUND_UP);
       const b = this.at(
         c.x + Math.cos(c.h + aim * sg) * range,
         c.y + Math.sin(c.h + aim * sg) * range,
-        c.z,
+        c.z + ROUND_UP,
       );
       ctx.moveTo(a[0], a[1]);
       ctx.lineTo(b[0], b[1]);
     }
-    this.stroke(COL.gun, 0.8, [4, 4]);
+    // (in the colour of the height its rounds fly at: what they can hit is in that colour too)
+    this.stroke(levelColour(ROUND_UP), 0.8, [4, 4]);
   }
 
   private legend(heights: boolean): void {
@@ -605,9 +642,8 @@ export class HitboxView {
     if (heights)
       rows.push(
         [COL.edge, 'ticks: a face too steep to climb'],
-        [COL.high, 'up off the ground (height)'],
         [COL.lamp, 'lamp'],
-        [COL.gun, 'gun muzzle and sights'],
+        ['', `height ${LEVELS.join(' ')}`],
       );
     ctx.font = `700 ${Math.round(8 * d)}px ui-monospace, Menlo, monospace`;
     ctx.textAlign = 'left';
@@ -623,10 +659,14 @@ export class HitboxView {
     rows.forEach(([col, label], i) => {
       const x = x0 + (i >= per ? 200 * d : 0);
       const y = y0 + (i % per) * 10 * d;
-      ctx.fillStyle = col;
-      ctx.fillRect(x, y - 2 * d, 10 * d, 4 * d);
+      // (the row for heights: a swatch a level, in the order the label names them)
+      const n = col ? 1 : LEVELS.length;
+      for (let k = 0; k < n; k++) {
+        ctx.fillStyle = col || levelColour(LEVELS[k]!);
+        ctx.fillRect(x + k * 7 * d, y - 2 * d, (col ? 10 : 6) * d, 4 * d);
+      }
       ctx.fillStyle = '#fff';
-      ctx.fillText(label, x + 14 * d, y);
+      ctx.fillText(label, x + (col ? 14 : n * 7 + 3) * d, y);
     });
   }
 }
