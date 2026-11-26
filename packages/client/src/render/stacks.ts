@@ -92,7 +92,16 @@ export function queueStacks(
   // a crown you are driving under thins out so you can see your car through it
   const P = w.player;
   tickBones(w.time);
-  for (const s of w.statics) if (!s.down) queueStatic(R, art, w, fx, s, P, still);
+  // a rail up a ramp lies along the ramp, each length tipped as the road climbs, so the run of
+  // them is one line and not a flight of steps
+  const railId = w.relief ? w.venue.track?.rail : undefined;
+  for (const s of w.statics) {
+    if (s.down) continue;
+    const tip = s.def.id === railId && R.tilt ? sloped(w, s) : null;
+    if (tip) R.tilt!(tip);
+    queueStatic(R, art, w, fx, s, P, still);
+    if (tip) R.tilt!(null);
+  }
   queueToppling(R, fx.toppling);
   // what has just come down, whole for the moment before it cracks apart
   for (const f of fx.wreck.falling) {
@@ -514,6 +523,24 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   R.tilt?.(null);
   // your own car, when it is dark enough to lose it: a pale line round the whole of it
   if (from !== undefined) R.rim?.(from, RIM);
+}
+
+const slope: Lie = { tx: 0, ty: 0, ax: 0, ay: 0, px: 0, py: 0, pz: 0, lift: 0 };
+
+/** How a long thing standing on a slope lies along it (the way it points), or null on the flat. */
+function sloped(w: World, s: StaticProp): Lie | null {
+  const cs = Math.cos(s.rot);
+  const sn = Math.sin(s.rot);
+  const d = Math.max(3, s.def.radius);
+  const g =
+    (w.relief!.at(s.x + cs * d, s.y + sn * d) - w.relief!.at(s.x - cs * d, s.y - sn * d)) / (2 * d);
+  if (Math.abs(g) < 0.02) return null;
+  const k = Math.max(-0.6, Math.min(0.6, g));
+  slope.tx = slope.ax = k * cs;
+  slope.ty = slope.ay = k * sn;
+  slope.px = s.x;
+  slope.py = s.y;
+  return slope;
 }
 
 /** How much more a car is drawn tipped than the ground under it slopes: it has to be seen. */

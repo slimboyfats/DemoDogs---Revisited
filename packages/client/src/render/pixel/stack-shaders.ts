@@ -196,12 +196,12 @@ float beam(vec2 wp, vec4 c, float gap) {
   float wide = 2.5 + along * 0.34;
   if (gap > 0.0) {
     across = abs(across - gap);
-    wide = 1.4 + along * 0.2;
+    wide = 2.0 + along * 0.27;
   }
   float side = across / wide;
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
-  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.15;
+  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.45;
 }${BLOCK_GLSL}`;
 
 export const STACK_FS = `#version 300 es
@@ -684,7 +684,8 @@ void main() {
     l += vec3(1.0, 0.93, 0.74) * clamp(lround(f, 4.0, b), 0.0, 1.5)
       * lightOpen(wp, 0.0, u_cone[n].xy + vec2(0.0, coneLift(u_coneh[n].w)), 5.0, 4.0 + coneLift(u_coneh[n].w), b);
   }
-  vec3 q = min(vec3(1.1), l);
+  // (too much light keeps its colour as it tops out: no ring of odd hues round a bright pool)
+  vec3 q = l * min(1.0, 1.1 / max(max(l.r, l.g), max(l.b, 0.001)));
   // (and what stands in the sun beside it throws some of its own colour back on it, in steps)
   vec3 back;
   float occ = 1.0;
