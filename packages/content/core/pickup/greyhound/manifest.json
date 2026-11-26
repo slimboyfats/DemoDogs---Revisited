@@ -1,0 +1,18 @@
+{
+  "id": "pickup.greyhound",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Greyhound",
+    "description": "A few seconds as a comet: the car steers itself flat out down the road, nothing can hurt it, and whatever it strikes is thrown out of its way.",
+    "since": "core@0.10.0"
+  },
+  "kind": "dash",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lead": 0.15,
+  "trail": 2.5,
+  "seconds": 3.5,
+  "pace": 1.55,
+  "amount": 10,
+  "factor": 210
+}

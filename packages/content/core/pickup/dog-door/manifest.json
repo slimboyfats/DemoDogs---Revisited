@@ -1,0 +1,16 @@
+{
+  "id": "pickup.dog-door",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Dog Door",
+    "description": "The car dives through a dog door and bursts out of another one up the road. In a derby it comes out right behind the nearest rival, at ramming speed.",
+    "since": "core@0.10.0"
+  },
+  "kind": "door",
+  "weight": 1,
+  "hurtWeight": 1,
+  "lead": 0.15,
+  "trail": 2.5,
+  "reach": 420,
+  "radius": 520
+}

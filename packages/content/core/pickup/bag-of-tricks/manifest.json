@@ -1,0 +1,24 @@
+{
+  "id": "pickup.bag-of-tricks",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Bag of Tricks",
+    "description": "A crate of toys: one of ten tricks that go off the moment the crate is opened, most of them on somebody else.",
+    "since": "core@0.10.0"
+  },
+  "kind": "tricks",
+  "weight": 0.2,
+  "hurtWeight": 0.16,
+  "kits": [
+    "pickup.party-balloons",
+    "pickup.dog-door",
+    "pickup.greyhound",
+    "pickup.mud-pie",
+    "pickup.sticky-paws",
+    "pickup.chasing-tails",
+    "pickup.best-friends",
+    "pickup.bouncy-ball",
+    "pickup.belly-flop",
+    "pickup.ghost-dog"
+  ]
+}

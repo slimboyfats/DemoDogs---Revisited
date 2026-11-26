@@ -154,6 +154,7 @@ export function makeCar(
     collar: null,
     fit: {},
     draft: false,
+    tricks: {},
   };
   for (const id of setup.fit ?? []) {
     const def = w.content.pickup.get(id);

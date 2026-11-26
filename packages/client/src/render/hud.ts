@@ -1,6 +1,7 @@
 import { ADDON_KINDS, BASE_SPEED, GUARD_KINDS, HELD } from '@demodogs/shared';
 import { rescueIn, type Car, type World } from '@demodogs/sim';
 import type { Effects } from './effects';
+import type { Splat } from './tricks-fx';
 import { DIAL_DEFAULT, dialSpot, type DialSetup } from '../game/speedo';
 
 const TAU = Math.PI * 2;
@@ -101,6 +102,8 @@ export class Hud {
     const ctx = this.ctx;
     const P = focus;
     const pad = 12 * u;
+    // a mud pie in the face goes on first, so that the dials can still be read through it
+    if (fx.tricks.mud > 0) mud(ctx, fx.tricks.splats, fx.tricks.mud, fx.tricks.mudFor, W, H);
     const left = pad + 46 * u;
     const font = (px: number) => `900 ${Math.round(px * u)}px system-ui, sans-serif`;
     const small = `800 ${Math.round(12 * u)}px system-ui, sans-serif`;
@@ -175,6 +178,8 @@ export class Hud {
       P.morph ? `${P.morph.def.kind === 'grow' ? 'BIG' : 'RUNT'} ${Math.ceil(P.morph.t)}s` : '',
       P.wind ? `WIND ${Math.ceil(P.wind.t)}s` : '',
       P.collar ? `COLLARED ${Math.ceil(P.collar.t)}s` : '',
+      // tricks at work on the car, its own or a rival's doing
+      ...trickLabels(P),
       // add-ons that run down or get used up; the rest can be seen on the car
       ...ADDON_KINDS.map((k) => {
         const f = P.fit[k];
@@ -257,6 +262,13 @@ export class Hud {
     if (back > 0 && !w.player.wrecked) {
       text('GET BACK ON THE ROAD', W / 2, H * 0.22, font(26), '#ff9a4a', 'center');
       text(String(Math.ceil(back)), W / 2, H * 0.38, font(64), '#ffd24a', 'center');
+    }
+    // a trick that takes the wheel out of your hands says so for as long as it lasts
+    const T = w.player.tricks;
+    if (!w.player.wrecked) {
+      if (T.dizzy) text('DIZZY: STEERING SWAPPED', W / 2, H * 0.2, font(24), '#ffe870', 'center');
+      else if (T.balloons) text('UP IN THE AIR', W / 2, H * 0.2, font(24), '#ff8a96', 'center');
+      else if (T.dash) text('GREYHOUND', W / 2, H * 0.2, font(24), '#ffc040', 'center');
     }
     if (this.dial.on) this.speedo(P, W, H, u, text);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
@@ -378,4 +390,72 @@ export class Hud {
     }
     ctx.textBaseline = 'top';
   }
+}
+
+/** What the tricks at work on a car are called on the status line. */
+function trickLabels(c: Car): string[] {
+  const T = c.tricks;
+  const s = (t: number) => `${Math.ceil(t)}s`;
+  return [
+    T.balloons ? `BALLOONS ${s(T.balloons.t)}` : '',
+    T.dash ? `GREYHOUND ${s(T.dash.t)}` : '',
+    T.splat ? `MUDDY ${s(T.splat.t)}` : '',
+    T.dizzy ? `DIZZY ${s(T.dizzy.t)}` : '',
+    T.pair ? `MAGNET ${s(T.pair.t)}` : '',
+    T.bumper ? `BOUNCY ${s(T.bumper.t)}` : '',
+    T.ghost ? `GHOST ${s(T.ghost.t)}` : '',
+  ];
+}
+
+/**
+ * Mud on the glass: each splat a ragged brown blot with runs going down from it, sliding down
+ * the screen as it thins, gone in the last moments of its `left` seconds out of `all`.
+ */
+function mud(
+  ctx: CanvasRenderingContext2D,
+  splats: readonly Splat[],
+  left: number,
+  all: number,
+  W: number,
+  H: number,
+): void {
+  const gone = 1 - left / all;
+  const fade = Math.min(1, left / 0.5);
+  const S = Math.min(W, H);
+  ctx.save();
+  for (const p of splats) {
+    const x = p.x * W;
+    const y = p.y * H + gone * H * 0.12;
+    const r = p.r * S * (1 - gone * 0.25);
+    for (const [k, col, a] of [
+      [1, '#33210f', 0.96],
+      [0.8, '#553a1c', 0.96],
+      [0.45, '#7c5a30', 0.9],
+    ] as const) {
+      ctx.globalAlpha = a * fade;
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      const n = 22;
+      for (let i = 0; i <= n; i++) {
+        const t = (i / n) * Math.PI * 2;
+        const q =
+          r * k * (1 + 0.22 * Math.sin(t * 3 + p.seed) + 0.14 * Math.sin(t * 7 + p.seed * 2.3));
+        ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(t) * q, y + Math.sin(t) * q * 0.9);
+      }
+      ctx.fill();
+    }
+    // the runs: three fat drips that lengthen as it slides
+    ctx.globalAlpha = 0.94 * fade;
+    ctx.fillStyle = '#402a13';
+    for (let i = -1; i <= 1; i++) {
+      const dx = x + i * r * 0.5 + Math.sin(p.seed + i) * r * 0.15;
+      const len = r * (0.7 + 0.5 * Math.abs(Math.sin(p.seed * 3 + i))) * (0.5 + gone * 1.6);
+      const wd = r * 0.13;
+      ctx.fillRect(dx - wd, y, wd * 2, len);
+      ctx.beginPath();
+      ctx.arc(dx, y + len, wd * 1.25, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 }
