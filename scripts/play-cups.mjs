@@ -71,7 +71,11 @@ async function round(name, ticks = 60 * 9) {
     const s = dd.session;
     for (let i = 0; i < 60 * 600 && s.world.phase !== 'over'; i++) s.step();
     dd.finish();
-    return { phase: s.world.phase, screen: dd.screen, title: resTitle.textContent };
+    return {
+      phase: s.world.phase,
+      screen: dd.screen,
+      title: document.getElementById('resTitle').textContent,
+    };
   });
   if (end.phase !== 'over' || end.screen !== 'results') fail(`${name}: ${JSON.stringify(end)}`);
   if (name) await shot(`${name}-results`);

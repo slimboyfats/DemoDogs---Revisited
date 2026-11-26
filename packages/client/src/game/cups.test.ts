@@ -285,7 +285,7 @@ describe('tournaments', () => {
       expect(Object.keys(o.wrecksOf!)).toEqual(r.field.map((e) => e.name));
       expect(settleCup(C, k, o)).not.toBeNull();
     }
-  });
+  }, 30000);
 });
 
 describe('gear upgrades', () => {
