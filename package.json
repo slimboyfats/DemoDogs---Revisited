@@ -32,6 +32,7 @@
     "life": "pnpm build && node scripts/capture-life.mjs",
     "bones": "pnpm build && node scripts/capture-bones.mjs",
     "bumps": "pnpm build && node scripts/capture-bumps.mjs",
+    "cars": "pnpm build && node scripts/capture-cars.mjs",
     "tracks": "pnpm build && node scripts/capture-tracks.mjs",
     "world": "pnpm build && node scripts/capture-world.mjs",
     "bridge": "pnpm build && node scripts/capture-bridge.mjs",
