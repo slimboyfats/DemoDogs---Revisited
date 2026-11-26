@@ -21,7 +21,7 @@ import {
 } from './terrain';
 import { bakePaint, toneAt, type GroundPaint } from './ground-paint';
 import { paintLeaps } from './leaps';
-import { WaterMap } from './water';
+import { WaterMap, poolTint } from './water';
 
 const TAU = Math.PI * 2;
 
@@ -70,8 +70,28 @@ export interface Ground {
    * other pool.
    */
   water: WaterMap | null;
+  /**
+   * The pools with a moving look of their own that are not water (lava, ice: a material's
+   * `look`), kept and drawn the same way (`poolOver` in the painter). Null with `water`.
+   */
+  pools: WaterMap | null;
   /** About what colour the ground is at (x, y), marks aside. */
   tone(x: number, y: number): Rgb;
+}
+
+/**
+ * A stretch of road surfaced in a material with a look of its own (sheet ice) is that same sheet
+ * as a pool of it is: laid into the pools' map along the road, so it is drawn the same way.
+ */
+function surfacePools(w: World, P: WaterMap): WaterMap {
+  const S = w.roadSurface;
+  const T = w.track;
+  if (!S || !T) return P;
+  for (let i = 0; i < T.n; i++) {
+    const m = S[i];
+    if (m?.look && !(w.deckH && w.deckH[i]! > 0)) P.pour(m, T.x[i]!, T.y[i]!, w.road / 2 - 2);
+  }
+  return P;
 }
 
 /**
@@ -216,7 +236,41 @@ export function makeGround(w: World): Ground {
     dressRoad(g, w, r, up);
     // stretches with a surface of their own: the road in that material's colour, roughened
     const S = w.roadSurface;
-    if (S)
+    if (S && bare) {
+      // (where the renderer paints the ground a stretch is one clean band of the material's
+      // colour, with two paler wheel tracks: no speckle. Ice and lava are not laid here at all:
+      // they are pools with a look of their own, see `surfacePools`)
+      const runs: number[][] = [];
+      for (let i = 0; i < T.n; i++) {
+        const m = S[i];
+        if (!m || up(i) || m.look) continue;
+        const last = runs[runs.length - 1];
+        if (last && last[last.length - 1] === i - 1 && S[i - 1] === m) last.push(i);
+        else runs.push([i]);
+      }
+      for (const run of runs) {
+        const m = S[run[0]!]!;
+        const rgb = parseInt(m.colour.slice(1), 16);
+        const col = (k: number): string =>
+          `rgb(${Math.min(255, ((rgb >> 16) & 255) * k) | 0},${Math.min(255, ((rgb >> 8) & 255) * k) | 0},${Math.min(255, (rgb & 255) * k) | 0})`;
+        const line = (width: number, off: number, style: string, alpha: number): void => {
+          g.beginPath();
+          for (const i of run) {
+            const a = T.a[i]!;
+            g.lineTo(T.x[i]! - Math.sin(a) * off, T.y[i]! + Math.cos(a) * off);
+          }
+          g.lineCap = 'butt';
+          g.lineWidth = width;
+          g.strokeStyle = style;
+          g.globalAlpha = alpha;
+          g.stroke();
+        };
+        line(road - 3, 0, col(groundMode.bright ? 1.12 : 1), Math.max(0.85, m.alpha));
+        for (const side of [-1, 1]) line(9, side * road * 0.22, col(1.24), 0.5);
+        g.globalAlpha = 1;
+        g.lineCap = 'round';
+      }
+    } else if (S)
       for (let i = 0; i < T.n; i++) {
         const m = S[i];
         if (!m || up(i)) continue;
@@ -327,6 +381,7 @@ export function makeGround(w: World): Ground {
       dirty: null,
       paint,
       water: WaterMap.of(w),
+      pools: surfacePools(w, WaterMap.of(w, poolTint)),
       tone: (x, y) => toneAt(w, P, F, x, y),
     };
   }
@@ -348,7 +403,7 @@ export function makeGround(w: World): Ground {
     for (let i = 0; i < d.length; i += 4) for (let c = 0; c < 3; c++) out[c]! += d[i + c]! / 16;
     return out;
   };
-  return { cv, g, dirty: null, paint: null, water: null, tone };
+  return { cv, g, dirty: null, paint: null, water: null, pools: null, tone };
 }
 
 /**

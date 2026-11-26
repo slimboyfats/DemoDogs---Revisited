@@ -34,6 +34,7 @@ export function fmtTime(t: number): string {
 /** What the speedometer says is holding the car back, most telling first. */
 const HELD_SAYS: [number, string][] = [
   [HELD.wet, 'WADING'],
+  [HELD.hot, 'IN THE LAVA!'],
   [HELD.sticky, 'STUCK IN THE MUCK'],
   [HELD.rough, 'OFF ROAD'],
   [HELD.hill, 'UPHILL'],

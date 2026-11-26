@@ -368,7 +368,7 @@ export class Effects {
     // the pools the map starts with
     // (water is not painted on: the ground's painter draws it from the water map, see water.ts)
     for (const s of w.spills)
-      if (s.fixed && !(s.def.water && ground.water)) {
+      if (s.fixed && !(s.def.water && ground.water) && !(s.def.look && ground.pools)) {
         if (s.r > TERRAIN_FROM) this.terrain(s.def, s.x, s.y, s.r);
         else this.pool(s.def, s.x, s.y, s.r);
       }
@@ -970,6 +970,66 @@ export class Effects {
     }
   }
 
+  /** Seconds each car's tyres stay alight after it has come out of lava. */
+  private readonly alight: number[] = [];
+
+  /**
+   * A car in lava burns where it stands, boldly: flames up round the whole body, sparks and a
+   * column of black smoke, and when it gets out its tyres stay alight for a moment and trail
+   * fire. On ice it throws up chips of ice from under the wheels and leaves no rut. Returns
+   * whether the ground under it is such a pool (nothing to mark, no dust to raise).
+   */
+  private poolFx(c: Car, i: number, cs: number, sn: number): boolean {
+    const hot = (c.scald ?? 0) > 0;
+    const lit = (this.alight[i] ?? 0) > 0;
+    const k = c.size;
+    const L = c.def.body.halfLength * k;
+    const W = c.def.body.halfWidth * k;
+    const q = this.quality;
+    if (hot) this.alight[i] = 1.6;
+    else if (lit) this.alight[i]! -= DT;
+    if ((hot || lit) && !c.wrecked && this.near(c.x, c.y, 280)) {
+      const n = hot ? 3 : 1;
+      for (let j = 0; j < n; j++) {
+        if (roll() > (hot ? 0.9 : 0.6) * q) continue;
+        // (out of the lava it is the four wheels that burn)
+        const fx = hot ? rand(-1, 1) : roll() < 0.5 ? -0.7 : 0.7;
+        const fy = hot ? rand(-1, 1) : roll() < 0.5 ? -1 : 1;
+        const x = c.x + cs * L * fx - sn * W * fy;
+        const y = c.y + sn * L * fx + cs * W * fy;
+        this.flame(x, y, c.z + (hot ? rand(0, 4) : 0), hot ? rand(3, 5) : 2.2, c.vx * 0.5, c.vy * 0.5);
+      }
+      if (hot) {
+        if (roll() < 0.5 * q) this.plume(c.x, c.y, c.z + 6, rand(3, 5));
+        if (roll() < 0.4 * q) this.spark(c.x + rand(-L, L), c.y + rand(-W, W), c.z + 2, 30);
+        if (roll() < 0.25 * q) this.ember(c.x, c.y, c.z + 4);
+      } else if (roll() < 0.3 * q) this.puff(c.x, c.y, c.z + 2, 'smoke');
+    }
+    if (hot) return true;
+    const P = this.ground.pools;
+    if (!P || c.deck > 0 || c.z - c.deck > 0.5 || P.depth(c.x, c.y) <= 0) return false;
+    // (not lava, so ice) chips fly from under the wheels when it slides or is driven hard
+    const v = Math.hypot(c.vx, c.vy);
+    if (v > 30 && this.near(c.x, c.y, 260) && roll() < (c.sliding ? 0.9 : 0.35) * q) {
+      const side = roll() < 0.5 ? -1 : 1;
+      const end = roll() < 0.5 ? -0.7 : 0.7;
+      const a = rand(0, TAU);
+      this.emit(
+        'pip',
+        c.x + cs * L * end - sn * W * side,
+        c.y + sn * L * end + cs * W * side,
+        0.5,
+        c.vx * 0.3 + Math.cos(a) * 18,
+        c.vy * 0.3 + Math.sin(a) * 18,
+        rand(20, 45),
+        rand(0.3, 0.6),
+        roll() < 0.3 ? 1 : 0.5,
+        roll() < 0.5 ? 0xffffff : 0xcfeaf8,
+      );
+    }
+    return true;
+  }
+
   /** Whether each car was in water a tick ago, and how high over the ground it was. */
   readonly wetWas: boolean[] = [];
   private readonly highWas: number[] = [];
@@ -1070,10 +1130,8 @@ export class Effects {
 
   /** Water is poured into the ground's water map, where there is one, not blotted on. */
   private pour(m: MaterialManifest, x: number, y: number, r: number): boolean {
-    const W = this.ground.water;
-    if (!W || !m.water) return false;
-    W.pour(m, x, y, r);
-    return true;
+    // (and so is a pool with a look of its own: lava, ice)
+    return !!(this.ground.water?.pour(m, x, y, r) || this.ground.pools?.pour(m, x, y, r));
   }
 
   pool(m: MaterialManifest, x: number, y: number, r: number): void {
@@ -1349,6 +1407,28 @@ export class Effects {
           if (this.near(c.x, c.y, 320)) S.whoosh();
           if (e.car === w.player.index) this.setMsg('BACK ON THE ROAD', 1.4);
           else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'LIFTED BACK', '#9fe8ff');
+          break;
+        }
+        case 'scald': {
+          // into the lava: a great hiss, a burst of flame and sparks, and it says so
+          const c = w.cars[e.car]!;
+          const v = this.vol(e.x, e.y);
+          if (e.out) {
+            if (v > 0) S.hiss(0.3 * v);
+            break;
+          }
+          for (let k = 0; k < 6; k++)
+            this.flame(e.x + rand(-7, 7), e.y + rand(-5, 5), c.z, rand(4, 6));
+          for (let k = 0; k < 14; k++) this.spark(e.x, e.y, 2, 90);
+          for (let k = 0; k < 4; k++) this.plume(e.x + rand(-5, 5), e.y + rand(-5, 5), 4, 5);
+          if (v > 0) {
+            S.hiss(0.9 * v, true);
+            S.hiss(0.6 * v);
+          }
+          if (e.car === w.player.index) {
+            this.setMsg('OUCH! LAVA BURNS', 1.4);
+            this.shake = Math.max(this.shake, 3);
+          } else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'SIZZLE!', '#ffb03a');
           break;
         }
         case 'land':
@@ -2222,7 +2302,8 @@ export class Effects {
       const down = c.deck < 1 && c.z - c.deck < 0.5 && !c.wrecked;
       const last = (this.ruts[i] ??= [0, 0, 0, 0, 0]);
       // in water there is no ground to mark and no dust to raise: it wades, with a wake
-      const wet = this.wade(c, i, cs, sn);
+      // (nor on lava or ice: it burns, or throws up chips of ice)
+      const wet = this.wade(c, i, cs, sn) || this.poolFx(c, i, cs, sn);
       if (wet) last[4] = 0;
       else if (down && (c.sliding || soft)) {
         const g = this.ground.g;

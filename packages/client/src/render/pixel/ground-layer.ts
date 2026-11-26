@@ -28,6 +28,7 @@ export class GroundLayer {
   /** The textures a ground the shader paints itself is painted from: noise, nearest, samples, far. */
   private readonly paintTex: WebGLTexture[] = [];
   private waterTex: WebGLTexture | null = null;
+  private poolTex: WebGLTexture | null = null;
   /** The water's clock, s: the page's own, wrapped so the shader's sums stay small. */
   waterTime = 0;
 
@@ -126,11 +127,16 @@ export class GroundLayer {
       gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
     }
     // the water: read between its texels, so a shore is a smooth line
-    const M = ground.water;
-    if (M) {
-      this.waterTex = texture(gl, gl.LINEAR);
+    for (const [M, pools] of [
+      [ground.water, false],
+      [ground.pools, true],
+    ] as const) {
+      if (!M) continue;
+      const t = texture(gl, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, M.gw, M.gh, 0, gl.RGBA, gl.UNSIGNED_BYTE, M.data);
       M.dirty = null;
+      if (pools) this.poolTex = t;
+      else this.waterTex = t;
     }
     this.prog = compile(gl, ...groundSources(ground, !!relief?.map));
     this.u = uniforms(gl, this.prog, [
@@ -168,13 +174,16 @@ export class GroundLayer {
 
   /** Copy up whatever was painted since the last frame. */
   sync(): void {
-    const M = this.ground.water;
-    if (M?.dirty && this.waterTex) {
+    for (const [M, tex] of [
+      [this.ground.water, this.waterTex],
+      [this.ground.pools, this.poolTex],
+    ] as const) {
+      if (!M?.dirty || !tex) continue;
       // water that was poured or has spread: the rows of its box, whole
       const gl = this.gl;
       const [x0, y0, x1, y1] = M.dirty;
       M.dirty = null;
-      gl.bindTexture(gl.TEXTURE_2D, this.waterTex);
+      gl.bindTexture(gl.TEXTURE_2D, tex);
       gl.pixelStorei(gl.UNPACK_ROW_LENGTH, M.gw);
       gl.texSubImage2D(
         gl.TEXTURE_2D,
@@ -291,6 +300,11 @@ export class GroundLayer {
       gl.uniform1i(u.u_wm, 13);
       gl.uniform2f(u.u_wmSize, M?.gw ?? 1, M?.gh ?? 1);
       gl.uniform2f(u.u_wt, this.waterTime, M?.any ? 1 : 0);
+      const Q = this.ground.pools;
+      gl.activeTexture(gl.TEXTURE14);
+      gl.bindTexture(gl.TEXTURE_2D, this.poolTex ?? this.tex);
+      gl.uniform1i(u.u_pm, 14);
+      gl.uniform3f(u.u_pmSize, Q?.gw ?? 1, Q?.gh ?? 1, Q?.any ? 1 : 0);
     }
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this.tex);
@@ -315,6 +329,7 @@ export class GroundLayer {
     this.gl.deleteTexture(this.tex);
     for (const t of this.paintTex) this.gl.deleteTexture(t);
     this.gl.deleteTexture(this.waterTex);
+    this.gl.deleteTexture(this.poolTex);
     this.gl.deleteVertexArray(this.vao);
   }
 }

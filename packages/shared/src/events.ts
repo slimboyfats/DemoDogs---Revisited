@@ -36,6 +36,8 @@ export type SimEvent =
   | { t: 'rescue'; car: number; x: number; y: number }
   /** A car drove or fell into water too deep to wade at (x, y), and is going under. */
   | { t: 'sink'; car: number; x: number; y: number }
+  /** A car drove into a pool that scalds (lava) at (x, y); `out` when it leaves it again. */
+  | { t: 'scald'; car: number; x: number; y: number; out?: boolean }
   | { t: 'land'; car: number; impact: number }
   /** z: up on a deck, art px; absent on the ground. */
   | { t: 'explode'; x: number; y: number; power: number; z?: number }
