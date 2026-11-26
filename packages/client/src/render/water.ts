@@ -84,7 +84,8 @@ export class WaterMap {
   static of(w: World, tint: Tint = waterTint): WaterMap {
     const M = new WaterMap(w.w, w.h, tint);
     for (const s of w.spills) M.pour(s.def, s.x, s.y, s.r);
-    if (M.any) M.stand(w);
+    // (what stands on lava or ice stands on it, not in it: only water laps round a foot)
+    if (M.any && tint === waterTint) M.stand(w);
     M.settle();
     return M;
   }

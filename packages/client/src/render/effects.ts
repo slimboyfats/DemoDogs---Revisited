@@ -989,7 +989,7 @@ export class Effects {
     if (hot) this.alight[i] = 1.6;
     else if (lit) this.alight[i]! -= DT;
     if ((hot || lit) && !c.wrecked && this.near(c.x, c.y, 280)) {
-      const n = hot ? 3 : 1;
+      const n = hot ? 5 : 1;
       for (let j = 0; j < n; j++) {
         if (roll() > (hot ? 0.9 : 0.6) * q) continue;
         // (out of the lava it is the four wheels that burn)
@@ -997,7 +997,14 @@ export class Effects {
         const fy = hot ? rand(-1, 1) : roll() < 0.5 ? -1 : 1;
         const x = c.x + cs * L * fx - sn * W * fy;
         const y = c.y + sn * L * fx + cs * W * fy;
-        this.flame(x, y, c.z + (hot ? rand(0, 4) : 0), hot ? rand(3, 5) : 2.2, c.vx * 0.5, c.vy * 0.5);
+        this.flame(
+          x,
+          y,
+          c.z + (hot ? rand(0, 4) : 0),
+          hot ? rand(5, 8) : 3,
+          c.vx * 0.5,
+          c.vy * 0.5,
+        );
       }
       if (hot) {
         if (roll() < 0.5 * q) this.plume(c.x, c.y, c.z + 6, rand(3, 5));
