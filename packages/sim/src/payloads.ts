@@ -25,7 +25,47 @@ export function lockOn(w: World, r: Rocket): void {
       best = c.index;
     }
   }
+  if (best < 0 && L.road && w.kind === 'race' && w.track) {
+    // nobody in its sights: the next car up the road, if that is not too far round
+    const from = w.cars[r.owner]!;
+    let gap = L.range * 2;
+    for (const c of w.cars) {
+      if (c.index === r.owner || c.wrecked || c.finished || c.invuln > 0 || hidden(c)) continue;
+      const d = c.progress - from.progress;
+      if (d > 0 && d < gap) {
+        gap = d;
+        best = c.index;
+      }
+    }
+  }
   if (best >= 0) r.target = best;
+}
+
+/** How near its target a road-following rocket leaves the road and flies straight at it. */
+const CLOSE = 130;
+
+/**
+ * Where a rocket locked onto `c` steers: at the car, or, for one that follows the road
+ * (`lock.road`) while the car is still a way off, at the road ahead of itself.
+ */
+export function aimAt(w: World, r: Rocket, c: Car, out: { x: number; y: number }): void {
+  out.x = c.x;
+  out.y = c.y;
+  const T = w.track;
+  if (!T || r.idx === undefined || !r.def.lock?.road) return;
+  if (Math.hypot(c.x - r.x, c.y - r.y) < CLOSE) return;
+  let i = r.idx;
+  for (let k = 0; k < 8; k++) {
+    const j = (i + 1) % T.n;
+    if (Math.hypot(T.x[j]! - r.x, T.y[j]! - r.y) > Math.hypot(T.x[i]! - r.x, T.y[i]! - r.y)) break;
+    i = j;
+  }
+  r.idx = i;
+  // (once it is past the car it turns and flies at it)
+  if ((((T.s[c.idx]! - T.s[i]!) % T.len) + T.len) % T.len > T.len / 2) return;
+  const j = (i + Math.ceil(44 / T.step)) % T.n;
+  out.x = T.x[j]!;
+  out.y = T.y[j]!;
 }
 
 /** The car a rocket is locked onto, while that car is still running; the lock drops otherwise. */

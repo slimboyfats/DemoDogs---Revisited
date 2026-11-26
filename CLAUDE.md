@@ -31,6 +31,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
+| `pnpm pack [out-dir] [venue] [--frames]`                        | a race of eight with what keeps it close set off in it: Runt Ray, Bloodhound, Sniffers (`captures/pack/`)     |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
@@ -123,6 +124,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `Car.tricks`): they come out of one crate, `pickup.bag-of-tricks`, which rolls its `kits` by their own odds, so a
   new trick is a pickup folder and a line in that list, not a line in every venue. The client's side is
   render/tricks-fx.ts (one `trick` SimEvent: on, off, use).
+- **What keeps a race a pack is in one place** (sim/catchup.ts, sim/hunt.ts): a race's field is the mode's `field`
+  (8), a crate's odds lean by the car's place or by how far off the front it is (`place`), rivals are banded to the
+  humans by degrees (`band` in the racer AI), and the items do the rest: the Runt Ray on every other car, the
+  Bloodhound (`w.hunters`, a rocket up the road to the car in front), Sniffers that follow the road (`lock.road`).
+  A car towed or put back finds its feet (`Car.fresh`, `freshen`): safe from harm and slow for a few seconds.
 - **Rival drivers are built from the AI kit** (sim/ai-kit.ts): `thingsAhead` gathers what is in the way and what is
   worth having as plain `Thing`s (a place, a size, a weight), `pickPath` / `pickHeading` weigh a fan of ways past
   them, `cornerSpeed` reads the racing line (sim/line.ts, `world.line`), `recover` backs out of trouble, and

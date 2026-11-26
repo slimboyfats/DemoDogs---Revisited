@@ -36,6 +36,7 @@ const HELD_SAYS: [number, string][] = [
   [HELD.sticky, 'STUCK IN THE MUCK'],
   [HELD.rough, 'OFF ROAD'],
   [HELD.hill, 'UPHILL'],
+  [HELD.fresh, 'FINDING ITS FEET'],
   [HELD.weighed, 'WEIGHED DOWN'],
   [HELD.hurt, 'DAMAGED'],
 ];
@@ -291,7 +292,9 @@ export class Hud {
       }
       // standings under the minimap
       let y = pad + m.cv.height + 6 * u;
-      for (let i = 0; i < Math.min(6, st.length); i++) {
+      // (six rows: of a bigger field, the six round this screen's car)
+      const from = Math.max(0, Math.min(st.length - 6, st.indexOf(focus ?? w.player) - 3));
+      for (let i = from; i < Math.min(from + 6, st.length); i++) {
         const c = st[i]!;
         ctx.beginPath();
         ctx.roundRect(W - pad - 9 * u, y + 1.5 * u, 8 * u, 9 * u, 2.5 * u);

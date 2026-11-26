@@ -183,6 +183,7 @@ export function makeCar(
     size: 1,
     pace: 1,
     squashT: 0,
+    fresh: 0,
     morph: null,
     wind: null,
     collar: null,
@@ -391,7 +392,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
       (uphill * T.hillPull > 20 ? HELD.hill : 0) |
       (bog > 0.3 ? HELD.sticky : 0) |
       (weak < 1 ? HELD.hurt : 0) |
-      (c.pace < 1 ? HELD.weighed : 0);
+      (c.fresh > 0 ? HELD.fresh : c.pace < 1 ? HELD.weighed : 0);
   c.vf = vf;
   const x0 = c.x;
   const y0 = c.y;

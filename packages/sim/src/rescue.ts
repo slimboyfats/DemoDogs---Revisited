@@ -1,4 +1,5 @@
 import { DT } from '@demodogs/shared';
+import { freshen } from './catchup';
 import type { Car } from './entities';
 import { pathAt } from './pads';
 import type { World } from './world';
@@ -72,6 +73,6 @@ export function updateRescue(w: World, c: Car): void {
   c.deck = w.deckAt(c.idx);
   c.z = c.deck + 6;
   c.downT = 0;
-  c.invuln = Math.max(c.invuln, 1);
+  freshen(w, c, 1);
   w.emit({ t: 'rescue', car: c.index, x, y });
 }

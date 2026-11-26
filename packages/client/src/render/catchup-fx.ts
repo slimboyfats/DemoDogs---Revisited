@@ -2,6 +2,7 @@ import { DT, type SimEvent } from '@demodogs/shared';
 import type { Car, World } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Art } from './art';
+import { roll } from './dice';
 import type { Effects } from './effects';
 
 /**
@@ -28,11 +29,50 @@ const CHAIN = 9;
 const GOLD = [0xfff3b0, 0xffd24a, 0xffa828] as const;
 const ICE = [0xd8f4ff, 0x7fd4ff, 0x4a8cff] as const;
 const GALE = [0xffffff, 0xd6f3ff, 0xa8e2ff] as const;
+const HOUND = [0xffffff, 0xff3a2e, 0xffd24a] as const;
+/** The mark on a hunted car: red, and red again. */
+const MARK = [0xff1408, 0xe00000] as const;
+const FRESH = [0xffffff, 0x6affb0, 0x2ee88a] as const;
 const pick = (c: readonly number[]) => c[(Math.random() * c.length) | 0]!;
 
 export class CatchupFx {
   private readonly balls = new Map<number, Ball>();
   private stomp = 0;
+  /** Seconds to the next note of the siren a hunted player hears. */
+  private siren = 0;
+
+  /**
+   * A ring of bright cells turning round (x, y): `n` dashes of it, drawn every third tick with
+   * cells that outlast the gap, so a slow phone sees it whole.
+   */
+  private halo(
+    fx: Effects,
+    w: World,
+    x: number,
+    y: number,
+    z: number,
+    r: number,
+    n: number,
+    turn: number,
+    col: readonly number[],
+  ): void {
+    if (w.tick % 3 !== 0) return;
+    const spin = w.tick * DT * turn;
+    // (each dash a few cells thick and close-set: a band, not a dotted line)
+    const arc = (TAU / n) * 0.62;
+    const m = Math.max(6, Math.round(arc * r * 1.8));
+    for (let k = 0; k < n; k++) {
+      const a = spin + (k * TAU) / n;
+      const rgb = col[k % col.length]!;
+      for (let q = 0; q <= m; q++) {
+        const b = a + (q / m - 0.5) * arc;
+        const cs = Math.cos(b);
+        const sn = Math.sin(b);
+        for (let t = -1; t <= 1; t += 0.5)
+          fx.emit('spark', x + cs * (r + t), y + sn * (r + t), z, 0, 0, 0, 0.11, 1, rgb);
+      }
+    }
+  }
 
   /** The ball car c drags (it starts where the collar was clamped on: just behind the car). */
   ball(c: Car): Ball {
@@ -159,16 +199,116 @@ export class CatchupFx {
         fx.text(e.x, e.y, mine ? 'LOOK UP!' : 'BONES!', '#f7f1dd', true);
         if (v > 0) S.whoosh(v * 0.6);
         break;
+      case 'hunt':
+        // off the roof in a ball of fire and a howl the whole field hears
+        this.ring(fx, e.x, e.y, c.z + 4, 22, 90, HOUND);
+        for (let i = 0; i < 14; i++) fx.puff(e.x, e.y, 3, 'smoke');
+        fx.flashes.push({ x: e.x, y: e.y, r: 110, life: 0.45, max: 0.45, rgb: 0xff5030 });
+        fx.text(e.x, e.y, 'BLOODHOUND!', '#ff5a3c', true);
+        S.howl(Math.max(0.45, v));
+        if (v > 0) S.fire();
+        if (mine) fx.shake = Math.max(fx.shake, 6);
+        break;
+      case 'hunt-lock':
+        // it has the scent: the car in front is told, and so is everybody who can see it
+        this.ring(fx, e.x, e.y, c.z + 2, 30, 70, HOUND);
+        fx.flashes.push({ x: e.x, y: e.y, r: 120, life: 0.4, max: 0.4, rgb: 0xff3a2e });
+        fx.text(e.x, e.y, mine ? 'INCOMING!' : `${c.name}: INCOMING!`, '#ff5a3c', true);
+        if (mine || v > 0) S.howl(Math.max(mine ? 0.8 : 0, v));
+        break;
+      case 'hunt-hit':
+        // (the blast is the sim's own `explode`: here is what makes it this rocket's)
+        this.ring(fx, e.x, e.y, 2, 40, 140, HOUND);
+        this.ring(fx, e.x, e.y, 10, 22, 80, HOUND);
+        fx.flashes.push({ x: e.x, y: e.y, r: 190, life: 0.6, max: 0.6, rgb: 0xffe0a0 });
+        fx.text(e.x, e.y, mine ? 'FETCHED!' : `${c.name} FETCHED!`, '#ffd24a', true);
+        fx.shake = Math.max(fx.shake, mine ? 16 : 10 * v);
+        break;
+      case 'hunt-off':
+        for (let i = 0; i < 10; i++) fx.puff(e.x, e.y, 20, 'smoke');
+        break;
     }
   }
 
   /** Per tick: the gale, the stamping, the crackle on a shrunk car, and every ball on its chain. */
-  step(fx: Effects, w: World): void {
+  step(fx: Effects, w: World, S: Sound): void {
     this.stomp -= DT;
+    this.siren -= DT;
+    for (const H of w.hunters) {
+      // a long tail of fire and a fat smoke trail, high over the road
+      const cs = Math.cos(H.h);
+      const sn = Math.sin(H.h);
+      const n = Math.ceil(5 * fx.quality);
+      for (let k = 0; k < n; k++) {
+        // (blobs of fire, fat at the nozzle and left to shrink out along the way it came)
+        const back = 16 + roll() * 10;
+        fx.emit(
+          'flame',
+          H.x - cs * back + rand(-2, 2),
+          H.y - sn * back + rand(-2, 2),
+          H.z + 6 + rand(-1.5, 1.5),
+          cs * H.v * 0.55,
+          sn * H.v * 0.55,
+          0,
+          rand(0.22, 0.4),
+          rand(4, 7),
+        );
+      }
+      fx.flame(H.x - cs * 18, H.y - sn * 18, H.z + 5, 5, -cs * 80, -sn * 80, 0);
+      for (let k = 0; k < 2; k++)
+        fx.plume(H.x - cs * (30 + k * 14), H.y - sn * (30 + k * 14), H.z + 4, 4, 0xe8e0d8, 4);
+      // its mark on the car it is after: a wide ring while it is on its way, drawn in tight and
+      // quick once it is coming down
+      const tg =
+        H.dive >= 0 ? w.cars[H.dive] : w.standings().find((o) => o.index !== H.owner && !o.wrecked);
+      if (!tg || tg.wrecked) continue;
+      const diving = H.dive >= 0;
+      this.halo(
+        fx,
+        w,
+        tg.x,
+        tg.y,
+        tg.z + 2,
+        diving ? 17 : 26,
+        diving ? 6 : 4,
+        diving ? 9 : 4,
+        MARK,
+      );
+      if (!diving && w.tick % 6 === 0)
+        fx.flashes.push({ x: tg.x, y: tg.y, r: 40, life: 0.12, max: 0.12, rgb: 0xff5a3c });
+      if (diving && w.tick % 6 === 0)
+        fx.flashes.push({ x: tg.x, y: tg.y, r: 46, life: 0.12, max: 0.12, rgb: 0xff3a2e });
+      if (tg === w.player && this.siren <= 0) {
+        S.beep(diving || w.tick % 40 < 20);
+        this.siren = diving ? 0.12 : 0.3;
+      }
+    }
     for (const c of w.cars) {
       if (c.wrecked) {
         this.balls.delete(c.index);
         continue;
+      }
+      if (c.fresh > 0) {
+        // back on the road and finding its feet: a bright ring that turns round it and runs out
+        // as the seconds do, and sparks falling off it, so everybody sees it cannot be hurt yet
+        const left = Math.min(1, c.fresh / 3);
+        const n = Math.max(2, Math.ceil(left * 8));
+        this.halo(fx, w, c.x, c.y, c.z + 2, 17 * c.size, n, 6, FRESH);
+        if (roll() < 0.5)
+          fx.emit(
+            'spark',
+            c.x + rand(-8, 8) * c.size,
+            c.y + rand(-8, 8) * c.size,
+            c.z + rand(4, 10),
+            c.vx * 0.5,
+            c.vy * 0.5,
+            rand(10, 40),
+            rand(0.2, 0.4),
+            1,
+            pick(FRESH),
+          );
+        if (w.tick % 8 === 0)
+          fx.flashes.push({ x: c.x, y: c.y, r: 40, life: 0.16, max: 0.16, rgb: 0x9affc8 });
       }
       const speed = Math.hypot(c.vx, c.vy);
       const cs = Math.cos(c.h);

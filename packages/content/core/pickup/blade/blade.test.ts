@@ -30,6 +30,8 @@ describe('pickup.blade', () => {
       const [x, y] = openSpot(w, 100);
       const s = stand(w, wall, x, y, 0, 0);
       const c = w.player;
+      // (and no crate in the way to hand it something that breaks walls)
+      w.pickups.length = 0;
       put(c, x - 40, y, 0, 60);
       if (withBlade) c.blade = { def: blade(), t: 8, cd: 0 };
       const events: SimEvent[] = [];

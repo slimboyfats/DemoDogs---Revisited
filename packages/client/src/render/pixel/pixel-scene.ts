@@ -287,6 +287,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    for (const H of w.hunters) L.add(H.x, H.y, 54, 1, 0xff6040);
     armsLights(L, w);
     arsenalLights(L, w);
     for (const f of fx.fires)
