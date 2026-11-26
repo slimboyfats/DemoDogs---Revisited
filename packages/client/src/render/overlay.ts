@@ -103,5 +103,15 @@ export function drawNames(
     ctx.strokeText(label, sx, sy);
     ctx.fillStyle = on ? '#ffd24a' : c.paint;
     ctx.fillText(label, sx, sy);
+    // what kind of driver it is, small, over the name
+    const kind = c.isPlayer ? '' : (c.ai?.style ?? '');
+    if (kind) {
+      const up = Math.round((on ? 13 : 10) * dpr);
+      ctx.font = `900 ${Math.round(7 * dpr)}px system-ui, sans-serif`;
+      ctx.lineWidth = 2.5 * dpr;
+      ctx.strokeText(kind, sx, sy - up);
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.fillText(kind, sx, sy - up);
+    }
   }
 }

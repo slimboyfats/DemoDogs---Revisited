@@ -58,6 +58,8 @@ export class Input {
       base.style.left = `${cx}px`;
       base.style.top = `${cy}px`;
       base.classList.add('on');
+      // (the DRAG TO DRIVE hint has done its work)
+      document.body.classList.add('driven');
       this.raw.stick.active = true;
       move(e);
       this.onGesture();

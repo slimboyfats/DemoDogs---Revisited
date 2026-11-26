@@ -3,6 +3,8 @@ import { updateDefence } from './defence';
 import {
   DT,
   DEFAULT_TUNING,
+  DIFFICULTY,
+  type Difficulty,
   FIELD_SIZE,
   ADDON_KINDS,
   NO_CONTROLS,
@@ -33,12 +35,13 @@ import type {
 import { Hasher, TAU, angDiff, clamp } from './math';
 import { Rng } from './prng';
 import { DistanceGrid, sampleTrack, type Track } from './track';
+import { racingLine, type Line } from './line';
 import { buildScenery } from './scenery';
 import { updateMovers } from './movers';
 import { pathAt, updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
-import { collideCars, collideProps, collideWorld, drive, makeCar } from './physics';
+import { collideCars, collideProps, collideWorld, drive, hemmed, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
 import { updateSagging } from './spans';
 import {
@@ -105,6 +108,8 @@ export interface WorldOptions {
   playOn?: boolean;
   /** Laps, instead of the mode's. */
   laps?: number;
+  /** How hard the rivals are to beat (default normal). Online, every peer gets the same. */
+  difficulty?: Difficulty;
   /**
    * A test range: no countdown and no end, and the rivals are parked targets that nobody drives.
    * See range.ts for what can be done to them.
@@ -138,6 +143,8 @@ const RIVAL_PAINTS = [
 ];
 const RIVAL_NAMES = ['REX', 'BISCUIT', 'FANG', 'DOZER', 'GNASHER', 'SCRAPS', 'BONES', 'TANK'];
 const COUNTDOWN = 3.6;
+/** The side of a cell of the grid the static props are kept in for `near`, px. */
+const CELL = 64;
 /** Past the road's edge, how far it takes for the rough ground to cost all it does, px. */
 const OFF_SOFT = 18;
 
@@ -154,6 +161,9 @@ export class World {
   readonly w: number;
   readonly h: number;
   readonly track: Track | null = null;
+  /** How hard the rivals are set to be (shared/constants.ts `DIFFICULTY`). */
+  readonly level: (typeof DIFFICULTY)[Difficulty];
+  private racing: Line | null = null;
   readonly grid: DistanceGrid | null = null;
   readonly oval: Oval | null = null;
   /** The lie of the land, or null where the venue is flat. */
@@ -251,6 +261,8 @@ export class World {
   /** Online race: once one human has finished, the race ends at this race time; 0 before. */
   finishBy = 0;
   private events: SimEvent[] = [];
+  /** Each car's place after its own driving this tick, x then y (see `hemmed`). */
+  private drove: Float64Array | null = null;
   private lastBeep = 4;
 
   /** The rule numbers this world runs on (shared/tuning.ts): the game's own unless tuned by hand. */
@@ -268,8 +280,11 @@ export class World {
     this.venue = venue;
     this.mode = mode;
     this.rng = new Rng(opts.seed);
+    this.level = DIFFICULTY[opts.difficulty ?? 'normal'];
     this.w = venue.size.w;
     this.h = venue.size.h;
+    this.cols = Math.ceil(this.w / CELL) + 1;
+    this.rows = Math.ceil(this.h / CELL) + 1;
     this.road = venue.track?.road ?? 0;
     this.knockout = opts.knockout ?? false;
     this.playOn = opts.playOn ?? false;
@@ -454,6 +469,12 @@ export class World {
     return Math.abs(off) > this.road / 2 + 2 ? 0 : h;
   }
 
+  /** The racing line round the track (see line.ts), worked out the first time a driver asks. */
+  get line(): Line | null {
+    if (!this.track) return null;
+    return (this.racing ??= racingLine(this.track, this.road / 2));
+  }
+
   get kind(): 'race' | 'derby' {
     return this.mode.kind;
   }
@@ -493,6 +514,15 @@ export class World {
     return Math.min(1, Math.max(0, (this.grid.at(x, y) - this.road / 2) / OFF_SOFT));
   }
 
+  /** Is a point of radius r inside the world? (When it is, `keepInside` gives it back as it is.) */
+  inside(x: number, y: number, r: number): boolean {
+    const O = this.oval;
+    if (!O) return x >= 10 + r && x <= this.w - 10 - r && y >= 10 + r && y <= this.h - 10 - r;
+    const ex = (x - O.cx) / O.rx;
+    const ey = (y - O.cy) / O.ry;
+    return Math.hypot(ex, ey) <= 1 - r / ((O.rx + O.ry) / 2);
+  }
+
   /** Clamp a point of radius r inside the world (the rectangle, or the derby oval). */
   keepInside(x: number, y: number, r: number): [number, number] {
     const O = this.oval;
@@ -505,43 +535,72 @@ export class World {
     return [O.cx + ((x - O.cx) * lim) / q, O.cy + ((y - O.cy) * lim) / q];
   }
 
-  private readonly cells = new Map<number, StaticProp[]>();
+  /** The static props by where they stand, in cells `CELL` px square, row by row. */
+  private readonly cells: (StaticProp[] | undefined)[] = [];
+  private readonly cols: number;
+  private readonly rows: number;
   private celled = 0;
+  /**
+   * Goes up each time a static prop is stood, or stands up again after being down: what lay
+   * still beside where it now stands may have to make room (see `updateProps`).
+   */
+  stood = 0;
+  /** The widest static's radius among those in the cells. */
+  private widest = 0;
+  private readonly freeNear: StaticProp[] = [];
 
   /**
    * The static props that could be within r of (x, y): those in the grid cells round it, in a
-   * fixed order. A town has thousands of pieces, and nothing should look at all of them.
+   * fixed order (cell by cell, and in each the order they were stood in). A town has thousands of
+   * pieces, and nothing should look at all of them. It is a first sieve: some of what it gives is
+   * further off than r, and the caller measures.
+   *
+   * A caller that asks every tick passes a list of its own as `out` to be filled again, so nothing
+   * new is made each time; it must not ask again with that list while it is still going through it.
    */
-  near(x: number, y: number, r: number): StaticProp[] {
+  near(x: number, y: number, r: number, out: StaticProp[] = []): StaticProp[] {
     const S = this.statics;
-    if (S.length < this.celled) {
-      this.cells.clear();
-      this.celled = 0;
-    }
+    const C = this.cells;
+    const cols = this.cols;
+    const rows = this.rows;
+    if (S.length < this.celled) this.restock();
     for (; this.celled < S.length; this.celled++) {
       const s = S[this.celled]!;
-      const k = Math.floor(s.x / 64) * 4096 + Math.floor(s.y / 64);
-      const c = this.cells.get(k);
+      // (anything stood beyond the edge of the map is kept in the cell at that edge)
+      const cx = Math.min(cols - 1, Math.max(0, Math.floor(s.x / CELL)));
+      const cy = Math.min(rows - 1, Math.max(0, Math.floor(s.y / CELL)));
+      const k = cx * rows + cy;
+      const c = C[k];
       if (c) c.push(s);
-      else this.cells.set(k, [s]);
+      else C[k] = [s];
+      if (s.def.radius > this.widest) this.widest = s.def.radius;
     }
-    // 12: the widest static's radius
-    const x0 = Math.floor((x - r - 12) / 64);
-    const x1 = Math.floor((x + r + 12) / 64);
-    const y0 = Math.floor((y - r - 12) / 64);
-    const y1 = Math.floor((y + r + 12) / 64);
-    const out: StaticProp[] = [];
+    out.length = 0;
+    const reach = r + this.widest;
+    // (asked about a place beyond the edge of the map, it looks in the cells at that edge)
+    const x0 = Math.min(cols - 1, Math.max(0, Math.floor((x - reach) / CELL)));
+    const x1 = Math.min(cols - 1, Math.max(0, Math.floor((x + reach) / CELL)));
+    const y0 = Math.min(rows - 1, Math.max(0, Math.floor((y - reach) / CELL)));
+    const y1 = Math.min(rows - 1, Math.max(0, Math.floor((y + reach) / CELL)));
     for (let cx = x0; cx <= x1; cx++)
       for (let cy = y0; cy <= y1; cy++) {
-        const c = this.cells.get(cx * 4096 + cy);
-        if (c) for (const s of c) out.push(s);
+        const c = C[cx * rows + cy];
+        if (c) for (let i = 0; i < c.length; i++) out.push(c[i]!);
       }
     return out;
   }
 
+  /** The list of static props has been made again (some taken out): `near` starts afresh. */
+  restock(): void {
+    this.cells.length = 0;
+    this.celled = 0;
+    this.widest = 0;
+    this.stood++;
+  }
+
   /** Is there no static prop within d of (x, y)? */
   free(x: number, y: number, d: number): boolean {
-    for (const s of this.near(x, y, d)) {
+    for (const s of this.near(x, y, d, this.freeNear)) {
       const r = s.def.radius;
       if (
         !s.down &&
@@ -629,6 +688,15 @@ export class World {
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
+    // where each car's own driving has left it, before anything pushes it about
+    const walls = this.relief?.plat
+      ? (this.drove ??= new Float64Array(this.cars.length * 2))
+      : null;
+    if (walls)
+      for (let i = 0; i < this.cars.length; i++) {
+        walls[i * 2] = this.cars[i]!.x;
+        walls[i * 2 + 1] = this.cars[i]!.y;
+      }
     for (let i = 0; i < this.cars.length; i++)
       for (let j = i + 1; j < this.cars.length; j++) {
         const c = this.cars[i]!;
@@ -640,6 +708,7 @@ export class World {
     for (const c of this.cars) {
       collideWorld(this, c);
       collideProps(this, c);
+      if (walls) hemmed(this, c, walls[c.index * 2]!, walls[c.index * 2 + 1]!);
       if (this.track) trackIndex(this, c);
     }
     for (const b of this.bots) updateBot(this, b);

@@ -25,6 +25,12 @@ describe('venue.crumple-yard', () => {
     const w = makeWorld({
       venue: 'venue.crumple-yard',
       car: 'car.bruiser',
+      // (the same three rivals whatever cars the game has, so the derby is the same one)
+      field: ['car.mutt', 'car.pug', 'car.terrier'].map((car, i) => ({
+        car,
+        name: `RIVAL ${i + 1}`,
+        paint: '#888888',
+      })),
       autopilot: true,
       seed: 1,
     });

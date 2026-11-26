@@ -1,0 +1,31 @@
+{
+  "id": "car.mastiff",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Mastiff",
+    "description": "Six-wheel scrap hauler. Slow to wake, impossible to move.",
+    "since": "core@0.4.0"
+  },
+  "paint": "#f0b429",
+  "price": 21000,
+  "stats": {
+    "speed": 0.9,
+    "accel": 0.78,
+    "grip": 0.9,
+    "mass": 1.6,
+    "armor": 1.55
+  },
+  "body": {
+    "halfLength": 12.5,
+    "halfWidth": 6.2
+  },
+  "wheels": [
+    [8.4, 4.95],
+    [-3.0, 4.95],
+    [-9.0, 4.95]
+  ],
+  "top": {
+    "x": 6.4,
+    "z": 8.6
+  }
+}
