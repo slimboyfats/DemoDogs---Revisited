@@ -2,9 +2,12 @@ import { fitted, mounts, place } from './addon-mounts';
 import { wayPainted } from './ways';
 import {
   SINK_TIME,
+  gateOpen,
   moundAt,
   pressOpen,
   pressWarning,
+  pumpUp,
+  ventOpen,
   type Bot,
   type Car,
   type Critter,
@@ -212,12 +215,17 @@ function queueStatic(
   P: Car,
   still?: StaticHook,
 ): void {
+  if (s.def.leap?.pump) queueFlap(R, art, w, s);
   if (s.def.pad) {
     queuePad(R, art, w, s);
     return;
   }
   if (s.def.gate) {
     queueGate(R, art, w, s);
+    return;
+  }
+  if (s.def.signal) {
+    queueSignal(R, art, w, s);
     return;
   }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
@@ -314,6 +322,80 @@ function queueGate(R: StackSink, art: Art, w: World, s: StaticProp): void {
     const z = i / strip.res - drop;
     if (z >= 0) R.slice(strip, i, s.x, s.y, z, s.rot);
   }
+}
+
+/** How far a pump takeoff's flap has risen (0 flat, 1 up), eased from tick to tick. */
+const flaps = new WeakMap<StaticProp, number>();
+/** How high the flap's front stands when up (art px), and the seconds it takes to rise or fall. */
+const FLAP_HIGH = 9;
+const FLAP_SWING = 0.25;
+
+/**
+ * The flap across a pumping takeoff's lip: flat on the ramp while it throws short, tipped up at
+ * its front while it throws far (drawn as the plate lifted, each slice a little higher).
+ */
+function queueFlap(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  const L = s.def.leap!;
+  const want = pumpUp(w, s) ? 1 : 0;
+  const was = flaps.get(s) ?? want;
+  const step = 1 / 60 / FLAP_SWING;
+  const k = want > was ? Math.min(want, was + step) : Math.max(want, was - step);
+  flaps.set(s, k);
+  // on the last of the ramp before its lip
+  const u = L.long / 2 - 12;
+  const x = s.x + Math.cos(s.rot) * u;
+  const y = s.y + Math.sin(s.rot) * u;
+  if (!R.visible(x, y, 40, 16)) return;
+  R.group(y);
+  R.stack(art.prop(L.pump!.plate), x, y, 0.6 + k * FLAP_HIGH, s.rot);
+}
+
+/** Seconds before the beat turns that a signal lamp shows amber. */
+const SIGNAL_WARN = 0.7;
+
+/** What each signal lamp reads: the nearest gate on a beat or vent within its reach (null: none). */
+const reads = new WeakMap<StaticProp, StaticProp | null>();
+
+/** Is the thing a signal reads open (a gate down, a vent blowing) at time t? */
+function beatOpen(w: World, o: StaticProp, t: number): boolean {
+  if (o.def.gate) return gateOpen(w, o, t);
+  return o.def.leap ? pumpUp(w, o, t) : ventOpen(w, o, 0, t);
+}
+
+/**
+ * A signal lamp, in the pose that says what the beat it reads is doing: red (its look's first
+ * pose) while that is shut, amber when it is about to turn either way, green while it is open.
+ */
+function queueSignal(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  if (!R.visible(s.x, s.y, s.def.radius + 8, 28)) return;
+  let o = reads.get(s);
+  if (o === undefined) {
+    o = null;
+    let near = s.def.signal!.reach;
+    for (const g of [...w.gates, ...w.pads, ...w.leaps]) {
+      const beat = g.def.gate
+        ? g.def.gate.period > 0
+        : g.def.leap
+          ? !!g.def.leap.pump
+          : g.def.pad?.kind === 'vent';
+      const d = Math.hypot(g.x - s.x, g.y - s.y);
+      if (!beat || d >= near) continue;
+      near = d;
+      o = g;
+    }
+    reads.set(s, o);
+  }
+  const now = o ? beatOpen(w, o, w.time) : false;
+  const soon = o ? beatOpen(w, o, w.time + SIGNAL_WARN) : false;
+  const pose = now !== soon ? 1 : now ? 2 : 0;
+  R.group(s.y);
+  R.stack(
+    art.prop(s.def.id, undefined, Math.min(pose, art.poses(s.def.id) - 1)),
+    s.x,
+    s.y,
+    0,
+    s.rot,
+  );
 }
 
 /** Steps of a tile's running light a second. */

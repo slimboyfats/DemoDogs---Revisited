@@ -17,7 +17,7 @@ export { FINISH_GRACE } from './race';
 export { World, ahead, type Oval, type Phase, type WorldOptions } from './world';
 export * from './range';
 export { putProp, stand } from './stand';
-export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
+export { boostAhead, onPad, padAt, pathAt, pumpUp, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
 export { PLUNGE_TIME, SINK_TIME, inPit, rescueIn, wading } from './rescue';
 export type { Critter } from './critters';

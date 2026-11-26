@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Cinder Peak",
-    "description": "Race. Round a live volcano: geysers in the road, a lava river to bridge, and a dirt cut across the lava field.",
+    "description": "Race. Round a live volcano: geysers in the road, a lava river to bridge, and a dirt cut across the lava field, if the geyser will throw you over the lava.",
     "since": "core@0.10.0"
   },
   "mode": "mode.race",
@@ -135,6 +135,24 @@
           "rot": -3.1082
         },
         {
+          "prop": "prop.cobbles",
+          "x": 336.9,
+          "y": 1125.5,
+          "rot": -3.1082
+        },
+        {
+          "prop": "prop.cobbles",
+          "x": 292.9,
+          "y": 1124,
+          "rot": -3.1082
+        },
+        {
+          "prop": "prop.cobbles",
+          "x": 250.9,
+          "y": 1122.6,
+          "rot": -3.1082
+        },
+        {
           "prop": "prop.dirt-track",
           "x": -68.7,
           "y": 1113.5,
@@ -224,9 +242,38 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.jump-takeoff",
-          "x": 292.9,
-          "y": 1124,
+          "prop": "prop.signal-lamp",
+          "x": 680.2,
+          "y": 1061.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 736.2,
+          "y": 1118.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 441.8,
+          "y": 1089.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": 437.8,
+          "y": 1169.1,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.launch-geyser",
+          "x": 248.9,
+          "y": 1122.5,
           "rot": -3.1082
         },
         {
@@ -245,35 +292,6 @@
           "x": 887.9,
           "y": 1031.1,
           "rot": 0
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.blast-wall",
-          "x": 282,
-          "y": 1150.7,
-          "rot": -3.1082
-        },
-        {
-          "prop": "prop.blast-wall",
-          "x": 282.6,
-          "y": 1132.7,
-          "rot": -3.1082
-        },
-        {
-          "prop": "prop.blast-wall",
-          "x": 283.2,
-          "y": 1114.7,
-          "rot": -3.1082
-        },
-        {
-          "prop": "prop.blast-wall",
-          "x": 283.8,
-          "y": 1096.7,
-          "rot": -3.1082
         }
       ]
     },

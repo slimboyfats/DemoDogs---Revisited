@@ -1,0 +1,22 @@
+{
+  "id": "prop.piston-block",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Piston block",
+    "description": "A striped steel block on a piston: it rises out of the ground on a beat, a little after the one beside it. In a row of four across a path one stands at a time, each in turn: steer for where the gap will be.",
+    "since": "core@0.11.0"
+  },
+  "body": "static",
+  "radius": 8,
+  "hit": {
+    "halfLength": 8,
+    "halfWidth": 8,
+    "round": 2,
+    "top": 15
+  },
+  "gate": {
+    "period": 4.8,
+    "open": 3.6,
+    "wave": 64
+  }
+}

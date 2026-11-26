@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Bonefish Bay",
-    "description": "Race. A long lap of the beach: round the lighthouse on the causeway, along the sands, and round the lagoon, or over it on the boardwalk.",
+    "description": "Race. A long lap of the beach: round the lighthouse on the causeway, along the sands, and round the lagoon, or over it on the boardwalk, when the pier's flap is up.",
     "since": "core@0.10.0"
   },
   "mode": "mode.race",
@@ -270,7 +270,36 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.jump-takeoff",
+          "prop": "prop.signal-lamp",
+          "x": -377.5,
+          "y": 593.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -332.1,
+          "y": 659.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -661.6,
+          "y": 573.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -675.6,
+          "y": 651.9,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.pump-takeoff",
           "x": -825.6,
           "y": 514.6,
           "rot": -2.5252
@@ -291,52 +320,6 @@
           "x": -253.7,
           "y": 477,
           "rot": 0
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.switch-bollard",
-          "x": -848.8,
-          "y": 530,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -841.3,
-          "y": 519.4,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -833.8,
-          "y": 508.8,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -826.2,
-          "y": 498.2,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -818.7,
-          "y": 487.6,
-          "rot": -2.5252
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.floor-switch",
-          "x": -559.6,
-          "y": 611.5,
-          "rot": -2.9755
         }
       ]
     },
