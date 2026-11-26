@@ -1413,12 +1413,14 @@ function boot(): void {
   if (params.has('overdraw') && scene instanceof PixelScene) scene.setMeter(true);
   if (params.get('order') === 'queued' && scene instanceof PixelScene) scene.frontToBack = false;
   if (scene instanceof PixelScene) {
-    // the sky and its switches: ?sky=night, ?light=flat, ?bloom=0, ?outline=on|off, ?reflect=0
+    // the sky and its switches: ?sky=night, ?light=flat, ?bloom=0, ?outline=on|off, ?reflect=0, ?fog=0
     if (params.get('light') === 'flat') scene.setFlat(true);
     if (params.get('bloom') === '0') scene.bloom = false;
     // ?relief=0 draws raised ground flat (the cars still feel it): to compare what it costs
     if (params.get('relief') === '0') scene.raised = false;
     if (params.get('reflect') === '0') scene.reflections = false;
+    // ?fog=0: no ground fog, whatever the sky says (to compare, and what it costs)
+    if (params.get('fog') === '0') scene.groundFog = false;
     // ?shadows=old: tall scenery's baked shadows and ovals under what moves, to compare
     if (params.get('shadows') === 'old') scene.sunCast = scene.lightCast = false;
     // ?gi=0: no traced light (the sun's one bounce, as before); ?gi=show: the traced field itself
