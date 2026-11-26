@@ -187,6 +187,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   beat; `prop.switch-bollard` sinks for a few seconds when a `switch` pad near it, `prop.floor-switch`, is driven
   over; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
   `prop.secret-crate` (`gives`) is a yellow crate that hands over all it lists (a boost refill and rockets). A
+  secret way is medium hard: its gate stands across the takeoff, up where the ramp's sides are too high to climb,
+  so there is no way round it, and a pool is laid under the gap (`pools`, the smallest one the gap's middle lies
+  in: `w.pits`). A car that comes down in it has fallen short (`plunge`, sim/rescue.ts) and is put back where it
+  left the road: a path is part of the course, but `Car.onIdx` is the last of the road itself. A
   pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
   back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.

@@ -1171,13 +1171,28 @@ export class Effects {
           this.slices.start(c, c.z);
           break;
         }
+        case 'plunge': {
+          // short of the jump and down in the pool under it: a fountain of what the pool is made of
+          const pit = w.pits.find((p) => Math.hypot(p.x - e.x, p.y - e.y) < p.r);
+          const rgb = pit ? parseInt(pit.def.colour.slice(1, 7), 16) : 0x36b4d2;
+          for (let k = 0; k < 16; k++)
+            this.spray(e.x + rand(-7, 7), e.y + rand(-7, 7), rgb, 0, 0, 70);
+          for (let k = 0; k < 6; k++) this.puff(e.x, e.y, 2, 'smoke');
+          if (this.near(e.x, e.y, 320)) S.crash(8);
+          if (e.car === w.player.index) {
+            this.shake = Math.max(this.shake, 4);
+            this.setMsg('FELL SHORT!', 1.6);
+          } else if (this.near(e.x, e.y, 300)) this.text(e.x, e.y, 'FELL SHORT', '#9fe8ff');
+          break;
+        }
         case 'rescue': {
           const c = w.cars[e.car]!;
           // gone from where it sat in a burst, and put together on the road slice by slice
           for (let k = 0; k < 10; k++) this.puff(e.x, e.y, 3, 'smoke');
           this.slices.start(c, c.z);
           if (this.near(c.x, c.y, 320)) S.whoosh();
-          if (e.car === w.player.index) this.setMsg('BACK ON THE ROAD', 1.4);
+          if (e.car === w.player.index)
+            this.setMsg(e.fell ? 'BACK WHERE YOU LEFT THE ROAD' : 'BACK ON THE ROAD', 1.4);
           else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'LIFTED BACK', '#9fe8ff');
           break;
         }

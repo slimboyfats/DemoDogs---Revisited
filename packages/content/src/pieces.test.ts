@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { boostAhead, explode, padAt, putProp } from '@demodogs/sim';
+import { boostAhead, explode, padAt, pathAt, putProp } from '@demodogs/sim';
 import { loadContent } from './index';
 import { flatBench, makeWorld, put, runUntil, startRace } from './testing';
 
@@ -11,10 +11,11 @@ describe('track pieces', () => {
     for (const id of races) {
       const w = makeWorld({ venue: id });
       const T = w.track!;
-      // (a secret way's jump stands up on its raised trail, away from the road)
+      // (a secret way's jump stands up on its raised trail, away from the road, and the plate
+      // that sinks its bollards lies on the way itself)
       const road = w.pads.filter((s) => w.grid!.at(s.x, s.y) < w.road / 2 + 4);
       for (const s of w.pads)
-        if (!road.includes(s))
+        if (!road.includes(s) && !pathAt(w, s.x, s.y))
           expect(w.relief?.platAt(s.x, s.y) ?? 0, `${id} ${s.def.id}`).toBeGreaterThan(10);
       const boosts = road.filter((s) => s.def.pad!.kind === 'boost');
       const ramps = road.filter((s) => s.def.pad!.kind === 'jump');

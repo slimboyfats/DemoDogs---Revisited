@@ -18,7 +18,7 @@ export * from './range';
 export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt, pathAt, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
-export { rescueIn } from './rescue';
+export { PLUNGE_TIME, inPit, rescueIn } from './rescue';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';
