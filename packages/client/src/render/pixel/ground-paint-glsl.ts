@@ -266,9 +266,9 @@ void wayOver(inout vec3 c, vec2 wp, ivec2 gc) {
   vec3 col;
   if (skin == 2) {
     // packed dirt, the colour of the road's own verge: two faint wheel ruts, a darker shoulder
-    col = WAYSUN(u_cD);
-    if (abs(d - half_ * 0.42) < 2.6) col *= 0.93;
-    if (d > half_ - 2.2) col *= 0.82;
+    col = WAYSUN(u_cD) * 1.06;
+    if (abs(d - half_ * 0.42) < 2.6) col *= 0.92;
+    if (d > half_ - 2.6) col *= 0.74;
   } else if (skin == 1) {
     // planks laid across, a beam down each edge, a nail at each end of every plank
     float pl = mod(al, 7.0);

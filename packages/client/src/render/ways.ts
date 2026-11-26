@@ -141,7 +141,12 @@ function build(w: World): Ways | null {
       for (let e = 8; e <= 260; e += 8) {
         const px = x + Math.cos(rot) * e * dir;
         const py = y + Math.sin(rot) * e * dir;
-        if (off(px, py) < -half * 0.96) return { x: px, y: py, s: dir < 0 ? first : last };
+        if (off(px, py) > -half * 0.35) continue;
+        // (and there it turns in to the middle of the road, so no corner of its end shows)
+        const T = w.track;
+        const i = G ? G.nearest(px, py) : -1;
+        const s = dir < 0 ? first : last;
+        return T && i >= 0 ? { x: T.x[i]!, y: T.y[i]!, s } : { x: px, y: py, s };
       }
       return null;
     };
