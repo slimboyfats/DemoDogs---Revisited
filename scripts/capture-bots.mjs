@@ -4,6 +4,7 @@
 //
 //   pnpm build && node scripts/capture-bots.mjs [out-dir] [--venue=kennel-loop] [--seed=7]
 //       [--from=4] [--seconds=30] [--rivals=normal] [--dist=packages/client/dist] [--name=race]
+//       [--dpr=2] [--zoom=wide]
 //
 // `--dist` points at another build of the client (an older checkout's, to film a before).
 import { createServer } from 'node:http';
@@ -48,12 +49,12 @@ const page = await browser.newPage({
   viewport: { width: 844, height: 390 },
   isMobile: true,
   hasTouch: true,
-  deviceScaleFactor: 2,
+  deviceScaleFactor: Number(flag('dpr', 2)),
 });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 await page.goto(
-  `${base}?start=${venue}&car=mutt&autoplay&seed=${flag('seed', 7)}&zoom=wide&bloom=0` +
+  `${base}?start=${venue}&car=mutt&autoplay&seed=${flag('seed', 7)}&zoom=${flag('zoom', 'wide')}&bloom=0` +
     `&rivals=${flag('rivals', 'normal')}`,
 );
 await page.waitForFunction(() => window.__dd?.screen === 'game', null, { timeout: 120000 });
@@ -72,7 +73,7 @@ await rm(dir, { recursive: true, force: true });
 await mkdir(dir, { recursive: true });
 for (let i = 0; i < seconds * 10; i++) {
   await step(6);
-  await page.screenshot({ path: `${dir}/${String(i).padStart(4, '0')}.png` });
+  await page.screenshot({ path: `${dir}/${String(i).padStart(4, '0')}.png`, timeout: 180000 });
 }
 const stats = await page.evaluate(() => {
   const w = window.__dd.session.world;

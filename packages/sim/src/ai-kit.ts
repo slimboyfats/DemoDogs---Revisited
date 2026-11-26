@@ -27,11 +27,6 @@ export interface Thing {
   w: number;
 }
 
-/** If the car has been pushing against something, back off and turn for a moment. */
-export function unstick(c: Car, out: Controls): Controls {
-  return recover(c, out, out.steer);
-}
-
 /**
  * Getting out of trouble. A car that pushes and does not move backs away with its wheels turned
  * so that its nose swings towards `d` (the angle it still has to turn); if it is no freer for
@@ -51,7 +46,6 @@ export function recover(c: Car, out: Controls, d: number): Controls {
     if (ai.jamT > 0.45) {
       ai.revT = 0;
       ai.jamT = 0;
-      ai.boostT = Math.max(ai.boostT, 0);
     }
     // (in reverse the wheels turn the nose the other way)
     return { steer: -turn, throttle: 0, brake: true, boost: false, fire: out.fire };
@@ -525,7 +519,7 @@ export function wantsFire(w: World, c: Car): boolean {
     want =
       back < 60 + 50 * trig ||
       (lead && back < 220 && ai.heldT > 4) ||
-      (ai.heldT > 16 - 8 * trig && dx2(c, cs, sn) > 60);
+      (ai.heldT > 16 - 8 * trig && c.vx * cs + c.vy * sn > 60);
   } else if (d.kind === 'rocket') want = front < SHOT + 60 * trig && aim < 0.12 + 0.12 * trig;
   else if (d.kind === 'pulse') want = near < (d.radius ?? 70) * 0.7;
   else if (!want && ai.heldT > 14 - 9 * trig)
@@ -533,11 +527,6 @@ export function wantsFire(w: World, c: Car): boolean {
     want = front < (d.range ?? SHOT) && aim < 0.3 + 0.3 * trig;
   ai.aimT = want ? ai.aimT + DT : 0;
   return want && ai.aimT >= 0.35 * Math.max(0, 1 / Math.max(0.3, w.level.wits) - 1);
-}
-
-/** A car's forward speed (it does not drop things behind it while it is standing). */
-function dx2(c: Car, cs: number, sn: number): number {
-  return c.vx * cs + c.vy * sn;
 }
 
 /**
