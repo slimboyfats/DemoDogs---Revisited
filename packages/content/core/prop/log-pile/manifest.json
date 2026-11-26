@@ -8,7 +8,34 @@
   },
   "body": "static",
   "radius": 6,
-  "hit": { "halfLength": 7, "halfWidth": 5, "round": 2 },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 5,
+        "round": 2,
+        "z": [0, 3]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 3.5,
+        "round": 0.5,
+        "z": [3, 7]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 2,
+        "round": 0.5,
+        "z": [7, 9]
+      }
+    ]
+  },
   "made": "material.wood",
   "integrity": 110
 }

@@ -8,7 +8,44 @@
   },
   "body": "static",
   "radius": 6.5,
-  "hit": { "halfLength": 7, "halfWidth": 5.5, "round": 1 },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 7,
+        "halfWidth": 5.5,
+        "round": 0.5,
+        "z": [0, 3]
+      },
+      {
+        "x": 0,
+        "y": 0.5,
+        "halfLength": 7,
+        "halfWidth": 5,
+        "round": 0.5,
+        "z": [3, 7]
+      },
+      {
+        "x": -4.8,
+        "y": 4.5,
+        "rot": 0.26,
+        "halfLength": 2.1,
+        "halfWidth": 0.6,
+        "round": 0.6,
+        "z": [7, 9]
+      },
+      {
+        "x": 2,
+        "y": 4.3,
+        "rot": 0,
+        "halfLength": 4.9,
+        "halfWidth": 0.7,
+        "round": 0.7,
+        "z": [7, 9]
+      }
+    ]
+  },
   "made": "material.wood",
   "integrity": 70
 }

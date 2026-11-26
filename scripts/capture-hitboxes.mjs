@@ -3,7 +3,7 @@
 // Headless Chromium at 844x390, dpr 2.
 // `pnpm build && node scripts/capture-hitboxes.mjs [out-dir] [venue ...] [--only=scene] [--frames]
 // [--dpr=1] [--dist=dir]` (default captures/hitboxes/; the venues are for the race scene).
-// Scenes: cars, props, lamps, race, drive.
+// Scenes: cars, props, lamps, guns, race, roads, drive.
 import { createServer } from 'node:http';
 import { readFile, mkdir } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -214,6 +214,9 @@ if (scene('props')) {
     await settle(30);
     await view('boxes');
     await shot(`props-${name}`);
+    // (and each piece of each shape from its foot to its top)
+    await view('heights');
+    await shot(`props-${name}-heights`);
   }
 }
 
@@ -245,6 +248,85 @@ if (scene('lamps')) {
   }
 }
 
+// 3b: the nose gun: a rival behind a wall (no round goes through it), a big one a little off the
+// line (the round lands on its bodywork), and two cars up on a flyover (the tracer is up there too)
+if (scene('guns')) {
+  /** Step until the player's gun has just fired (or `max` ticks have gone), and stop there. */
+  const fire = (max = 90) =>
+    page.evaluate((max) => {
+      const s = window.__dd.session;
+      const w = s.world;
+      const had = w.player.rounds;
+      for (let i = 0; i < max && w.player.rounds === had; i++) s.step();
+      s.step();
+      return had - w.player.rounds;
+    }, max);
+  await range('&zoom=close');
+  await page.evaluate(() => {
+    const dd = window.__dd;
+    const w = dd.session.world;
+    const P = dd.home;
+    const me = w.player;
+    const [a, b] = w.cars.filter((c) => c !== me);
+    Object.assign(me, { x: P.x - 60, y: P.y - 30, h: 0, rounds: 50, gunCd: 0 });
+    Object.assign(a, { x: P.x + 20, y: P.y - 30, h: Math.PI / 2 });
+    dd.lay('concrete-wall', P.x - 20, P.y - 38, Math.PI / 2);
+    dd.lay('concrete-wall', P.x - 20, P.y - 22, Math.PI / 2);
+    dd.second = () => {
+      Object.assign(me, { x: P.x - 60, y: P.y + 30, h: 0, rounds: 50, gunCd: 0 });
+      Object.assign(b, { x: P.x + 10, y: P.y + 38, h: Math.PI / 2, size: 1.5 });
+    };
+  });
+  await view('heights');
+  await settle(8);
+  console.log('through the wall:', await fire(), 'rounds');
+  await shot('guns-wall');
+  await page.evaluate(() => window.__dd.second());
+  await settle(8);
+  console.log('off the line:', await fire(), 'rounds');
+  await shot('guns-aside');
+
+  await page.goto(`${base}?start=knotwood&car=mutt&autoplay&seed=7&hitboxes=heights&zoom=close`);
+  await page.waitForFunction(() => window.__dd?.session, null, { timeout: 180000 });
+  await page.waitForTimeout(2500);
+  await page.evaluate(() => {
+    const s = window.__dd.session;
+    s.rate = 0;
+    s.fx.quality = 1;
+    for (let i = 0; i < 200; i++) s.step();
+    const w = s.world;
+    const T = w.track;
+    let hi = 0;
+    for (let i = 0; i < T.n; i++) if (w.deckH[i] > w.deckH[hi]) hi = i;
+    const park = (c, i) =>
+      Object.assign(c, {
+        x: T.x[i],
+        y: T.y[i],
+        h: T.a[i],
+        vx: 0,
+        vy: 0,
+        idx: i,
+        z: w.deckH[i],
+        deck: w.deckH[i],
+        ai: null,
+        rounds: 0,
+      });
+    w.cars.forEach((c, k) => park(c, (hi + 400 + k * 30) % T.n));
+    const ahead = Math.round(60 / T.step);
+    park(w.player, hi - ahead);
+    park(
+      w.cars.find((c) => c !== w.player),
+      hi,
+    );
+    Object.assign(w.player, { rounds: 50, gunCd: 0 });
+    s.o.input.read = () => ({ steer: 0, throttle: 0, brake: true, boost: false, fire: false });
+    s.follow = false;
+    Object.assign(s.cam, { x: T.x[hi - (ahead >> 1)], y: T.y[hi - (ahead >> 1)] });
+  });
+  console.log('on the deck:', await fire(), 'rounds');
+  await shot('guns-deck');
+}
+
 // 4: race frames with everything on
 if (scene('race')) {
   for (const v of venues.length ? venues : ['kennel-loop', 'knotwood', 'tumble-heights']) {
@@ -258,6 +340,78 @@ if (scene('race')) {
       for (let i = 0; i < 500; i++) s.step();
     });
     await shot(`race-${v}`);
+  }
+}
+
+// 4b: the road itself, close up: your car parked against a flyover's rail, on its ramp, beside the
+// steepest ground by the road, and in a bend
+if (scene('roads')) {
+  for (const v of venues.length ? venues : ['knotwood', 'tumble-heights', 'splinter-ridge']) {
+    await page.goto(`${base}?start=${v}&car=mutt&autoplay&seed=7&hitboxes=heights`);
+    await page.waitForFunction(() => window.__dd?.session, null, { timeout: 180000 });
+    await page.waitForTimeout(2500);
+    const spots = await page.evaluate(() => {
+      const s = window.__dd.session;
+      s.rate = 0;
+      s.fx.quality = 1;
+      for (let i = 0; i < 200; i++) s.step();
+      const w = s.world;
+      const T = w.track;
+      const out = [];
+      if (w.deckH) {
+        let hi = 0;
+        for (let i = 0; i < T.n; i++) if (w.deckH[i] > w.deckH[hi]) hi = i;
+        if (w.deckH[hi] > 2) {
+          out.push(['deck', hi, w.road / 2 - 6]);
+          let r = hi;
+          for (let n = 0; n < T.n && w.deckH[r] > w.deckH[hi] * 0.4; n++) r = (r + 1) % T.n;
+          out.push(['ramp', r, 0]);
+        }
+      }
+      if (w.relief) {
+        let best = 0;
+        let at = -1;
+        for (let i = 0; i < T.n; i += 5)
+          for (const sg of [-1, 1]) {
+            const off = sg * (w.road / 2 + 20);
+            const x = T.x[i] - Math.sin(T.a[i]) * off;
+            const y = T.y[i] + Math.cos(T.a[i]) * off;
+            const d = Math.abs(w.relief.at(x, y) - w.relief.at(T.x[i], T.y[i]));
+            if (d > best) [best, at] = [d, i];
+          }
+        if (at >= 0) out.push(['cliff', at, 0]);
+      }
+      out.push(['bend', Math.floor(T.n * 0.3), w.road / 2 - 6]);
+      return out;
+    });
+    for (const [name, i, off] of spots) {
+      await page.evaluate(
+        ([i, off]) => {
+          const s = window.__dd.session;
+          const w = s.world;
+          const T = w.track;
+          const a = T.a[i];
+          const h = w.deckH?.[i] ?? 0;
+          for (const c of w.cars) c.ai = null;
+          Object.assign(w.player, {
+            x: T.x[i] - Math.sin(a) * off,
+            y: T.y[i] + Math.cos(a) * off,
+            h: a,
+            vx: 0,
+            vy: 0,
+            idx: i,
+            z: h,
+            deck: h,
+          });
+          for (let k = 0; k < 30; k++) s.step();
+          s.follow = false;
+          Object.assign(s.cam, { x: w.player.x, y: w.player.y });
+        },
+        [i, off],
+      );
+      await page.waitForTimeout(200);
+      await shot(`road-${v}-${name}`);
+    }
   }
 }
 

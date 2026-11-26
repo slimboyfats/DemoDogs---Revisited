@@ -8,7 +8,37 @@
   },
   "body": "static",
   "radius": 7,
-  "hit": { "halfLength": 8, "halfWidth": 6, "round": 2.5 },
+  "hit": {
+    "parts": [
+      {
+        "x": -1,
+        "y": 1,
+        "rot": 3.01,
+        "halfLength": 8.1,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [0, 4]
+      },
+      {
+        "x": 1.2,
+        "y": -0.5,
+        "rot": 0.26,
+        "halfLength": 7.8,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [5, 9]
+      },
+      {
+        "x": 0.2,
+        "y": -0.4,
+        "rot": 2.75,
+        "halfLength": 8.1,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [10, 14]
+      }
+    ]
+  },
   "made": "material.steel",
   "integrity": 45,
   "topple": {

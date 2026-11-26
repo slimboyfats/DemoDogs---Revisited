@@ -8,7 +8,12 @@
   },
   "body": "static",
   "radius": 4.4,
-  "hit": { "halfLength": 4.5, "halfWidth": 1.6, "round": 0.5 },
+  "hit": {
+    "halfLength": 4.5,
+    "halfWidth": 1.6,
+    "round": 0.5,
+    "top": 10
+  },
   "made": "material.brick",
   "integrity": 70
 }

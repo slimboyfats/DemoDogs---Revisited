@@ -8,6 +8,24 @@
   },
   "body": "static",
   "radius": 1,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 0.6,
+        "z": [0, 7]
+      },
+      {
+        "x": 0,
+        "y": 3.8,
+        "halfLength": 1,
+        "halfWidth": 4.3,
+        "round": 1,
+        "z": [7, 20]
+      }
+    ]
+  },
   "hardness": 0.2,
   "sway": true,
   "made": "material.wood",

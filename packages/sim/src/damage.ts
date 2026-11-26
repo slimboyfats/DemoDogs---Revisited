@@ -1,11 +1,4 @@
-import {
-  CAR_RADIUS,
-  DT,
-  GRAVITY,
-  REBUILD_TIME,
-  type CarPart,
-  type MaterialManifest,
-} from '@demodogs/shared';
+import { DT, GRAVITY, REBUILD_TIME, type CarPart, type MaterialManifest } from '@demodogs/shared';
 import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
 import { blastCritters } from './critters';
@@ -20,6 +13,7 @@ import { stand } from './stand';
 import { giveWay, wouldHold } from './spans';
 import { fireproof, held, padded, shared } from './guards';
 import type { World } from './world';
+import { bound, carGap, carPropGap, reach } from './shapes';
 
 /** A blow on a corner harder than this smashes the lamp there. */
 const LAMP_BLOW = 3;
@@ -355,7 +349,7 @@ export function updateEmbers(w: World): void {
     if (star) {
       w.emit({ t: 'pop', x, y });
       for (const c of w.cars)
-        if (Math.hypot(c.x - x, c.y - y) < 10)
+        if (Math.abs(c.x - x) < 60 && carGap(c, x, y) < 4)
           damage(w, c, 5, owner && owner !== c ? owner : null, x, y);
       for (const p of w.props)
         if (p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 8)
@@ -384,7 +378,7 @@ export function updateEmbers(w: World): void {
     b.bite = 0.3;
     const owner = b.owner >= 0 ? w.cars[b.owner]! : null;
     for (const c of w.cars)
-      if (c.z < 4 && !fireproof(c) && Math.hypot(c.x - b.x, c.y - b.y) < b.r + 4)
+      if (c.z < 4 && !fireproof(c) && Math.abs(c.x - b.x) < b.r + 40 && carGap(c, b.x, b.y) < b.r)
         damage(w, c, 2.2, owner && owner !== c ? owner : null, c.x, c.y);
     for (const p of w.props)
       if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
@@ -601,8 +595,17 @@ export function updateMending(w: World): void {
       w.emit({ t: 'mend', prop: s.index, in: s.mendT });
     }
     if (s.mendT > 0) continue;
-    const r = s.def.radius + CAR_RADIUS + 4;
-    if (s.def.solid && w.cars.some((c) => Math.abs(c.x - s.x) < r && Math.abs(c.y - s.y) < r))
+    // (nothing is built back onto a car: it waits for the spot to clear)
+    const r = Math.max(bound(s.def), s.def.radius) + 4;
+    if (
+      s.def.solid &&
+      w.cars.some(
+        (c) =>
+          Math.abs(c.x - s.x) < r + reach(c) &&
+          Math.abs(c.y - s.y) < r + reach(c) &&
+          carPropGap(c, s.def, s.x, s.y, s.rot) < 4,
+      )
+    )
       continue;
     // a piece of bridge waits for what it stands on
     if (!wouldHold(w, s)) continue;

@@ -8,6 +8,22 @@
   },
   "body": "static",
   "radius": 2.8,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2.8,
+        "z": [0, 7]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.9,
+        "z": [7, 13]
+      }
+    ]
+  },
   "hardness": 0.2,
   "made": "material.ice",
   "integrity": 4

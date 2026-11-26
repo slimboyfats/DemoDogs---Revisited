@@ -8,7 +8,10 @@
   },
   "body": "static",
   "radius": 3.4,
-  "hit": { "radius": 4.2 },
+  "hit": {
+    "radius": 1.6,
+    "top": 6
+  },
   "sway": true,
   "hardness": 0,
   "made": "material.wood",

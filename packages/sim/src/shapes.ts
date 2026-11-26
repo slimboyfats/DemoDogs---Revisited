@@ -42,6 +42,9 @@ const CORNER = 3;
 /** How round the corners of a prop's box are, unless it says. */
 const EDGE = 1;
 
+/** How high a car stands, art px, on a car of its own size. */
+export const CAR_HIGH = 7;
+
 /** Half the width of a car's hull: a swollen car's is wider, a shrunk one's narrower. */
 export function hull(c: Car): number {
   return (c.def.body.halfWidth + SKIN) * c.size;
@@ -67,11 +70,37 @@ export function carShape(c: Car, S: Shape): Shape {
   return S;
 }
 
-/** The shape of a prop of kind `def` standing at (x, y) turned `rot`, into `S`. */
-export function propShape(def: PropManifest, x: number, y: number, rot: number, S: Shape): Shape {
+/** How many pieces the shape of a prop of kind `def` is in: one, unless its `hit` has `parts`. */
+export function pieces(def: PropManifest): number {
+  const H = def.hit;
+  return H && 'parts' in H ? H.parts.length : 1;
+}
+
+/**
+ * The shape of a prop of kind `def` standing at (x, y) turned `rot`, into `S`: piece `k` of it,
+ * where it is in several (`pieces`).
+ */
+export function propShape(
+  def: PropManifest,
+  x: number,
+  y: number,
+  rot: number,
+  S: Shape,
+  k = 0,
+): Shape {
   S.x = x;
   S.y = y;
-  const H = def.hit;
+  let H = def.hit;
+  if (H && 'parts' in H) {
+    // a piece is set off from the prop's middle, and turned with it
+    const P = H.parts[k]!;
+    const cs = Math.cos(rot);
+    const sn = Math.sin(rot);
+    S.x = x + P.x * cs - P.y * sn;
+    S.y = y + P.x * sn + P.y * cs;
+    if (!('radius' in P)) rot += P.rot ?? 0;
+    H = P;
+  }
   if (!H || 'radius' in H) {
     S.cs = 1;
     S.sn = 0;
@@ -92,13 +121,22 @@ export function propShape(def: PropManifest, x: number, y: number, rot: number, 
 export function bound(def: PropManifest): number {
   const H = def.hit;
   if (!H) return def.radius;
+  if ('parts' in H) {
+    let far = 0;
+    for (const P of H.parts)
+      far = Math.max(
+        far,
+        Math.hypot(P.x, P.y) + ('radius' in P ? P.radius : Math.hypot(P.halfLength, P.halfWidth)),
+      );
+    return far;
+  }
   return 'radius' in H ? H.radius : Math.hypot(H.halfLength, H.halfWidth);
 }
 
 /** The radius of a prop taken as a ball: a loose one rolling against scenery, or the map's edge. */
 export function girth(def: PropManifest): number {
   const H = def.hit;
-  if (!H) return def.radius;
+  if (!H || 'parts' in H) return def.radius;
   return 'radius' in H ? H.radius : Math.min(H.halfLength, H.halfWidth);
 }
 
@@ -269,6 +307,100 @@ export function shapeGap(A: Shape, B: Shape, T: Touch): number {
 const CAR = newShape();
 const PROP = newShape();
 const HIT = newTouch();
+const PIECE = newTouch();
+
+/** As high as a thing on the ground reaches when nothing says: a car's body, a round, a ball. */
+export const BODY_HIGH = 7;
+/** A gap that is no touch at all: what is asked about is over the thing, or under it. */
+const CLEAR = 1e6;
+
+/** The foot of piece `k` of a prop's shape, art px over the ground it stands on. */
+export function pieceFoot(def: PropManifest, k: number): number {
+  const H = def.hit;
+  return H && 'parts' in H ? (H.parts[k]!.z?.[0] ?? 0) : 0;
+}
+
+/** The top of piece `k` of a prop's shape. */
+export function pieceTop(def: PropManifest, k: number): number {
+  const H = def.hit;
+  if (!H) return Infinity;
+  return 'parts' in H ? (H.parts[k]!.z?.[1] ?? Infinity) : (H.top ?? Infinity);
+}
+
+/**
+ * How far point (x, y) is from the edge of a prop of kind `def` at (sx, sy) turned `rot`: from
+ * the nearest of its pieces that stand anywhere between heights `lo` and `hi` over its foot (a
+ * thing on the ground, unless told), with the way out of that piece and its nearest point in `T`.
+ * Nothing of it at that height: a gap too wide to be a touch.
+ */
+export function propPoint(
+  def: PropManifest,
+  sx: number,
+  sy: number,
+  rot: number,
+  x: number,
+  y: number,
+  T: Touch,
+  lo = 0,
+  hi = BODY_HIGH,
+): number {
+  const n = pieces(def);
+  let best = CLEAR;
+  for (let k = 0; k < n; k++) {
+    if (pieceTop(def, k) <= lo || pieceFoot(def, k) >= hi) continue;
+    if (n === 1) return pointGap(propShape(def, sx, sy, rot, PROP), x, y, T);
+    const g = pointGap(propShape(def, sx, sy, rot, PROP, k), x, y, PIECE);
+    if (g < best) {
+      best = g;
+      T.nx = PIECE.nx;
+      T.ny = PIECE.ny;
+      T.px = PIECE.px;
+      T.py = PIECE.py;
+    }
+  }
+  T.gap = best;
+  return best;
+}
+
+/**
+ * How far apart shape A and a prop of kind `def` at (x, y) turned `rot` are, by the nearest of the
+ * prop's pieces between heights `lo` and `hi` over its foot, which is left in `S`. In `T` as
+ * `shapeGap(A, S, T)` gives it (the way out of the prop, towards A) or, with `turned`, as
+ * `shapeGap(S, A, T)` does (the way out of A).
+ */
+export function propTouch(
+  A: Shape,
+  def: PropManifest,
+  x: number,
+  y: number,
+  rot: number,
+  S: Shape,
+  T: Touch,
+  turned = false,
+  lo = 0,
+  hi = BODY_HIGH,
+): number {
+  const n = pieces(def);
+  let best = CLEAR;
+  let at = -1;
+  for (let k = 0; k < n; k++) {
+    if (pieceTop(def, k) <= lo || pieceFoot(def, k) >= hi) continue;
+    propShape(def, x, y, rot, S, k);
+    if (n === 1) return turned ? shapeGap(S, A, T) : shapeGap(A, S, T);
+    const g = turned ? shapeGap(S, A, PIECE) : shapeGap(A, S, PIECE);
+    if (g < best) {
+      best = g;
+      at = k;
+      T.nx = PIECE.nx;
+      T.ny = PIECE.ny;
+      T.px = PIECE.px;
+      T.py = PIECE.py;
+    }
+  }
+  if (at >= 0) propShape(def, x, y, rot, S, at);
+  T.gap = best;
+  return best;
+}
 
 /**
  * How far point (x, y) is from car c's hull: nothing at its edge, less inside it. A round, a
@@ -279,7 +411,10 @@ export function carGap(c: Car, x: number, y: number): number {
   return pointGap(carShape(c, CAR), x, y, HIT);
 }
 
-/** How far point (x, y) is from the edge of a prop standing at (sx, sy) turned `rot`. */
+/**
+ * How far point (x, y) is from the edge of a prop standing at (sx, sy) turned `rot`: of what of
+ * it stands between heights `lo` and `hi` over its foot.
+ */
 export function propGap(
   def: PropManifest,
   sx: number,
@@ -287,8 +422,10 @@ export function propGap(
   rot: number,
   x: number,
   y: number,
+  lo = 0,
+  hi = BODY_HIGH,
 ): number {
-  return pointGap(propShape(def, sx, sy, rot, PROP), x, y, HIT);
+  return propPoint(def, sx, sy, rot, x, y, HIT, lo, hi);
 }
 
 const BODY = newShape();
@@ -298,7 +435,23 @@ const BODY = newShape();
  * they touch, less when one is into the other.
  */
 export function carPropGap(c: Car, def: PropManifest, x: number, y: number, rot: number): number {
-  return shapeGap(propShape(def, x, y, rot, PROP), carShape(c, BODY), HIT);
+  return propTouch(carShape(c, BODY), def, x, y, rot, PROP, HIT, true);
+}
+
+/** How far apart the hulls of cars a and b are. */
+export function carsGap(a: Car, b: Car): number {
+  return shapeGap(carShape(a, CAR), carShape(b, BODY), HIT);
+}
+
+/** How far point (x, y) is from the edge of p: a piece of scenery, or a loose thing. */
+export function thingGap(
+  p: { def: PropManifest; x: number; y: number; rot: number },
+  x: number,
+  y: number,
+  lo = 0,
+  hi = BODY_HIGH,
+): number {
+  return propPoint(p.def, p.x, p.y, p.rot, x, y, HIT, lo, hi);
 }
 
 /**

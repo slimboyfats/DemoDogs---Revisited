@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PropLook } from '@demodogs/shared';
-import { newShape, newTouch, pointGap, propShape } from '@demodogs/sim';
+import { bound, newShape, newTouch, pieces, pointGap, propPoint, propShape } from '@demodogs/sim';
 import { loadContent, loadLooks } from './index';
 
 /**
@@ -49,26 +49,35 @@ describe('hit shapes fit what is drawn', () => {
   const T = newTouch();
   for (const [id, def] of C.prop) {
     const lm = L.get(id);
-    if (!lm || lm.look.kind !== 'prop' || !def.solid || def.critter || LOOSE_FIT.has(id)) continue;
+    if (!lm || lm.look.kind !== 'prop' || !def.solid || def.critter) continue;
+    // (a shape in pieces was baked from the look, slice by slice: it is held to it at every
+    // height, whatever the thing is)
+    const baked = pieces(def) > 1;
+    if (!baked && LOOSE_FIT.has(id)) continue;
     it(id, () => {
       const p = (lm.look as PropLook).part;
       propShape(def, 0, 0, 0, S);
+      const trunk = def.crown ? def.crown.trunk + 0.75 : Infinity;
       let out = 0;
       let reach = 0;
       const step = 0.5;
-      for (let z = 0.5; z < Math.min(p.layers, CAR_HIGH); z += 1)
+      for (let z = 0.5; z < (baked ? p.layers : Math.min(p.layers, CAR_HIGH)); z += 1)
         for (let x = -p.w / 2 + step / 2; x < p.w / 2; x += step)
           for (let y = -p.h / 2 + step / 2; y < p.h / 2; y += step) {
             if (!p.fn(x, y, p.smooth ? z : Math.floor(z))) continue;
-            out = Math.max(out, pointGap(S, x, y, T));
+            if (Math.hypot(x, y) > trunk) continue;
+            out = Math.max(
+              out,
+              baked ? propPoint(def, 0, 0, 0, x, y, T, z - 0.5, z + 0.5) : pointGap(S, x, y, T),
+            );
             reach = Math.max(reach, Math.abs(x), Math.abs(y));
           }
       if (reach === 0) return;
       // no part of it well outside the shape
       expect(out).toBeLessThan(OUT);
       // and the shape not well outside it
-      const far = Math.max(S.a, S.b) + S.r;
-      expect(far - reach).toBeLessThan(OVER);
+      if (!baked) expect(Math.max(S.a, S.b) + S.r - reach).toBeLessThan(OVER);
+      else expect(bound(def) - Math.hypot(reach, reach)).toBeLessThan(OVER);
     });
   }
 });

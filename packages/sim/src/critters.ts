@@ -8,7 +8,7 @@ import {
 import { damage } from './damage';
 import type { Car, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { carShape, newShape, newTouch, pointGap, reach } from './shapes';
+import { carShape, newShape, newTouch, pointGap, propPoint, reach } from './shapes';
 
 /** A car's hull and where an animal meets it: filled again for each pair. */
 const HULL = newShape();
@@ -249,12 +249,11 @@ export function updateCritters(w: World): void {
       let ny = k.y + Math.sin(k.h) * go * DT;
       const rad = k.def.radius;
       for (const s of w.near(nx, ny, rad + 2, WALK_NEAR)) {
-        const r = s.def.radius + rad;
-        if (s.down || !s.def.solid || Math.abs(s.x - nx) > r || Math.abs(s.y - ny) > r) continue;
-        const d = Math.hypot(nx - s.x, ny - s.y) || 1;
-        if (d < r) {
-          nx = s.x + ((nx - s.x) / d) * r;
-          ny = s.y + ((ny - s.y) / d) * r;
+        if (s.down || !s.def.solid) continue;
+        const gap = propPoint(s.def, s.x, s.y, s.rot, nx, ny, AT);
+        if (gap < rad) {
+          nx += AT.nx * (rad - gap);
+          ny += AT.ny * (rad - gap);
           // blocked on a walk: think again
           if (k.state === 'walk') [k.tx, k.ty] = spot(w, k, D);
           // ran into it head down: that is the end of the charge

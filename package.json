@@ -18,6 +18,7 @@
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "content:validate": "vitest run --project content validate",
+    "hitboxes:bake": "BAKE_HITS=1 vitest run --project content bake-hits --disableConsoleIntercept --coverage.enabled=false",
     "bench:sim": "SIM_BENCH=1 vitest run --project content simbench --disableConsoleIntercept",
     "check": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test",
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",

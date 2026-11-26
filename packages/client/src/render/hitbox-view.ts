@@ -1,4 +1,5 @@
 import {
+  BODY_HIGH,
   CLIFF,
   MINE_TRIGGER,
   PICKUP_REACH,
@@ -10,6 +11,9 @@ import {
   moundHeight,
   muzzle,
   newShape,
+  pieceFoot,
+  pieceTop,
+  pieces,
   propShape,
   type Car,
   type Shape,
@@ -425,20 +429,29 @@ export class HitboxView {
         } else if (heights && lift > 0) {
           this.ring(s.x, s.y, 2, lift);
           this.stroke(COL.high, 1);
+          // (a piece of deck: how high a car rides on it is the road's own number, not this)
           this.pin(s.x, s.y, lift, COL.high);
-          this.text(lift.toFixed(0), s.x, s.y, lift + 3, COL.high, 7);
         }
         continue;
       }
-      // (with HEIGHTS on, as tall as it is drawn: a low wall, a tower)
-      const high = heights ? Math.min(40, tall(this.art.prop(D.id))) : 0;
-      this.block(
-        propShape(D, s.x, s.y, s.rot, S),
-        lift,
-        high,
-        D.low !== undefined ? COL.low : COL.solid,
-        1.5,
-      );
+      // every piece of its shape, where it stands; with HEIGHTS on, each from its own foot up to
+      // its own top (a piece with no top: as tall as the thing is drawn)
+      const drawn = heights ? Math.min(60, tall(this.art.prop(D.id))) : 0;
+      for (let k = 0; k < pieces(D); k++) {
+        // (what a car cannot reach is drawn thinner, in the colour for things up off the ground,
+        // and only with HEIGHTS on)
+        const up = pieceFoot(D, k) >= BODY_HIGH;
+        if (!heights && up) continue;
+        const foot = heights ? pieceFoot(D, k) : 0;
+        const top = Math.min(drawn, pieceTop(D, k));
+        this.block(
+          propShape(D, s.x, s.y, s.rot, S, k),
+          lift + foot,
+          heights ? Math.max(0, top - foot) : 0,
+          up ? COL.high : D.low !== undefined ? COL.low : COL.solid,
+          up ? 1 : 1.5,
+        );
+      }
       if (heights && D.low !== undefined) this.text(`<${D.low}`, s.x, s.y, 0, COL.low, 7);
     }
   }
@@ -472,8 +485,10 @@ export class HitboxView {
   private loose(w: World, heights: boolean): void {
     for (const p of w.props) {
       if (!p.alive || !this.seen(p.x, p.y, 20)) continue;
-      this.outline(propShape(p.def, p.x, p.y, p.rot, S), p.z);
-      this.stroke(COL.loose, 1.3);
+      for (let k = 0; k < pieces(p.def); k++) {
+        this.outline(propShape(p.def, p.x, p.y, p.rot, S, k), p.z);
+        this.stroke(COL.loose, 1.3);
+      }
       if (heights) this.pin(p.x, p.y, p.z, COL.loose);
     }
     for (const k of w.critters) {
@@ -545,9 +560,17 @@ export class HitboxView {
       this.stroke(COL.lamp, 0.8, [1, 2]);
     }
     // the gun: where a round leaves it, and the sights it fires in (your own car's only)
-    const [mx, my, mz] = muzzle(c);
-    this.ring(mx, my, 0.6, mz);
-    this.stroke(COL.gun, 1.2);
+    const [mx, my] = muzzle(c);
+    if (c.gun) {
+      // (a round is drawn leaving the mouth of one barrel or the other, at the barrel's height)
+      const mount = this.art.gunMount(c.def.id, c.def.body);
+      const mz = c.z + (BODY_UP + mount[2] + 1.3) * c.size;
+      for (const sg of [-1, 1]) {
+        const off = sg * mount[1] * c.size;
+        this.ring(mx - Math.sin(c.h) * off, my + Math.cos(c.h) * off, 0.6, mz);
+        this.stroke(COL.gun, 1.2);
+      }
+    }
     if (c !== w.player || !c.gun) return;
     const [range, aim] = gunSight(c);
     const ctx = this.ctx;
@@ -589,16 +612,21 @@ export class HitboxView {
     ctx.font = `700 ${Math.round(8 * d)}px ui-monospace, Menlo, monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    const x = 8 * d;
-    let y = 70 * d;
+    // across the top between the lap counter and the map when there is the room for two columns,
+    // else down the left
+    const wide = this.W / d >= 640;
+    const per = wide ? Math.ceil(rows.length / 2) : rows.length;
+    const x0 = (wide ? 204 : 8) * d;
+    const y0 = (wide ? 12 : 70) * d;
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
-    ctx.fillRect(x - 4 * d, y - 7 * d, 190 * d, (rows.length * 10 + 6) * d);
-    for (const [col, label] of rows) {
+    ctx.fillRect(x0 - 4 * d, y0 - 7 * d, (wide ? 396 : 196) * d, (per * 10 + 6) * d);
+    rows.forEach(([col, label], i) => {
+      const x = x0 + (i >= per ? 200 * d : 0);
+      const y = y0 + (i % per) * 10 * d;
       ctx.fillStyle = col;
       ctx.fillRect(x, y - 2 * d, 10 * d, 4 * d);
       ctx.fillStyle = '#fff';
       ctx.fillText(label, x + 14 * d, y);
-      y += 10 * d;
-    }
+    });
   }
 }

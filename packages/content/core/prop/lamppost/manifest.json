@@ -8,7 +8,30 @@
   },
   "body": "static",
   "radius": 1.8,
-  "hit": { "radius": 1.4 },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 1.1,
+        "z": [0, 3]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 0.6,
+        "z": [3, 7]
+      },
+      {
+        "x": 0,
+        "y": -2.5,
+        "halfLength": 0.5,
+        "halfWidth": 3,
+        "round": 0.5,
+        "z": [7, 22]
+      }
+    ]
+  },
   "hardness": 0.5,
   "made": "material.steel",
   "integrity": 8

@@ -842,11 +842,42 @@ export const PropSchema = z.strictObject({
    */
   hit: z
     .union([
-      z.strictObject({ radius: z.number().positive() }),
+      // (`top`: how high it stands, art px; what is up above that goes over it. Without one it
+      // is as high as anything gets)
+      z.strictObject({ radius: z.number().positive(), top: z.number().positive().optional() }),
       z.strictObject({
         halfLength: z.number().positive(),
         halfWidth: z.number().positive(),
         round: z.number().min(0).optional(),
+        top: z.number().positive().optional(),
+      }),
+      // a thing whose outline is no one box, or not the same all the way up: several pieces, each
+      // a circle or a box set off from its middle and turned, each standing from `z[0]` up to
+      // `z[1]` (roots spread low about a trunk, a tank up on legs). Baked from the look's slices
+      // by `pnpm hitboxes:bake`, so that what is hit is what is drawn at every height
+      z.strictObject({
+        parts: z
+          .array(
+            z.union([
+              z.strictObject({
+                x: z.number(),
+                y: z.number(),
+                radius: z.number().positive(),
+                z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+              }),
+              z.strictObject({
+                x: z.number(),
+                y: z.number(),
+                rot: z.number().optional(),
+                halfLength: z.number().positive(),
+                halfWidth: z.number().positive(),
+                round: z.number().min(0).optional(),
+                z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+              }),
+            ]),
+          )
+          .min(1)
+          .max(12),
       }),
     ])
     .optional(),

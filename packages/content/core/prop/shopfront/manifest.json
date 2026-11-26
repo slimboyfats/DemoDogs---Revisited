@@ -8,10 +8,21 @@
   },
   "body": "static",
   "radius": 5.5,
-  "hit": { "halfLength": 5.6, "halfWidth": 5.5, "round": 0.6 },
+  "hit": {
+    "halfLength": 5.6,
+    "halfWidth": 5.5,
+    "round": 0.6,
+    "top": 13
+  },
   "made": "material.concrete",
   "integrity": 110,
   "hardness": 1.1,
   "storeys": 3,
-  "fallOver": { "rubble": "prop.rubble", "floor": 4, "step": 6, "spread": 2.4, "crush": 20 }
+  "fallOver": {
+    "rubble": "prop.rubble",
+    "floor": 4,
+    "step": 6,
+    "spread": 2.4,
+    "crush": 20
+  }
 }

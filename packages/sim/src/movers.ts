@@ -1,8 +1,9 @@
 import { DT, GRAVITY, type PickupManifest } from '@demodogs/shared';
 import { batter, breakProp, damage, footing, light } from './damage';
-import type { Car } from './entities';
+import type { Car, StaticProp } from './entities';
 import { clamp } from './math';
-import { circles, hull, toLocal } from './physics';
+import { toLocal } from './physics';
+import { carShape, newShape, newTouch, propTouch, shapeGap } from './shapes';
 import type { World } from './world';
 
 /**
@@ -10,6 +11,10 @@ import type { World } from './world';
  * springs that throw the car over a crater or a slick lying ahead. Both are on the car until they
  * are used up, and both work the same for the player and for rivals.
  */
+
+const BLADE = newShape();
+const OTHER = newShape();
+const MEET = newTouch();
 
 /** Seconds between two bites of a blade: what it is pushing into loses a piece each time. */
 const BITE_EVERY = 0.1;
@@ -92,19 +97,32 @@ function plough(w: World, c: Car): void {
   const ready = B.cd <= 0;
   let bit = false;
   let held = false;
-  // within the blade's sweep: just in front of the nose and no wider than the blade
-  const under = (x: number, y: number, r: number): [number, number] | null => {
-    const L = toLocal(c, x, y);
-    if (L[0] < reach - r - 1 || L[0] > reach + r + 1.5 || Math.abs(L[1]) > half + r * 0.5)
-      return null;
-    return L;
-  };
+  // the blade's sweep: a bar across the nose as wide as the blade, and a little before it
+  BLADE.x = c.x + cs * (reach + 0.25);
+  BLADE.y = c.y + sn * (reach + 0.25);
+  BLADE.cs = cs;
+  BLADE.sn = sn;
+  BLADE.a = 1.25;
+  BLADE.b = half;
+  BLADE.r = 0;
+  /** Is that shape under the blade? Where along the blade it meets it, if so. */
+  const under = (S: typeof BLADE): [number, number] | null =>
+    shapeGap(S, BLADE, MEET) < 0.5 ? toLocal(c, MEET.px, MEET.py) : null;
+  const propUnder = (p: {
+    def: StaticProp['def'];
+    x: number;
+    y: number;
+    rot: number;
+  }): [number, number] | null =>
+    propTouch(BLADE, p.def, p.x, p.y, p.rot, OTHER, MEET, true) < 0.5
+      ? toLocal(c, MEET.px, MEET.py)
+      : null;
 
   // scenery: chewed while the car leans on it, so it grinds through instead of bouncing off
   const [nx, ny] = nose(c);
   for (const s of w.near(nx, ny, 24)) {
     if (s.down || !s.def.solid || s.hp === undefined) continue;
-    const L = under(s.x, s.y, s.def.radius);
+    const L = propUnder(s);
     if (!L) continue;
     const px = c.x + cs * reach - sn * clamp(L[1], -half, half);
     const py = c.y + sn * reach + cs * clamp(L[1], -half, half);
@@ -129,7 +147,7 @@ function plough(w: World, c: Car): void {
 
   // loose things are scooped up and thrown forward; crates burst, drums light
   for (const p of w.props) {
-    if (!p.alive || p.z > 8 || !under(p.x, p.y, p.def.radius)) continue;
+    if (!p.alive || p.z > 8 || !propUnder(p)) continue;
     if (p.def.breaksAt !== undefined && vf > 10) {
       breakProp(w, p, c);
       continue;
@@ -145,8 +163,7 @@ function plough(w: World, c: Car): void {
   for (const o of w.cars) {
     if (o === c || Math.abs(o.z - c.z) > 8 || Math.abs(o.x - c.x) > 40 || Math.abs(o.y - c.y) > 40)
       continue;
-    let L: [number, number] | null = null;
-    for (const q of circles(o)) L ??= under(q[0], q[1], hull(o));
+    const L = under(carShape(o, OTHER));
     if (!L) continue;
     const closing = vf - (o.vx * cs + o.vy * sn);
     if (closing <= 2) continue;

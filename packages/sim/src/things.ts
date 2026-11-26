@@ -4,12 +4,14 @@ import { fitCatchup, odds, place } from './catchup';
 import {
   bound,
   carGap,
+  carShape,
+  hull,
   girth,
   newShape,
   newTouch,
   pointGap,
   propGap,
-  propShape,
+  propPoint,
   reach,
 } from './shapes';
 import { grantDefence } from './defence';
@@ -175,7 +177,6 @@ export function smashBot(w: World, b: Bot, c: Car): void {
 // ---------------------------------------------------------------- loose props
 
 /** A piece of scenery's shape and where a prop touches it: filled again for each pair. */
-const SCENERY = newShape();
 const AT = newTouch();
 
 export function updateProps(w: World): void {
@@ -255,7 +256,7 @@ export function updateProps(w: World): void {
         if (s.down || !s.def.solid) continue;
         const m = bound(s.def) + ball;
         if (Math.abs(s.x - p.x) > m || Math.abs(s.y - p.y) > m) continue;
-        const gap = pointGap(propShape(s.def, s.x, s.y, s.rot, SCENERY), p.x, p.y, AT);
+        const gap = propPoint(s.def, s.x, s.y, s.rot, p.x, p.y, AT);
         if (gap < ball) {
           p.x += AT.nx * (ball - gap);
           p.y += AT.ny * (ball - gap);
@@ -279,6 +280,8 @@ export const PICKUP_REACH = 6.8;
 export const MINE_TRIGGER = 5;
 /** How near a rocket has to come to a car's hull, or to scenery, to go off. */
 export const ROCKET_REACH = 3;
+/** How high over the ground (or its deck) a rocket flies: what stands lower than that it goes over. */
+export const ROCKET_HIGH = 4;
 
 export function updatePickups(w: World): void {
   for (const p of w.pickups) {
@@ -428,12 +431,33 @@ export function muzzle(c: Car): [number, number, number] {
   return [c.x + Math.cos(c.h) * n, c.y + Math.sin(c.h) * n, c.z + 4 * c.size];
 }
 
+/**
+ * Is there solid scenery standing between (x, y) and (tx, ty)? A round does not go through a wall,
+ * so a car behind one is not in the sights.
+ */
+function walled(w: World, x: number, y: number, tx: number, ty: number): boolean {
+  const d = Math.hypot(tx - x, ty - y);
+  const n = Math.ceil(d / 2);
+  for (let i = 1; i < n; i++) {
+    const px = x + ((tx - x) * i) / n;
+    const py = y + ((ty - y) * i) / n;
+    for (const s of w.near(px, py, 1))
+      if (!s.down && s.def.solid && !s.def.mound && !s.def.pad) {
+        if (propPoint(s.def, s.x, s.y, s.rot, px, py, AT, 3.5, 5) < 0.5) return true;
+      }
+  }
+  return false;
+}
+
+const TARGET = newShape();
+
 export function shoot(w: World, c: Car): void {
   const g = c.gun;
   c.gunCd -= DT;
   if (!g || c.rounds <= 0 || c.gunCd > 0) return;
   const fast = barrelOf(c);
   const [range, aim] = gunSight(c);
+  const [x, y] = muzzle(c);
   let best: Car | null = null;
   let bd = range;
   for (const o of w.cars) {
@@ -441,7 +465,11 @@ export function shoot(w: World, c: Car): void {
     if (hidden(o)) continue;
     if (Math.abs(o.deck - c.deck) > 8) continue;
     const d = Math.hypot(o.x - c.x, o.y - c.y);
-    if (d < bd && Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim) {
+    if (
+      d < bd &&
+      Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < aim &&
+      (c.z - c.deck > 10 || !walled(w, x, y, o.x, o.y))
+    ) {
       bd = d;
       best = o;
     }
@@ -451,13 +479,26 @@ export function shoot(w: World, c: Car): void {
   c.gunCd = g.cooldown / fast;
   const cs = Math.cos(c.h);
   const sn = Math.sin(c.h);
-  const [x, y] = muzzle(c);
   const hit = w.rng.next() < 0.8;
-  // a hit lands on the near side of the target, a miss flies on past it
   const off = w.rng.range(-3, 3);
-  const far = hit ? bd - 5 : range;
-  const tx = c.x + cs * far - sn * off;
-  const ty = c.y + sn * far + cs * off;
+  let tx = c.x + cs * range - sn * off;
+  let ty = c.y + sn * range + cs * off;
+  if (hit) {
+    // a hit lands on the target's own bodywork: the side of its hull that faces the gun, a
+    // little to one side of its middle or the other (a miss flies on past it)
+    const ux = (best.x - x) / (Math.hypot(best.x - x, best.y - y) || 1);
+    const uy = (best.y - y) / (Math.hypot(best.x - x, best.y - y) || 1);
+    const out = reach(best) * 2;
+    const side = (off / 3) * hull(best) * 0.7;
+    pointGap(
+      carShape(best, TARGET),
+      best.x - ux * out - uy * side,
+      best.y - uy * out + ux * side,
+      AT,
+    );
+    tx = AT.px;
+    ty = AT.py;
+  }
   w.emit({ t: 'shot', car: c.index, x, y, tx, ty, hit: hit ? best.index : -1 });
   if (!hit) return;
   // a mirrored car sends the round back where it came from
@@ -513,7 +554,8 @@ export function updateRockets(w: World): void {
           !s.down &&
           s.def.solid &&
           // (and one on the ground goes over what a car in the air would clear)
-          propGap(s.def, s.x, s.y, s.rot, r.x, r.y) < ROCKET_REACH - 1,
+          propGap(s.def, s.x, s.y, s.rot, r.x, r.y, ROCKET_HIGH - 1, ROCKET_HIGH + 1) <
+            ROCKET_REACH - 1,
       );
     if (!hit && armed && r.z < 4)
       hit = w.props.some(
@@ -521,7 +563,8 @@ export function updateRockets(w: World): void {
           p.alive &&
           p.def.radius > 3 &&
           Math.abs(p.x - r.x) < 30 &&
-          propGap(p.def, p.x, p.y, p.rot, r.x, r.y) < ROCKET_REACH - 1,
+          propGap(p.def, p.x, p.y, p.rot, r.x, r.y, ROCKET_HIGH - 1, ROCKET_HIGH + 1) <
+            ROCKET_REACH - 1,
       );
     if (hit) {
       w.rockets.splice(i, 1);

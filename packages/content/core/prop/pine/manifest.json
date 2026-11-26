@@ -7,11 +7,14 @@
     "since": "core@0.1.0"
   },
   "extends": "prop.tree",
-  "hit": { "radius": 4 },
   "crown": {
     "trunk": 1.3,
     "top": 19,
     "hold": 0.55,
     "flash": 0.25
+  },
+  "hit": {
+    "radius": 2,
+    "top": 22
   }
 }

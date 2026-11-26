@@ -21,6 +21,7 @@ import type { World } from './world';
 import { pace } from './modifiers';
 import {
   bound,
+  CAR_HIGH,
   carGap,
   carShape,
   extent,
@@ -28,7 +29,7 @@ import {
   pointGap,
   newShape,
   newTouch,
-  propShape,
+  propTouch,
   reach,
   shapeGap,
   type Shape,
@@ -644,7 +645,20 @@ export function collideWorld(w: World, c: Car): void {
     // high enough in the air, a car sails over what is low
     if (s.def.low !== undefined && c.z > s.def.low) continue;
     // (the hull where the car is now: something else may just have pushed it back)
-    const gap = shapeGap(carShape(c, HULL), propShape(s.def, s.x, s.y, s.rot, OTHER), AT);
+    // (as much of it as stands at the car's own height: wheels up to roof, wherever it is)
+    const foot = c.z - (s.lift ?? 0);
+    const gap = propTouch(
+      carShape(c, HULL),
+      s.def,
+      s.x,
+      s.y,
+      s.rot,
+      OTHER,
+      AT,
+      false,
+      foot,
+      foot + CAR_HIGH * c.size,
+    );
     if (gap >= 0) continue;
     let nx = AT.nx;
     let ny = AT.ny;
@@ -808,7 +822,7 @@ export function collideProps(w: World, c: Car): void {
     const pm = p.def.mass ?? 0.5;
     {
       // its shape against the hull: it is pushed out of the car the nearest way
-      const gap = shapeGap(propShape(p.def, p.x, p.y, p.rot, OTHER), carShape(c, HULL), AT);
+      const gap = propTouch(carShape(c, HULL), p.def, p.x, p.y, p.rot, OTHER, AT, true);
       if (gap >= 0) continue;
       const nx = AT.nx;
       const ny = AT.ny;

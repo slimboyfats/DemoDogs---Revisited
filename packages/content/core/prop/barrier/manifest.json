@@ -8,7 +8,34 @@
   },
   "body": "static",
   "radius": 4.4,
-  "hit": { "halfLength": 4.5, "halfWidth": 2, "round": 0.8 },
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 4.5,
+        "halfWidth": 2,
+        "round": 0.8,
+        "z": [0, 3]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 4.5,
+        "halfWidth": 1.5,
+        "round": 0.5,
+        "z": [3, 7]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 4.5,
+        "halfWidth": 1,
+        "round": 0.5,
+        "z": [7, 10]
+      }
+    ]
+  },
   "made": "material.concrete",
   "integrity": 70
 }
