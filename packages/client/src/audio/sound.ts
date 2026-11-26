@@ -512,7 +512,7 @@ export class Sound {
       case 'soft':
         // straw, snow, a hedge: a whump and a rustle
         this.noise(0.22, 280, 0.6, v * 1.1, 'lowpass');
-        this.noise(0.2, 3000, 0.6, v * 0.25, 'highpass', 0.03);
+        this.noise(0.2, 1700, 0.7, v * 0.14, 'bandpass', 0.03);
         break;
     }
   }
@@ -521,7 +521,7 @@ export class Sound {
   jingle(name: JingleName, when = 0): void {
     const j: Jingle = JINGLES[name];
     const step = 15 / j.bpm;
-    const vol = j.wave === 'square' ? 0.1 : 0.14;
+    const vol = j.wave === 'square' ? 0.13 : j.wave === 'triangle' ? 0.26 : 0.16;
     for (const [pitch, at, len] of j.lead) {
       this.tone(hertz(pitch), len * step * 0.95, vol, j.wave, 1, when + at * step);
       // a second voice a hair sharp, so it is a section and not a telephone
