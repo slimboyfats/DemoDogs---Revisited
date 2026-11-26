@@ -9,6 +9,7 @@ import {
 import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
+import './theme.css';
 import { RANGE, loadContent, loadLooks, withRange } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { Sound } from './audio/sound';
@@ -24,7 +25,7 @@ import {
   type RaceId,
 } from './game/career';
 import { Session, type SessionOptions } from './game/session';
-import { CameraZoom, VIEWS, zoomStops } from './game/zoom';
+import { CameraZoom, VIEWS, zoomSides, zoomStops } from './game/zoom';
 import { DIAL_PLACE_NAMES, Speedo } from './game/speedo';
 import { TuningStore } from './game/tuning';
 import { devSettings } from './ui/dev-settings';
@@ -42,6 +43,8 @@ import { PITCH, Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
 import { DevPanel } from './ui/dev-panel';
 import { Garage } from './ui/garage';
+import { Settings } from './ui/settings';
+import { venueThumb } from './ui/venue-thumb';
 import { KeyHints } from './ui/key-hints';
 import { volumeSliders } from './ui/volume';
 import { NameTags } from './ui/name-tags';
@@ -475,8 +478,7 @@ function resize(): void {
   overK = Math.min(2, device) / DPR;
   overlay.width = Math.round(W * overK);
   overlay.height = Math.round(H * overK);
-  const short = Math.min(W, H);
-  const long = Math.max(W, H);
+  const [short, long] = zoomSides(W, H);
   // at NORMAL about 175 art pixels up the short side: far enough out that the cells read as fine
   // grain (on a phone an art pixel is about 4.5 device px, a fire or smoke cell about 2)
   scale = camZoom.scale(short, long);
@@ -504,8 +506,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.resBtn'))
 
 /** The CAMERA button and slider say which zoom is on, and what this screen can do. */
 function showZoom(): void {
-  const short = Math.min(W, H);
-  const long = Math.max(W, H);
+  const [short, long] = zoomSides(W, H);
   // between the names: which side of NORMAL it is on
   const name =
     camZoom.name(short, long)?.toUpperCase() ?? (camZoom.view < VIEWS.normal ? 'CLOSER' : 'WIDER');
@@ -525,7 +526,7 @@ for (const b of document.querySelectorAll<HTMLButtonElement>('.zoomBtn'))
 // the slider: the race behind the pause menu zooms as it is dragged
 for (const r of document.querySelectorAll<HTMLInputElement>('.zoomRange'))
   r.oninput = () => {
-    camZoom.setStop(Number(r.value), Math.min(W, H), Math.max(W, H));
+    camZoom.setStop(Number(r.value), ...zoomSides(W, H));
     resize();
   };
 
@@ -625,7 +626,7 @@ function show(id: string | null): void {
     'menu',
     'results',
     'pauseMenu',
-    'tuneMenu',
+    'settings',
     'career',
     'loader',
     'online',
@@ -676,14 +677,8 @@ function updateFireButton(): void {
 function goFullscreen(): void {
   try {
     if (matchMedia('(pointer: coarse)').matches && !document.fullscreenElement)
-      document.documentElement
-        .requestFullscreen()
-        .then(() =>
-          (
-            window.screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> }
-          ).lock?.('landscape'),
-        )
-        .catch(() => undefined);
+      // (held either way up: the race is laid out for a phone on its side and for an upright one)
+      document.documentElement.requestFullscreen().catch(() => undefined);
   } catch {
     /* not allowed */
   }
@@ -929,12 +924,23 @@ function buildMenu(): void {
     const mode = content.mode.get(v.mode)!;
     const b = document.createElement('button');
     b.dataset.venue = v.id;
-    const what =
-      mode.kind === 'race' ? `Race · ${mode.laps} laps` : 'Derby · last car running wins';
+    b.className = `venue ${mode.kind}`;
+    const about = v.meta.description.replace(/^(Race|Derby)\.\s*/, '');
+    b.title = about;
+    let best = 0;
+    try {
+      best = Number(localStorage.getItem(`dd-best-${v.id}`)) || 0;
+    } catch {
+      /* private mode */
+    }
     b.append(
+      venueThumb(v),
+      Object.assign(document.createElement('em'), {
+        textContent: mode.kind === 'race' ? `RACE · ${mode.laps} LAPS` : 'DERBY',
+      }),
       Object.assign(document.createElement('b'), { textContent: v.meta.name.toUpperCase() }),
       Object.assign(document.createElement('small'), {
-        textContent: `${what} · ${v.meta.description.replace(/^(Race|Derby)\.\s*/, '')}`,
+        textContent: best ? `Best ${best} · ${about}` : about,
       }),
     );
     b.onclick = () => startGame(v.id);
@@ -1210,26 +1216,20 @@ function boot(): void {
   // DEV SETTINGS: from the menu or the pause menu, and back to whichever it was
   const tuneBtns = document.querySelectorAll<HTMLButtonElement>('.tuneBtn');
   const tuneLabel = (): void =>
-    tuneBtns.forEach(
-      (b) =>
-        (b.textContent = tune.changed ? `DEV SETTINGS (${tune.changed} CHANGED)` : 'DEV SETTINGS'),
-    );
+    tuneBtns.forEach((b) => (b.textContent = tune.changed ? `DEV · ${tune.changed}` : 'DEV'));
   const tuneSync = devSettings($('tuneRows'), tune, () => {
     // a race under way on this device takes the numbers at once (the ground keeps its shape)
     if (session && !online.room) session.world.tuning = { ...tune.values };
     tuneLabel();
   });
-  let tuneFrom: 'menu' | 'pauseMenu' = 'menu';
-  tuneBtns.forEach(
-    (b) =>
-      (b.onclick = () => {
-        tuneFrom = screen === 'game' ? 'pauseMenu' : 'menu';
-        tuneSync();
-        show('tuneMenu');
-      }),
-  );
-  $('tuneBack').onclick = () => show(tuneFrom);
   tuneLabel();
+  // SETTINGS: one sheet from the menu or the pause menu, and back to whichever it was
+  new Settings({
+    opened: tuneSync,
+    closed: (fromPause) => {
+      if (fromPause && paused && screen === 'game') show('pauseMenu');
+    },
+  });
   const muteBtns = document.querySelectorAll<HTMLButtonElement>('.muteBtn');
   const label = () => muteBtns.forEach((b) => (b.textContent = sound.label));
   const sliders = volumeSliders($('volume'), sound, label);
