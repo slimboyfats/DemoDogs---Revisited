@@ -7,7 +7,7 @@
   "short_name": "DemoDogs",
   "start_url": "./index.html",
   "display": "fullscreen",
-  "orientation": "landscape",
-  "background_color": "#16141c",
-  "theme_color": "#16141c"
+  "orientation": "any",
+  "background_color": "#5cc0ff",
+  "theme_color": "#5cc0ff"
 }

@@ -1,97 +1,70 @@
-import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
+import { type Controls } from '@demodogs/shared';
 import {
-  angDiff,
-  armsWants,
-  boostAhead,
-  arsenalWants,
-  howlWants,
+  belowRoad,
+  cornerSpeed,
   defineAi,
-  dropsBehind,
-  nearestCar,
+  looksNow,
+  pickPath,
+  rampAhead,
+  recover,
   steerTo,
-  unstick,
+  thingsAhead,
+  topSpeed,
+  wantsBoost,
+  wantsFire,
+  wayBackUp,
 } from '@demodogs/sim';
 
 /**
- * ai.racer: drive the racing line in a lane of its own, slow for bends, pick fights with a car just
- * ahead when it is spoiling for one, grab pickups in reach, fire rockets at cars in front and drop
- * mines on cars behind. A rubber band keeps the pack close to the player.
+ * ai.racer: drive the racing line, each driver a little off it in a lane of its own. Go round
+ * what is in the way (slower cars, wrecks, scenery, mines, pools), go out of the way for crates
+ * and boost tiles, brake only as late as the bend ahead needs, shut the door on a car coming up
+ * behind, ram the car ahead when spoiling for it. Fire what it carries when it would hit, drop
+ * what it carries on a car on its tail, and boost down a clear straight when there is a place to
+ * gain. Back out of what it gets stuck on, and find the way back up beside raised road. A rubber
+ * band keeps the pack close to the humans. What kind of driver it is comes from the manifest's
+ * `styles`.
  */
 export default defineAi({
   id: 'ai.racer',
   drive(w, c) {
     const T = w.track;
     const ai = c.ai!;
-    if (!T) return unstick(c, { steer: 0, throttle: 1, brake: false, boost: false, fire: false });
-    const N = T.n;
+    const idle: Controls = { steer: 0, throttle: 1, brake: false, boost: false, fire: false };
+    if (!T) return recover(c, idle, 0);
+    const R = ai.traits;
     const sp = c.vf;
-    const k = Math.round((26 + Math.abs(sp) * 0.5) / T.step);
-    const i2 = (c.idx + k) % N;
-    const lane = Math.max(-0.6, Math.min(0.6, ai.lane + Math.sin(w.time * 0.35 + ai.phase) * 0.25));
-    let tx = T.x[i2]! - Math.sin(T.a[i2]!) * lane * (w.road / 2);
-    let ty = T.y[i2]! + Math.cos(T.a[i2]!) * lane * (w.road / 2);
-    const [prey, pd] = nearestCar(
-      w,
-      c,
-      75,
-      (o) => Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) < 0.8,
-    );
-    if (prey && ai.aggro > 0.35 && Math.abs(angDiff(T.a[prey.idx]!, T.a[c.idx]!)) < 0.6) {
-      tx = tx * 0.35 + (prey.x + prey.vx * 0.2) * 0.65;
-      ty = ty * 0.35 + (prey.y + prey.vy * 0.2) * 0.65;
-    } else if (!c.weapon) {
-      const p = w.pickups.find(
-        (p) =>
-          p.on &&
-          Math.hypot(p.x - c.x, p.y - c.y) < 70 &&
-          Math.abs(angDiff(Math.atan2(p.y - c.y, p.x - c.x), c.h)) < 0.5,
-      );
-      if (p) {
-        tx = p.x;
-        ty = p.y;
-      }
-    } else {
-      // nothing better to do: take the boost tile that lies ahead
-      const pad = boostAhead(w, c, 120);
-      if (pad) {
-        tx = pad.x;
-        ty = pad.y;
-      }
-    }
+    const look = 30 + Math.abs(sp) * 0.45;
+    // its own lane, and a weave that is wider the less tidy the driver (and the easier the race)
+    const weave = Math.sin(w.time * 0.35 + ai.phase) * (0.04 + (0.16 * R.wobble) / w.level.wits);
+    const bias = (ai.lane * 0.22 + weave) * w.road;
+    const things = looksNow(w, c) ? thingsAhead(w, c, look + 50) : null;
+    const way = pickPath(w, c, look, bias, things);
+    let tx = way.x;
+    let ty = way.y;
+    // down beside raised road: along the wall to the next way up
+    const below = belowRoad(w, c);
+    if (below) [tx, ty] = wayBackUp(w, c, below, look);
+    // a ramp: straight up the middle of it, whatever else is going on
+    const ramp = below ? null : rampAhead(w, c, 30 + Math.abs(sp) * 0.3);
+    if (ramp) [tx, ty] = ramp;
     const [steer, d] = steerTo(c, tx, ty);
     const out: Controls = { steer, throttle: 1, brake: false, boost: false, fire: false };
-    const curv = Math.abs(angDiff(T.a[(c.idx + Math.round(k * 2.2)) % N]!, T.a[c.idx]!));
-    const target = BASE_SPEED * c.stats.speed * (1 - Math.min(0.5, curv * 0.5));
-    if (sp > target + 25) out.brake = true;
-    else if (sp > target) out.throttle = 0.3;
-    if (Math.abs(d) > 1.1 && sp > 70) out.throttle = 0.25;
-    if (ai.boostT > 0) {
-      ai.boostT -= DT;
-      out.boost = true;
-    } else if (curv < 0.15 && c.nitro > 0.5 && w.rng.next() < 0.006) ai.boostT = 1.3;
-    if (armsWants(w, c) || arsenalWants(w, c)) out.fire = true;
-    if (c.weapon?.kind === 'rocket' && prey && pd < 200 && Math.abs(d) < 0.2) out.fire = true;
-    if (dropsBehind(c.weapon?.kind)) {
-      const [behind] = nearestCar(
-        w,
-        c,
-        70,
-        (o) => Math.abs(angDiff(Math.atan2(o.y - c.y, o.x - c.x), c.h)) > 2.5,
-      );
-      if (behind) out.fire = true;
-    }
-    // a shock pulse goes off when a rival is well inside its ring
-    if (
-      c.weapon?.kind === 'pulse' &&
-      nearestCar(w, c, (c.weapon.radius ?? 70) * 0.7, () => true)[0]
-    )
-      out.fire = true;
-    if (howlWants(w, c)) out.fire = true;
-    // rubber band: rivals far ahead of the player ease off, far behind push harder
+    // no faster than the bends ahead allow, and off the power while it is pointing the wrong way
+    const cap = cornerSpeed(w, c);
+    if (ramp) out.throttle = 1;
+    else if (sp > cap + 14) out.brake = true;
+    else if (sp > cap) out.throttle = 0.2;
+    if (Math.abs(d) > 1.1 && sp > 70) out.throttle = Math.min(out.throttle, 0.25);
+    // something square in the way that it cannot get round in time
+    if (way.blocked < 16 + sp * 0.12 && sp > 60) out.throttle = Math.min(out.throttle, 0.3);
+    out.boost = !below && wantsBoost(w, c, d, cap > topSpeed(c) * 1.3);
+    out.fire = wantsFire(w, c);
+    // rubber band: rivals far ahead of the humans ease off, far behind push harder
     if (!c.isPlayer) {
       const gap = c.progress - w.humanProgress();
-      c.aiSpeed = ai.skill * (gap > 300 ? 0.9 : gap < -300 ? 1.07 : 1);
+      c.aiSpeed = ai.skill * (gap > 300 ? w.level.ease : gap < -300 ? w.level.press : 1);
     }
-    return unstick(c, out);
+    return recover(c, out, d);
   },
 });

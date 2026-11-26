@@ -332,7 +332,7 @@ export const PROP_GROUPS: [PropGroup, string][] = [
 
 /** Which group of the palette a prop is shown in: by what it does, never by its name. */
 export function propGroup(p: PropManifest): PropGroup {
-  if (p.pad) return 'pieces';
+  if (p.pad || p.bounce) return 'pieces';
   if (p.critter) return 'animals';
   if (p.crown || p.sway || p.trample) return 'plants';
   if (p.explodesAt || p.blast || p.throws || p.spills) return 'bangs';
@@ -358,24 +358,71 @@ export function nearest(
   return best;
 }
 
-/** Steps back: the track as it was before each change. */
+/** Things off the road settle on a grid this fine when snapping is on (art px). */
+export const SNAP_GRID = 16;
+/** Road points settle on a coarser one, so bends line up. */
+export const SNAP_POINT = 20;
+
+/** The nearest multiple of `step` to v. */
+export const snapTo = (v: number, step: number): number => Math.round(v / step) * step;
+
+/**
+ * Where a thing let go at (x, y) settles when snapping is on. On the road it takes the middle of
+ * the road or of a lane either side, as far along as it was let go; off it, the grid.
+ */
+export function snapThing(T: Track, width: number, x: number, y: number): [number, number] {
+  const near = nearestSample(T, x, y);
+  if (near.d > width / 2) return [snapTo(x, SNAP_GRID), snapTo(y, SNAP_GRID)];
+  const a = T.a[near.i]!;
+  const px = T.x[near.i]!;
+  const py = T.y[near.i]!;
+  // across the road (to the right of the way it runs) and along it
+  const across = -(x - px) * Math.sin(a) + (y - py) * Math.cos(a);
+  const along = (x - px) * Math.cos(a) + (y - py) * Math.sin(a);
+  const lane = width * 0.3;
+  const off = Math.abs(across) < lane / 2 ? 0 : Math.sign(across) * lane;
+  return [
+    Math.round(px + along * Math.cos(a) - off * Math.sin(a)),
+    Math.round(py + along * Math.sin(a) + off * Math.cos(a)),
+  ];
+}
+
+/** Steps back and forward again: the track as it was before each change, and after it. */
 export class History {
   private readonly past: string[] = [];
+  private readonly future: string[] = [];
 
-  /** Call before changing the track. */
+  /** Call before changing the track. A new change leaves nothing to step forward to. */
   remember(t: TrackFile): void {
     const now = JSON.stringify(t);
     if (this.past[this.past.length - 1] === now) return;
     this.past.push(now);
     if (this.past.length > 60) this.past.shift();
+    this.future.length = 0;
   }
 
+  /** How many steps back there are, and how many forward again. */
   get size(): number {
     return this.past.length;
   }
 
-  undo(): TrackFile | null {
+  get ahead(): number {
+    return this.future.length;
+  }
+
+  /** The track as it was a step back. Given the track as it is, `redo` can bring that back. */
+  undo(now?: TrackFile): TrackFile | null {
     const s = this.past.pop();
-    return s === undefined ? null : (JSON.parse(s) as TrackFile);
+    if (s === undefined) return null;
+    if (now) this.future.push(JSON.stringify(now));
+    return JSON.parse(s) as TrackFile;
+  }
+
+  /** The track as it was before the last step back. */
+  redo(now: TrackFile): TrackFile | null {
+    const s = this.future.pop();
+    if (s === undefined) return null;
+    this.past.push(JSON.stringify(now));
+    return JSON.parse(s) as TrackFile;
   }
 }

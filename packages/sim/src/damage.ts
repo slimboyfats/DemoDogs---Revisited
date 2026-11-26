@@ -1,11 +1,4 @@
-import {
-  CAR_RADIUS,
-  DT,
-  GRAVITY,
-  REBUILD_TIME,
-  type CarPart,
-  type MaterialManifest,
-} from '@demodogs/shared';
+import { DT, GRAVITY, REBUILD_TIME, type CarPart, type MaterialManifest } from '@demodogs/shared';
 import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
 import { blastCritters } from './critters';
@@ -20,6 +13,7 @@ import { stand } from './stand';
 import { giveWay, wouldHold } from './spans';
 import { fireproof, held, padded, shared } from './guards';
 import type { World } from './world';
+import { bound, carGap, carPropGap, reach } from './shapes';
 
 /** A blow on a corner harder than this smashes the lamp there. */
 const LAMP_BLOW = 3;
@@ -355,7 +349,7 @@ export function updateEmbers(w: World): void {
     if (star) {
       w.emit({ t: 'pop', x, y });
       for (const c of w.cars)
-        if (Math.hypot(c.x - x, c.y - y) < 10)
+        if (Math.abs(c.x - x) < 60 && carGap(c, x, y) < 4)
           damage(w, c, 5, owner && owner !== c ? owner : null, x, y);
       for (const p of w.props)
         if (p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 8)
@@ -384,7 +378,7 @@ export function updateEmbers(w: World): void {
     b.bite = 0.3;
     const owner = b.owner >= 0 ? w.cars[b.owner]! : null;
     for (const c of w.cars)
-      if (c.z < 4 && !fireproof(c) && Math.hypot(c.x - b.x, c.y - b.y) < b.r + 4)
+      if (c.z < 4 && !fireproof(c) && Math.abs(c.x - b.x) < b.r + 40 && carGap(c, b.x, b.y) < b.r)
         damage(w, c, 2.2, owner && owner !== c ? owner : null, c.x, c.y);
     for (const p of w.props)
       if (p.def.explodesAt !== undefined && Math.hypot(p.x - b.x, p.y - b.y) < b.r + p.def.radius)
@@ -483,7 +477,7 @@ export function footing(w: World, x: number, y: number): [number, number, boolea
     drag = 0.9;
   }
   for (const s of w.spills) {
-    if (Math.hypot(s.x - x, s.y - y) > s.r) continue;
+    if (Math.abs(s.x - x) > s.r || Math.hypot(s.x - x, s.y - y) > s.r) continue;
     grip = Math.min(grip, s.def.grip);
     drag = Math.max(drag, s.def.drag);
   }
@@ -601,13 +595,23 @@ export function updateMending(w: World): void {
       w.emit({ t: 'mend', prop: s.index, in: s.mendT });
     }
     if (s.mendT > 0) continue;
-    const r = s.def.radius + CAR_RADIUS + 4;
-    if (s.def.solid && w.cars.some((c) => Math.abs(c.x - s.x) < r && Math.abs(c.y - s.y) < r))
+    // (nothing is built back onto a car: it waits for the spot to clear)
+    const r = Math.max(bound(s.def), s.def.radius) + 4;
+    if (
+      s.def.solid &&
+      w.cars.some(
+        (c) =>
+          Math.abs(c.x - s.x) < r + reach(c) &&
+          Math.abs(c.y - s.y) < r + reach(c) &&
+          carPropGap(c, s.def, s.x, s.y, s.rot) < 4,
+      )
+    )
       continue;
     // a piece of bridge waits for what it stands on
     if (!wouldHold(w, s)) continue;
     w.mending.splice(i, 1);
     s.down = false;
+    w.stood++;
     s.mending = false;
     delete s.mendT;
     if (s.def.integrity !== undefined) s.hp = s.def.integrity;
@@ -647,13 +651,29 @@ export function dig(w: World, x: number, y: number, power: number): void {
   const r = (soft ? 8 : 5) * Math.sqrt(power);
   for (const c of w.craters) {
     if (Math.hypot(c.x - x, c.y - y) > c.r * 0.6) continue;
-    c.r = Math.min(24, Math.sqrt(c.r * c.r + r * r * 0.6));
+    const wider = Math.min(24, Math.sqrt(c.r * c.r + r * r * 0.6));
+    if (laidOn(w, c.x, c.y, wider)) return;
+    c.r = wider;
     w.emit({ t: 'crater', x: c.x, y: c.y, r: c.r });
     return;
   }
+  if (laidOn(w, x, y, r)) return;
   w.craters.push({ x, y, r });
   if (w.craters.length > 160) w.craters.shift();
   w.emit({ t: 'crater', x, y, r });
+}
+
+/**
+ * Whether a pit of radius `r` at (x, y) would reach under something laid flat on the ground (a
+ * boost tile, a ramp, a speed bump): the ground under those stays whole, so nothing is left
+ * lying over a hole.
+ */
+export function laidOn(w: World, x: number, y: number, r: number): boolean {
+  for (const s of w.pads)
+    if (!s.down && Math.hypot(s.x - x, s.y - y) < s.def.radius + r) return true;
+  for (const s of w.mounds)
+    if (!s.down && Math.hypot(s.x - x, s.y - y) < s.def.radius + r) return true;
+  return false;
 }
 
 /** A tree loses up to `amount` of a full crown of leaves. */

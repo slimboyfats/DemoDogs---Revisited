@@ -8,6 +8,53 @@
   },
   "extends": "prop.scrap-tower",
   "radius": 8,
+  "hit": {
+    "parts": [
+      {
+        "x": 0.3,
+        "y": 0.9,
+        "rot": 0.26,
+        "halfLength": 7.8,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [0, 4]
+      },
+      {
+        "x": -1.5,
+        "y": -1.1,
+        "rot": 2.88,
+        "halfLength": 8.1,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [5, 9]
+      },
+      {
+        "x": 0.5,
+        "y": 0.8,
+        "halfLength": 6.5,
+        "halfWidth": 4.3,
+        "round": 2,
+        "z": [10, 14]
+      },
+      {
+        "x": 0.8,
+        "y": 0,
+        "halfLength": 6.8,
+        "halfWidth": 4.5,
+        "round": 2,
+        "z": [15, 19]
+      },
+      {
+        "x": -1.2,
+        "y": -0.9,
+        "rot": 2.88,
+        "halfLength": 7.8,
+        "halfWidth": 4.3,
+        "round": 4.3,
+        "z": [20, 24]
+      }
+    ]
+  },
   "integrity": 60,
   "topple": {
     "prop": "prop.scrap-slab",

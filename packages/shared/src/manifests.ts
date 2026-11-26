@@ -24,6 +24,25 @@ const base = {
   extends: z.string().optional(),
 };
 
+/** One piece of a hit shape in several: a circle or a box set off from the thing's middle and turned, standing from `z[0]` up to `z[1]`. */
+const HitPiece = z.union([
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    radius: z.number().positive(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+  z.strictObject({
+    x: z.number(),
+    y: z.number(),
+    rot: z.number().optional(),
+    halfLength: z.number().positive(),
+    halfWidth: z.number().positive(),
+    round: z.number().min(0).optional(),
+    z: z.tuple([z.number().min(0), z.number().positive()]).optional(),
+  }),
+]);
+
 export const CarSchema = z.strictObject({
   ...base,
   id: id('car'),
@@ -51,6 +70,12 @@ export const CarSchema = z.strictObject({
     .max(3),
   /** Where the roof piece sits: x along the car, z its underside. */
   top: z.strictObject({ x: z.number(), z: z.number() }),
+  /**
+   * What a shot meets: a hitbox a slice of the body, stacked as the slices are, baked from the
+   * look by `pnpm hitboxes:bake`. x runs along the car, heights are over the body's underside.
+   * Bumping into things goes by the one hull (`body`), which this does not change.
+   */
+  hit: z.strictObject({ parts: z.array(HitPiece).min(1).max(32) }).optional(),
 });
 export type CarManifest = z.infer<typeof CarSchema>;
 
@@ -391,6 +416,8 @@ export const VenueSchema = z.strictObject({
   mode: id('mode'),
   /** Fixed seed for the venue's scenery, so a venue looks the same every time. */
   seed: z.number().int(),
+  /** Race venues: laps to finish here, where the mode's own count is wrong for it (a very long lap). */
+  laps: z.number().int().positive().optional(),
   size: z.strictObject({
     w: z.number().int().min(400).max(4000),
     h: z.number().int().min(400).max(4000),
@@ -450,8 +477,9 @@ export const VenueSchema = z.strictObject({
    * The lie of the land (art px): `hills` high, rolling every `wave` px, under the road too, so
    * cars climb and coast; and `banks` that rise in sheer terraces `step` high, beginning `from` past the
    * road's edge (or a derby bowl's wall) and reaching full height `spread` further on. With
+   * `outfield: false` they rise only inside the loop instead: a stepped hill the road runs round. With
    * `infield: false` they rise only outside the loop, so the ground inside it stays one clean
-   * level. Left out, the venue is flat.
+   * level. (A jump's two pieces are raised ground too: props with a `leap`.) Left out, the venue is flat.
    */
   relief: z
     .strictObject({
@@ -462,6 +490,7 @@ export const VenueSchema = z.strictObject({
       spread: z.number().positive().default(150),
       step: z.number().positive().default(8),
       infield: z.boolean().default(true),
+      outfield: z.boolean().default(true),
     })
     .optional(),
   /**
@@ -599,7 +628,10 @@ export const WeaponSchema = z.strictObject({
   /** Slicks: a pool of `material` of this `radius` poured out behind the car. */
   material: id('material').optional(),
   radius: z.number().positive().optional(),
-  /** Mines: seconds before it arms; trigger radius. Rockets: seconds before contact sets it off. */
+  /**
+   * Mines: seconds before it arms, and how near it a car's hull has to come to set it off (art
+   * px). Rockets: seconds before contact sets it off.
+   */
   arm: z.number().min(0).optional(),
   trigger: z.number().positive().optional(),
   /**
@@ -747,6 +779,35 @@ export const ADDON_KINDS = [
 ] as const;
 export type AddonKind = (typeof ADDON_KINDS)[number];
 
+/**
+ * Tricks: ten toys out of the Bag of Tricks crate (sim/tricks.ts), all at work the moment they
+ * are picked up.
+ *
+ * - balloons  every rival ahead is hung from balloons `lift` high for `seconds`, then dropped
+ * - door      a dog door: the car goes in and comes out `reach` up the road
+ * - dash      `seconds` as a comet: it steers itself, nothing hurts it, and what it strikes flies
+ * - splat     mud in the face of every rival ahead for `seconds`
+ * - steal     the weapon of the nearest armed rival changes hands
+ * - dizzy     every rival ahead steers back to front for `seconds`
+ * - pair      two rivals are pulled together like magnets for `seconds`
+ * - bumper    `seconds` as a pinball bumper: whatever touches the car is flung off it
+ * - flop      the car leaps and comes down as a blast on the nearest rival
+ * - ghost     `seconds` as a ghost: cars pass through it and nothing hurts it
+ */
+export const TRICK_KINDS = [
+  'balloons',
+  'door',
+  'dash',
+  'splat',
+  'steal',
+  'dizzy',
+  'pair',
+  'bumper',
+  'flop',
+  'ghost',
+] as const;
+export type TrickKind = (typeof TRICK_KINDS)[number];
+
 export const PickupSchema = z.strictObject({
   ...base,
   id: id('pickup'),
@@ -768,6 +829,8 @@ export const PickupSchema = z.strictObject({
     'collar',
     'bones',
     ...ADDON_KINDS,
+    'tricks',
+    ...TRICK_KINDS,
   ]),
   /** Relative chance; `hurt` is used instead when the car is below 70 armour. */
   weight: z.number().positive(),
@@ -818,8 +881,33 @@ export const PickupSchema = z.strictObject({
    * the car for good, or on the black market (`sold: 'market'`), fitted for the next race only.
    */
   factor: z.number().positive().optional(),
+  /**
+   * Tricks (the TRICK_KINDS, sim/tricks.ts), on the fields above. A `tricks` crate holds the
+   * pickups in `kits` and rolls one by their own odds. Those that last run `seconds`; those that
+   * go for rivals take every one ahead in a race, or within `radius`. Balloons: `lift` is how
+   * high they carry a car, `amount` what the drop costs it. Door: `reach` up the road (more the
+   * further back the car is running); with no road, out behind the nearest rival within `radius`.
+   * Dash: `pace` on its top speed; what it strikes takes `amount` and is thrown at `factor`.
+   * Steal: `amount` gun rounds change hands when no rival within `radius` holds a weapon. Pair:
+   * `factor` is the pull, art px per second squared. Bumper: what touches it is flung at `factor`
+   * and takes `amount`. Flop: the car is thrown up at `lift` onto a rival within `radius`, and
+   * lands as a blast of power `factor`.
+   */
   price: z.number().int().positive().optional(),
   sold: z.enum(['garage', 'market']).optional(),
+  /**
+   * An add-on that stands out past the car's body where a shot can meet it (plates on its flanks,
+   * jaws across its nose): each piece of it as a box, `halfLength` along the car, standing from
+   * `z[0]` to `z[1]` over the ground under the car, on a car of its usual size. It is part of
+   * what a shot at the car meets (`carPoint`), where it is bolted on (`standOut`, sim/shapes.ts).
+   */
+  hit: z
+    .strictObject({
+      halfLength: z.number().positive(),
+      halfWidth: z.number().positive(),
+      z: z.tuple([z.number().min(0), z.number().positive()]),
+    })
+    .optional(),
 });
 export type PickupManifest = z.infer<typeof PickupSchema>;
 
@@ -829,6 +917,34 @@ export const PropSchema = z.strictObject({
   /** static: never moves, cars bounce off. loose: pushed around, can fly. */
   body: z.enum(['static', 'loose']),
   radius: z.number().positive(),
+  /**
+   * Its hit shape, where that is not a circle of `radius`: a box lying the way the prop is turned,
+   * `halfLength` along it and `halfWidth` across (art px, as its look is drawn at the height of a
+   * car), its corners rounded by `round`; or a circle of a `radius` of its own (a tree's trunk).
+   * Cars, rounds and other props meet this shape. `radius` stays its size for everything that
+   * only asks how big it is: the room it is given when scenery is laid, a blast's reach, how a
+   * driver steers round it.
+   */
+  hit: z
+    .union([
+      // (`top`: how high it stands, art px; what is up above that goes over it. Without one it
+      // is as high as anything gets)
+      z.strictObject({ radius: z.number().positive(), top: z.number().positive().optional() }),
+      z.strictObject({
+        halfLength: z.number().positive(),
+        halfWidth: z.number().positive(),
+        round: z.number().min(0).optional(),
+        top: z.number().positive().optional(),
+      }),
+      // a thing whose outline is no one box, or not the same all the way up: several pieces, each
+      // a circle or a box set off from its middle and turned, each standing from `z[0]` up to
+      // `z[1]` (roots spread low about a trunk, a tank up on legs). Baked from the look's slices
+      // by `pnpm hitboxes:bake`, so that what is hit is what is drawn at every height
+      z.strictObject({
+        parts: z.array(HitPiece).min(1).max(32),
+      }),
+    ])
+    .optional(),
   /** Static props: false for looks-only props (fences, the oval wall). */
   solid: z.boolean().default(true),
   mass: z.number().positive().optional(),
@@ -1017,7 +1133,38 @@ export const AiSchema = z.strictObject({
   /** Each rival rolls a skill and an aggression in these ranges. */
   skill: z.tuple([unit, unit]),
   aggro: z.tuple([unit, unit]),
+  /**
+   * The kinds of driver in the field. Each rival is one of them: the one that lists its name, or
+   * else one picked by its name (always the same one). Left out, every rival is the same plain driver.
+   */
+  styles: z.array(z.lazy(() => DriverStyleSchema)).optional(),
 });
+
+/**
+ * A kind of driver: how it differs from the rest of the field. Every number is 0 to 1 and they
+ * are read by the behaviour, which may use them as it likes.
+ */
+export const DriverStyleSchema = z.strictObject({
+  /** A word for it, for the name tag and the results. */
+  name: z.string().min(1).max(12),
+  /** Rivals of these names are always this kind. */
+  drivers: z.array(z.string()).default([]),
+  /** Added to the skill it rolls (top speed). */
+  pace: z.number().min(-0.2).max(0.2).default(0),
+  /** Its aggression is rolled in this range instead of the AI's own. */
+  aggro: z.tuple([unit, unit]).optional(),
+  /** How late it brakes and how close to the edge it runs. */
+  nerve: unit.default(0.5),
+  /** How far it goes out of its way for crates, boost tiles and ramps. */
+  greed: unit.default(0.5),
+  /** How hard it shuts the door on a car coming up behind. */
+  block: unit.default(0.3),
+  /** How quick it is to fire what it holds. */
+  trigger: unit.default(0.5),
+  /** How much it wanders off its line. */
+  wobble: unit.default(0.3),
+});
+export type DriverStyle = z.infer<typeof DriverStyleSchema>;
 export type AiManifest = z.infer<typeof AiSchema>;
 
 /**
@@ -1101,6 +1248,7 @@ export const MODIFIER_KINDS = [
   'meteors',
   'slick',
   'tinder',
+  'fog',
 ] as const;
 export type ModifierKind = (typeof MODIFIER_KINDS)[number];
 
@@ -1161,13 +1309,15 @@ export const ModifierSchema = z.strictObject({
   /**
    * How the client shows it; nothing in the race depends on these. `tint` multiplies the whole
    * picture (dust is yellow), and `sky` asks the client's sky for at least this much darkness
-   * (0 day, 0.5 dusk, 1 night: headlamps come on) and wet (rain on the ground, reflections).
+   * (0 day, 0.5 dusk, 1 night: headlamps come on), wet (rain on the ground, reflections) and fog
+   * (a low blanket of it on the ground, that the cars push about).
    */
   tint: hex.default('#ffffff'),
   sky: z
     .strictObject({
       dark: z.number().min(0).max(1).default(0),
       wet: z.number().min(0).max(1).default(0),
+      fog: z.number().min(0).max(1).default(0),
     })
     .optional(),
 });

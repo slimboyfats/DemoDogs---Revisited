@@ -8,9 +8,18 @@
   },
   "body": "loose",
   "radius": 4.2,
+  "hit": {
+    "radius": 3.9,
+    "top": 8
+  },
   "mass": 0.45,
   "explodesAt": 75,
   "blast": 1.1,
   "launch": 0.25,
-  "rocket": { "up": 170, "burst": 0.7, "stars": 6, "globs": 3 }
+  "rocket": {
+    "up": 170,
+    "burst": 0.7,
+    "stars": 6,
+    "globs": 3
+  }
 }

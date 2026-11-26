@@ -16,5 +16,10 @@
   "amount": 14,
   "radius": 32,
   "price": 450,
-  "sold": "market"
+  "sold": "market",
+  "hit": {
+    "halfLength": 2.7,
+    "halfWidth": 0.95,
+    "z": [1.7, 5.1]
+  }
 }

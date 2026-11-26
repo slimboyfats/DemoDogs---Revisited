@@ -768,8 +768,68 @@ tr.me td {
   font-weight: 800;
   font-size: 13px;
 }
+.banner small {
+  display: block;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.events button.item.cup {
+  border-left-width: 8px;
+}
+.events button.item.cup.cup {
+  border-left-color: #ffd24a;
+}
+.events button.item.cup.trial {
+  border-left-color: #6fd0ff;
+}
+.events button.item.cup.derby {
+  border-left-color: #ff6a3d;
+}
+.events button.item.cup.last {
+  border-left-color: #c58cff;
+}
+.events button.item.cup.bounty {
+  border-left-color: #ff4d6a;
+}
+.events button.item.cup.iron {
+  border-left-color: #b9c2cc;
+}
+tr.gone {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.medal.m3,
+#payout div.m3 b {
+  color: #ffd24a;
+}
+.medal.m2,
+#payout div.m2 b {
+  color: #dfe6ee;
+}
+.medal.m1,
+#payout div.m1 b {
+  color: #e09a5a;
+}
 #payout {
   margin-bottom: 10px;
+}
+#payout div.cupHead {
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: #ffd24a;
+}
+#payout div.cupRow {
+  font-size: 13px;
+  padding: 0;
+}
+#payout div.cupRow.me {
+  color: #8ff08a;
+}
+#payout div.cupRow.gone {
+  opacity: 0.45;
+  text-decoration: line-through;
 }
 #payout div {
   display: flex;
@@ -1004,6 +1064,125 @@ body.online[data-screen='game'] #netDot {
   margin: 0;
   word-break: break-all;
 }
+#onlinePanel .hint {
+  margin: -4px 0 4px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+.roomHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.roomHead .roomCode {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+#onlinePanel .roomHead button.invite {
+  min-width: 110px;
+  background: rgba(255, 210, 74, 0.35);
+}
+.seats li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 32px;
+}
+.seats .who {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seats .pill {
+  flex: none;
+  font:
+    800 11px/1 system-ui,
+    sans-serif;
+  padding: 5px 8px;
+  border-radius: 999px;
+  color: #fff;
+  background: #2c7a3f;
+}
+.seats li.away .pill {
+  background: #a33;
+}
+#onlinePanel .waiting {
+  margin: 0;
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  font-weight: 900;
+  color: #fff;
+  background: #2c7a3f;
+}
+#onlinePanel .waiting.linking {
+  background: #b5651d;
+  animation: netPulse 1s ease-in-out infinite alternate;
+}
+@keyframes netPulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.6;
+  }
+}
+/* the connection, over the race: what is wrong, or what just happened to someone's link */
+#netBanner {
+  position: fixed;
+  left: 50%;
+  top: calc(44px + env(safe-area-inset-top));
+  transform: translateX(-50%);
+  max-width: 90vw;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font:
+    900 14px/1.1 system-ui,
+    sans-serif;
+  letter-spacing: 0.5px;
+  text-align: center;
+  color: #fff;
+  background: #c0392b;
+  border: 2px solid #fff;
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+  display: none;
+  z-index: 5;
+}
+#netBanner.good {
+  background: #2c7a3f;
+}
+body.online[data-screen='game'] #netBanner.on {
+  display: block;
+}
+#netBanner.bad {
+  animation: netPulse 0.6s ease-in-out infinite alternate;
+}
+#netDot .bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 10px;
+  margin-right: 5px;
+  vertical-align: -1px;
+}
+#netDot .bars i {
+  width: 3px;
+  background: rgba(255, 255, 255, 0.3);
+}
+#netDot .bars i.on {
+  background: #7ddc4b;
+}
+#netDot .bars.weak i.on {
+  background: #ffb02e;
+}
+#netDot .bars.none i {
+  background: #ff5a4f;
+}
 
 /* ---- world modifiers: a row of chips that toggle */
 #worldPick {
@@ -1065,45 +1244,51 @@ body.editing #pauseKey {
   touch-action: none;
   cursor: crosshair;
 }
+/*
+ * The track creator's bars, made for a thumb: a top bar (back, name, undo, redo, share, drive), a
+ * mode bar of five big buttons, the row of the tool in hand, and the tray. A phone held upright
+ * has them stacked along the bottom; one on its side has the modes down the left and the tray
+ * down the right, so the map keeps the height.
+ */
 #editPanel {
+  --bar: 46px;
+  --rail: 62px;
+  --tray: 150px;
+  --l: calc(6px + env(safe-area-inset-left));
+  --r: calc(6px + env(safe-area-inset-right));
+  --t: calc(6px + env(safe-area-inset-top));
+  --b: calc(6px + env(safe-area-inset-bottom));
   position: fixed;
-  top: calc(6px + env(safe-area-inset-top));
-  left: calc(8px + env(safe-area-inset-left));
-  right: calc(8px + env(safe-area-inset-right));
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  inset: 0;
   font-size: 12px;
   pointer-events: none;
 }
-#editPanel .row1,
-#editPanel .row2 {
-  display: flex;
-  gap: 5px;
-  align-items: center;
-  overflow-x: auto;
-  scrollbar-width: none;
-  touch-action: pan-x;
-  pointer-events: none;
-}
-#editPanel .row1 > *,
-#editPanel .row2 > * {
-  pointer-events: auto;
-  flex: 0 0 auto;
+#editPanel.hidden,
+#editTap.hidden {
+  display: none;
 }
 #editPanel button,
 #editPanel select {
   font: inherit;
   font-weight: 800;
   color: #fff;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 8px;
-  padding: 9px 11px;
-  min-height: 36px;
+  background: rgba(18, 16, 24, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+  flex: 0 0 auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
-#editPanel select {
-  max-width: 170px;
+#editPanel button:active {
+  transform: scale(0.95);
 }
 #editPanel button.on {
   background: #ff6a3d;
@@ -1114,33 +1299,264 @@ body.editing #pauseKey {
   border-color: #6fe07a;
 }
 #editPanel button:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
 }
-#editPanel .gap {
-  width: 8px;
+#editPanel .ic {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
-#editPanel label,
-#editPanel .hint {
+#editPanel .ic-play {
+  fill: currentColor;
+}
+#editPanel .top {
+  position: absolute;
+  top: var(--t);
+  left: var(--l);
+  right: var(--r);
+  height: var(--bar);
+  display: flex;
+  gap: 6px;
+  align-items: stretch;
+}
+#editPanel .top button {
+  padding: 0 10px;
+}
+#editPanel .top .name {
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 0 10px;
+  text-align: left;
+}
+#editPanel .top .name b,
+#editPanel .top .name small {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#editPanel .top .name b {
+  font-size: 13px;
+}
+#editPanel .top .name small {
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+#editPanel .top .name.bad small {
+  color: #ff8a7a;
+  opacity: 1;
+}
+/* what the tool does, or what is wrong: said under the top bar, then gone */
+#editPanel .coach {
+  position: absolute;
+  top: calc(var(--t) + var(--bar) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(78vw, 460px);
+  padding: 7px 12px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.72);
   color: #fff;
   font-weight: 700;
-  text-shadow:
-    0 1px 2px #000,
-    0 0 4px #000;
-  pointer-events: none !important;
+  font-size: 12px;
+  line-height: 1.25;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.25s;
 }
-#editPanel .hint {
-  opacity: 0.9;
-  padding-left: 4px;
+#editPanel .coach.show {
+  opacity: 1;
 }
-#editPanel input[type='range'] {
-  width: 90px;
+#editPanel .coach.bad {
+  background: rgba(150, 30, 20, 0.92);
 }
-#editPanel.hidden,
-#editTap.hidden {
+#editPanel .float {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#editPanel .float button {
+  padding: 0;
+  width: 44px;
+  background: rgba(18, 16, 24, 0.66);
+}
+#editPanel .float button.on {
+  background: rgba(255, 106, 61, 0.9);
+}
+#editPanel .modes {
+  display: flex;
+  gap: 5px;
+}
+#editPanel .modes button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 52px;
+  padding: 3px 2px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+#editPanel .modes .ic {
+  width: 24px;
+  height: 24px;
+}
+#editPanel .ctx {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  pointer-events: auto;
+  padding: 5px;
+  border-radius: 12px;
+  background: rgba(18, 16, 24, 0.6);
+}
+#editPanel .ctx:empty {
   display: none;
+}
+#editPanel .ctx > * {
+  flex: 0 0 auto;
+}
+#editPanel .ctx button {
+  min-height: 42px;
+  min-width: 42px;
+  padding: 0 10px;
+  font-size: 11px;
+}
+#editPanel .ctx label {
+  color: #fff;
+  font-weight: 800;
+  font-size: 11px;
+  white-space: nowrap;
+}
+#editPanel .ctx label.what {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ffd24a;
+}
+#editPanel .ctx select {
+  max-width: 150px;
+  font-size: 11px;
+}
+#editPanel .ctx input[type='range'] {
+  width: 110px;
+  height: 40px;
+  pointer-events: auto;
+}
+/* the tools that share a mode, side by side as one control */
+#editPanel .seg {
+  display: flex;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  overflow: hidden;
+}
+#editPanel .seg button {
+  border: 0;
+  border-radius: 0;
+  background: rgba(18, 16, 24, 0.82);
+  padding: 0 11px;
+}
+#editPanel .seg button.on {
+  background: #ff6a3d;
+}
+#editPanel .seg button + button {
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* a phone held upright (and anything taller than wide): everything in a stack along the bottom */
+#editPanel .dock {
+  position: absolute;
+  left: var(--l);
+  right: var(--r);
+  bottom: var(--b);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#editPanel .float {
+  right: var(--r);
+  top: calc(var(--t) + var(--bar) + 44px);
+}
+
+/* a phone on its side: modes down the left, the tray down the right, the tool's row between */
+@media (orientation: landscape) {
+  #editPanel .dock {
+    display: contents;
+  }
+  #editPanel .modes {
+    position: absolute;
+    left: var(--l);
+    top: calc(var(--t) + var(--bar) + 6px);
+    bottom: var(--b);
+    width: var(--rail);
+    flex-direction: column;
+  }
+  #editPanel .modes button {
+    min-height: 0;
+  }
+  #editPanel .ctx {
+    position: absolute;
+    left: calc(var(--l) + var(--rail) + 6px);
+    bottom: var(--b);
+    max-width: calc(100vw - var(--l) - var(--r) - var(--rail) - 12px);
+  }
+  #editPanel.trayed .ctx {
+    max-width: calc(100vw - var(--l) - var(--r) - var(--rail) - var(--tray) - 18px);
+  }
+  #editPanel #editTray {
+    position: absolute;
+    right: var(--r);
+    top: calc(var(--t) + var(--bar) + 6px);
+    bottom: var(--b);
+    width: var(--tray);
+  }
+  #editPanel .float {
+    top: calc(var(--t) + var(--bar) + 6px);
+  }
+  #editPanel.trayed .float {
+    right: calc(var(--r) + var(--tray) + 6px);
+  }
+  #editPanel .coach {
+    max-width: min(46vw, 420px);
+  }
 }
 #editSetup {
   z-index: 5;
+  background: rgba(12, 10, 18, 0.9);
+}
+#editSetup .sheetHead {
+  position: sticky;
+  top: -1px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  background: rgb(12, 10, 18);
+}
+#editSetup .sheetHead h2 {
+  flex: 1;
+  margin: 0;
+}
+#editSetup .sheetHead button {
+  flex: 0 0 auto;
+  min-width: 88px;
+  border-color: #6fe07a;
+  background: rgba(47, 143, 58, 0.5);
 }
 #editSetup .field {
   display: flex;
@@ -1156,6 +1572,13 @@ body.editing #pauseKey {
 #editSetup .field > :last-child {
   flex: 1;
   min-width: 0;
+}
+#editSetup .files {
+  flex-wrap: wrap;
+}
+#editSetup .files button {
+  flex: 1 1 auto;
+  min-height: 44px;
 }
 #editSetup input[type='text'],
 #editSetup select {
@@ -1223,20 +1646,33 @@ body.editing #pauseKey {
   gap: 8px;
 }
 .trackRow {
-  display: flex;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 6px 10px;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
   background: rgba(0, 0, 0, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.16);
   border-radius: 12px;
   padding: 8px 10px;
 }
-.trackRow > div {
-  flex: 1 1 200px;
+.trackRow .thumb {
+  width: 96px;
+  height: 66px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+}
+.trackRow .about {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
+}
+.trackRow .acts {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 .trackRow small {
   opacity: 0.75;
@@ -1254,90 +1690,92 @@ body.editing #pauseKey {
   border: 2px solid rgba(255, 210, 74, 0.55);
   background: rgba(255, 210, 74, 0.1);
   border-radius: 10px;
+  min-height: 44px;
+  flex: 1 1 auto;
   padding: 9px 12px;
   font-weight: 900;
   font-size: 13px;
 }
 
-/* the tray of things and materials along the bottom of the track creator */
+/* the tray of things and materials: along the bottom of a phone held upright, down the right of
+   one on its side */
 #editTray {
-  position: fixed;
-  left: calc(8px + env(safe-area-inset-left));
-  right: calc(8px + env(safe-area-inset-right));
-  bottom: calc(6px + env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
   font-size: 11px;
   pointer-events: none;
+  min-height: 0;
 }
 #editTray.hidden {
   display: none;
 }
-#editTray .chips,
-#editTray .tiles {
+#editTray .head,
+#editTray .chips {
   display: flex;
   gap: 5px;
+  pointer-events: none;
+}
+#editTray .chips {
   overflow-x: auto;
   scrollbar-width: none;
   touch-action: pan-x;
-  pointer-events: none;
-}
-#editTray .chips > *,
-#editTray .tiles > * {
   pointer-events: auto;
-  flex: 0 0 auto;
+}
+#editTray .head button,
+#editTray .chips button {
+  min-height: 36px;
+  min-width: 0;
+  padding: 0 10px;
+  font-size: 11px;
+}
+#editTray .head select {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 6px;
+  font-size: 11px;
 }
 #editTray .tiles {
+  display: flex;
+  gap: 5px;
+  overflow: auto;
+  scrollbar-width: none;
   touch-action: none;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(18, 16, 24, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 5px;
   pointer-events: auto;
 }
 #editTray.shut .tiles {
   display: none;
 }
-#editTray button {
-  font: inherit;
-  font-weight: 800;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.62);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 8px;
-  padding: 6px 9px;
-}
-#editTray button.on {
-  background: #ff6a3d;
-  border-color: #ff6a3d;
-}
-#editTray .tile {
-  width: 62px;
-  padding: 3px 2px 2px;
-  display: flex;
+#editPanel #editTray .tile {
+  width: 70px;
+  min-height: 0;
+  padding: 4px 2px 3px;
   flex-direction: column;
-  align-items: center;
-  gap: 1px;
+  gap: 2px;
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
   cursor: grab;
   user-select: none;
   -webkit-user-select: none;
 }
-#editTray .tile.on {
+#editPanel #editTray .tile.on {
   background: rgba(255, 106, 61, 0.45);
   border-color: #ff6a3d;
 }
 #editTray .tile canvas {
-  width: 46px;
-  height: 46px;
+  width: 52px;
+  height: 52px;
   image-rendering: pixelated;
   pointer-events: none;
 }
 #editTray .tile i {
-  width: 46px;
-  height: 30px;
+  width: 52px;
+  height: 34px;
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
@@ -1345,11 +1783,60 @@ body.editing #pauseKey {
   font-size: 9px;
   font-weight: 700;
   line-height: 1.1;
-  max-width: 58px;
+  max-width: 64px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
+}
+/* upright: the groups are chips over the tiles, and the tray's own bar is only its HIDE button */
+@media (orientation: portrait) {
+  #editTray .head {
+    display: none;
+  }
+}
+/* a narrow phone: sharing is in the track's own sheet (tap its name), so the name has room */
+@media (max-width: 480px) {
+  #editPanel .top [data-act='share'] {
+    display: none;
+  }
+}
+/* on its side: the groups are one picker, and the tiles run down in two columns */
+@media (orientation: landscape) {
+  #editTray .chips {
+    display: none;
+  }
+  #editTray .tiles {
+    flex: 1 1 0;
+    min-height: 0;
+    flex-wrap: wrap;
+    align-content: flex-start;
+  }
+  #editPanel #editTray .tile {
+    width: calc(50% - 3px);
+  }
+  #editTray.shut {
+    bottom: auto !important;
+  }
+}
+
+/* driving a track from the track creator: one tap goes straight back to it */
+#backToEdit {
+  position: fixed;
+  left: calc(50% + 14px);
+  transform: translateX(-50%);
+  top: calc(8px + env(safe-area-inset-top));
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 2px solid #ffd24a;
+  background: rgba(0, 0, 0, 0.45);
+  font-weight: 900;
+  font-size: 12px;
+  display: none;
+}
+body.testdrive:not(.editing)[data-screen='game'] #backToEdit {
+  display: block;
 }
 
 /* a slider in a narrow panel (the pause menu): a label over a wide track, easy to drag by thumb */

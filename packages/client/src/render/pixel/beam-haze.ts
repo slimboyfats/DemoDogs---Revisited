@@ -1,4 +1,4 @@
-import { compile, uniforms } from './gl';
+import { compile, type Sources, uniforms } from './gl';
 import type { LightBlock } from './light-block';
 import type { Lights } from './lighting';
 import { MAX_CONES } from './lighting';
@@ -34,10 +34,8 @@ export class BeamHaze {
   ): void {
     if (lights.coneCount === 0 || thick <= 0.01) return;
     const gl = this.gl;
-    if (this.prog && this.reliefMap !== !!relief.map) {
-      gl.deleteProgram(this.prog);
-      this.prog = null;
-    }
+    // (programs are kept by `compile`: the other one is there again when the ground changes back)
+    if (this.prog && this.reliefMap !== !!relief.map) this.prog = null;
     if (!this.prog) {
       this.reliefMap = !!relief.map;
       this.prog = compile(gl, GROUND_VS, hazeFs(this.reliefMap));
@@ -87,7 +85,6 @@ export class BeamHaze {
 
   dispose(): void {
     this.gl.deleteVertexArray(this.vao);
-    if (this.prog) this.gl.deleteProgram(this.prog);
   }
 }
 
@@ -131,3 +128,9 @@ void main() {
   if (e <= 0.0) discard;
   o = vec4(vec3(1.0, 0.94, 0.78) * e * 0.5, 0.0);
 }`;
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const HAZE_PROGRAMS: readonly Sources[] = [
+  [GROUND_VS, hazeFs(false)],
+  [GROUND_VS, hazeFs(true)],
+];

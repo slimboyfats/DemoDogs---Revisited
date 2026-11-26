@@ -6,9 +6,13 @@ import {
   type PropManifest,
 } from '@demodogs/shared';
 import { damage } from './damage';
-import type { Car } from './entities';
+import type { Car, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
-import { circles, hull } from './physics';
+import { carShape, newShape, newTouch, pointGap, propPoint, reach } from './shapes';
+
+/** A car's hull and where an animal meets it: filled again for each pair. */
+const HULL = newShape();
+const AT = newTouch();
 import type { Rng } from './prng';
 import type { World } from './world';
 
@@ -140,6 +144,9 @@ export function blastCritters(w: World, x: number, y: number, rad: number): void
   }
 }
 
+/** The list `near` fills for an animal on a walk. */
+const WALK_NEAR: StaticProp[] = [];
+
 export function updateCritters(w: World): void {
   for (const k of w.critters) {
     const D = k.def.critter!;
@@ -241,13 +248,12 @@ export function updateCritters(w: World): void {
       let nx = k.x + Math.cos(k.h) * go * DT;
       let ny = k.y + Math.sin(k.h) * go * DT;
       const rad = k.def.radius;
-      for (const s of w.near(nx, ny, rad + 2)) {
-        const r = s.def.radius + rad;
-        if (s.down || !s.def.solid || Math.abs(s.x - nx) > r || Math.abs(s.y - ny) > r) continue;
-        const d = Math.hypot(nx - s.x, ny - s.y) || 1;
-        if (d < r) {
-          nx = s.x + ((nx - s.x) / d) * r;
-          ny = s.y + ((ny - s.y) / d) * r;
+      for (const s of w.near(nx, ny, rad + 2, WALK_NEAR)) {
+        if (s.down || !s.def.solid) continue;
+        const gap = propPoint(s.def, s.x, s.y, s.rot, nx, ny, AT);
+        if (gap < rad) {
+          nx += AT.nx * (rad - gap);
+          ny += AT.ny * (rad - gap);
           // blocked on a walk: think again
           if (k.state === 'walk') [k.tx, k.ty] = spot(w, k, D);
           // ran into it head down: that is the end of the charge
@@ -368,18 +374,19 @@ function fly(w: World, k: Critter, D: CritterManifest): void {
 
 /** A car and an animal on the ground. */
 function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
-  const R = hull(c);
-  const m = k.def.radius + R;
-  if (Math.abs(c.x - k.x) > m + 14 * c.size || Math.abs(c.y - k.y) > m + 14 * c.size) return;
+  const far = k.def.radius + reach(c) + 2;
+  if (Math.abs(c.x - k.x) > far || Math.abs(c.y - k.y) > far) return;
   // a car in the air goes over its head
   if (c.z - c.deck > 7 || c.deck > 4) return;
-  for (const p of circles(c)) {
-    const dx = k.x - p[0];
-    const dy = k.y - p[1];
-    const d = Math.hypot(dx, dy);
-    if (d >= m) continue;
-    const nx = d > 0.001 ? dx / d : Math.cos(c.h);
-    const ny = d > 0.001 ? dy / d : Math.sin(c.h);
+  {
+    // where the animal stands against the car's hull: the way out of the car towards it
+    const gap = pointGap(carShape(c, HULL), k.x, k.y, AT);
+    const over = k.def.radius - gap;
+    if (over <= 0) return;
+    const nx = AT.nx;
+    const ny = AT.ny;
+    const px = AT.px;
+    const py = AT.py;
     const closing = c.vx * nx + c.vy * ny;
     if (D.mass < FLUNG_BELOW) {
       if (closing > 30 && !c.wrecked) {
@@ -410,17 +417,17 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
         }
       } else {
         // nudged out of the way
-        k.x += nx * (m - d);
-        k.y += ny * (m - d);
+        k.x += nx * over;
+        k.y += ny * over;
       }
       return;
     }
     // too heavy to throw: the car is what gives way
     const share = clamp(1 / (1 + D.mass), 0.2, 0.6);
-    c.x -= nx * (m - d) * (1 - share);
-    c.y -= ny * (m - d) * (1 - share);
-    k.x += nx * (m - d) * share;
-    k.y += ny * (m - d) * share;
+    c.x -= nx * over * (1 - share);
+    c.y -= ny * over * (1 - share);
+    k.x += nx * over * share;
+    k.y += ny * over * share;
     if (k.state === 'charge' && D.charge) {
       // caught it: the car goes the way the animal was going, spinning
       const C = D.charge;
@@ -430,7 +437,7 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
       c.vy = c.vy * 0.35 + ay * C.shove;
       c.spin += (w.rng.next() < 0.5 ? -1 : 1) * w.rng.range(2.5, 4.5);
       tire(k, C.rest);
-      damage(w, c, C.hit, null, p[0] + nx * R, p[1] + ny * R);
+      damage(w, c, C.hit, null, px, py);
       w.emit({
         t: 'critter',
         what: 'gore',
@@ -464,8 +471,7 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
     }
     if (closing > 25 && c.hitCd <= 0) {
       c.hitCd = 0.25;
-      if (closing > 45 && !c.wrecked)
-        damage(w, c, (closing - 35) * 0.2, null, p[0] + nx * R, p[1] + ny * R);
+      if (closing > 45 && !c.wrecked) damage(w, c, (closing - 35) * 0.2, null, px, py);
       w.emit({
         t: 'critter',
         what: 'bump',

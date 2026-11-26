@@ -8,6 +8,42 @@
   },
   "body": "static",
   "radius": 5,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 4.5,
+        "halfWidth": 4.5,
+        "round": 0.5,
+        "z": [0, 4]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 4,
+        "halfWidth": 4,
+        "round": 0.5,
+        "z": [4, 17]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 3.5,
+        "halfWidth": 3.5,
+        "round": 0.5,
+        "z": [17, 29]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 3,
+        "halfWidth": 3,
+        "round": 0.5,
+        "z": [29, 40]
+      }
+    ]
+  },
   "made": "material.brick",
   "integrity": 260
 }

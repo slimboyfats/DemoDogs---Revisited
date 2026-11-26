@@ -93,6 +93,8 @@ export interface DevHooks {
   heat(): string;
   /** Step the sky (day, dusk, night, rain, storm, snow); the button's new label. */
   sky(): string;
+  /** Step the hitbox view (hitboxes, then heights too, then off); the button's new label. */
+  hitboxes(): string;
 }
 
 /**
@@ -197,6 +199,11 @@ export class DevPanel {
       'SKY DAY',
       'The sky: day, dusk, night (headlamps), rain and storm (wet ground and reflections), snow',
       () => (sk.textContent = hooks.sky()),
+    );
+    const hb = btn(
+      'HITBOXES',
+      'Every shape the rules use, drawn over the world: hulls, scenery, crates, the road; then heights too (the ground, decks, things in the air, lamps and guns)',
+      () => (hb.textContent = hooks.hitboxes()),
     );
     btn('EXIT', 'Back to the menu', () => hooks.exit());
     this.statsEl.className = 'stats';

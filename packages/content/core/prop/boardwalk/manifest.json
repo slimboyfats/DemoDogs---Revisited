@@ -1,0 +1,18 @@
+{
+  "id": "prop.boardwalk",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Boardwalk",
+    "description": "A length of plank walk on short piles. It carries a car over water, mud or sand as if it were road: laid end to end, a shortcut across a pond.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 20,
+  "solid": false,
+  "pad": {
+    "kind": "road",
+    "long": 40,
+    "wide": 56,
+    "skin": "wood"
+  }
+}

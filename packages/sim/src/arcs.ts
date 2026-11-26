@@ -1,9 +1,10 @@
-import { CAR_RADIUS, DT, type WeaponManifest } from '@demodogs/shared';
+import { DT, type WeaponManifest } from '@demodogs/shared';
 import type { Car } from './entities';
 import { angDiff } from './math';
 import { batter, damage, explode, ignite, light, shed } from './damage';
 import { earthed, held } from './guards';
 import type { World } from './world';
+import { thingGap } from './shapes';
 
 /**
  * Two arms that reach out by themselves: a coil that throws lightning from car to car, and an orb
@@ -80,7 +81,7 @@ function strike(w: World, c: Car, d: WeaponManifest): void {
       damage(w, best, amount, c, x, y);
     }
     // the spark sets alight a slick under it, and a drum beside it
-    ignite(w, x, y, CAR_RADIUS, c.index);
+    ignite(w, x, y, 6, c.index);
     for (const p of w.props)
       if (p.alive && p.def.explodesAt !== undefined && Math.hypot(p.x - x, p.y - y) < 14)
         light(p, c.index, 0.2);
@@ -104,7 +105,7 @@ function strike(w: World, c: Car, d: WeaponManifest): void {
     }
     pts.push(tx, ty);
     for (const s of w.near(tx, ty, 2)) {
-      if (s.down || Math.hypot(s.x - tx, s.y - ty) > s.def.radius + 1) continue;
+      if (s.down || thingGap(s, tx, ty) > 1) continue;
       if (s.leaves) shed(w, s, 0.08, 'heat', tx, ty);
       batter(w, s, 10, 'heat', tx, ty);
     }

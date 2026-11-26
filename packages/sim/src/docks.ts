@@ -1,8 +1,8 @@
-import { CAR_RADIUS, type SceneryRule } from '@demodogs/shared';
+import type { SceneryRule } from '@demodogs/shared';
 import { batter, damage, spill } from './damage';
 import type { LooseProp, StaticProp } from './entities';
 import { TAU } from './math';
-import { circles } from './physics';
+import { carPropGap } from './shapes';
 import type { Rng } from './prng';
 import { padded } from './guards';
 import type { World } from './world';
@@ -206,13 +206,12 @@ export function smash(w: World, p: LooseProp): void {
   const fall = -p.vz;
   // a container's weight does the damage more than its speed
   const k = Math.min(1, 0.55 + fall / 220);
-  // touching a car's body: a car shoves a loose prop out to exactly this far
-  const m = p.def.radius + CAR_RADIUS + 1.5;
   let hit = false;
   let player = false;
   for (const c of w.cars) {
     if (c.wrecked || c.z > 8 || Math.abs(c.x - p.x) > 30 || Math.abs(c.y - p.y) > 30) continue;
-    if (!circles(c).some((q) => Math.hypot(q[0] - p.x, q[1] - p.y) < m)) continue;
+    // (touching its body, or as good as: a car shoves a loose prop out to exactly its edge)
+    if (carPropGap(c, p.def, p.x, p.y, p.rot) > 1.5) continue;
     if (!padded(w, c, p.x, p.y)) damage(w, c, C * k, null, p.x, p.y);
     hit = true;
     player ||= c === w.player;

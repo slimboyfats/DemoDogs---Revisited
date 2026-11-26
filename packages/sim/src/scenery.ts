@@ -1,6 +1,8 @@
 import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/shared';
 import type { StaticProp } from './entities';
 import { spill } from './damage';
+import { pathAt } from './pads';
+import { leapGaps, leapPieces } from './leaps';
 import { putProp, stand } from './stand';
 import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
@@ -33,8 +35,35 @@ export function buildScenery(w: World, rng: Rng): void {
     onSide(x, y) || R?.slipAt(x, y) ? null : putProp(w, prop(id), x, y, rot, rng);
   // (nor, unless it was put there by hand, on the shoulder of raised road: that is the road's room)
   const half = w.road / 2;
+  // (nor on a path laid off the road, which is road; nor out in a lake of something deep)
+  // (nor in the way of a car leaping the gap from a takeoff to its landing)
+  const leaps = leapGaps(leapPieces(w.venue, w.content));
+  const blocked = (id: string, x: number, y: number): boolean => {
+    const def = prop(id);
+    if (def.pad || !def.solid) return false;
+    const r = def.radius + 8;
+    for (const [ax, ay, bx, by, wide] of leaps) {
+      const dx = bx - ax;
+      const dy = by - ay;
+      const u = Math.max(
+        0,
+        Math.min(1, ((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy || 1)),
+      );
+      if (Math.hypot(ax + dx * u - x, ay + dy * u - y) < wide / 2 + r) return true;
+    }
+    if (w.paths.length)
+      for (let k = 0; k < 5; k++)
+        if (
+          pathAt(w, x + (k ? Math.cos(k * 1.5708) * r : 0), y + (k ? Math.sin(k * 1.5708) * r : 0))
+        )
+          return true;
+    return w.spills.some(
+      (p) =>
+        p.fixed && p.r > DEEP_FROM && p.def.drag >= 1.5 && Math.hypot(p.x - x, p.y - y) < p.r - 4,
+    );
+  };
   const add: Add = (id, x, y, rot) =>
-    R?.plat && w.grid && R.platAt(x, y) > 0.5 && w.grid.at(x, y) > half
+    (R?.plat && w.grid && R.platAt(x, y) > 0.5 && w.grid.at(x, y) > half) || blocked(id, x, y)
       ? null
       : loose(id, x, y, rot);
   const weighted = (items: { prop: string; weight: number }[]): string => {
@@ -49,6 +78,9 @@ export function buildScenery(w: World, rng: Rng): void {
   for (const rule of w.venue.scenery)
     apply(w, rng, rule, rule.rule === 'place' ? loose : add, weighted, prop);
 }
+
+/** A pool laid with the map that is wider than this (px) and drags hard is a lake: nothing is stood in it. */
+const DEEP_FROM = 60;
 
 /** How high road must stand to be railed, and how far in from the platform's edge the rail runs (px). */
 const RAIL_FROM = 7;
@@ -73,6 +105,7 @@ function layRails(w: World, rng: Rng): void {
     for (const side of [-1, 1]) {
       let lx = -1e9;
       let ly = -1e9;
+      const run: number[] = [];
       for (let i = 0; i < T.n; i++) {
         const top = lift[i]!;
         if (top < RAIL_FROM || (w.deckH && w.deckH[i]! > 0)) continue;
@@ -90,10 +123,30 @@ function layRails(w: World, rng: Rng): void {
         const near = w.grid ? w.grid.nearest(x, y) : -1;
         if (near >= 0 && Math.min((near - i + T.n) % T.n, (i - near + T.n) % T.n) > 8) continue;
         if (x < 8 || y < 8 || x > w.w - 8 || y > w.h - 8) continue;
-        putProp(w, def, x, y, a, rng);
+        run.push(x, y, a);
         lx = x;
         ly = y;
       }
+      // each length points along the line of rails itself, not the road: where a lane widens or
+      // the road bends the line runs askew of it, and lengths laid square to the road would
+      // stand in steps instead of end to end
+      const near = def.radius * 3;
+      for (let j = 0; j < run.length; j += 3) {
+        const x = run[j]!;
+        const y = run[j + 1]!;
+        let ax = 0;
+        let ay = 0;
+        if (j >= 3 && Math.hypot(x - run[j - 3]!, y - run[j - 2]!) < near) {
+          ax += x - run[j - 3]!;
+          ay += y - run[j - 2]!;
+        }
+        if (j + 3 < run.length && Math.hypot(run[j + 3]! - x, run[j + 4]! - y) < near) {
+          ax += run[j + 3]! - x;
+          ay += run[j + 4]! - y;
+        }
+        putProp(w, def, x, y, ax || ay ? Math.atan2(ay, ax) : run[j + 2]!, rng);
+      }
+      run.length = 0;
     }
 }
 

@@ -1,5 +1,5 @@
 import { DT, type SimEvent } from '@demodogs/shared';
-import type { Car, World } from '@demodogs/sim';
+import { ventOpen, type Car, type StaticProp, type World } from '@demodogs/sim';
 import type { Sound } from '../audio/sound';
 import type { Art } from './art';
 import type { Effects } from './effects';
@@ -14,7 +14,7 @@ import { voxelsOf } from './strips';
  * loud on purpose, and nothing fed back into the sim.
  */
 
-type LifeEvent = Extract<SimEvent, { t: 'pad' | 'critter' | 'trample' }>;
+type LifeEvent = Extract<SimEvent, { t: 'pad' | 'bounce' | 'critter' | 'trample' }>;
 
 const TAU = Math.PI * 2;
 const rand = (a: number, b: number) => a + Math.random() * (b - a);
@@ -30,6 +30,7 @@ const CRIES = {
   snort: 'SNORT!',
   bellow: 'ROAR!',
 } as const;
+const WATER = [0xffffff, 0xe2f8ff, 0x9ae4fa, 0x48b8de] as const;
 const RED = [0xffffff, 0xff8a70, 0xff3b2a, 0xd0141a] as const;
 const hex = (rgb: number) => `#${rgb.toString(16).padStart(6, '0')}`;
 
@@ -123,9 +124,83 @@ export class LifeFx {
       if (v > 0 && Math.random() < 0.35) S.rustle(v);
       return;
     }
+    if (e.t === 'bounce') {
+      // off a bumper: a ring of red and white sparks, the bulbs flash, a boing
+      const c = w.cars[e.car]!;
+      const n = Math.ceil(26 * Math.max(0.4, fx.quality));
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * TAU;
+        fx.emit(
+          'spark',
+          e.x,
+          e.y,
+          rand(3, 7),
+          Math.cos(a) * rand(50, 120),
+          Math.sin(a) * rand(50, 120),
+          rand(20, 80),
+          rand(0.25, 0.5),
+          1,
+          pick(i % 2 ? RED : AMBER),
+        );
+      }
+      fx.flashes.push({ x: e.x, y: e.y, r: 46, life: 0.25, max: 0.25, rgb: 0xffd870 });
+      if (v > 0) S.boing(v);
+      if (c === w.player) {
+        fx.text(e.x, e.y - 6, 'BOING!', '#ffd24a');
+        fx.shake = Math.max(fx.shake, 4);
+      }
+      return;
+    }
     if (e.t === 'pad') {
       const c = w.cars[e.car]!;
       const mine = c === w.player;
+      if (e.kind === 'switch') {
+        // a floor switch: a ring of blue sparks off the plate, and word that the gate is open
+        for (let i = 0; i < 36; i++) {
+          const a = (i / 36) * TAU;
+          const sp = rand(50, 90);
+          fx.emit(
+            'spark',
+            e.x,
+            e.y,
+            1,
+            Math.cos(a) * sp,
+            Math.sin(a) * sp,
+            rand(20, 60),
+            rand(0.4, 0.7),
+            1,
+            pick(BLUE),
+          );
+        }
+        if (mine) fx.text(e.x, e.y, e.power > 0 ? 'GATE OPEN!' : 'CLICK', '#6fd6ff', true);
+        return;
+      }
+      if (e.kind === 'vent') {
+        // thrown up by a geyser: the car goes up in a burst of water
+        this.flying.add(c.index);
+        for (let i = 0; i < 30; i++) {
+          const a = rand(0, TAU);
+          const sp = rand(10, 70);
+          fx.emit(
+            'spark',
+            e.x,
+            e.y,
+            2,
+            Math.cos(a) * sp,
+            Math.sin(a) * sp,
+            rand(90, 200),
+            rand(0.5, 0.9),
+            1,
+            pick(WATER),
+          );
+        }
+        if (v > 0) S.whoosh(v);
+        if (mine) {
+          fx.text(e.x, e.y, 'WHOOSH!', '#9ae4fa', true);
+          fx.shake = Math.max(fx.shake, 5);
+        }
+        return;
+      }
       if (e.kind === 'boost') {
         const turbo = w.statics[e.prop]!.def.pad!.kind === 'boost' && e.power > 90;
         const col = turbo ? BLUE : AMBER;
@@ -267,6 +342,48 @@ export class LifeFx {
     }
   }
 
+  /** A vent: a column of water and steam while it blows, and a simmer just before it does. */
+  private spout(fx: Effects, w: World, s: StaticProp): void {
+    const P = w.player;
+    if (Math.abs(s.x - P.x) > 520 || Math.abs(s.y - P.y) > 320) return;
+    if (ventOpen(w, s)) {
+      const n = Math.ceil(5 * Math.max(0.4, fx.quality));
+      for (let i = 0; i < n; i++) {
+        const a = rand(0, TAU);
+        const sp = rand(0, 16);
+        fx.emit(
+          'spark',
+          s.x + rand(-2.5, 2.5),
+          s.y + rand(-2.5, 2.5),
+          1,
+          Math.cos(a) * sp,
+          Math.sin(a) * sp,
+          rand(110, 190),
+          rand(0.55, 0.95),
+          Math.random() < 0.3 ? 2 : 1,
+          pick(WATER),
+        );
+      }
+      if (Math.random() < 0.6)
+        fx.puff(s.x, s.y, rand(6, 26), 'smoke', rand(-10, 10), rand(-10, 10));
+    } else if (ventOpen(w, s, 0.7) && Math.random() < 0.5) {
+      // about to blow: it spits
+      const a = rand(0, TAU);
+      fx.emit(
+        'spark',
+        s.x,
+        s.y,
+        1,
+        Math.cos(a) * 20,
+        Math.sin(a) * 20,
+        rand(30, 60),
+        0.4,
+        1,
+        pick(WATER),
+      );
+    }
+  }
+
   step(fx: Effects, w: World): void {
     this.hush -= DT;
     this.warned -= DT;
@@ -277,6 +394,7 @@ export class LifeFx {
         this.touchdown(fx, w, c);
       }
     }
+    for (const s of w.pads) if (s.def.pad!.kind === 'vent') this.spout(fx, w, s);
     for (const k of w.critters) {
       if (k.state === 'wind') {
         // pawing the ground: dirt kicked back, and a red ring that tightens until it goes

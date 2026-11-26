@@ -1,5 +1,5 @@
 import { DT, type ModifierManifest } from '@demodogs/shared';
-import { batter, explode, scatter, shed, spill } from './damage';
+import { batter, explode, laidOn, scatter, shed, spill } from './damage';
 import type { Car, Spill } from './entities';
 import { TAU } from './math';
 import { stand } from './stand';
@@ -398,7 +398,8 @@ function quake(w: World, m: Mod, x: number, y: number): void {
       const len = w.rng.range(9, 15);
       [px, py] = w.keepInside(px + Math.cos(a) * len, py + Math.sin(a) * len, 6);
       pts.push(px, py);
-      w.craters.push({ x: px, y: py, r: 4 + 2 * D.power * (1 - i / segs) });
+      const r = 4 + 2 * D.power * (1 - i / segs);
+      if (!laidOn(w, px, py, r)) w.craters.push({ x: px, y: py, r });
     }
     w.emit({ t: 'split', pts });
   }

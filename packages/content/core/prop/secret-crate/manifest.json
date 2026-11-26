@@ -1,0 +1,13 @@
+{
+  "id": "prop.secret-crate",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Secret crate",
+    "description": "A yellow crate over a yellow ring, put before a secret way: it holds a boost refill and a rack of rockets, everything a jump or a cracked wall needs. It comes back as other crates do.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 10,
+  "solid": false,
+  "gives": ["pickup.nitro", "pickup.rockets"]
+}

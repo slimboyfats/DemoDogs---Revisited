@@ -1,0 +1,83 @@
+{
+  "id": "prop.glow-shroom",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Glowcap",
+    "description": "A toadstool taller than a car, its violet cap dotted with spots that glow in the dark.",
+    "since": "core@0.10.0"
+  },
+  "body": "static",
+  "radius": 2.8,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2.8,
+        "z": [0, 1]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2.5,
+        "z": [1, 2]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2,
+        "z": [2, 8]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 3.6,
+        "z": [8, 9]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2,
+        "z": [9, 10]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 9.1,
+        "z": [10, 13]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 8.4,
+        "z": [13, 14]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 7.6,
+        "z": [14, 15]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 6.7,
+        "z": [15, 16]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 5.1,
+        "z": [16, 17]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "radius": 2.8,
+        "z": [17, 18]
+      }
+    ]
+  },
+  "made": "material.wood",
+  "integrity": 50
+}
