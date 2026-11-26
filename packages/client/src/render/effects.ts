@@ -738,7 +738,7 @@ export class Effects {
   }
 
   text(x: number, y: number, text: string, col = '#fff', big = false): void {
-    this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
+    this.texts.push({ x, y, z: 26, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
   fling(
