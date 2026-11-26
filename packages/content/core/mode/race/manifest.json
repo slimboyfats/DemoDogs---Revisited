@@ -12,6 +12,7 @@
   "respawnSeconds": 2.6,
   "ai": "ai.racer",
   "pickupRespawn": 7,
+  "field": 8,
   "chase": {
     "gap": 350,
     "full": 1100,

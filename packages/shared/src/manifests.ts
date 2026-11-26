@@ -530,6 +530,8 @@ export const ModeSchema = z.strictObject({
   ai: id('ai'),
   /** Seconds a pickup takes to come back. */
   pickupRespawn: z.number().positive(),
+  /** How many cars start, humans and rivals together (absent: FIELD_SIZE). */
+  field: z.number().int().min(2).max(12).optional(),
   /**
    * Race: a human more than `gap` art px of road behind the car in front is helped along, up to
    * `pace` times its top speed once it is `full` behind (rivals have their own rubber band).
@@ -602,9 +604,17 @@ export const WeaponSchema = z.strictObject({
   homing: z.number().min(0).optional(),
   /**
    * Rockets: on launch, lock onto the nearest rival within `range` and `cone` radians of the nose,
-   * and chase that car (at the `homing` turn rate) for the whole flight, wherever it goes.
+   * and chase that car (at the `homing` turn rate) for the whole flight, wherever it goes. With
+   * `road`, in a race with nobody in the cone it takes the next car up the road within `range` of
+   * road, and follows the road round to it instead of flying at it through whatever is between.
    */
-  lock: z.strictObject({ range: z.number().positive(), cone: z.number().positive() }).optional(),
+  lock: z
+    .strictObject({
+      range: z.number().positive(),
+      cone: z.number().positive(),
+      road: z.boolean().optional(),
+    })
+    .optional(),
   /**
    * Rockets: when it bursts it throws `count` of the `bomblet` weapon (a rocket) out ahead in a
    * fan `spread` radians wide; it also bursts by itself after `fuse` seconds.
@@ -828,6 +838,7 @@ export const PickupSchema = z.strictObject({
     'wind',
     'collar',
     'bones',
+    'hunt',
     ...ADDON_KINDS,
     'tricks',
     ...TRICK_KINDS,
@@ -847,8 +858,15 @@ export const PickupSchema = z.strictObject({
    * its size, and `pace` multiplies its top speed. Shrink: every rival ahead (or, with nobody
    * ahead, within `radius`) is zapped down to `scale`, at `pace`. Wind: top speed times `pace`.
    * Collar: the car in front is weighed down to `pace`. Bones: `charges` of `prop` drop out of
-   * the sky in front of each rival ahead (or within `radius`).
+   * the sky in front of each rival ahead (or within `radius`). A shrink with `all` takes every
+   * other car in a race, behind as well as ahead, and holds the ones nearer the front longer (the
+   * car at the back for `tail` of its `seconds`). Hunt: a rocket flies up the road at `speed`
+   * (art px/s) to whoever is in front and lands on it as a blast of power `factor`, killing its
+   * engine for `seconds`.
    */
+  all: z.boolean().optional(),
+  tail: z.number().min(0).max(1).optional(),
+  speed: z.number().positive().optional(),
   scale: z.number().positive().optional(),
   pace: z.number().positive().optional(),
   radius: z.number().positive().optional(),

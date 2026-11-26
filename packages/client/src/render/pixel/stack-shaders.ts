@@ -704,11 +704,20 @@ void main() {
   c = min(vec3(1.0), c * shd);
   gl_FragDepth = clamp(1.0 - (wp.y * u_depth.x + shift * u_hk * u_depth.y - 4.0 - u_depth.z) * u_depth.w, 0.0, 1.0);
 #endif
-  // Snow settles in patches, a cell at a time, and last on the tarmac where the cars keep it off.
+  // Snow settles in patches, and last on the tarmac where the cars keep it off.
   if (u_snow > 0.0) {
+    float drift = soft(wp / 16.0 + 40.0);
+#ifdef BRIGHT
+    // (the bright look is plain: one soft white laid in round drifts with a soft edge, no cells,
+    // no specks, and only a thin drift here and there across the road)
+    float lie = mix(drift * 0.6 + soft(wp.yx / 9.0 + 7.0) * 0.4, drift * 0.55 + soft(wp.yx / 6.0 + 3.0) * 0.45, tar);
+    float full = u_snow * (1.3 - 0.9 * tar) - 0.12;
+    float on = (1.0 - smoothstep(full - 0.07, full + 0.02, lie)) * (1.0 - 0.25 * tar);
+    vec3 s = mix(vec3(0.88, 0.91, 0.97), vec3(0.94, 0.96, 1.0), soft(wp.yx / 21.0 + 90.0));
+    c = mix(c, s, on);
+#else
     // on grass and dirt it lies in drifts with dithered edges; on tarmac the cars keep it to a
     // thin dusting, a cell here and there, thicker where a drift has blown across
-    float drift = soft(wp / 16.0 + 40.0);
     float fine = bayer(ci);
     float lie = mix(drift * 0.55 + soft(wp / 4.0 + 7.0) * 0.25 + fine * 0.2, drift * 0.3 + h1 * 0.35 + fine * 0.35, tar);
 #ifdef PAINT
@@ -723,6 +732,7 @@ void main() {
       if (h1 < 0.04) s *= 0.92;
       c = grass > 0.5 && tip > 0.5 && u_snow < 0.9 ? c : s;
     }
+#endif
   }
   // Wet ground is darker, and darker and bluer again where water stands (the stacks' reflections
   // are drawn into the same puddles).

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Atmosphere, LAMPS_AT, SKIES } from './atmosphere';
+import { Atmosphere, LAMPS_AT, SKIES, skyOver } from './atmosphere';
 import { SUN } from './cast';
 
 const sky = (name: string): Atmosphere => {
@@ -92,5 +92,15 @@ describe('Atmosphere', () => {
     a.sunLong = null;
     a.update(0);
     expect(Math.hypot(a.reach[0]!, a.reach[1]!)).toBeCloseTo(len, 5);
+  });
+});
+
+describe('a weather area', () => {
+  it('lays its weather over the sky the race has and never takes the dark away', () => {
+    expect(skyOver(SKIES.night!, SKIES.snow!)).toEqual(SKIES['snow-night']);
+    expect(skyOver(SKIES['snow-night']!, SKIES.snow!)).toEqual(SKIES['snow-night']);
+    expect(skyOver(SKIES.day!, SKIES.snow!)).toEqual(SKIES.snow);
+    expect(skyOver(SKIES.day!, SKIES.storm!)).toEqual(SKIES.storm);
+    expect(skyOver(SKIES.night!, SKIES.rain!)).toEqual({ dark: 1, wet: 1, snow: 0, fog: 0 });
   });
 });

@@ -1,4 +1,5 @@
 import { DT } from '@demodogs/shared';
+import { freshen } from './catchup';
 import type { Car, Spill } from './entities';
 import { waterAt } from './damage';
 import { jumpGaps } from './leaps';
@@ -131,7 +132,7 @@ function putBack(w: World, c: Car, i: number): void {
   c.downT = 0;
   c.plunge = 0;
   c.drown = 0;
-  c.invuln = Math.max(c.invuln, 1);
+  freshen(w, c, 1);
   w.emit(fell ? { t: 'rescue', car: c.index, x, y, fell } : { t: 'rescue', car: c.index, x, y });
 }
 

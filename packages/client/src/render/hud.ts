@@ -37,9 +37,13 @@ const HELD_SAYS: [number, string][] = [
   [HELD.sticky, 'STUCK IN THE MUCK'],
   [HELD.rough, 'OFF ROAD'],
   [HELD.hill, 'UPHILL'],
+  [HELD.fresh, 'FINDING ITS FEET'],
   [HELD.weighed, 'WEIGHED DOWN'],
   [HELD.hurt, 'DAMAGED'],
 ];
+
+/** How far a dial at the bottom is lifted to clear the spectator's bar (CSS px). */
+const WATCH_BAR = 66;
 
 /** The words for what is holding a car back (`Car.held`), most telling first. */
 export function heldLabels(held: number): string[] {
@@ -232,7 +236,10 @@ export class Hud {
         w.timeLeft < 20 ? '#ff8f80' : '#fff',
       );
     }
-    text(`SCORE ${P.score}`, left, pad + 42 * u, small);
+    // (watching, the gauges are the watched car's, so they wear its name)
+    const watching = P !== w.player;
+    if (watching) text(`${P.name} · SCORE ${P.score}`, left, pad + 42 * u, small, '#7fe0ff');
+    else text(`SCORE ${P.score}`, left, pad + 42 * u, small);
     bar(
       pad + 60 * u,
       P.hp / 100,
@@ -292,7 +299,9 @@ export class Hud {
       }
       // standings under the minimap
       let y = pad + m.cv.height + 6 * u;
-      for (let i = 0; i < Math.min(6, st.length); i++) {
+      // (six rows: of a bigger field, the six round this screen's car)
+      const from = Math.max(0, Math.min(st.length - 6, st.indexOf(focus ?? w.player) - 3));
+      for (let i = from; i < Math.min(from + 6, st.length); i++) {
         const c = st[i]!;
         ctx.beginPath();
         ctx.roundRect(W - pad - 9 * u, y + 1.5 * u, 8 * u, 9 * u, 2.5 * u);
@@ -353,7 +362,7 @@ export class Hud {
       else if (T.balloons) text('UP IN THE AIR', W / 2, H * 0.2, font(24), '#ff8a96', 'center');
       else if (T.dash) text('COMET', W / 2, H * 0.2, font(24), '#ffc040', 'center');
     }
-    if (this.dial.on) this.speedo(P, W, H, u, text);
+    if (this.dial.on) this.speedo(P, W, H, u, text, watching);
     if (w.wrongWay()) text('WRONG WAY!', W / 2, H * 0.42, font(28), '#ff6a5a', 'center');
   }
 
@@ -381,6 +390,8 @@ export class Hud {
       col?: string,
       align?: CanvasTextAlign,
     ) => void,
+    /** Looking on at another car: the bar along the bottom is there, so the dial stands over it. */
+    watching = false,
   ): void {
     const ctx = this.ctx;
     const now = performance.now() / 1000;
@@ -391,7 +402,7 @@ export class Hud {
     const r = 40 * u;
     const spot = dialSpot(this.dial.place, W, H, r, ui);
     const cx = spot.x;
-    const cy = spot.y;
+    const cy = spot.y - (watching && !spot.below ? WATCH_BAR * ui : 0);
     const top = BASE_SPEED * P.stats.speed;
     // the dial runs to a boost and a bit over the car's own top speed
     const full = top * 1.45;

@@ -1,6 +1,7 @@
 import { DT, GRAVITY, REBUILD_TIME, type CarPart, type MaterialManifest } from '@demodogs/shared';
 import { caged, chew, plateOff } from './addons';
 import { absorb } from './defence';
+import { freshen } from './catchup';
 import { blastCritters } from './critters';
 import { LAMP, type Car, type LooseProp, type StaticProp } from './entities';
 import { topple } from './hazards';
@@ -131,7 +132,7 @@ export function respawn(w: World, c: Car): void {
   w.placeOnTrack(c, i, 0);
   c.vx = c.vy = c.vz = c.z = c.spin = 0;
   c.z = c.deck = w.deckAt(i);
-  c.invuln = 2.2;
+  freshen(w, c, 2.2);
   c.nitro = Math.max(c.nitro, 0.5);
   for (
     let tries = 0;

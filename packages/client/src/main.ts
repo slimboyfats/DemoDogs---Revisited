@@ -39,7 +39,7 @@ import { HITBOX_MODES, HitboxView, type HitboxMode } from './render/hitbox-view'
 import { drawNames, drawOverlay, type WorldRenderer } from './render/overlay';
 import { PixelScene } from './render/pixel/pixel-scene';
 import { groundMode } from './render/ground';
-import { SKIES } from './render/atmosphere';
+import { SKIES, skyOver } from './render/atmosphere';
 import { overdrawLine, type Channel, type OverdrawStats } from './render/pixel/overdraw';
 import { PITCH, Scene } from './render/scene';
 import { CareerScreen, money } from './ui/career-screen';
@@ -62,6 +62,7 @@ import { savedRoom } from './net/room';
 import type { TrackFile } from '@demodogs/shared';
 import {
   customVenueId,
+  grant,
   installTrack,
   rangeBlast,
   type Content,
@@ -407,8 +408,8 @@ function raceTrack(t: TrackFile): void {
   startGame(customVenueId(t.id), installTrack(content, t));
 }
 /**
- * A custom track's weather areas: the screen takes the sky of the area it is over, and goes back
- * to the sky it had when it leaves. Not in the editor, where the whole map is in view at once.
+ * A track's weather areas: the screen takes the weather of the area it is over, laid over the sky
+ * the race has (a night race stays dark in it), and goes back to that sky when it leaves. Not in the editor, where the whole map is in view at once.
  */
 let areaSky: string | null = null;
 function weatherAreas(): void {
@@ -419,7 +420,8 @@ function weatherAreas(): void {
       if (SKIES[a.sky] && Math.hypot(a.x - session.cam.x, a.y - session.cam.y) <= a.r) name = a.sky;
   if (name === areaSky) return;
   areaSky = name;
-  Object.assign(scene.sky, SKIES[name ?? skyName] ?? SKIES.day);
+  const base = SKIES[skyName] ?? SKIES.day!;
+  Object.assign(scene.sky, name ? skyOver(base, SKIES[name]!) : base);
 }
 /** The sky by name (see SKIES); false when there is no such sky or no pixel engine. */
 let skyName = 'day';
@@ -1687,6 +1689,12 @@ function boot(): void {
         return screen;
       },
       dev,
+      /** For scripts: hand car `i` of the running race the pickup `id`, as if it had opened it. */
+      give(i: number, id: string) {
+        const w = session?.world;
+        const got = w?.content.pickup.get(id);
+        return w && got ? grant(w, w.cars[i]!, got) : null;
+      },
       /** The hitbox view for scripts: `hitboxes.mode = 'off' | 'boxes' | 'heights'`. */
       hitboxes,
       /** The driving lesson for scripts: `step` is the one that is on, `state` where its things are, `end()` jumps to its last card. */
