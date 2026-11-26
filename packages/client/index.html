@@ -181,13 +181,20 @@
           <button id="settingsBack" class="go">DONE</button>
         </header>
         <nav class="setTabs">
-          <button data-tab="view" class="on">VIEW</button>
+          <button data-tab="race" class="on">RACE</button>
+          <button data-tab="view">VIEW</button>
           <button data-tab="sound">SOUND</button>
           <button data-tab="hud">HUD</button>
           <button data-tab="dev" class="tuneBtn">DEV</button>
         </nav>
         <div class="setBody">
-          <div data-pane="view">
+          <div data-pane="race">
+            <button class="rivalsBtn">RIVALS NORMAL</button>
+            <p class="note">
+              How hard the other drivers race, from the next race. Online races are always NORMAL.
+            </p>
+          </div>
+          <div data-pane="view" class="hidden">
             <label class="slide">
               <span>CAMERA <b class="zoomName">NORMAL</b></span>
               <input class="zoomRange" type="range" min="0" max="6" step="1" value="3" />

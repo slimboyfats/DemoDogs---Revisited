@@ -6,7 +6,8 @@ import { armed, put } from '../../../src/testing';
 
 describe('weapon.dig', () => {
   it('splits the ground in a line of pits and throws the car on it into the air', () => {
-    const { w, me, rivals, x, y, run } = armed('weapon.dig');
+    // (a crack wanders: on this seed it runs under the car)
+    const { w, me, rivals, x, y, run } = armed('weapon.dig', 1, 4);
     const t = rivals[0]!;
     put(me, x - 120, y, 0);
     put(t, x - 30, y, 0);
