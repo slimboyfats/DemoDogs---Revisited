@@ -44,6 +44,24 @@ export interface Strip {
   glow?: Uint8Array | undefined;
   /** How each texel shines (0 dull, 1 painted, 2 metal, 3 polished), laid out and kept as `glow` is. */
   gloss?: Uint8Array | undefined;
+  /**
+   * What the lighting needs of every texel (two bytes each, see pixel/aux.ts), while it is known
+   * for the pixels as they are: a strip is built with it, and whatever changes the strip's shape
+   * clears it (the atlas then bakes it afresh, a little a frame).
+   */
+  aux?: Uint8Array | undefined;
+  /**
+   * The part of each slice that has anything in it, as the strip was built (four numbers a slice:
+   * texel x0, y0, x1, y1 within it, the last two not included; x1 of 0 for an empty slice). Only
+   * that part is drawn. What breaks off later leaves it too big, never too small.
+   */
+  trim?: Uint16Array | undefined;
+  /**
+   * The part of every slice (texels: x0, y0, x1, y1, the last two not included) that has changed
+   * since the atlas last took the strip in, when whatever changed it knows: a dent's crater is a
+   * small part of a car. Null: any of it may have. Not set: nothing was noted (taken as any).
+   */
+  touched?: [number, number, number, number] | null | undefined;
 }
 
 /** How tall a strip stands, in art pixels. */

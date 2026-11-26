@@ -38,6 +38,7 @@
     "world": "pnpm build && node scripts/capture-world.mjs",
     "bridge": "pnpm build && node scripts/capture-bridge.mjs",
     "res": "pnpm build && node scripts/resolution.mjs",
+    "perf:start": "pnpm build && node scripts/perf-start.mjs",
     "slices": "pnpm build && node scripts/capture-slices.mjs",
     "ui": "pnpm build && node scripts/capture-ui.mjs",
     "play:lesson": "pnpm build && node scripts/play-lesson.mjs",

@@ -1,4 +1,4 @@
-import { compile, uniforms } from './gl';
+import { compile, type Sources, uniforms } from './gl';
 import { BANG_RAMP, CKind, FIRE_RAMP, HOT, ringStrength, type Gust, type Ring } from './cells';
 import { LIGHT_BANDS, MAX_LIGHTS, type Lights } from './lighting';
 import { WIND } from './particles';
@@ -794,3 +794,10 @@ export class GasGpu {
     gl.deleteTransformFeedback(this.tf);
   }
 }
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const GAS_PROGRAMS: readonly Sources[] = [
+  [UPDATE_VS, NOP_FS, ['o0', 'o1', 'o2']],
+  [DRAW_VS, DRAW_FS],
+  [EMIT_VS, EMIT_FS],
+];

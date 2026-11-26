@@ -1,5 +1,6 @@
 import { sliceX, sliceY, type Strip } from '../stack';
-import { compile, compileKept, countingShader, uniforms } from './gl';
+import { compile, compileKept, countingShader, uniforms, type Sources } from './gl';
+import { QUAD_FS, QUAD_VS } from './shaders';
 import type { Lights } from './lighting';
 import type { StackAtlas } from './stack-atlas';
 import type { ReliefLayer } from './relief-layer';
@@ -10,7 +11,7 @@ import type { TracedLight } from './traced-light';
 import type { SunShadow } from './sun-shadow';
 
 /** Per-instance floats: x, y, z, lift, rot, u, v, w, h, alpha, res, tint, tilt x, tilt y, air. */
-const STRIDE = 15;
+const STRIDE = 19;
 
 /** The sky's light for a frame of slices (see Atmosphere). */
 export interface StackSky {
@@ -252,6 +253,7 @@ export class StackBatch {
       [5, 1, 11],
       [6, 2, 12],
       [7, 1, 14],
+      [8, 4, 15],
     ];
     for (const [loc, size, off] of attrs) {
       gl.enableVertexAttribArray(loc);
@@ -288,6 +290,10 @@ export class StackBatch {
     tx = 0,
     ty = 0,
     air = 0,
+    x0 = 0,
+    y0 = 0,
+    x1 = w,
+    y1 = h,
   ): void {
     if ((this.n + 1) * STRIDE > this.data.length) {
       const bigger = new Float32Array(this.data.length * 2);
@@ -311,6 +317,10 @@ export class StackBatch {
     d[o + 12] = tx;
     d[o + 13] = ty;
     d[o + 14] = air;
+    d[o + 15] = x0;
+    d[o + 16] = y0;
+    d[o + 17] = x1;
+    d[o + 18] = y1;
     this.n++;
   }
 
@@ -327,6 +337,8 @@ export class StackBatch {
     tint = 0,
   ): void {
     const a = this.atlas.slot(s);
+    // (a race being got ready: the strip is noted for the atlas, and nothing is queued)
+    if (this.atlas.gathering) return;
     const zk = this.v.zk;
     const T = this.lie;
     if (T) {
@@ -340,6 +352,19 @@ export class StackBatch {
       // on the ground under its middle, or over an edge its far end would drop down the face
       const R = this.relief;
       if (R) z += R.at(T.px, T.py) - R.at(x, y);
+    }
+    // only the part of the slice with anything in it is drawn; a slice with nothing in it, not at all
+    const M = s.trim;
+    let x0 = 0;
+    let y0 = 0;
+    let x1 = s.cw;
+    let y1 = s.ch;
+    if (M) {
+      x0 = M[i * 4]!;
+      y0 = M[i * 4 + 1]!;
+      x1 = M[i * 4 + 2]!;
+      y1 = M[i * 4 + 3]!;
+      if (x1 <= x0) return;
     }
     const up = Math.round(z * zk);
     const res = s.res / this.zm;
@@ -365,6 +390,10 @@ export class StackBatch {
         T?.tx,
         T?.ty,
         T?.air,
+        x0,
+        y0,
+        x1,
+        y1,
       );
   }
 
@@ -422,6 +451,11 @@ export class StackBatch {
           tint,
           d[o + 12]!,
           d[o + 13]!,
+          0,
+          d[o + 15]!,
+          d[o + 16]!,
+          d[o + 17]!,
+          d[o + 18]!,
         );
       }
   }
@@ -706,6 +740,13 @@ export class StackBatch {
   dispose(): void {
     this.gl.deleteBuffer(this.buf);
     this.gl.deleteVertexArray(this.vao);
-    this.gl.deleteProgram(this.prog);
   }
 }
+
+/** Every program this file draws with, to start building before any is needed (`prelink`). */
+export const STACK_PROGRAMS: readonly Sources[] = [
+  [STACK_VS, STACK_FS],
+  [CAST_VS, CAST_FS],
+  [BLOCK_VS, BLOCK_FS],
+  [QUAD_VS, QUAD_FS],
+];
