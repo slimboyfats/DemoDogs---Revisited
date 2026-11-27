@@ -3,6 +3,8 @@ import type { Art } from '../render/art';
 import { StackRenderer } from '../render/stack';
 
 const TAU = Math.PI * 2;
+/** How far round the turntable is at a time. */
+const h0 = (t: number): number => t * 0.8;
 
 /** The turntable on the menu: the chosen car spinning slowly, wheels rolling. */
 export class Garage {
@@ -35,13 +37,16 @@ export class Garage {
     R.setView(s, (50 * Math.PI) / 180);
     R.begin(0, 0, cv.width, cv.height + s * 6);
     const A = this.art.car(car.id, car.paint);
-    const h = this.t * 0.8;
+    const h = h0(this.t);
     const cs = Math.cos(h);
     const sn = Math.sin(h);
     const wheel = this.art.wheels[((Math.floor(this.t * 10) % 3) + 3) % 3]!;
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    // the car's shade on whatever stage the page puts under it
+    const px = R.sx(0);
+    const py = R.sy(0, 0);
+    ctx.fillStyle = 'rgba(10,20,64,0.22)';
     ctx.beginPath();
-    ctx.ellipse(R.sx(0), R.sy(0, 0), 15 * s, 9 * s * R.ys, 0, 0, TAU);
+    ctx.ellipse(px, py, 11.5 * s, 7 * s * R.ys, 0, 0, TAU);
     ctx.fill();
     R.group(0);
     for (const w of car.wheels)

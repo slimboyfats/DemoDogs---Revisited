@@ -276,13 +276,22 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   before anything reads it whole (a respawn, a weld). Effects throw their dice with `roll` (render/dice.ts), never
   `Math.random`, which makes garbage on every call; a loop that lets go many cells fills `Cells.q` and calls `one`,
   or calls `spray`, and spent particles go back to a pool. Judge a change there with `pnpm perf:fight`.
-- **The menus wear one look** (client `theme.css`, loaded after `styles.css`): paper cards and sunny buttons with
-  an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
-  `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
-  drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
-  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused race so a
-  slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
-  in `theme.css`); nothing forces landscape.
+- **The menus wear one look** (client `theme.css`, loaded after `styles.css`; V2, "grand prix blue"): a deep blue
+  hall with bands of light sliding across it, white slabs with a thick foot, yellow for the way forward, navy words
+  on white, white on blue. A new screen is built from the pieces it lists (`.panel`, `.events button`,
+  `.row button`, `.go`, `.quiet`, `.slide`, `.tog`, `.bar` with a `.back`) and wears it without rules of its own.
+  Home (`#menu`, `.home`) is the car on its stage and four ways in (`.mode`): RACE opens the tracks to pick from
+  (`#quick`, a row of cards to flick through), HOW TO PLAY is a screen of its own (`#help`). The HUD drawn on the
+  canvas (`render/hud.ts`) uses the same navy, white and yellow. Every setting lives on the one SETTINGS sheet
+  (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused
+  race so a slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the
+  portrait blocks in `theme.css`); nothing forces landscape.
+  Words are set in one face kept in `src/fonts/` (Rubik, upright and italic; headings, buttons and numbers are
+  italic 900; a canvas takes it from `render/type.ts`). A button's colour is its `--c`, its words `--ct`, its foot
+  `--cd`, so a new kind of button sets those and never a flat `background`; a rule that must beat an older one in
+  `styles.css` carries `:is(*, #_)`. Signs are drawn once in the sheet at the top of `index.html` and used by name
+  (`<use href="#i-...">`, class `ic`). What moves in a menu or over a race moves by `transform` or `opacity` only,
+  and stops under `prefers-reduced-motion`.
 - **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
   else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
   in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never

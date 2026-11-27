@@ -50,7 +50,8 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 const tag = portrait ? '-portrait' : '';
 const shot = async (name) => {
-  await page.waitForTimeout(250);
+  // (long enough for a screen to have settled into place)
+  await page.waitForTimeout(800);
   await page.screenshot({ path: join(out, `${name}${tag}.png`) });
   console.log(`  ${name}${tag}.png`);
 };
@@ -74,12 +75,18 @@ const toEnd = (sel) =>
       if (e.scrollHeight > e.clientHeight + 4) e.scrollTop = e.scrollHeight;
   }, sel);
 
-// the main menu, top and bottom
+// the home screen, the tracks to pick from, how to play
 await page.goto(base);
 await page.waitForTimeout(900);
 await shot('menu');
-await toEnd('#menu');
-await shot('menu-end');
+if (await tap('#toQuick')) {
+  await shot('pick-track');
+  await tap('#quickBack');
+}
+if (await tap('#toHelp')) {
+  await shot('how-to-play');
+  await tap('#helpBack');
+}
 
 // settings from the menu (where there is such a screen), and the dev settings
 if (await tap('.settingsBtn')) {
@@ -91,14 +98,22 @@ if (await tap('#menu .tuneBtn', '.tuneBtn')) {
   await tap('#tuneBack');
 }
 
+// your tracks, and the online room
+if (await tap('#toTracks')) await shot('tracks');
+await page.goto(base);
+await page.waitForTimeout(900);
+if (await tap('#toOnline')) await shot('online');
+
 // the career hub
 await page.goto(`${base}?career`);
 await page.waitForTimeout(900);
 await shot('career');
 
-// a race: the HUD and the touch buttons
+// a race: the track's name before the lights, then the HUD and the touch buttons
 await page.goto(`${base}?start=kennel-loop&car=mutt&autoplay&seed=7`);
-await page.waitForTimeout(6500);
+await page.waitForTimeout(3000);
+await shot('countdown');
+await page.waitForTimeout(3500);
 await page.evaluate(() => {
   const s = window.__dd.session;
   for (let i = 0; i < 60 * 9; i++) s.step();

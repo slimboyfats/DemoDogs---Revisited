@@ -72,7 +72,7 @@ export function venueThumb(v: VenueManifest, w = 150, h = 84): HTMLCanvasElement
     g.fillStyle = sunny(v.colors.dirt);
     g.fill();
     g.lineWidth = 3;
-    g.strokeStyle = '#1b2233';
+    g.strokeStyle = '#0a1440';
     g.stroke();
   }
   if (P.line.length) {
@@ -84,7 +84,7 @@ export function venueThumb(v: VenueManifest, w = 150, h = 84): HTMLCanvasElement
     // an ink edge, the road, a white middle line
     path();
     g.lineWidth = P.wide + 3;
-    g.strokeStyle = '#1b2233';
+    g.strokeStyle = '#0a1440';
     g.stroke();
     path();
     g.lineWidth = P.wide;
