@@ -105,6 +105,13 @@ export class Hud {
   /** The place last shown and when it changed, so the numeral jumps as a car is passed. */
   private placeWas = 0;
   private placeAt = -1e9;
+  /** The gun's rounds last shown, whose they were, when one was last fired or a box of them
+   * picked up, and the most the gun has held, which is a full gauge. */
+  private gunOf: Car | null = null;
+  private roundsWas = 0;
+  private roundsTop = 1;
+  private firedAt = -1e9;
+  private loadedAt = -1e9;
   /** The message last shown and when it came up, so it lands with a bounce. */
   private msgWas = '';
   private msgLeft = 0;
@@ -477,19 +484,82 @@ export class Hud {
       P.boosting ? ['#ffffff', '#6fd0ff'] : ['#9be0ff', '#2f8fe6'],
       'bolt',
     );
+    // the gun's rounds: a gauge of their own with the count in big numerals at its end, since the
+    // gun fires by itself and this is all that says how long it will go on doing so
+    let row = pad + 88 * u;
     let cx = left - 2 * u;
-    cx = chip(cx, pad + 88 * u, 'star', 'SCORE', String(P.score), SUN);
-    // (this screen's own rounds are beside its FIRE button; a watched car's are here)
-    if (P.gun && watching)
-      cx = chip(
-        cx,
-        pad + 88 * u,
+    /** Where the line of what is bolted on goes: under whatever is lowest. */
+    let below = 0;
+    if (P.gun) {
+      if (P !== this.gunOf) {
+        this.gunOf = P;
+        this.roundsWas = P.rounds;
+        this.roundsTop = Math.max(1, P.gun.ammo, P.rounds);
+      }
+      if (P.rounds < this.roundsWas) this.firedAt = now;
+      else if (P.rounds > this.roundsWas) this.loadedAt = now;
+      this.roundsWas = P.rounds;
+      this.roundsTop = Math.max(this.roundsTop, P.rounds);
+      const firing = now - this.firedAt < 0.14;
+      const loaded = now - this.loadedAt;
+      const out = P.rounds <= 0;
+      const few = !out && P.rounds <= this.roundsTop * 0.2;
+      const beat = Math.sin(now * 11) > 0;
+      const y = pad + 87 * u;
+      bar(
+        y,
+        P.rounds / this.roundsTop,
+        firing ? ['#ffffff', '#ffe680'] : few ? ['#ffc37a', '#f0701c'] : ['#fff0a0', '#ffc21a'],
         'shell',
-        'AMMO',
-        String(P.rounds),
-        P.rounds > 0 ? '#fff' : '#ff8f80',
       );
-    if (watching) text(P.name, cx + 2 * u, pad + 90 * u, small, '#7fe0ff');
+      // (a box of rounds picked up: the count jumps; a round fired: it kicks)
+      const pop =
+        loaded < 0.4
+          ? 1 + 0.5 * Math.sin((loaded / 0.4) * Math.PI) * (1 - loaded / 0.4)
+          : firing
+            ? 1.08
+            : 1;
+      const cols = out
+        ? beat
+          ? (['#ffd0c8', '#ff6a58', '#d1321f'] as const)
+          : (['#ffb0a6', '#ff4a38', '#b02414'] as const)
+        : few
+          ? (['#ffe9c2', '#ffa63d', '#f0701c'] as const)
+          : (['#ffffff', '#fff3b0', '#ffd60a'] as const);
+      // (on a plate of its own at the gauge's end: the count, then what it counts)
+      const big = font(20);
+      const name = out ? 'NO AMMO' : 'AMMO';
+      ctx.font = big;
+      const nw = ctx.measureText(String(P.rounds)).width;
+      ctx.font = fine(9);
+      const lw = ctx.measureText(name).width;
+      const pw = 9 * u + nw + 5 * u + lw + 9 * u;
+      const ph = 21 * u;
+      // (at the gauge's end; where the map and the standings are in the way of that, as on an
+      // upright phone, under the gauge with the score after it)
+      const beside = left + 11 * u + 128 * u + 9 * u;
+      const fits = beside + pw + 8 * u < W - pad - (this.mini?.cv.width ?? 0);
+      const px = fits ? beside : left - 2 * u;
+      const py = fits ? y + 6.5 * u - ph / 2 : pad + 106 * u;
+      plate(px, py, pw, ph, out && beat ? 'rgba(120,16,8,0.8)' : DARK);
+      ctx.save();
+      ctx.translate(px + 10 * u + nw / 2, py + ph / 2 + u);
+      ctx.scale(pop, pop);
+      ctx.textBaseline = 'middle';
+      plain(String(P.rounds), -nw / 2, 0, big, shade(cols, 0, 17 * u));
+      ctx.restore();
+      ctx.textBaseline = 'middle';
+      plain(name, px + 15 * u + nw, py + ph / 2 + u, fine(9), out ? '#ffb0a6' : '#b9c8e6');
+      ctx.textBaseline = 'top';
+      row = pad + 107 * u;
+      if (!fits) {
+        cx = px + pw + 6 * u;
+        row = py + 2.5 * u;
+        below = py + ph + 4 * u;
+      }
+    }
+    cx = chip(cx, row, 'star', 'SCORE', String(P.score), SUN);
+    if (watching) text(P.name, cx + 2 * u, row + 2 * u, small, '#7fe0ff');
     // what is bolted on: the blade's seconds left, the leaps left in the springs
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
@@ -511,7 +581,7 @@ export class Hud {
     ]
       .filter(Boolean)
       .join('  ');
-    if (fitted) text(fitted, left, pad + 108 * u, font(12), SUN);
+    if (fitted) text(fitted, left, below || row + 20 * u, font(12), SUN);
 
     const m = this.mini;
     if (m) {

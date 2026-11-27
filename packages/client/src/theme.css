@@ -1781,103 +1781,6 @@ body[data-screen='game']:not(.editing) #pauseBtn {
   line-height: 1.05;
   padding: 0 6px;
 }
-/* the gun's rounds, in the gap beside FIRE and over BRAKE: a dark slab with a white line whose
-   yellow runs down as they are spent (one sheet scaled from its left end), the count in big numerals */
-#ammo {
-  --k: 1;
-  position: absolute;
-  right: calc(126px + env(safe-area-inset-right));
-  bottom: calc(132px + env(safe-area-inset-bottom));
-  height: 46px;
-  min-width: 96px;
-  padding: 0 14px 0 8px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  border: 3px solid #fff;
-  border-radius: 14px;
-  background: rgba(10, 20, 64, 0.82);
-  box-shadow:
-    0 5px 0 rgba(10, 20, 64, 0.7),
-    0 10px 14px rgba(4, 8, 40, 0.35);
-  color: #fff;
-  font-family: var(--display);
-  font-style: italic;
-  font-weight: 900;
-  transform: skewX(-8deg);
-  overflow: hidden;
-  pointer-events: none;
-}
-#ammo[hidden] {
-  display: none;
-}
-#ammo::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(#ffe45c, #ffb300);
-  transform-origin: 0 50%;
-  transform: scaleX(var(--k));
-  transition: transform 0.12s;
-}
-#ammo > * {
-  position: relative;
-}
-#ammo .ic {
-  width: 20px;
-  height: 26px;
-  fill: #fff;
-  stroke: #0a1440;
-  stroke-width: 2.4;
-  stroke-linejoin: round;
-  paint-order: stroke;
-}
-#ammo b {
-  font-size: 30px;
-  line-height: 1;
-  -webkit-text-stroke: 5px #0a1440;
-  paint-order: stroke fill;
-}
-#ammo small {
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  -webkit-text-stroke: 3.5px #0a1440;
-  paint-order: stroke fill;
-}
-#ammo.few::before {
-  background: linear-gradient(#ffb066, #ff6a1a);
-}
-#ammo.few b {
-  color: #ffd9a8;
-}
-#ammo.out {
-  border-color: #ff8f80;
-  background: rgba(140, 20, 10, 0.85);
-  animation: ammoOut 0.5s steps(2, jump-none) infinite;
-}
-#ammo.out :is(b, small) {
-  color: #ffb0a6;
-}
-#ammo.more {
-  animation: ammoMore 0.4s ease-out;
-}
-@keyframes ammoOut {
-  to {
-    opacity: 0.6;
-  }
-}
-@keyframes ammoMore {
-  30% {
-    transform: skewX(-8deg) scale(1.25);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  #ammo,
-  #ammo::before {
-    animation: none;
-    transition: none;
-  }
-}
 /* something to fire: a ring round the button breathes until it is used (moved and faded only) */
 #btnFire:not(.empty)::before {
   content: '';
@@ -1999,10 +1902,6 @@ body.driven #stickZone .hint {
   #btnBrake {
     right: calc(23px + env(safe-area-inset-right));
     bottom: calc(226px + env(safe-area-inset-bottom));
-  }
-  #ammo {
-    right: calc(112px + env(safe-area-inset-right));
-    bottom: calc(150px + env(safe-area-inset-bottom));
   }
   #stickZone .hint {
     bottom: calc(126px + env(safe-area-inset-bottom));

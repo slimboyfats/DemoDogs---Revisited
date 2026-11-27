@@ -848,37 +848,7 @@ function updateFireButton(): void {
   if (label.textContent !== text) label.textContent = text;
   b.classList.toggle('empty', !P.weapon);
   keyHints.setFire(text, !P.weapon);
-  // the gun's rounds beside it: a gauge that runs down from the most the gun has held
-  const A = $('ammo');
-  A.hidden = !P.gun;
-  if (!P.gun) return;
-  if (P !== ammoOf) {
-    ammoOf = P;
-    ammoWas = P.rounds;
-    ammoTop = Math.max(1, P.gun.ammo, P.rounds);
-    $('ammoN').textContent = '';
-  }
-  ammoTop = Math.max(ammoTop, P.rounds);
-  const n = String(P.rounds);
-  const N = $('ammoN');
-  if (N.textContent === n) return;
-  N.textContent = n;
-  A.style.setProperty('--k', String(Math.min(1, P.rounds / ammoTop)));
-  A.classList.toggle('few', P.rounds > 0 && P.rounds <= ammoTop * 0.2);
-  A.classList.toggle('out', P.rounds <= 0);
-  $('ammoName').textContent = P.rounds > 0 ? 'AMMO' : 'NO AMMO';
-  // (a box of rounds picked up: the count jumps)
-  if (P.rounds > ammoWas) {
-    A.classList.remove('more');
-    void A.offsetWidth;
-    A.classList.add('more');
-  }
-  ammoWas = P.rounds;
 }
-/** Whose rounds the gauge beside the buttons last showed, how many, and the most it has held. */
-let ammoOf: object | null = null;
-let ammoWas = 0;
-let ammoTop = 1;
 
 function goFullscreen(): void {
   try {
