@@ -1,0 +1,932 @@
+/*
+ * The level builder (V2 of the track creator), in the menus' own look (theme.css): navy, white
+ * slabs with a foot, the one yellow for what is in hand and the way forward.
+ *
+ *   .rail    the tools: down the left of a screen on its side, along the bottom of an upright one
+ *   .topbar     over the map: back, the track's name (its settings), undo, redo
+ *   .say    a pill that says what the tool is for, or what is wrong with the road
+ *   .view    closer, further, the whole map, snap
+ *   .pane    one panel for the tool in hand or the thing picked: down the right, or along the
+ *            bottom over the rail; .head, .body (.ctl, .cat, .ctl), .foot
+ *   .setup   the track's settings, over everything
+ *
+ * In the panel:  .part (.lab over what it names)   .seg (choices, one picked)   .step (- n +)
+ *                .range (a slider and its number)  .pair (two side by side)     .tip (small print)
+ * A button's colour is --c, its words --ct, its foot --cd; .go, .warn and .soft set them.
+ */
+#buildTap {
+  position: fixed;
+  inset: 0;
+  touch-action: none;
+}
+#buildTap.hidden,
+#builder.hidden,
+#builder .hidden {
+  display: none !important;
+}
+#builder {
+  --rail: 58px;
+  --pane: 232px;
+  --sl: env(safe-area-inset-left, 0px);
+  --sr: env(safe-area-inset-right, 0px);
+  --st: env(safe-area-inset-top, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+  --railw: calc(var(--rail) + var(--sl));
+  --panew: calc(var(--pane) + var(--sr));
+  --ink: rgba(4, 10, 40, 0.4);
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  color: var(--navy);
+  font: 700 11px/1.25 var(--body);
+  font-synthesis: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#builder > * {
+  pointer-events: auto;
+}
+
+/* ---- buttons */
+#builder button {
+  --c: #fff;
+  --ct: var(--navy);
+  --cd: #aab6e2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  min-height: 34px;
+  margin: 0;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--c);
+  color: var(--ct);
+  box-shadow: 0 3px 0 var(--cd);
+  font: italic 900 11px/1 var(--display);
+  letter-spacing: 0.02em;
+  text-transform: none;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+#builder button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 var(--cd);
+}
+#builder button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+#builder :is(button, input, select):focus-visible {
+  outline: 3px solid var(--cyan);
+  outline-offset: 2px;
+}
+#builder button.sq {
+  width: 34px;
+  padding: 0;
+  flex: none;
+}
+#builder button.go {
+  --c: var(--yel);
+  --cd: #c98600;
+  background: linear-gradient(#ffe45c, #ffc400);
+}
+#builder button.warn {
+  --c: #ffe3e7;
+  --ct: var(--red);
+  --cd: #f3b6bf;
+}
+#builder button.soft {
+  --c: var(--mist);
+  --cd: #c5cff0;
+}
+#builder button.soft.on {
+  --c: var(--navy);
+  --ct: #fff;
+  --cd: var(--ink);
+}
+#builder .sg {
+  width: 1.55em;
+  height: 1.55em;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+#builder .sg.full {
+  fill: currentColor;
+  stroke-width: 1.4;
+}
+
+/* ---- the rail of tools */
+#builder .rail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--railw);
+  padding: var(--st) 0 var(--sb) var(--sl);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: min(5px, 1.2vh);
+  background: linear-gradient(#17309a, #0a1440);
+  box-shadow: 4px 0 0 var(--ink);
+}
+#builder .rail button {
+  --c: rgba(255, 255, 255, 0.12);
+  --ct: #fff;
+  --cd: transparent;
+  width: 42px;
+  height: min(40px, calc((100vh - 44px) / 8));
+  min-height: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: none;
+  font-size: 8px;
+}
+#builder .rail button span {
+  display: none;
+}
+#builder .rail button .sg {
+  width: 21px;
+  height: 21px;
+}
+#builder .rail button.on {
+  --ct: var(--navy);
+  background: linear-gradient(#ffe45c, #ffc400);
+  box-shadow: 0 3px 0 #c98a00;
+}
+
+/* ---- the bar over the map */
+#builder .topbar {
+  position: absolute;
+  left: calc(var(--railw) + 10px);
+  right: calc(var(--panew) + 10px);
+  top: calc(8px + var(--st));
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+#builder .topbar > * {
+  pointer-events: auto;
+  box-shadow:
+    0 3px 0 var(--cd),
+    0 6px 12px rgba(4, 8, 40, 0.3);
+}
+#builder .topbar .name {
+  --c: var(--navy);
+  --ct: #fff;
+  --cd: rgba(4, 10, 40, 0.75);
+  flex: 0 1 auto;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 0 12px;
+  background: linear-gradient(#17309a, #0a1440);
+  overflow: hidden;
+}
+#builder .topbar .name b {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#builder .topbar .name small {
+  font: 700 7.5px/1 var(--body);
+  letter-spacing: 0.1em;
+  opacity: 0.7;
+}
+#builder .topbar .name.bad small {
+  color: #ff9aa8;
+  opacity: 1;
+}
+#builder .topbar .drive {
+  display: none;
+  margin-left: auto;
+}
+#builder.shut .topbar {
+  right: calc(52px + var(--sr));
+}
+#builder.shut .topbar .drive {
+  display: inline-flex;
+}
+
+/* ---- the pill that says things */
+#builder .say {
+  position: absolute;
+  left: calc(var(--railw) + 10px);
+  top: calc(52px + var(--st));
+  max-width: min(360px, calc(100vw - var(--railw) - var(--panew) - 20px));
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: rgba(10, 20, 64, 0.9);
+  color: #fff;
+  font: 600 11px/1.3 var(--body);
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  pointer-events: none;
+}
+#builder .say.show {
+  opacity: 1;
+  transform: none;
+}
+#builder .say.bad {
+  background: var(--red);
+  font-weight: 800;
+}
+
+/* ---- closer, further, the whole map, snap */
+#builder .view {
+  position: absolute;
+  left: calc(var(--railw) + 10px);
+  bottom: calc(8px + var(--sb));
+  display: flex;
+  gap: 6px;
+}
+#builder .view button {
+  --cd: var(--ink);
+  width: 34px;
+  border-radius: 50%;
+}
+#builder .view button.on {
+  --c: var(--yel);
+  --cd: #c98600;
+}
+
+/* ---- the panel */
+#builder .pane {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--panew);
+  padding-right: var(--sr);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  box-shadow: -4px 0 0 var(--ink);
+}
+#builder .pane .head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: calc(9px + var(--st)) 10px 6px 12px;
+}
+#builder :is(.pane, .setup) h2 {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--navy);
+  font: italic 900 15px/1.1 var(--display);
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  text-shadow: none;
+  white-space: nowrap;
+}
+#builder .pane .head button {
+  --c: var(--mist);
+  --cd: #c5cff0;
+  width: 28px;
+  min-height: 28px;
+  box-shadow: 0 2px 0 var(--cd);
+}
+#builder .pane .body {
+  flex: 1;
+  min-height: 0;
+  padding: 2px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+#builder .ctl {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+#builder .ctl:empty {
+  display: none;
+}
+#builder .pane .foot {
+  padding: 8px 12px calc(10px + var(--sb));
+  box-shadow: 0 -1px 0 var(--mist);
+}
+#builder .pane .foot .drive {
+  width: 100%;
+  min-height: 40px;
+  font-size: 13px;
+}
+/* put away: only its tab is left, at the edge of the map */
+#builder.shut .pane {
+  transform: translateX(100%);
+  box-shadow: none;
+}
+#builder.shut .pane .fold {
+  position: absolute;
+  left: -42px;
+  top: calc(8px + var(--st));
+  width: 34px;
+  min-height: 34px;
+  --c: #fff;
+  --cd: var(--ink);
+}
+#builder.shut .pane .fold .sg {
+  transform: rotate(180deg);
+}
+
+/* ---- what the panel is made of */
+#builder .part {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+#builder .lab,
+#builder .field > span {
+  color: var(--grey);
+  font: 800 9px/1.2 var(--body);
+  letter-spacing: 0.09em;
+}
+#builder .tip {
+  margin: 0;
+  color: var(--grey);
+  font: 500 10.5px/1.35 var(--body);
+}
+#builder .sum {
+  margin: 0;
+  font: 600 11px/1.45 var(--body);
+}
+#builder .pair {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 6px;
+}
+#builder .pair > * {
+  flex: 1 1 auto;
+}
+#builder .pair > .part {
+  flex: 1 1 0;
+}
+#builder .pair .step button {
+  width: 28px;
+}
+#builder .pair .step b {
+  min-width: 28px;
+  font-size: 14px;
+}
+#builder .seg {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 11px;
+  background: var(--mist);
+}
+#builder .seg button {
+  --c: transparent;
+  --ct: var(--grey);
+  flex: 1 1 0;
+  min-height: 30px;
+  padding: 0 4px;
+  border-radius: 8px;
+  box-shadow: none;
+  font: 800 10px/1 var(--body);
+  white-space: nowrap;
+}
+#builder .seg button.on {
+  --c: var(--navy);
+  --ct: #fff;
+  box-shadow: 0 2px 0 var(--ink);
+}
+#builder .seg.off {
+  opacity: 0.45;
+}
+#builder .seg.wrap {
+  flex-wrap: wrap;
+}
+#builder .seg.wrap button {
+  flex: 1 0 auto;
+  padding: 0 9px;
+}
+#builder .step {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+#builder .step b {
+  flex: 1;
+  min-width: 34px;
+  text-align: center;
+  font: italic 900 17px/1 var(--display);
+}
+#builder .step button {
+  --c: var(--mist);
+  --cd: #c5cff0;
+  width: 32px;
+  min-height: 32px;
+}
+#builder .range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#builder .range b {
+  min-width: 30px;
+  text-align: right;
+  font: italic 900 14px/1 var(--display);
+}
+#builder input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  height: 30px;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+#builder input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #cfd8f5;
+}
+#builder input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: #cfd8f5;
+}
+#builder input[type='range']::-webkit-slider-thumb {
+  width: 22px;
+  height: 22px;
+  margin-top: -7px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 2px 0 var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
+}
+#builder input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  background: var(--blue);
+  box-shadow: 0 2px 0 var(--ink);
+}
+#builder :is(input[type='text'], input[type='search'], select) {
+  min-width: 0;
+  height: 34px;
+  margin: 0;
+  padding: 0 10px;
+  border: 2px solid #cfd8f5;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--navy);
+  font: 700 12px/1 var(--body);
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---- a raised stretch from the side: its levels and slopes, dragged here and not on the map */
+#builder .profile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+#builder .profile svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 12px;
+  background: linear-gradient(#dff1ff, var(--mist));
+  cursor: ns-resize;
+  touch-action: none;
+}
+#builder .profile .col {
+  fill: rgba(31, 91, 255, 0.14);
+}
+#builder .profile .road {
+  fill: var(--yel);
+  stroke: var(--navy);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+}
+#builder .profile .ground {
+  stroke: var(--navy);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+#builder .profile .cut {
+  stroke: var(--navy);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+}
+#builder .profile .knob {
+  fill: #fff;
+  stroke: var(--navy);
+  stroke-width: 2.5;
+  cursor: ew-resize;
+}
+#builder .profile .knob.slope {
+  fill: var(--blue);
+  stroke: #fff;
+}
+#builder .profile .knob.on {
+  fill: var(--yel);
+  stroke: var(--navy);
+}
+#builder .profile .arrows {
+  fill: none;
+  stroke: var(--navy);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  pointer-events: none;
+}
+#builder .profile text {
+  fill: var(--grey);
+  font: italic 900 13px var(--display);
+  text-anchor: middle;
+  pointer-events: none;
+}
+#builder .profile .num.on {
+  fill: var(--navy);
+  font-size: 17px;
+}
+#builder .profile .nth {
+  font: 800 9px var(--body);
+}
+#builder .profile .ends {
+  display: flex;
+  justify-content: space-between;
+  color: var(--grey);
+  font: 800 8px/1 var(--body);
+  letter-spacing: 0.09em;
+}
+#builder .profile .how {
+  margin: 3px 0 0;
+  color: var(--grey);
+  font: 500 10px/1.3 var(--body);
+}
+
+/* ---- the catalogue: things as pictures, materials as swatches */
+#builder .cat {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+#builder .shelves {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+#builder .shelves button {
+  --c: var(--mist);
+  --ct: var(--grey);
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 8px;
+  box-shadow: none;
+  font: 800 9px/1 var(--body);
+  white-space: nowrap;
+}
+#builder .shelves button.on {
+  --c: var(--navy);
+  --ct: #fff;
+}
+#builder .tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  touch-action: pan-y;
+}
+#builder .tile {
+  --c: var(--mist);
+  height: 62px;
+  min-height: 0;
+  padding: 4px 2px 3px;
+  flex-direction: column;
+  gap: 3px;
+  border-radius: 12px;
+  box-shadow: none;
+  overflow: hidden;
+  touch-action: pan-y;
+}
+#builder .tile canvas {
+  width: 38px;
+  height: 38px;
+  pointer-events: none;
+}
+#builder .tile i {
+  width: 34px;
+  height: 26px;
+  border: 2px solid rgba(10, 20, 64, 0.18);
+  border-radius: 7px;
+}
+#builder .tile small {
+  max-width: 100%;
+  padding: 0 2px;
+  overflow: hidden;
+  color: var(--grey);
+  font: 800 8px/1.1 var(--body);
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+#builder .tile.on {
+  --c: #fff;
+  box-shadow: inset 0 0 0 3px var(--blue);
+}
+#builder .tile.on small {
+  color: var(--navy);
+}
+#builder .tiles .none {
+  grid-column: 1 / -1;
+  margin: 6px 0;
+  color: var(--grey);
+  font: 600 11px var(--body);
+}
+
+/* ---- the sheet */
+#builder .setup {
+  position: absolute;
+  inset: 0;
+  padding: calc(10px + var(--st)) calc(10px + var(--sr)) calc(10px + var(--sb))
+    calc(10px + var(--sl));
+  display: grid;
+  place-items: center;
+  background: rgba(4, 10, 40, 0.6);
+}
+#builder .setup .box {
+  width: min(620px, 100%);
+  max-height: 100%;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow:
+    0 6px 0 rgba(4, 10, 40, 0.6),
+    var(--drop);
+  overflow: hidden;
+}
+#builder .setup .head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#builder .setup h2 {
+  font-size: 17px;
+}
+#builder .setup .in {
+  min-height: 0;
+  padding: 0 2px 4px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-content: start;
+  gap: 10px 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+#builder .setup .in > :is(.tip, .rules, .files, .keys, button) {
+  grid-column: 1 / -1;
+}
+#builder .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+#builder .rules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px;
+}
+#builder .tog {
+  --c: var(--mist);
+  justify-content: flex-start;
+  padding: 0 9px;
+  box-shadow: none;
+  font: 700 10.5px/1.2 var(--body);
+  text-align: left;
+}
+#builder .tog i {
+  position: relative;
+  width: 28px;
+  height: 16px;
+  flex: none;
+  border-radius: 8px;
+  background: #b0bbe0;
+}
+#builder .tog i::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+}
+#builder .tog.on i {
+  background: var(--grn);
+}
+#builder .tog.on i::after {
+  transform: translateX(12px);
+}
+#builder .files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#builder .files button {
+  flex: 1 1 140px;
+  min-height: 42px;
+}
+#builder .keys {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  font: 600 11px/1.3 var(--body);
+}
+#builder .keys dt {
+  font-weight: 800;
+  white-space: nowrap;
+}
+#builder .keys dd {
+  margin: 0;
+  color: var(--grey);
+}
+
+/* ---- a phone on its side is short: the pill says what a tool is for, the panel need not */
+@media (orientation: landscape) and (max-height: 480px) {
+  #builder .pane .tip {
+    display: none;
+  }
+}
+
+/* ---- a big screen with a mouse: wider bars, the tools by name */
+@media (orientation: landscape) and (min-width: 1000px) and (min-height: 560px) {
+  #builder {
+    --rail: 78px;
+    --pane: 300px;
+    font-size: 12px;
+  }
+  #builder .rail {
+    gap: 7px;
+  }
+  #builder .rail button {
+    width: 64px;
+    height: 54px;
+    font-size: 9px;
+  }
+  #builder .rail button span {
+    display: block;
+  }
+  #builder .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---- a phone held upright: the rail along the bottom, the panel lying over it */
+@media (orientation: portrait) {
+  #builder {
+    --rail: 54px;
+    --pane: 0px;
+    --panew: 0px;
+    --railw: 0px;
+  }
+  #builder .rail {
+    top: auto;
+    right: 0;
+    width: auto;
+    height: calc(var(--rail) + var(--sb));
+    padding: 0 calc(4px + var(--sr)) var(--sb) calc(4px + var(--sl));
+    flex-direction: row;
+    justify-content: space-evenly;
+    gap: 2px;
+    box-shadow: 0 -4px 0 var(--ink);
+  }
+  #builder .rail button {
+    width: min(42px, 11.4vw);
+    height: 40px;
+  }
+  #builder .topbar,
+  #builder.shut .topbar {
+    left: calc(8px + var(--sl));
+    right: calc(8px + var(--sr));
+  }
+  #builder .topbar .drive {
+    display: inline-flex;
+  }
+  #builder .say {
+    left: calc(8px + var(--sl));
+    right: calc(52px + var(--sr));
+    max-width: none;
+  }
+  #builder .view {
+    left: auto;
+    right: calc(8px + var(--sr));
+    top: calc(52px + var(--st));
+    bottom: auto;
+    flex-direction: column;
+  }
+  #builder .pane,
+  #builder.shut .pane {
+    left: 0;
+    top: auto;
+    bottom: calc(var(--rail) + var(--sb));
+    width: auto;
+    height: min(40vh, 290px);
+    padding: 0 var(--sr) 0 var(--sl);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -4px 0 var(--ink);
+    transform: none;
+  }
+  #builder.shut .pane {
+    height: auto;
+  }
+  #builder.shut .pane .body,
+  #builder .pane .foot,
+  #builder .pane .tip {
+    display: none;
+  }
+  #builder .pane .head {
+    padding: 8px 10px 6px 14px;
+  }
+  #builder .pane .fold,
+  #builder.shut .pane .fold {
+    position: static;
+    width: 28px;
+    min-height: 28px;
+    --c: var(--mist);
+    --cd: #c5cff0;
+  }
+  #builder .pane .fold .sg {
+    transform: rotate(90deg);
+  }
+  #builder.shut .pane .fold .sg {
+    transform: rotate(-90deg);
+  }
+  #builder .pane .body {
+    padding: 2px 14px 10px;
+  }
+  /* the catalogue runs sideways, two rows deep: a thing is carried up and out of it */
+  #builder .cat[data-shelf='things'] {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+  }
+  #builder .shelves {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #builder .shelves button {
+    min-height: 34px;
+    flex: none;
+  }
+  #builder .tiles {
+    grid-column: 1 / -1;
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, 62px);
+    grid-auto-flow: column;
+    grid-auto-columns: 66px;
+    overflow-x: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+    touch-action: pan-x;
+  }
+  #builder .tile {
+    touch-action: pan-x;
+  }
+  #builder .setup .in {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #builder .say {
+    transition: none;
+  }
+}

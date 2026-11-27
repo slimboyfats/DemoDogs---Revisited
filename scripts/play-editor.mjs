@@ -74,7 +74,8 @@ const shot = async (name) => {
  */
 const tapSel = async (sel) => {
   const at = await page.evaluate((sel) => {
-    const e = document.querySelector(sel);
+    // (the first one that is on show: a button can be in the bar and in the panel)
+    const e = [...document.querySelectorAll(sel)].find((e) => e.getClientRects().length);
     if (!e) return null;
     e.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const r = e.getBoundingClientRect();
@@ -84,38 +85,34 @@ const tapSel = async (sel) => {
   await page.touchscreen.tap(at[0], at[1]);
   await page.waitForTimeout(200);
 };
-/** A button of the top bar, the mode bar or the floating ones, by what it does. */
-const act = (what) => tapSel(`#editPanel [data-act="${what}"]`);
-/** A button of the row of the tool in hand, by its label. */
-const row = (label) => tapSel(`#editPanel .ctx button[aria-label="${label}"]`);
-const MODE = {
-  hand: 'hand',
+/** A button of the builder, by what it does. */
+const act = (what) => tapSel(`#builder [data-act="${what}"]`);
+/** One of a row of choices in the panel, by the row's name and the choice's. */
+const opt = (name, value) => tapSel(`#builder [data-choice="${name}"] [data-value="${value}"]`);
+const RAIL = {
+  hand: 'select',
   road: 'road',
-  surface: 'road',
-  raise: 'road',
-  bridge: 'road',
-  place: 'place',
+  surface: 'surface',
+  raise: 'raise',
+  bridge: 'bridge',
+  place: 'things',
   area: 'ground',
   pool: 'ground',
   erase: 'erase',
 };
-/** Take a tool out: its mode on the mode bar, then the tool itself where the mode has several. */
+/** Take a tool out by its button on the rail (a second tap lets go of what was picked). */
 const tool = async (t) => {
-  await act(MODE[t]);
-  if (await page.locator(`#editPanel .ctx [data-tool="${t}"]`).count())
-    await tapSel(`#editPanel .ctx [data-tool="${t}"]`);
+  await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (await page.evaluate(() => !!window.__dd.editor.sel))
+    await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (t === 'area' || t === 'pool') await opt('ground', t);
   check(
     (await page.evaluate(() => window.__dd.editor.tool)) === t,
     `the ${t} tool did not come out`,
   );
 };
-/** Show a group of things in the tray. */
-const group = (g) =>
-  page.evaluate((g) => {
-    const s = document.querySelector('#editTray .head select');
-    s.value = g;
-    s.dispatchEvent(new Event('change'));
-  }, g);
+/** Show a shelf of things in the catalogue. */
+const group = (g) => tapSel(`#builder .shelves [data-group="${g}"]`);
 const track = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dd.editor.track)));
 /** Where a point of the map is on the screen, CSS px. */
 const at = (x, y) =>
@@ -143,7 +140,7 @@ const tapMap = async (x, y) => {
 /** Tap a thing or a material in the tray. */
 const pickTile = async (id) => {
   if (id.startsWith('prop.')) await group('all');
-  await tapSel(`#editTray .tile[data-id="${id}"]`);
+  await tapSel(`#builder .tile[data-id="${id}"]`);
 };
 const touch = (type, points) =>
   cdp.send('Input.dispatchTouchEvent', {
@@ -157,15 +154,21 @@ const dragMap = async (x0, y0, x1, y1, mid) => {
   await centre((x0 + x1) / 2, (y0 + y1) / 2);
   const a = await at(x0, y0);
   const b = await at(x1, y1);
-  await cdp.send('Input.dispatchTouchEvent', {
-    type: 'touchStart',
-    touchPoints: [{ x: a[0], y: a[1] }],
+  const to = (k) => ({
+    type: 'touchMove',
+    touchPoints: [{ x: a[0] + ((b[0] - a[0]) * k) / 10, y: a[1] + ((b[1] - a[1]) * k) / 10 }],
   });
-  for (let k = 1; k <= 10; k++)
-    await cdp.send('Input.dispatchTouchEvent', {
-      type: 'touchMove',
-      touchPoints: [{ x: a[0] + ((b[0] - a[0]) * k) / 10, y: a[1] + ((b[1] - a[1]) * k) / 10 }],
-    });
+  // a slow headless frame between the touch and its first move would count as resting the
+  // finger (which takes hold of what is under it): the two are sent together
+  await Promise.all([
+    cdp.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x: a[0], y: a[1] }],
+    }),
+    // (far enough at once to be a drag, however short the way is on the screen)
+    cdp.send('Input.dispatchTouchEvent', to(4)),
+  ]);
+  for (let k = 5; k <= 10; k++) await cdp.send('Input.dispatchTouchEvent', to(k));
   if (mid) await mid();
   await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 };
@@ -242,14 +245,14 @@ check(
 );
 // tap the cone to choose it: turn it, make it bigger, then let go of it
 await tapMap(cone.x, cone.y);
-await row('Turn it right');
+await act('turn-right');
 await page.waitForTimeout(300);
 check(
   Math.abs((await track()).items[4].rot - cone.rot - Math.PI / 12) < 1e-6,
   'the turn button did not turn the chosen thing',
 );
-await row('Bigger');
-await row('Bigger');
+await act('size-more');
+await act('size-more');
 await page.waitForTimeout(400);
 const bigCone = await page.evaluate(
   () => window.__dd.session.world.props.filter((p) => p.def.id === 'prop.cone-x150').length,
@@ -259,7 +262,7 @@ check(
   `the chosen thing did not grow (${bigCone} big cones in the world)`,
 );
 await shot('7a-chosen-thing');
-await row('DONE');
+await act('done');
 // track pieces: a boost pad on the road, and a flock of animals that the world brings alive
 await pickTile('prop.boost-pad');
 await tapMap(rx, ry - 200);
@@ -319,19 +322,17 @@ check((await track()).items.length === 7, 'the second undo did not bring it back
 
 // ---- setup: name, laps, a rule off
 await act('setup');
-await page.fill('#editSetup input[type=text]', 'Drum Alley');
-await page.dispatchEvent('#editSetup input[type=text]', 'change');
+await page.fill('#builder .setup input[type=text]', 'Drum Alley');
+await page.dispatchEvent('#builder .setup input[type=text]', 'change');
 await shot('10-setup');
-await tapSel('#editSetup [data-act="done"]');
+await act('done');
 check((await track()).name === 'Drum Alley', 'the name was not taken');
 
 // ---- the file: save, delete, load
 await act('setup');
+await opt('tab', 'share');
 await shot('11-file');
-const [download] = await Promise.all([
-  page.waitForEvent('download'),
-  tapSel('#editSetup [data-act="save"]'),
-]);
+const [download] = await Promise.all([page.waitForEvent('download'), act('save')]);
 const file = `${out}/${download.suggestedFilename()}`;
 await download.saveAs(file);
 const saved = JSON.parse(await readFile(file, 'utf8'));
@@ -347,7 +348,7 @@ check(
     saved.pools.length === 2,
   'the file does not hold the track',
 );
-await tapSel('#editSetup [data-act="done"]');
+await act('done');
 await act('exit');
 await page.waitForTimeout(300);
 check((await page.locator('.trackRow').count()) === 1, 'the track is not listed');
@@ -426,7 +427,7 @@ check((await track()).items.length === 7, 'a pinch put something down');
 await shot('17-pinched-in');
 await page.evaluate(() =>
   document
-    .getElementById('editTap')
+    .getElementById('buildTap')
     .dispatchEvent(
       new WheelEvent('wheel', { deltaY: 300, clientX: 300, clientY: 200, cancelable: true }),
     ),
@@ -438,7 +439,7 @@ check((await zoomNow()) < close * 0.8, 'the wheel did not zoom out');
 await tool('place');
 await group('pieces');
 await page.waitForTimeout(300);
-const tile = await page.locator('#editTray .tile[data-id="prop.boost-pad"]').boundingBox();
+const tile = await page.locator('#builder .tile[data-id="prop.boost-pad"]').boundingBox();
 const grab = [tile.x + tile.width / 2, tile.y + tile.height / 2];
 await touch('touchStart', [grab]);
 for (let k = 1; k <= 10; k++)
@@ -464,7 +465,7 @@ const before = (await track()).items;
 await centre(before[7].x, before[7].y);
 await page.touchscreen.tap(...(await at(before[7].x, before[7].y)));
 await page.waitForTimeout(300);
-await row('COPY');
+await act('copy');
 await page.waitForTimeout(400);
 const copied = (await track()).items;
 check(
@@ -500,13 +501,14 @@ await page.evaluate(() => {
   navigator.clipboard.writeText = async (text) => void (window.__copied = text);
 });
 await act('setup');
-await tapSel('#editSetup [data-act="link"]');
+await opt('tab', 'share');
+await act('link');
 // (the track is squeezed between frames, and headless frames of the whole map are slow)
 await page.waitForFunction(() => window.__copied, null, { timeout: 60000 }).catch(() => {});
 const link = await page.evaluate(() => window.__copied ?? '');
 check(/#track=[A-Za-z0-9_-]{200,}$/.test(link), `no link was copied (${link.slice(0, 80)})`);
 await shot('19d-shared');
-await tapSel('#editSetup [data-act="done"]');
+await act('done');
 const guest = await browser.newPage({ viewport: { width: VW, height: VH }, hasTouch: true });
 await guest.goto(link || base);
 await guest.waitForTimeout(1500);
@@ -544,8 +546,8 @@ const lifted = await page.evaluate(() => {
 await act('fit');
 await dragMap(...lifted[0], ...lifted[2], () => shot('21b-picking-a-stretch'));
 await page.waitForTimeout(600);
-await row('Higher');
-await row('Higher');
+await act('height-more');
+await act('height-more');
 await page.waitForTimeout(600);
 const stands = await page.evaluate(
   ([x, y]) => window.__dd.session.world.relief?.at(x, y) ?? 0,
@@ -557,15 +559,15 @@ check(
   `no stretch of road was raised: ${JSON.stringify(up)}, the ground stands ${stands}`,
 );
 await shot('21c-raised-road');
-await row('Lower');
+await act('height-less');
 await page.waitForTimeout(400);
 check((await track()).raised[0].height === 24, 'LOWER did not bring the raised road down');
-await row('Higher');
+await act('height-more');
 
 // ---- the pencil: a whole new road drawn with a finger
 await tool('road');
 await act('fit');
-await row('DRAW');
+await opt('draw', 'pencil');
 const size = (await track()).size;
 const loop = [];
 for (let k = 0; k <= 60; k++) {
@@ -598,8 +600,8 @@ await shot('23-road-drawn');
 
 // ---- terrain and weather: a snowfield where it snows, round the start line
 await tool('area');
-await tapSel('#editTray .tile[data-id="material.snow"]');
-await page.selectOption('#editPanel .ctx select', 'snow');
+await pickTile('material.snow');
+await opt('sky', 'snow');
 await act('in');
 await tapMap(...drawn.points[0]);
 await page.waitForTimeout(500);

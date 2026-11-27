@@ -78,7 +78,8 @@ const frame = async (hold = 1) => {
 };
 const tapSel = async (sel) => {
   const at = await page.evaluate((sel) => {
-    const e = document.querySelector(sel);
+    // (the first one that is on show: a button can be in the bar and in the panel)
+    const e = [...document.querySelectorAll(sel)].find((e) => e.getClientRects().length);
     if (!e) return null;
     e.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const r = e.getBoundingClientRect();
@@ -88,12 +89,23 @@ const tapSel = async (sel) => {
   await page.touchscreen.tap(at[0], at[1]);
   await page.waitForTimeout(200);
 };
-const act = (what) => tapSel(`#editPanel [data-act="${what}"]`);
-const MODE = { hand: 'hand', surface: 'road', raise: 'road', bridge: 'road', area: 'ground' };
+/** A button of the builder, by what it does. */
+const act = (what) => tapSel(`#builder [data-act="${what}"]`);
+/** One of a row of choices in the panel, by the row's name and the choice's. */
+const opt = (name, value) => tapSel(`#builder [data-choice="${name}"] [data-value="${value}"]`);
+const RAIL = {
+  hand: 'select',
+  surface: 'surface',
+  raise: 'raise',
+  bridge: 'bridge',
+  area: 'ground',
+};
+/** Take a tool out by its button on the rail (a second tap lets go of what was picked). */
 const tool = async (t) => {
-  await act(MODE[t]);
-  if (await page.locator(`#editPanel .ctx [data-tool="${t}"]`).count())
-    await tapSel(`#editPanel .ctx [data-tool="${t}"]`);
+  await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (await page.evaluate(() => !!window.__dd.editor.sel))
+    await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (t === 'area') await opt('ground', t);
   check((await page.evaluate(() => window.__dd.editor.tool)) === t, `no ${t} tool`);
 };
 const track = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dd.editor.track)));
@@ -171,6 +183,16 @@ const drag = async (a, b, { rest = 0, steps = 8, mid = null } = {}) => {
   await frame(4);
 };
 
+/** The picture of the chosen raised stretch in the panel: where its handles are (CSS px). */
+const prof = () => page.evaluate(() => window.__dd.editor.ui.profile.spots());
+/** Drag a level of it up (or down) in the picture, by so much height. */
+const lift = async (part, by, opts = {}) => {
+  const p = await prof();
+  if (!p?.levels[part]) return fail(`the picture has no level ${part + 1}`);
+  const a = p.levels[part];
+  await drag(a, [a[0], a[1] - by * p.sy], { steps: 10, ...opts });
+};
+
 // ---- a new track, close enough to see the road well
 await page.goto(`${base}?autoplay&seed=7`);
 await page.waitForTimeout(500);
@@ -215,11 +237,7 @@ check(
 );
 
 // ---- lift it by its tab: up the screen is higher
-const tab = await grip('lift');
-await drag(tab, [tab[0], tab[1] - 62], {
-  steps: 10,
-  mid: async () => (live = await stands(await road(0.36))),
-});
+await lift(0, 12, { mid: async () => (live = await stands(await road(0.36))) });
 check(Math.abs(live - 32) < 1, `the ground did not rise under the finger: it stood ${live}`);
 check(
   (await track()).raised[0].height === 32,
@@ -253,10 +271,11 @@ check((await stands(plain)) > 20, 'the held road does not stand up');
 await shot('5-held-road-raised');
 
 // ---- with a mouse: the same tab
-const mt = await grip('lift');
+const mp = await prof();
+const mt = mp.levels[0];
 await page.mouse.move(mt[0], mt[1]);
 await page.mouse.down();
-await page.mouse.move(mt[0], mt[1] + 40, { steps: 6 });
+await page.mouse.move(mt[0], mt[1] + 8 * mp.sy, { steps: 6 });
 await page.mouse.up();
 await page.waitForTimeout(400);
 check(
@@ -266,7 +285,7 @@ check(
 
 // ---- a stretch of surface by its end
 await tool('surface');
-await tapSel('#editTray .tile[data-id="material.ice"]');
+await tapSel('#builder .tile[data-id="material.ice"]');
 const [s0, s1, s2] = [await road(0.74), await road(0.78), await road(0.84)];
 await centre(...s1);
 await drag(await at(...s0), await at(...s1));
@@ -297,7 +316,7 @@ await shot('7-bridge-end-dragged');
 
 // ---- an area by its edge
 await tool('area');
-await tapSel('#editTray .tile[data-id="material.snow"]');
+await tapSel('#builder .tile[data-id="material.snow"]');
 const t = await track();
 const mapMid = [t.size.w / 2, t.size.h / 2];
 await act('out');

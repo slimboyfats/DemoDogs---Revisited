@@ -10,6 +10,7 @@ import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
 import './theme.css';
+import './builder.css';
 import { loadType } from './render/type';
 import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
@@ -84,7 +85,7 @@ import {
 import { Feel, FEEL_RANGE } from './game/feel';
 import { Pads } from './input/gamepad';
 import { PadMenu } from './ui/pad-menu';
-import { TrackEditor } from './ui/track-editor';
+import { LevelBuilder } from './ui/builder/builder';
 import { TracksScreen } from './ui/tracks-screen';
 import { modChips, modLine, parseMods, resolveMods } from './ui/mod-chips';
 
@@ -314,66 +315,58 @@ function storage(): KeyValue | null {
   }
 }
 const trackStore = new LocalTrackStore(storage(), () => new Date().toISOString());
-const editor = new TrackEditor(
-  $('editPanel'),
-  $('editTap'),
-  $('editSetup'),
-  $('editTray'),
-  content,
-  art,
-  {
-    view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
-    rebuild: (made) => {
-      const old = session;
-      const s = new Session({
-        art,
-        sound,
-        input,
-        ...editOptions(made),
-        autopilot: false,
-        tuning: tune.values,
-        feel,
-      });
-      if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
-      s.setView(W / shown, H / shown);
-      session = s;
-      return s;
-    },
-    ground: (t) =>
-      !!session &&
-      scene instanceof PixelScene &&
-      liftGround(session.world, t) &&
-      scene.reground(session.world),
-    setZoom: (k) => {
-      editShown = shown = k;
-      scene.setScale(k);
-      session?.setView(W / k, H / k);
-    },
-    zoomRange: () => {
-      const w = session!.world;
-      // from the whole map with room to spare, to twice as close as a race is shown
-      // (the bars and the tray of a small phone leave about half of it clear)
-      const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
-      return [Math.min(fit * 0.55, scale / 2), scale * 2];
-    },
-    save: (t) => {
-      editing = t;
-      void trackStore.put(t);
-    },
-    drive: (t) => raceTrack(t),
-    exit: () => openTracks(),
-    snap: {
-      get: () => storage()?.getItem('dd-edit-snap') !== '0',
-      set: (on) => {
-        try {
-          storage()?.setItem('dd-edit-snap', on ? '1' : '0');
-        } catch {
-          /* it lasts as long as the page */
-        }
-      },
+const editor = new LevelBuilder($('builder'), $('buildTap'), content, art, {
+  view: () => ({ w: W, h: H, scale: shown, dpr: DPR }),
+  rebuild: (made) => {
+    const old = session;
+    const s = new Session({
+      art,
+      sound,
+      input,
+      ...editOptions(made),
+      autopilot: false,
+      tuning: tune.values,
+      feel,
+    });
+    if (old) Object.assign(s.cam, { x: old.cam.x, y: old.cam.y });
+    s.setView(W / shown, H / shown);
+    session = s;
+    return s;
+  },
+  ground: (t) =>
+    !!session &&
+    scene instanceof PixelScene &&
+    liftGround(session.world, t) &&
+    scene.reground(session.world),
+  setZoom: (k) => {
+    editShown = shown = k;
+    scene.setScale(k);
+    session?.setView(W / k, H / k);
+  },
+  zoomRange: () => {
+    const w = session!.world;
+    // from the whole map with room to spare, to twice as close as a race is shown
+    // (the bars and the tray of a small phone leave about half of it clear)
+    const fit = Math.min(W / w.w, (H * 0.6) / (w.h * Math.sin(PITCH)));
+    return [Math.min(fit * 0.55, scale / 2), scale * 2];
+  },
+  save: (t) => {
+    editing = t;
+    void trackStore.put(t);
+  },
+  drive: (t) => raceTrack(t),
+  exit: () => openTracks(),
+  snap: {
+    get: () => storage()?.getItem('dd-edit-snap') !== '0',
+    set: (on) => {
+      try {
+        storage()?.setItem('dd-edit-snap', on ? '1' : '0');
+      } catch {
+        /* it lasts as long as the page */
+      }
     },
   },
-);
+});
 const tracksScreen = new TracksScreen($('tracksPanel'), content, trackStore, {
   edit: startEditor,
   race: (t) => {

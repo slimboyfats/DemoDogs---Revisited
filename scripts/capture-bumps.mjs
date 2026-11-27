@@ -303,7 +303,7 @@ const built = async (bridge) => {
     return [east, west];
   }, bridge);
   await page.waitForTimeout(800);
-  await page.locator('#editPanel button', { hasText: 'TEST DRIVE' }).first().tap();
+  await page.locator('#builder [data-act="drive"]:visible').first().tap();
   await page.waitForFunction(
     () =>
       window.__dd.screen === 'game' &&

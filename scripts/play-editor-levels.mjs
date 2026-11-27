@@ -79,7 +79,8 @@ const frame = async (hold = 1) => {
 };
 const tapSel = async (sel) => {
   const at = await page.evaluate((sel) => {
-    const e = document.querySelector(sel);
+    // (the first one that is on show: a button can be in the bar and in the panel)
+    const e = [...document.querySelectorAll(sel)].find((e) => e.getClientRects().length);
     if (!e) return null;
     e.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     const r = e.getBoundingClientRect();
@@ -89,12 +90,23 @@ const tapSel = async (sel) => {
   await page.touchscreen.tap(at[0], at[1]);
   await page.waitForTimeout(200);
 };
-const act = (what) => tapSel(`#editPanel [data-act="${what}"]`);
-const MODE = { hand: 'hand', surface: 'road', raise: 'road', bridge: 'road', area: 'ground' };
+/** A button of the builder, by what it does. */
+const act = (what) => tapSel(`#builder [data-act="${what}"]`);
+/** One of a row of choices in the panel, by the row's name and the choice's. */
+const opt = (name, value) => tapSel(`#builder [data-choice="${name}"] [data-value="${value}"]`);
+const RAIL = {
+  hand: 'select',
+  surface: 'surface',
+  raise: 'raise',
+  bridge: 'bridge',
+  area: 'ground',
+};
+/** Take a tool out by its button on the rail (a second tap lets go of what was picked). */
 const tool = async (t) => {
-  await act(MODE[t]);
-  if (await page.locator(`#editPanel .ctx [data-tool="${t}"]`).count())
-    await tapSel(`#editPanel .ctx [data-tool="${t}"]`);
+  await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (await page.evaluate(() => !!window.__dd.editor.sel))
+    await tapSel(`#builder [data-rail="${RAIL[t]}"]`);
+  if (t === 'area') await opt('ground', t);
   check((await page.evaluate(() => window.__dd.editor.tool)) === t, `no ${t} tool`);
 };
 const track = () => page.evaluate(() => JSON.parse(JSON.stringify(window.__dd.editor.track)));
@@ -125,21 +137,6 @@ const road = (f) =>
   }, f);
 /** How high the ground stands at a place. */
 const stands = (p) => page.evaluate(([x, y]) => window.__dd.session.world.relief?.at(x, y) ?? 0, p);
-/** A handle of what is chosen, where it is on the screen (CSS px). */
-const grip = async (name, part) => {
-  const g = await page.evaluate(
-    ([name, part]) => {
-      const k = window.__dd.view().dpr;
-      const h = window.__dd.editor
-        .grips()
-        .find((h) => h.grip === name && (part === null || h.part === part));
-      return h ? [h.x / k, h.y / k] : null;
-    },
-    [name, part ?? null],
-  );
-  if (!g) fail(`what is chosen has no ${name} handle`);
-  return g ?? [0, 0];
-};
 const cdp = await page.context().newCDPSession(page);
 const finger = (type, p) =>
   cdp.send('Input.dispatchTouchEvent', {
@@ -179,12 +176,20 @@ const drag = async (a, b, { rest = 0, steps = 8, mid = null } = {}) => {
   await frame(4);
 };
 
-const press = (label) => tapSel(`#editPanel .ctx button[aria-label^="${label}"]`);
 const built = async () => {
   await page.waitForTimeout(150);
   await page.waitForFunction(() => window.__dd.editor.settled, null, { timeout: 120000 });
   await page.waitForTimeout(200);
   await frame(5);
+};
+/** The picture of the chosen raised stretch in the panel: where its handles are (CSS px). */
+const prof = () => page.evaluate(() => window.__dd.editor.ui.profile.spots());
+/** Drag a level of it up (or down) in the picture, by so much height. */
+const lift = async (part, by, opts = {}) => {
+  const p = await prof();
+  if (!p?.levels[part]) return fail(`the picture has no level ${part + 1}`);
+  const a = p.levels[part];
+  await drag(a, [a[0], a[1] - by * p.sy], { steps: 10, ...opts });
 };
 const statics = (id) =>
   page.evaluate((id) => {
@@ -222,25 +227,23 @@ let up = (await track()).raised;
 check(up.length === 1 && up[0].height === 20, `no stretch was raised: ${JSON.stringify(up)}`);
 await shot('1-raised');
 
-// ---- split it in two, and lift the second level by its own tab
-await press('ADD LEVEL');
+// ---- split it in two (the new level starts a step higher), and lift it on the picture
+await act('split');
 await built();
 up = (await track()).raised;
 check(up[0].levels?.length === 1, `ADD LEVEL added none: ${JSON.stringify(up)}`);
-let tab = await grip('lift', 1);
-await drag(tab, [tab[0], tab[1] - 62], {
-  steps: 10,
-  mid: async () => (live = await stands(await road(0.44))),
-});
+await lift(1, 12, { mid: async () => (live = await stands(await road(0.44))) });
 up = (await track()).raised;
 check(up[0].levels[0].height === 40, `the second level stands ${up[0].levels[0].height}`);
-check(Math.abs(live - 40) < 1.5, `the ground did not follow the tab: it stood ${live}`);
+check(Math.abs(live - 40) < 1.5, `the ground did not follow the picture: it stood ${live}`);
 check(Math.abs((await stands(await road(0.33))) - 20) < 1.5, 'the first level did not stay put');
 await shot('2-two-levels');
 
 // ---- drag the place where the second level begins back along the road
 const cut = await road(0.36);
-await drag(await grip('level', 1), await at(...cut), {
+const lap = await page.evaluate(() => window.__dd.session.world.track.len);
+let pic = await prof();
+await drag(pic.cuts[0], [pic.x0 + 0.08 * lap * pic.sx, pic.cuts[0][1]], {
   mid: async () => (live = await stands(await road(0.4))),
 });
 up = (await track()).raised;
@@ -251,11 +254,10 @@ check(
 check(live > 36, `the ground did not follow the step under the finger: it stood ${live}`);
 await shot('3-step-dragged');
 
-// ---- a third level, lower: tap ADD LEVEL on the second, pull the new tab down
-await press('ADD LEVEL');
+// ---- a third level, lower: tap ADD LEVEL on the second, pull the new one down
+await act('split');
 await built();
-tab = await grip('lift', 2);
-await drag(tab, [tab[0], tab[1] + 122], { steps: 10 });
+await lift(2, -24);
 up = (await track()).raised;
 check(
   up[0].levels.length === 2 && up[0].levels[1].height === 24,
@@ -264,8 +266,8 @@ check(
 await shot('4-three-levels');
 
 // ---- the slope at each end: steep where the road climbs on, gentle where it comes down
-const lap = await page.evaluate(() => window.__dd.session.world.track.len);
-await drag(await grip('rampIn'), await at(...(await road(0.28))));
+pic = await prof();
+await drag(pic.slopes[0], [pic.x0 - 6, pic.slopes[0][1]]);
 /** The road `back` px before where the stretch ends. */
 const before = (back) =>
   page.evaluate((back) => {
@@ -280,7 +282,8 @@ const before = (back) =>
     const i = (end - Math.round(back / T.step) + T.n) % T.n;
     return [T.x[i], T.y[i]];
   }, back);
-await drag(await grip('rampOut'), await at(...(await before(200))), {
+pic = await prof();
+await drag(pic.slopes[1], [pic.x1 - 200 * pic.sx, pic.slopes[1][1]], {
   mid: async () => (live = await stands(await before(100))),
 });
 up = (await track()).raised;
@@ -293,10 +296,10 @@ await shot('5-steep-and-gentle');
 // ---- walls along its edges: no rails, no ramps beside it
 const rails = await statics('prop.armco');
 check(rails > 20, `it was not railed to begin with: ${rails}`);
-await press('EDGES');
+await opt('edge', 'wall');
 await built();
 up = (await track()).raised;
-check(up[0].edge === 'wall', `EDGES did not wall it: ${up[0].edge}`);
+check(up[0].edge === 'wall', `WALLS did not wall it: ${up[0].edge}`);
 check((await statics('prop.road-wall')) > 40, 'no walls stand along it');
 check((await statics('prop.armco')) === 0, 'rails still stand along it');
 check(
@@ -306,22 +309,22 @@ check(
 await shot('6-walled');
 
 // ---- open edges, and ramps on one side only
-await press('EDGES');
+await opt('edge', 'open');
 await built();
-check((await track()).raised[0].edge === 'open', 'EDGES did not open it');
+check((await track()).raised[0].edge === 'open', 'OPEN did not open it');
 check((await statics('prop.road-wall')) + (await statics('prop.armco')) === 0, 'open, yet railed');
-await press('SIDE RAMPS');
+await opt('lanes', 'left');
 await built();
-check((await track()).raised[0].lanes === 'left', 'SIDE RAMPS did not go to one side');
+check((await track()).raised[0].lanes === 'left', 'LEFT did not put the ramps on one side');
 await shot('7-open-ramps-one-side');
-await press('EDGES');
+await opt('edge', 'rail');
 await built();
-check((await track()).raised[0].edge === undefined, 'EDGES did not come back round to rails');
+check((await track()).raised[0].edge === undefined, 'RAILS did not bring the rails back');
 
 // ---- joined back up, one level at a time
-await press('JOIN');
+await act('join');
 await built();
-await press('JOIN');
+await act('join');
 await built();
 check(!(await track()).raised[0].levels, 'JOIN left levels behind');
 await act('undo');

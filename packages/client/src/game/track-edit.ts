@@ -429,18 +429,26 @@ export function rampOf(T: Track, s: Up, end: 0 | 1): number {
  * wall, and leaves the other end's slope (or the next level) its room. Whether it changed.
  */
 export function moveRamp(T: Track, s: Up, end: 0 | 1, x: number, y: number): boolean {
-  const { a, len, cuts, heights } = levelsIn(T, s);
-  const h = end === 0 ? heights[0]! : heights[heights.length - 1]!;
+  const { a, len } = levelsIn(T, s);
   const at = (nearestSample(T, x, y).i - a + T.n) % T.n;
   const k = at > len ? (at - len < T.n - at ? len : 0) : at;
+  return setRamp(T, s, end, (end === 0 ? k : len - k) * T.step);
+}
+
+/**
+ * Make the slope at an end of a raised stretch about `want` px long. It is never so short as to
+ * be a wall, and leaves the other end's slope (or the next level) its room. Whether it changed.
+ */
+export function setRamp(T: Track, s: Up, end: 0 | 1, want: number): boolean {
+  const { len, cuts, heights } = levelsIn(T, s);
+  const h = end === 0 ? heights[0]! : heights[heights.length - 1]!;
   const first = cuts.length ? (end === 0 ? cuts[0]! : len - cuts[cuts.length - 1]!) : len;
   // (with no levels the two slopes share the one stretch)
   const other = cuts.length ? 0 : rampOf(T, s, end === 0 ? 1 : 0);
   const most = Math.min(RAMP_MAX, Math.floor((first * T.step - other) / RAMP_STEP) * RAMP_STEP);
   const least = rampLeast(h);
   if (most < least) return false;
-  const want = snapTo((end === 0 ? k : len - k) * T.step, RAMP_STEP);
-  const long = Math.max(least, Math.min(most, want));
+  const long = Math.max(least, Math.min(most, snapTo(want, RAMP_STEP)));
   if (long === (end === 0 ? s.rampIn : s.rampOut)) return false;
   // (a slope of its own at one end makes the other end's its own too, as long as it was)
   const was = rampOf(T, s, end === 0 ? 1 : 0);
@@ -452,6 +460,25 @@ export function moveRamp(T: Track, s: Up, end: 0 | 1, x: number, y: number): boo
     s.rampIn ??= snapTo(Math.max(RAMP_MIN, Math.min(RAMP_MAX, was)), RAMP_STEP);
   }
   return true;
+}
+
+/** The slopes an end can be given by name: as steep as a car can climb, the usual, or a long one. */
+export const SLOPES = ['steep', 'medium', 'gentle'] as const;
+export type Slope = (typeof SLOPES)[number];
+
+/** How long a slope of each name is for road `h` high (px). */
+export const slopeLength = (h: number, slope: Slope): number =>
+  slope === 'steep' ? rampLeast(h) : snapTo(h * (slope === 'medium' ? 5 : 10), RAMP_STEP);
+
+/** Which of the named slopes the one at an end of a raised stretch is nearest to. */
+export function slopeOf(T: Track, s: Up, end: 0 | 1): Slope {
+  const { heights } = levelsIn(T, s);
+  const h = end === 0 ? heights[0]! : heights[heights.length - 1]!;
+  const long = rampOf(T, s, end);
+  let best: Slope = 'medium';
+  for (const k of SLOPES)
+    if (Math.abs(slopeLength(h, k) - long) < Math.abs(slopeLength(h, best) - long)) best = k;
+  return best;
 }
 
 /** A finger moves this many CSS px up or down the screen for each art px a road is raised by. */
