@@ -16,5 +16,6 @@
     "lift": 230,
     "period": 4.8,
     "open": 2.2
-  }
+  },
+  "ambient": "bubble"
 }

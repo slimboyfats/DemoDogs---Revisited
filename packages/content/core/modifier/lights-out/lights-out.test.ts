@@ -16,6 +16,8 @@ function pace(modifiers: string[], nose: boolean): number {
     r.nitro = 0;
     // (nor the rubber band: as far as it knows the human is alongside)
     w.player.progress = r.progress;
+    // (nor a mended nose: a crate on its way would give the lamps back)
+    r.has.front = nose;
     w.step();
     top = Math.max(top, r.vf);
   }

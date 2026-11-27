@@ -248,6 +248,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   pothole, the ramps' wedges) and the climb of a deck. The client tips the whole car as one thing (`lying` in
   render/stacks.ts, `tilt` on the stack sink): whatever is queued for a car between `tilt(lie)` and `tilt(null)` goes
   with it at the car's size, so new gear on a car needs nothing of its own.
+- **A corner is taken on grip, and a drift is the fast way round.** The tyres pull a car sideways only so hard
+  (`cornerGrip` in `TUNABLES`; `drive` in sim/physics.ts), so flat out through a hairpin it runs wide. Brake with
+  the power on in a turn and the car drifts (`DRIFT` in shared/constants.ts, `Car.drift`, `Car.charge`): it turns
+  tighter, keeps its speed, and after 0.6 s and 1.3 s of holding pays a burst when the brake is let go (one `drift`
+  SimEvent; render/drift-fx.ts shows it). Rivals of normal wits and up drift too (`driftBend`, `cornerSpeed` in
+  sim/ai-kit.ts). Every race venue has one to three hard bends and at least two more worth a drift (`bends.test.ts`
+  reads them off the racing line), and a boost tile or ramp never sits just before one.
 - **Tests stand on venues of their own.** `makeWorld`, `bench` and `flatBench` (content/src/testing.ts) default to
   `venue.bench` and `venue.bench-pit` (content/src/fixtures/), which are not in the game and never change, so a
   built-in track can be rebuilt without touching tests. A test about a real venue names it.

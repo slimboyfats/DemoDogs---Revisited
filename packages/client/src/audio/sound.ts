@@ -1,5 +1,7 @@
 /** Every sound is synthesised with Web Audio, so the game ships no sound files. */
-import { EngineVoice, SkidVoice } from './engine';
+import { Ambience, type Air } from './ambience';
+import { EngineVoice, PLAIN, SkidVoice, type EngineNote } from './engine';
+import { JINGLES, hertz, jingleSeconds, type Jingle, type JingleName } from './jingles';
 import { clipCurve, Music } from './music';
 import { tune, type Tune } from './tunes';
 import { FULL, gainOf, readVolume, type Channel, type Volume } from './volume';
@@ -18,9 +20,42 @@ export interface Drive {
   /** How hard its tyres are sliding, 0 to 1, and whether the ground under them is loose. */
   slide: number;
   loose: boolean;
+  /** Whose engine it is (see `engineNote`); the pickup's when not said. */
+  note?: EngineNote;
   /** The nearest other car: the same, and how near it is (1 alongside, 0 out of earshot). */
-  rival: { frac: number; throttle: number; near: number } | null;
+  rival: { frac: number; throttle: number; near: number; note?: EngineNote } | null;
 }
+
+/** What a thing that was hit is made of, as far as the ear can tell (a material's `sound`). */
+export const TIMBRES = ['car', 'metal', 'wood', 'stone', 'rubber', 'glass', 'soft'] as const;
+export type Timbre = (typeof TIMBRES)[number];
+
+const CALLS: readonly (readonly number[])[] = [
+  [0, 4, 7, 12],
+  [0, 3, 7, 12],
+  [0, 7, 12, 19],
+  [0, 5, 7, 12],
+  [12, 7, 4, 12],
+  [0, 12, 7, 16],
+  [0, 2, 4, 9],
+  [0, 4, 9, 16],
+];
+const ROOTS = [392, 440, 494, 523, 587, 659] as const;
+
+/** The call of a pickup of this kind: where it starts (hertz), its four steps, its wave. */
+export function pickupCall(kind: string): [number, readonly number[], OscillatorType] {
+  if (!kind) return [523, CALLS[0]!, 'square'];
+  let h = 2166136261;
+  for (let i = 0; i < kind.length; i++) h = Math.imul(h ^ kind.charCodeAt(i), 16777619) >>> 0;
+  return [
+    ROOTS[h % ROOTS.length]!,
+    CALLS[(h >>> 8) % CALLS.length]!,
+    (h >>> 16) % 3 === 0 ? 'triangle' : 'square',
+  ];
+}
+
+/** The small sounds of the menus. */
+export type Ui = 'tap' | 'back' | 'tab' | 'tick' | 'go';
 
 export class Sound {
   private ac: BaseAudioContext | null = null;
@@ -36,7 +71,14 @@ export class Sound {
   private musicOut: GainNode | null = null;
   private tunes: Music | null = null;
   private noiseBuf: AudioBuffer | null = null;
-  private engine: { own: EngineVoice; rival: EngineVoice; skid: SkidVoice } | null = null;
+  private engine: {
+    own: EngineVoice;
+    rival: EngineVoice;
+    skid: SkidVoice;
+    air: Ambience;
+  } | null = null;
+  /** When each kind of knock was last heard, so a pile-up is not one long roar. */
+  private readonly lastKnock = new Map<string, number>();
   private muted_ = false;
   private music_ = true;
   private volume: Volume = { ...FULL };
@@ -323,8 +365,12 @@ export class Sound {
     if (!ac || !this.master || !this.noiseBuf || this.engine) return;
     this.engine = {
       own: new EngineVoice(ac, this.master, this.noiseBuf),
-      rival: new EngineVoice(ac, this.master, this.noiseBuf, 1.19),
+      rival: new EngineVoice(ac, this.master, this.noiseBuf, 1.045),
       skid: new SkidVoice(ac, this.master, this.noiseBuf),
+      air: new Ambience(ac, this.master, this.noiseBuf, {
+        tone: (f, dur, vol, type, slide, when) => this.tone(f, dur, vol, type, slide, when),
+        noise: (dur, f, q, vol, type, when) => this.noise(dur, f, q, vol, type, when),
+      }),
     };
   }
 
@@ -333,9 +379,42 @@ export class Sound {
     const e = this.engine;
     if (!e) return;
     const t = this.now();
+    e.own.tune(d.note ?? PLAIN, t);
     e.own.set(d.frac, d.throttle, d.boost, 0.2, t);
+    if (d.rival) e.rival.tune(d.rival.note ?? PLAIN, t);
     e.rival.set(d.rival?.frac ?? 0, d.rival?.throttle ?? 0, false, 0.1 * (d.rival?.near ?? 0), t);
     e.skid.set(d.slide, d.loose, t);
+  }
+
+  /**
+   * The sound of the place round the car on screen (see audio/ambience.ts), and `dt` seconds of
+   * it going by. Only while the engines run.
+   */
+  ambience(air: Air, dt: number): void {
+    const e = this.engine;
+    if (!e) return;
+    e.air.set(air, this.now());
+    e.air.tick(dt);
+  }
+
+  /** A car's engine blipped where it stands: what the garage plays for the car it is showing. */
+  rev(note: EngineNote): void {
+    const ac = this.ac;
+    if (!ac || !this.master || !this.noiseBuf) return;
+    const t = this.now();
+    const v = new EngineVoice(ac, this.master, this.noiseBuf);
+    v.tune(note, t);
+    // two stabs of the throttle, the second longer, and back to a tick-over
+    const shape: [number, number, number][] = [
+      [0, 0.02, 0.1],
+      [0.08, 0.17, 1],
+      [0.3, 0.06, 0],
+      [0.48, 0.2, 1],
+      [0.85, 0.08, 0.1],
+      [1.15, 0.02, 0],
+    ];
+    for (const [at, frac, throttle] of shape) v.set(frac, throttle, false, 0.2, t + at);
+    v.stop(t + 1.35);
   }
 
   engineStop(): void {
@@ -345,21 +424,140 @@ export class Sound {
     e.own.stop(t);
     e.rival.stop(t);
     e.skid.stop(t);
+    e.air.stop(t);
     this.engine = null;
     // the weather goes quiet with the engine (a pause, the menus)
     this.rain(0);
   }
 
-  crash(power: number): void {
+  /**
+   * Two hard things meeting, as hard as `power`. `into` is what was hit: a car's bodywork when not
+   * said, or what the scenery is made of, which is most of how a rail differs from a fence.
+   */
+  crash(power: number, into: Timbre = 'car'): void {
     const v = Math.min(0.9, 0.12 + power * 0.008);
+    // a car is in nearly every crash: against scenery its own crunch is under the other sound
+    const car = into === 'car' ? 1 : into === 'rubber' || into === 'soft' ? 0.2 : 0.45;
     this.heavy(v > 0.5 ? v * 0.3 : 0, () => {
-      this.noise(0.25 + power * 0.003, 900, 0.8, v * 1.3);
-      this.noise(0.12, 2600, 2, v * 0.8);
+      this.noise(0.25 + power * 0.003, 900, 0.8, v * 1.3 * car);
+      this.noise(0.12, 2600, 2, v * 0.8 * car);
       // the weight behind it, and the bodywork ringing
-      this.noise(0.2, 300, 0.8, v * 0.8, 'lowpass');
-      this.tone(100, 0.16, v * 0.5, 'sine', 0.5);
-      this.tone(410, 0.09, v * 0.16, 'square', 0.8);
+      this.noise(0.2, 300, 0.8, v * 0.8 * car, 'lowpass');
+      this.tone(100, 0.16, v * 0.5 * car, 'sine', 0.5);
+      this.tone(410, 0.09, v * 0.16 * car, 'square', 0.8);
+      this.knock(into, v);
     });
+  }
+
+  /** What a thing made of `made` sounds like when it is struck, as loud as `v`. */
+  knock(made: Timbre, v: number): void {
+    // the same stuff struck again within a moment is the same knock
+    const t = this.now();
+    if (made === 'car' || t - (this.lastKnock.get(made) ?? -1) < 0.05) return;
+    this.lastKnock.set(made, t);
+    const jit = 0.92 + Math.random() * 0.16;
+    switch (made) {
+      case 'metal':
+        // a rail rings: three notes that do not agree, dying slowly, and the bang that set them off
+        this.tone(312 * jit, 0.55, v * 0.34, 'triangle', 0.985);
+        this.tone(861 * jit, 0.4, v * 0.2, 'square', 0.99);
+        this.tone(1685 * jit, 0.22, v * 0.1, 'triangle', 0.99);
+        this.noise(0.05, 3200, 1, v * 0.7, 'highpass');
+        this.tone(140, 0.12, v * 0.4, 'sine', 0.6);
+        break;
+      case 'wood': {
+        // a knock on a board, the crack of it, and splinters ticking down
+        this.tone(190 * jit, 0.07, v * 0.6, 'triangle', 0.6);
+        this.noise(0.09, 520, 2.2, v * 1.1);
+        this.noise(0.035, 1900, 1.4, v * 0.9);
+        const n = 2 + Math.floor(v * 4);
+        for (let i = 0; i < n; i++)
+          this.noise(
+            0.025,
+            1300 + Math.random() * 1500,
+            3,
+            v * 0.3,
+            'bandpass',
+            0.06 + Math.random() * 0.25,
+          );
+        break;
+      }
+      case 'stone':
+        // dead weight: a thud with no ring in it, and grit
+        this.noise(0.28, 210, 0.7, v * 1.5, 'lowpass');
+        this.tone(58, 0.2, v * 0.7, 'sine', 0.7);
+        this.noise(0.16, 1300, 0.7, v * 0.3, 'bandpass', 0.02);
+        break;
+      case 'rubber':
+        // a tyre wall gives and throws the car back: a dull thump that climbs
+        this.tone(74 * jit, 0.24, v * 0.9, 'sine', 1.7);
+        this.noise(0.14, 360, 0.9, v * 0.9, 'lowpass');
+        this.tone(150 * jit, 0.12, v * 0.2, 'triangle', 1.5, 0.03);
+        break;
+      case 'glass': {
+        // a pane goes, and the bits of it come down for a while after
+        this.noise(0.16, 4600, 0.8, v * 0.9, 'highpass');
+        const n = 5 + Math.floor(v * 6);
+        for (let i = 0; i < n; i++)
+          this.tone(
+            2400 + Math.random() * 3800,
+            0.05,
+            v * 0.12,
+            'sine',
+            0.97,
+            0.03 + Math.random() * 0.45,
+          );
+        break;
+      }
+      case 'soft':
+        // straw, snow, a hedge: a whump and a rustle
+        this.noise(0.22, 280, 0.6, v * 1.1, 'lowpass');
+        this.noise(0.2, 1700, 0.7, v * 0.14, 'bandpass', 0.03);
+        break;
+    }
+  }
+
+  /** A short tune for a moment (see audio/jingles.ts), over the one that is playing. */
+  jingle(name: JingleName, when = 0): void {
+    const j: Jingle = JINGLES[name];
+    const step = 15 / j.bpm;
+    const vol = j.wave === 'square' ? 0.13 : j.wave === 'triangle' ? 0.26 : 0.16;
+    for (const [pitch, at, len] of j.lead) {
+      this.tone(hertz(pitch), len * step * 0.95, vol, j.wave, 1, when + at * step);
+      // a second voice a hair sharp, so it is a section and not a telephone
+      this.tone(hertz(pitch) * 1.006, len * step * 0.95, vol * 0.5, j.wave, 1, when + at * step);
+    }
+    for (const [pitch, at, len] of j.under ?? [])
+      this.tone(hertz(pitch), len * step * 0.95, 0.2, 'triangle', 1, when + at * step);
+    if (j.duck > 0) this.tunes?.duck(j.duck, this.now() + when, jingleSeconds(j));
+  }
+
+  /** The small sounds of the menus: a button, the way back, a tab, a slider's notch, the start. */
+  ui(what: Ui): void {
+    switch (what) {
+      case 'tap':
+        this.tone(740, 0.035, 0.07, 'square');
+        this.tone(1110, 0.04, 0.05, 'square', 1, 0.03);
+        break;
+      case 'back':
+        this.tone(590, 0.035, 0.07, 'square');
+        this.tone(392, 0.05, 0.06, 'square', 1, 0.03);
+        break;
+      case 'tab':
+        this.tone(880, 0.03, 0.06, 'triangle');
+        this.noise(0.02, 2400, 2, 0.05);
+        break;
+      case 'tick':
+        this.tone(1320, 0.012, 0.05, 'square');
+        break;
+      case 'go':
+        // into a race: a rising rush and a hit
+        this.noise(0.35, 500, 0.7, 0.2, 'bandpass', 0, 5);
+        this.tone(196, 0.3, 0.1, 'sawtooth', 2);
+        this.tone(392, 0.3, 0.1, 'square', 1, 0.3);
+        this.tone(587, 0.3, 0.07, 'square', 1, 0.3);
+        break;
+    }
   }
 
   scrape(): void {
@@ -393,8 +591,15 @@ export class Sound {
     this.noise(0.2, 1800, 1.5, 0.25);
   }
 
-  pickup(): void {
-    [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 0.09, 0.12, 'square', 1, i * 0.06));
+  /**
+   * Something picked up. Each `kind` of thing has a call of its own, made from its name, so an
+   * item nobody has voiced is still told apart from the rest by ear; without one, the plain call.
+   */
+  pickup(kind = ''): void {
+    const [root, shape, wave] = pickupCall(kind);
+    shape.forEach((semi, i) =>
+      this.tone(root * 2 ** (semi / 12), 0.09, wave === 'square' ? 0.12 : 0.16, wave, 1, i * 0.06),
+    );
   }
 
   fire(): void {
@@ -590,6 +795,31 @@ export class Sound {
     this.noise(0.5, 600, 0.5, 0.2, 'lowpass');
   }
 
+  /** A car going into deep water: the slap of it, the gulp, and the spray coming down. */
+  plop(v = 1): void {
+    this.heavy(0, () => {
+      this.noise(0.12, 420, 0.8, 0.9 * v, 'lowpass');
+      this.tone(220, 0.22, 0.25 * v, 'sine', 0.35, 0.02);
+      this.noise(0.6, 2200, 0.6, 0.35 * v, 'bandpass', 0.05);
+      for (let i = 0; i < 5; i++)
+        this.noise(0.04, 1400 + Math.random() * 1800, 2, 0.12 * v, 'bandpass', 0.25 + i * 0.09);
+    });
+  }
+
+  /** A plate in the ground pressed down: a heavy clunk and a latch. */
+  clank(v = 1): void {
+    this.tone(150, 0.12, 0.25 * v, 'square', 0.5);
+    this.noise(0.08, 900, 1.2, 0.3 * v, 'bandpass');
+    this.tone(1250, 0.04, 0.08 * v, 'square', 1, 0.09);
+  }
+
+  /** Steel posts sinking into the ground: a motor's whine falling, and the grind of it. */
+  grind(v = 1): void {
+    this.tone(340, 0.7, 0.07 * v, 'sawtooth', 0.45, 0.1);
+    this.noise(0.7, 500, 1.4, 0.12 * v, 'bandpass', 0.1);
+    this.tone(70, 0.15, 0.2 * v, 'sine', 0.6, 0.8);
+  }
+
   /** Springs letting go: a rising twang. */
   boing(v = 1): void {
     this.tone(150, 0.32, 0.16 * v, 'triangle', 3.2);
@@ -633,8 +863,17 @@ export class Sound {
   }
 
   /** An animal's cry. */
-  cry(kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow', v = 1): void {
+  cry(
+    kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow' | 'click',
+    v = 1,
+  ): void {
     switch (kind) {
+      case 'click':
+        // claws snapping, and the scuttle of many legs
+        for (let i = 0; i < 2; i++) this.noise(0.025, 3800, 4, 0.22 * v, 'bandpass', i * 0.11);
+        for (let i = 0; i < 7; i++)
+          this.noise(0.015, 2400, 3, 0.07 * v, 'bandpass', 0.25 + i * 0.04);
+        break;
       case 'cluck':
         // three short clucks and a squawk
         for (let i = 0; i < 3; i++)

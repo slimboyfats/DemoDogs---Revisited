@@ -172,5 +172,6 @@
     ]
   },
   "made": "material.wood",
-  "integrity": 70
+  "integrity": 70,
+  "ambient": "crowd"
 }

@@ -42,5 +42,6 @@
   },
   "hardness": 0.3,
   "made": "material.wood",
-  "integrity": 6
+  "integrity": 6,
+  "ambient": "fire"
 }

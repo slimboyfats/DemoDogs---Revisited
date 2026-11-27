@@ -20,5 +20,6 @@
     "dust": 0.2,
     "sparks": true
   },
-  "colour": "#5d6168"
+  "colour": "#5d6168",
+  "sound": "metal"
 }

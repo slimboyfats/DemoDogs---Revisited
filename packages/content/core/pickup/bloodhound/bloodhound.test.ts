@@ -15,7 +15,7 @@ function hunt(prepare?: (first: ReturnType<typeof makeWorld>['player']) => void)
   const first = order[0]!;
   const last = order[order.length - 1]!;
   for (const c of w.cars) c.hp = 100;
-  prepare?.(first);
+  for (const c of w.cars) prepare?.(c);
   const label = grant(w, last, def());
   const events: SimEvent[] = [];
   let top = 0;
@@ -24,29 +24,33 @@ function hunt(prepare?: (first: ReturnType<typeof makeWorld>['player']) => void)
     top = Math.max(top, w.hunters[0]?.z ?? 0);
     events.push(...w.takeEvents());
   }
-  return { w, first, last, label, events, top };
+  // (it lands on whoever leads when it comes down: two cars nose to nose may have changed places)
+  const lock = events.find((e) => e.t === 'catchup' && e.what === 'hunt-lock');
+  const hit = w.cars[lock?.t === 'catchup' ? lock.car : first.index]!;
+  return { w, first, hit, last, label, events, top };
 }
 
 describe('pickup.bloodhound', () => {
   it('flies over the pack and lands on the car in front, which is hurt and stalls', () => {
-    const { w, first, last, label, events, top } = hunt();
+    const { w, first, hit, last, label, events, top } = hunt();
     expect(label).toBe(`BLOODHOUND: AFTER ${first.name}`);
     expect(w.hunters).toHaveLength(0);
     const said = events.flatMap((e) => (e.t === 'catchup' ? [`${e.what}:${e.car}`] : []));
-    expect(said).toContain(`hunt-lock:${first.index}`);
-    expect(said).toContain(`hunt-hit:${first.index}`);
+    expect(w.standings().slice(0, 2)).toContain(hit);
+    expect(said).toContain(`hunt-lock:${hit.index}`);
+    expect(said).toContain(`hunt-hit:${hit.index}`);
     expect(top).toBeGreaterThan(HUNT_HIGH - 1);
-    expect(first.hp).toBeLessThan(100);
-    expect(
-      events.some((e) => e.t === 'stall' && e.car === first.index && e.by === last.index),
-    ).toBe(true);
+    expect(hit.hp).toBeLessThan(100);
+    expect(events.some((e) => e.t === 'stall' && e.car === hit.index && e.by === last.index)).toBe(
+      true,
+    );
   });
 
   it('lands on a car that cannot be hurt without stopping it', () => {
-    const { first, events } = hunt((c) => (c.invuln = 60));
+    const { hit, events } = hunt((c) => (c.invuln = 60));
     expect(events.some((e) => e.t === 'catchup' && e.what === 'hunt-hit')).toBe(true);
-    expect(first.hp).toBe(100);
-    expect(first.stall ?? 0).toBe(0);
+    expect(hit.hp).toBe(100);
+    expect(hit.stall ?? 0).toBe(0);
   });
 
   it('goes after the next car along when the leader opens it', () => {

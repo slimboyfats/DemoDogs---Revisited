@@ -31,6 +31,7 @@
     "audio": "pnpm build && node scripts/capture-audio.mjs",
     "sky": "pnpm build && node scripts/capture-sky.mjs",
     "chase": "pnpm build && node scripts/capture-chase.mjs",
+    "drift": "pnpm build && node scripts/capture-drift.mjs",
     "traced": "pnpm build && node scripts/capture-traced.mjs",
     "ground": "pnpm build && node scripts/capture-ground.mjs",
     "life": "pnpm build && node scripts/capture-life.mjs",

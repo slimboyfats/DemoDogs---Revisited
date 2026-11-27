@@ -1,14 +1,16 @@
+import { DRIFT } from '@demodogs/shared';
+
 /**
- * The driving lesson a new player is given before a first race: five things to do, one at a time,
+ * The driving lesson a new player is given before a first race: six things to do, one at a time,
  * each done by doing it. This is the lesson's own book-keeping only (which step is on, where its
  * rings, crate and targets stand, when it is done); the world it is given in and what is drawn
  * are the tutor's (ui/tutor.ts). Nothing here touches the DOM or the sim, so it can be tested.
  */
 
-export type StepId = 'drive' | 'brake' | 'boost' | 'crate' | 'fire';
+export type StepId = 'drive' | 'brake' | 'boost' | 'drift' | 'crate' | 'fire';
 
 /** The steps, in the order they are taught. */
-export const STEPS: readonly StepId[] = ['drive', 'brake', 'boost', 'crate', 'fire'];
+export const STEPS: readonly StepId[] = ['drive', 'brake', 'boost', 'drift', 'crate', 'fire'];
 
 /** What the lesson reads of the world, each frame. */
 export interface Seen {
@@ -20,6 +22,8 @@ export interface Seen {
   brake: boolean;
   /** Nitro is burning. */
   boosting: boolean;
+  /** Seconds a drift has been held well (the car's `charge`): 0 when there is none. */
+  charge: number;
   /** A weapon is in hand. */
   armed: boolean;
   /** How many of the parked targets are wrecked. */
@@ -71,6 +75,7 @@ const PLACES: Record<StepId, [number, number][]> = {
   ],
   brake: [],
   boost: [],
+  drift: [],
   crate: [[120, 0]],
   fire: [
     [130, 0],
@@ -121,6 +126,8 @@ export class Lesson {
   missed = false;
   private held = 0;
   private empty = 0;
+  /** The drift step: a slide has been held long enough to pay. */
+  private charged = false;
 
   constructor(
     private readonly lawn: Lawn,
@@ -143,7 +150,7 @@ export class Lesson {
   private begin(from: Seen): void {
     const s = this.step;
     this.progress = this.held = this.empty = this.ring = 0;
-    this.missed = false;
+    this.missed = this.charged = false;
     this.spots = s ? layout(from, this.lawn, PLACES[s]) : [];
   }
 
@@ -173,6 +180,11 @@ export class Lesson {
       if (s === 'brake' ? seen.brake : seen.boosting) this.held += dt;
       this.progress = Math.min(1, this.held / HOLD[s]!);
       done = this.progress >= 1;
+    } else if (s === 'drift') {
+      // held until the sparks turn, then let go: the burst is the lesson
+      if (seen.charge >= DRIFT.stage[0]) this.charged = true;
+      this.progress = this.charged ? 0.9 : Math.min(0.8, (seen.charge / DRIFT.stage[0]) * 0.8);
+      done = this.charged && seen.charge === 0;
     } else if (s === 'crate') done = seen.armed;
     else {
       done = seen.wrecks > 0;
@@ -212,13 +224,23 @@ export function words(step: StepId, keys: boolean, missed = false): Words {
     case 'brake':
       return {
         title: keys ? 'HOLD S TO BRAKE' : 'HOLD BRAKE',
-        sub: 'It stops the car. Keep holding and you back up. Brake in a turn and you slide.',
+        sub: 'It stops the car. Keep holding and you back up.',
       };
     case 'boost':
       return {
         title: keys ? 'HOLD SPACE TO BOOST' : 'HOLD BOOST',
         sub: 'Nitro! The blue tank drains while you hold, then fills back up by itself.',
       };
+    case 'drift':
+      return keys
+        ? {
+            title: 'DRIFT: GAS, TURN AND S',
+            sub: 'Get up to speed, turn, and hold the brake with the gas still on. When the sparks turn yellow, let go: whoosh!',
+          }
+        : {
+            title: 'DRIFT: BRAKE IN A TURN',
+            sub: 'Get up to speed, turn, and hold BRAKE while you steer. When the sparks turn yellow, let go: whoosh!',
+          };
     case 'crate':
       return {
         title: 'GRAB THE CRATE',
@@ -239,6 +261,7 @@ export const CHEERS: Record<StepId, string> = {
   drive: 'NICE DRIVING!',
   brake: 'SMOOTH!',
   boost: 'WHOOSH!',
+  drift: 'DRIFT KING!',
   crate: 'ROCKETS!',
   fire: 'BOOM!',
 };

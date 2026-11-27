@@ -18,5 +18,6 @@
     "brittle": 0.4,
     "dust": 1
   },
-  "colour": "#63656b"
+  "colour": "#63656b",
+  "sound": "stone"
 }

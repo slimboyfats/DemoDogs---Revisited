@@ -8,6 +8,8 @@ import {
   type Tuning,
 } from '@demodogs/shared';
 import { World, type Car, type Content, type Entrant, type Setup } from '@demodogs/sim';
+import { STILL, heard, type Air } from '../audio/ambience';
+import { engineNote, type EngineNote } from '../audio/engine';
 import type { Sound } from '../audio/sound';
 import { tuneFor, type Tune } from '../audio/tunes';
 import type { Input } from '../input/input';
@@ -22,6 +24,10 @@ import { cuesOf, hitStop, Shaker, STOP_REST, type Feel } from './feel';
 
 /** How far off another car's engine can be heard, in art pixels. */
 const EARSHOT = 240;
+/** How far off a thing's own noise (a crowd, birds in a tree) is heard, art px. */
+const HEARD = 230;
+/** How far off the loudest things (a lighthouse's horn) are heard. */
+const FAR = 520;
 
 export interface SessionOptions {
   content: Content;
@@ -377,6 +383,7 @@ export class Session {
       }
     }
     this.o.sound.drive({
+      note: this.noteOf(C),
       frac: top(C),
       throttle: C.wrecked && !C.haunt?.up ? 0 : Math.abs(C.throttle),
       boost: C.boosting,
@@ -384,9 +391,60 @@ export class Session {
         C.sliding && moving > 40 ? Math.min(1, 0.35 + side / 110 + (C.handbrake ? 0.2 : 0)) : 0,
       loose: C.offroad || this.looseRoad,
       rival: near
-        ? { frac: top(near), throttle: Math.abs(near.throttle), near: (1 - best / EARSHOT) ** 1.5 }
+        ? {
+            note: this.noteOf(near),
+            frac: top(near),
+            throttle: Math.abs(near.throttle),
+            near: (1 - best / EARSHOT) ** 1.5,
+          }
         : null,
     });
+    // (its own count: `ticks` is taken and zeroed by whoever reads the frame's cost)
+    if (this.heardT++ % 12 === 0) this.air = this.listen(C);
+    this.o.sound.ambience(this.air, DT);
+  }
+
+  /** The sky over the car is a dark one (the screen says so): the birds are asleep. */
+  night = false;
+  private readonly notes = new Map<string, EngineNote>();
+  private air: Air = STILL;
+  private heardT = 0;
+
+  /** A car's engine: its manifest's say, and its stats for whatever that leaves out. */
+  private noteOf(c: Car): EngineNote {
+    let n = this.notes.get(c.def.id);
+    if (!n) this.notes.set(c.def.id, (n = engineNote(c.def.stats, c.def.engine)));
+    return n;
+  }
+
+  /**
+   * What the place sounds like from car `C`: the wind, anything burning, and the nearest of each
+   * kind of thing that makes a noise standing there. Birds keep quiet in the dark and the rain.
+   */
+  private listen(C: Car): Air {
+    const w = this.world;
+    const air: Air = { ...STILL };
+    const sky = this.fx.weather;
+    air.wind = Math.min(1, Math.hypot(w.wind[0], w.wind[1]) / 80);
+    for (const b of w.blazes)
+      air.fire = Math.max(air.fire, heard(Math.hypot(b.x - C.x, b.y - C.y) - b.r, 150));
+    for (const s of w.near(C.x, C.y, FAR)) {
+      if (s.down) continue;
+      const what = s.def.ambient ?? (s.def.crown && s.leaves ? 'birds' : null);
+      if (!what) continue;
+      // a ride that has been hurt stands still, and its organ with it
+      if ((what === 'fair' || what === 'creak') && this.fx.scarred.has(s)) continue;
+      // a lighthouse's horn carries; a lantern is a small flame
+      const reach = what === 'horn' ? FAR : HEARD;
+      const v =
+        heard(Math.hypot(s.x - C.x, s.y - C.y) - s.def.radius, reach) * (what === 'fire' ? 0.4 : 1);
+      if (v > air[what]) air[what] = v;
+    }
+    if (this.night || sky.dark > 0.5 || sky.rain > 0.1) air.birds = 0;
+    // a flag hangs and a mill stands in still air: both go with the wind, and never quite stop
+    air.flap *= 0.35 + 0.65 * air.wind;
+    air.creak *= 0.5 + 0.5 * air.wind;
+    return air;
   }
 
   private over(): boolean {

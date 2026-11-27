@@ -100,5 +100,6 @@
   },
   "hardness": 0.6,
   "made": "material.wood",
-  "integrity": 260
+  "integrity": 260,
+  "ambient": "crowd"
 }

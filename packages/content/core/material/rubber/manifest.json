@@ -18,5 +18,6 @@
     "brittle": 0,
     "dust": 0
   },
-  "colour": "#1d1e21"
+  "colour": "#1d1e21",
+  "sound": "rubber"
 }

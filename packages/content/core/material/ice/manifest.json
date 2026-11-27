@@ -9,5 +9,6 @@
   "grip": 0.06,
   "look": "ice",
   "colour": "#bcd9e6",
-  "alpha": 0.6
+  "alpha": 0.6,
+  "sound": "glass"
 }

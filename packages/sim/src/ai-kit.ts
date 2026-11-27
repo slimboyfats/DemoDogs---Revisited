@@ -1,4 +1,4 @@
-import { BASE_SPEED, DT, type Controls } from '@demodogs/shared';
+import { BASE_SPEED, DRIFT, DT, type Controls } from '@demodogs/shared';
 import { armsWants } from './arms';
 import { arsenalWants } from './arsenal';
 import { dropsBehind } from './drops';
@@ -388,27 +388,94 @@ export function pickHeading(
 /** What a car slows at with the brakes on, art px/s² (a little under what the brakes give). */
 const BRAKING = 280;
 
+/** What the tyres of car c pull it round a bend with on a dry road here, art px/s² (see `drive`). */
+export function cornerPull(w: World, c: Car): number {
+  // (a stretch of road with a surface of its own, ice or dirt, holds as it does)
+  const road = w.roadSurface && !c.offroad ? w.roadSurface[c.idx] : null;
+  return w.tuning.cornerGrip * (0.4 + 0.6 * c.stats.grip) * w.grip * (road ? road.grip : 1);
+}
+
+/** A bend of the racing line tighter than this radius (art px) is one to drift round. */
+const DRIFT_BEND = 1 / 240;
+
+/**
+ * Does a driver as sharp as this one drift? The easy field never does; the rest do, the ones
+ * with less nerve only round the longer bends.
+ */
+function drifts(w: World, c: Car): boolean {
+  return w.level.wits >= 1 && w.tuning.driftBoost > 0 && c.stats.grip > 0;
+}
+
 /**
  * The most car c should be doing now to get round what is coming: for every stretch of the
- * racing line as far ahead as it would take to stop, the speed that bend can be taken at (its
- * wheels turn it so many radians a second, less on a wet road; a driver with more nerve uses
- * more of that), and so the speed it may have here and still brake down to it in time.
+ * racing line as far ahead as it would take to stop, the speed that bend can be taken at (what
+ * its tyres can pull it round with, less on a wet road, more for a driver who will slide it
+ * round; a driver with more nerve uses more of that), and so the speed it may have here and
+ * still brake down to it in time.
  */
 export function cornerSpeed(w: World, c: Car): number {
   const T = w.track!;
   const L = w.line!;
   const N = T.n;
-  const turn = 3 * c.stats.grip * w.grip * (0.6 + 0.3 * c.ai!.traits.nerve);
+  // (a car on the power pulls itself round harder than its tyres alone would, and a drift
+  // harder still)
+  const pull =
+    cornerPull(w, c) *
+    (drifts(w, c) ? 0.6 + 0.25 * w.tuning.driftGrip : 1.05) *
+    (0.78 + 0.3 * c.ai!.traits.nerve);
   const v = Math.max(0, c.vf);
   const far = (v * v) / (2 * BRAKING) + 50;
   let best = Infinity;
   for (let d = 0; d <= far; d += T.step * 3) {
     const k = Math.abs(L.k[(c.idx + Math.round(d / T.step)) % N]!);
     if (k < 1e-4) continue;
-    const cap = turn / k;
-    best = Math.min(best, Math.sqrt(cap * cap + 2 * BRAKING * d));
+    best = Math.min(best, Math.sqrt(pull / k + 2 * BRAKING * d));
   }
   return best;
+}
+
+/**
+ * Drifting round the bend car c is in or coming to. Given the controls a driver has settled on
+ * (`out`, steering for the point `tx, ty`), it holds the brake with the power on from the way
+ * into a bend of the racing line that is tight and long enough to be worth it, steers the slide
+ * so the car goes where it was going to, and lets go as the bend opens, for the burst. A driver
+ * who is braking for the bend, off the road, in the air or not pointing the bend's way leaves it.
+ */
+export function driftBend(w: World, c: Car, out: Controls, tx: number, ty: number): void {
+  const ai = c.ai!;
+  const T = w.track;
+  const L = w.line;
+  if (!T || !L || !drifts(w, c)) return;
+  const N = T.n;
+  const v = Math.max(1, c.vf);
+  const at = (d: number) => L.k[(c.idx + Math.round(d / T.step)) % N]!;
+  if (c.drift !== 0) {
+    // the bend goes on (a little ahead of the car it still turns this way): hold it
+    const on = at(v * 0.25) * c.drift > DRIFT_BEND * 0.55 || at(v * 0.1) * c.drift > DRIFT_BEND;
+    const done = c.charge >= DRIFT.stage[1] && at(v * 0.35) * c.drift < DRIFT_BEND;
+    if (!on || done || out.brake || c.offroad) return;
+    // the slide is steered by where the car is going, not where its nose is
+    const dv = angDiff(Math.atan2(ty - c.y, tx - c.x), Math.atan2(c.vy, c.vx));
+    const want = (dv * 2.2 * c.drift * v) / (cornerPull(w, c) * w.tuning.driftGrip);
+    out.steer = c.drift * clamp((want - 0.55) / 0.45, -1, 1);
+    out.throttle = 1;
+    out.brake = true;
+    out.boost = false;
+    return;
+  }
+  if (out.brake || out.throttle < 1 || c.offroad || v < DRIFT.from + 15 || c.z - c.deck > 0.6)
+    return;
+  // the bend just ahead: which way, and how long it stays tight
+  const k = at(v * 0.12);
+  const side = k < 0 ? -1 : 1;
+  if (Math.abs(k) < DRIFT_BEND || out.steer * side < 0.12) return;
+  // (worth it only if the slide can be held to its first stage; the bold hold out for longer)
+  let run = 0;
+  const need = v * (DRIFT.stage[0] + 0.25 + 0.3 * (1 - ai.traits.nerve));
+  while (run < need && at(v * 0.12 + run) * side > DRIFT_BEND * 0.6) run += T.step * 2;
+  if (run < need) return;
+  out.steer = side * Math.max(0.5, Math.abs(out.steer));
+  out.brake = true;
 }
 
 /** The top speed car c would have on a clear road now, about. */
