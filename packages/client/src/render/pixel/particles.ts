@@ -25,7 +25,9 @@ export type FxKind =
   /** Dust kicked off the dirt: a stippled cloud hugging the ground. */
   | 'dust'
   /** Foam on water: one flat cell that slides out from where it was churned up, slows and is gone. */
-  | 'foam';
+  | 'foam'
+  /** A scrap of coloured paper: thrown up, it brakes in the air and flutters down, turning over. */
+  | 'paper';
 
 export interface Particle {
   kind: FxKind;
@@ -85,6 +87,19 @@ export function stepParticle(p: Particle, dt: number): boolean {
       p.vx *= f;
       p.vy *= f;
       p.vz = p.vz * f - 60 * dt;
+      break;
+    }
+    case 'paper': {
+      if (p.z <= 0) {
+        p.vx = p.vy = 0;
+        break;
+      }
+      const f = Math.exp(-2.6 * dt);
+      const sway = Math.sin(p.life * 7 + p.max * 40) * 26;
+      p.vx = p.vx * f + (sway + WIND[0] * 0.5) * dt;
+      p.vy = p.vy * f + WIND[1] * 0.5 * dt;
+      // (it falls no faster than paper falls)
+      p.vz = Math.max(-22, p.vz * f - 70 * dt);
       break;
     }
     case 'ember': {
@@ -192,6 +207,19 @@ export function drawParticle(p: Particle, normal: Put, glow: Put, cell = 1): voi
       );
       break;
     }
+    case 'paper':
+      // its bright face and its dull one by turns, and gone in a blink at the end
+      if (t > 0.9 && (Math.floor(p.life * 20) & 1) === 0) break;
+      normal(
+        p.x,
+        p.y,
+        p.z,
+        Math.max(cell, s),
+        p.z > 0 && Math.floor(p.life * 9 + p.max * 30) & 1 ? shade(p.rgb, 0.72) : p.rgb,
+        1,
+        Shape.Rect,
+      );
+      break;
     case 'foam':
       // whole while it is fresh, then breaking up: there, not there, gone
       if (t > 0.55 && (Math.floor(p.life * 14 + p.max * 60) & 1) === 0) break;

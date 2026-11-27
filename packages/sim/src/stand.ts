@@ -25,6 +25,8 @@ export function stand(
   if (def.integrity !== undefined) s.hp = def.integrity;
   if (def.crown) s.leaves = 1;
   if (def.storeys) s.storeys = def.storeys;
+  // (what floats is up in the air: it is drawn there, and its shadow thrown from there)
+  if (def.float) s.lift = def.float.high;
   w.statics.push(s);
   w.stood++;
   // (a piece of track laid off the road is ground, not a tile that does something)

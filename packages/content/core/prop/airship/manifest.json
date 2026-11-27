@@ -1,0 +1,16 @@
+{
+  "id": "prop.airship",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Airship",
+    "description": "A white airship with a red band. It is for a venue's flyby: it crosses the sky over the race, slowly.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 8,
+  "hit": {
+    "radius": 8,
+    "top": 15
+  },
+  "solid": false
+}

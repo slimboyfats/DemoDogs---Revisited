@@ -128,12 +128,15 @@ export interface PropLook {
  *  - roll: turns about the axis it faces along, `rate` turns a second (times the wind's strength
  *    with `by: 'wind'`). It looks the same `fold` times in a turn, and one such stretch is drawn
  *    in `steps` poses. The bone's part must be wide and tall enough to hold it at every angle.
+ *  - cheer: stands and sways, and jumps up and down `high` art px for as long as a car is within
+ *    `reach` art px of it (a spectator).
  */
 export type Motion =
   | { kind: 'turn'; rate: number }
   | { kind: 'sweep'; arc: number; rate: number }
   | { kind: 'wind'; arc?: number; flutter?: number }
   | { kind: 'watch'; reach: number; arc: number }
+  | { kind: 'cheer'; reach: number; high: number }
   | { kind: 'roll'; rate: number; steps: number; fold?: number; by?: 'time' | 'wind' };
 
 /** A part that moves: a stack standing on a pivot of the look, or of another bone. */

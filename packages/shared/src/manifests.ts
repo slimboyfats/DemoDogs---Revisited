@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { AlongRule, FieldRule, pieceFields } from './pieces';
+import { AlongRule, FieldRule, TrekRule, pieceFields } from './pieces';
 
 /**
  * Manifest schemas. Every content item is a folder with a manifest.json; its id is
@@ -422,6 +422,7 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
   }),
   AlongRule,
   FieldRule,
+  TrekRule,
 ]);
 export type SceneryRule = z.infer<typeof SceneryRuleSchema>;
 
@@ -554,6 +555,24 @@ export const VenueSchema = z.strictObject({
     )
     .optional(),
   scenery: z.array(SceneryRuleSchema),
+  /**
+   * What flies over during a race, for show (the client's alone): about every `every` seconds
+   * something of this list crosses the picture `high` art px up at `speed` art px a second, its
+   * shadow under it on the ground: a `flock` of birds in a V (a prop with a bird's poses), a
+   * plane towing a banner, an airship.
+   */
+  flyby: z
+    .array(
+      z.strictObject({
+        prop: id('prop'),
+        every: z.number().positive(),
+        high: z.number().positive().default(46),
+        speed: z.number().positive().default(90),
+        flock: z.number().int().min(1).max(11).default(1),
+      }),
+    )
+    .max(6)
+    .optional(),
   bots: z.strictObject({ bot: id('bot'), count: z.number().int().min(0).max(40) }),
   pickups: z.array(id('pickup')).min(1),
 });

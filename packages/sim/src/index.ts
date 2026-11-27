@@ -23,6 +23,7 @@ export { PLUNGE_TIME, SINK_TIME, inPit, rescueIn, wading } from './rescue';
 export { scalding } from './heat';
 export { away, canHaunt, haunting, HAUNT_AFTER, HAUNT_REST, type Haunt } from './haunt';
 export type { Critter } from './critters';
+export { offWay, slotAt, newSlot, trekBy, trekNear, type Slot, type Trek } from './treks';
 export { pressOpen, pressWarning } from './hazards';
 export { canopy, flyover, plantTree, type TreeKit } from './heights';
 export { OVERHANG, SAG, SAG_STEP } from './spans';

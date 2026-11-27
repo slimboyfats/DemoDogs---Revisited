@@ -30,6 +30,9 @@ const CRIES = {
   click: 'SNIP!',
   snort: 'SNORT!',
   bellow: 'ROAR!',
+  quack: 'QUACK!',
+  toot: 'TOOT!',
+  honk: 'HONK!',
 } as const;
 const WATER = [0xffffff, 0xe2f8ff, 0x9ae4fa, 0x48b8de] as const;
 const RED = [0xffffff, 0xff8a70, 0xff3b2a, 0xd0141a] as const;

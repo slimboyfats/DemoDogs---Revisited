@@ -8,6 +8,8 @@ import {
   pressOpen,
   pressWarning,
   pumpUp,
+  trekBy,
+  trekNear,
   ventOpen,
   type Bot,
   type Car,
@@ -18,6 +20,7 @@ import {
 import type { Art } from './art';
 import { queueToppling } from './collapse';
 import type { Effects } from './effects';
+import { floating, type Ambient } from './ambient';
 import { queueRig, rigTall, tickBones } from './bones';
 import { pose } from './rig';
 import { tall, type Strip } from './stack';
@@ -182,6 +185,7 @@ export function queueStacks(
   queueArsenal(R, art, w);
   for (const b of w.bots) queueBot(built(R, fx, b, 16), art, fx, b);
   for (const k of w.critters) queueCritter(R, art, w, k);
+  fx.ambient.queue(R, art, w);
   for (const d of fx.debris)
     if (R.visible(d.x, d.y, 8, 10)) {
       R.group(d.y);
@@ -264,6 +268,22 @@ function queueStatic(
     // the ground (the foot of a ramp) are left out.
     const alpha = over(s, strip, lift, P) ? THROUGH : 1;
     const from = Math.max(0, Math.ceil(-lift * strip.res));
+    if (s.def.float) {
+      // tethered in the air: it drifts round its spot, rising and sinking a little
+      floating(s, w.time, AFLOAT);
+      for (let i = 0; i < strip.n; i++)
+        R.slice(
+          strip,
+          i,
+          s.x + AFLOAT[0],
+          s.y + AFLOAT[1],
+          AFLOAT[2] + i / strip.res,
+          s.rot,
+          1,
+          alpha,
+        );
+      return;
+    }
     const [wx, wy] = s.def.sway
       ? sway(w.time, s.seed)
       : sag > 0
@@ -356,7 +376,11 @@ function queueFlap(R: StackSink, art: Art, w: World, s: StaticProp): void {
 const SIGNAL_WARN = 0.7;
 
 /** What each signal lamp reads: the nearest gate on a beat or vent within its reach (null: none). */
-const reads = new WeakMap<StaticProp, StaticProp | null>();
+const reads = new WeakMap<StaticProp, StaticProp | 'trek' | null>();
+
+/** How near a lamp (art px) a traveller is when the lamp shows red, and the seconds of amber before. */
+const CROSSING = 130;
+const CROSSING_WARN = 1.6;
 
 /** Is the thing a signal reads open (a gate down, a vent blowing) at time t? */
 function beatOpen(w: World, o: StaticProp, t: number): boolean {
@@ -385,10 +409,18 @@ function queueSignal(R: StackSink, art: Art, w: World, s: StaticProp): void {
       near = d;
       o = g;
     }
+    // (nothing on a beat near it: it stands by a way something travels, and reads that)
+    if (!o && trekBy(w, s.x, s.y, s.def.signal!.reach)) o = 'trek';
     reads.set(s, o);
   }
-  const now = o ? beatOpen(w, o, w.time) : false;
-  const soon = o ? beatOpen(w, o, w.time + SIGNAL_WARN) : false;
+  const clear = (t: number): boolean => !trekNear(w, s.x, s.y, s.def.signal!.reach, CROSSING, t);
+  const now = o === 'trek' ? clear(w.time) : o ? beatOpen(w, o, w.time) : false;
+  const soon =
+    o === 'trek'
+      ? clear(w.time + CROSSING_WARN) && clear(w.time + CROSSING_WARN / 2)
+      : o
+        ? beatOpen(w, o, w.time + SIGNAL_WARN)
+        : false;
   const pose = now !== soon ? 1 : now ? 2 : 0;
   R.group(s.y);
   R.stack(
@@ -423,7 +455,7 @@ function queuePad(R: StackSink, art: Art, w: World, s: StaticProp): void {
  * knocked into the air it spins; a bird on the wing beats between its two flying poses.
  */
 function queueCritter(R: StackSink, art: Art, w: World, k: Critter): void {
-  if (!R.visible(k.x, k.y, 12, 14 + k.z)) return;
+  if (k.gone || !R.visible(k.x, k.y, 12 + k.def.radius, 18 + k.z)) return;
   R.group(k.y);
   const D = k.def.critter!;
   const id = k.def.id;
@@ -466,6 +498,7 @@ function queuePress(R: StackSink, art: Art, w: World, s: StaticProp): void {
 }
 
 const STILL: readonly [number, number] = [0, 0];
+const AFLOAT: [number, number, number] = [0, 0, 0];
 const CALM = Math.hypot(BREEZE[0], BREEZE[1]);
 
 /**
@@ -794,8 +827,20 @@ export function queueShadows(
    */
   sun: boolean,
   shadow: ShadowFn,
+  sky?: Ambient,
 ): void {
   for (const s of w.statics) {
+    if (s.def.float) {
+      // a thing in the air: its shadow on the ground, off to the side the sun throws it
+      floating(s, w.time, AFLOAT);
+      const x = s.x + AFLOAT[0] + AFLOAT[2] * 0.28;
+      const y = s.y + AFLOAT[1] + AFLOAT[2] * 0.2;
+      if (!sun && !s.down && R.visible(x, y, 30)) {
+        const st = art.prop(s.def.id);
+        shadow(x, y, (st.cw / st.res) * 0.4, (st.ch / st.res) * 0.34, 0, 0.26);
+      }
+      continue;
+    }
     if (s.down || cast?.(s)) continue;
     const lift = s.lift ?? 0;
     if (sun && (lift <= 0 || s.def.crown)) continue;
@@ -837,10 +882,11 @@ export function queueShadows(
   for (const b of w.bots) if (b.alive && R.visible(b.x, b.y, 8)) shadow(b.x, b.y, 4, 3, 0, 0.25);
   // an animal's shadow stays on the ground under it: it is how you see a bird is up in the air
   for (const k of w.critters)
-    if (R.visible(k.x, k.y, 10)) {
+    if (!k.gone && R.visible(k.x, k.y, 10)) {
       const r = k.def.radius * (k.state === 'fly' ? 1.5 : 1.15);
       shadow(k.x + 1 + k.z * 0.25, k.y + 1 + k.z * 0.2, r, r * 0.75, k.h, 0.28 / (1 + k.z / 60));
     }
+  sky?.shadows(shadow, art);
   // what is falling out of the sky is seen coming by its shadow, which tightens as it nears
   for (const p of w.props)
     if (p.alive && p.z > 6 && R.visible(p.x, p.y, 12)) {

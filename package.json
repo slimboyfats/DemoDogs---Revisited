@@ -55,6 +55,7 @@
     "feel": "pnpm build && node scripts/capture-feel.mjs",
     "hitboxes": "pnpm build && node scripts/capture-hitboxes.mjs",
     "play:lesson": "pnpm build && node scripts/play-lesson.mjs",
+    "alive": "pnpm build && node scripts/capture-alive.mjs",
     "bots": "node scripts/bot-lab.mjs",
     "bots:clip": "pnpm build && node scripts/capture-bots.mjs",
     "verify": "pnpm check && pnpm play:smoke",

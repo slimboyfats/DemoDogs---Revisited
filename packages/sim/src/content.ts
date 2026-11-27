@@ -84,6 +84,7 @@ export function sceneryRefs(r: SceneryRule): { prop: string[]; material: string[
   if (r.rule === 'trackside') prop.push(...r.items.map((i) => i.prop));
   if (r.rule === 'towers') prop.push(...r.column, r.front);
   if (r.rule === 'kerb') prop.push(...r.items.map((i) => i.prop));
+  if (r.rule === 'trek') prop.push(r.prop, r.lead, r.ends);
   return { prop: prop.filter((p): p is string => !!p), material };
 }
 
@@ -183,6 +184,7 @@ export function resolveContent(src: ContentSource): Content {
       for (const p of refs.prop) need(v.id, 'prop', p);
       for (const m of refs.material) need(v.id, 'material', m);
     }
+    for (const f of v.flyby ?? []) need(v.id, 'prop', f.prop);
     for (const s of v.track?.surfaces ?? []) need(v.id, 'material', s.material);
     if (v.track?.rail) need(v.id, 'prop', v.track.rail);
     if (v.track?.wall) need(v.id, 'prop', v.track.wall);

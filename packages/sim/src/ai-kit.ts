@@ -1,4 +1,4 @@
-import { BASE_SPEED, DRIFT, DT, type Controls } from '@demodogs/shared';
+import { BASE_SPEED, DRIFT, DT, FLUNG_BELOW, type Controls } from '@demodogs/shared';
 import { armsWants } from './arms';
 import { arsenalWants } from './arsenal';
 import { raised } from './damage';
@@ -9,6 +9,7 @@ import { howlWants } from './howl';
 import { angDiff, clamp } from './math';
 import { onPad } from './pads';
 import { SHOULDER } from './relief';
+import { newSlot, offWay, slotAt } from './treks';
 import type { World } from './world';
 
 /**
@@ -27,6 +28,41 @@ export interface Thing {
   y: number;
   r: number;
   w: number;
+}
+
+const CROSS = newSlot();
+
+/**
+ * How fast a car may go for what is about to cross its way: something heavy on a timetable (a
+ * train over a level crossing) that will be where the car is heading when the car gets there.
+ * Infinity when the way is clear. A driver brakes for it and waits short of the line, as at any
+ * crossing; one already on the line gets off it.
+ */
+export function crossingAhead(w: World, c: Car): number {
+  let cap = Infinity;
+  const hx = Math.cos(c.h);
+  const hy = Math.sin(c.h);
+  const v = Math.max(60, c.vf);
+  for (const K of w.treks) {
+    if (!K.heavy) continue;
+    const off = offWay(K, c.x, c.y);
+    if (off > 200 || off < K.size + 8) continue;
+    for (let d = 24; d <= 168; d += 24) {
+      const x = c.x + hx * d;
+      const y = c.y + hy * d;
+      if (offWay(K, x, y) > K.size + 8) continue;
+      // (anything of it there when the car would be, or a moment either side of that)
+      let met = false;
+      for (let i = 0; i < K.rule.count && !met; i++)
+        for (let n = 0; n < 3 && !met; n++) {
+          const S = slotAt(K, i, 0, w.time + (d / v) * (0.6 + n * 0.3), CROSS);
+          met = S.on && Math.hypot(S.x - x, S.y - y) < K.size + 20;
+        }
+      if (met) cap = Math.min(cap, Math.max(0, d - 44) * 1.4);
+      break;
+    }
+  }
+  return cap;
 }
 
 /**
@@ -207,9 +243,16 @@ export function thingsAhead(w: World, c: Car, reach: number, rivals = true): Thi
       if (k.owner !== c.index && seen(k.x, k.y, 8)) out.push({ x: k.x, y: k.y, r: 10, w: 1 });
     for (const k of w.arsenal.strikes)
       if (k.owner !== c.index && seen(k.x, k.y, 20)) out.push({ x: k.x, y: k.y, r: 20, w: 1.5 });
-    for (const k of w.critters)
-      if (k.z < 6 && seen(k.x, k.y, k.def.radius))
+    for (const k of w.critters) {
+      if (k.gone) continue;
+      // (something heavy under way is steered round where it will be in a moment)
+      if (k.trek && k.def.critter!.mass >= FLUNG_BELOW) {
+        const x = k.x + k.vx * 0.35;
+        const y = k.y + k.vy * 0.35;
+        if (seen(x, y, k.def.radius + 4)) out.push({ x, y, r: k.def.radius + 6, w: 2 });
+      } else if (k.z < 6 && seen(k.x, k.y, k.def.radius))
         out.push({ x: k.x, y: k.y, r: k.def.radius + 2, w: k.state === 'charge' ? 1.5 : 0.5 });
+    }
     // a scrap bot is points and boost for whoever flattens it
     if (c.nitro < 0.8)
       for (const b of w.bots)

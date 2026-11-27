@@ -42,6 +42,7 @@ import { updateMovers } from './movers';
 import { pathAt, updatePads } from './pads';
 import { updateRide } from './mounds';
 import { updateCritters, type Critter } from './critters';
+import type { Trek } from './treks';
 import { collideCars, collideProps, collideWorld, drive, hemmed, makeCar } from './physics';
 import { explode, fall, respawn, updateEmbers, updateMending } from './damage';
 import { updateSagging } from './spans';
@@ -218,6 +219,8 @@ export class World {
   readonly mounds: StaticProp[] = [];
   /** Animals: see critters.ts. */
   readonly critters: Critter[] = [];
+  /** The ways things travel along, and when (the `trek` rules): see treks.ts. */
+  readonly treks: Trek[] = [];
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
   /** Hunting rockets on their way to the car in front (see hunt.ts). */

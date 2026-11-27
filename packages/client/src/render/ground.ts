@@ -373,6 +373,7 @@ export function makeGround(w: World): Ground {
     g.stroke();
   }
   dressVerge(g, w, r, F);
+  layTreks(g, w);
   paintLeaps(g, w);
   if (paint) {
     const P = paint;
@@ -405,6 +406,55 @@ export function makeGround(w: World): Ground {
     return out;
   };
   return { cv, g, dirty: null, paint: null, water: null, pools: null, tone };
+}
+
+/**
+ * What is laid under the ways things travel along (the venue's `trek` rules): a railway under a
+ * way that asks for one (sleepers, two rails, and where it crosses the road a boarded crossing
+ * boxed in yellow), and under any other way that crosses the road a row of white bars, so a
+ * driver sees where something may be coming over.
+ */
+function layTreks(g: CanvasRenderingContext2D, w: World): void {
+  const half = w.road / 2;
+  for (const K of w.treks) {
+    const R = K.rule;
+    if (!R.rails && !R.cross) continue;
+    const onRoad = (x: number, y: number): boolean => !!w.grid && w.grid.at(x, y) < half - 1;
+    for (let d = 0; d <= K.len; d += 1) {
+      // (the place d along the way, and the way it runs there)
+      let i = 1;
+      while (i < K.ds.length - 1 && K.ds[i]! < d) i++;
+      const span = K.ds[i]! - K.ds[i - 1]! || 1;
+      const u = (d - K.ds[i - 1]!) / span;
+      const x = K.xs[i - 1]! + (K.xs[i]! - K.xs[i - 1]!) * u;
+      const y = K.ys[i - 1]! + (K.ys[i]! - K.ys[i - 1]!) * u;
+      const a = Math.atan2(K.ys[i]! - K.ys[i - 1]!, K.xs[i]! - K.xs[i - 1]!);
+      const road = onRoad(x, y);
+      g.save();
+      g.translate(x, y);
+      g.rotate(a);
+      if (R.rails) {
+        if (road) {
+          // the crossing: boards between and beside the rails, a yellow line down each side
+          g.fillStyle = '#6b6f7a';
+          g.fillRect(-0.6, -8, 1.2, 16);
+          g.fillStyle = '#ffd23f';
+          g.fillRect(-0.6, -10, 1.2, 2);
+          g.fillRect(-0.6, 8, 1.2, 2);
+        } else if (d % 5 < 1) {
+          g.fillStyle = '#6a4a2c';
+          g.fillRect(-0.9, -6, 1.8, 12);
+        }
+        g.fillStyle = '#d9dde4';
+        g.fillRect(-0.6, -4.3, 1.2, 1.4);
+        g.fillRect(-0.6, 2.9, 1.2, 1.4);
+      } else if (road && d % 8 < 4) {
+        g.fillStyle = 'rgba(248,246,236,0.9)';
+        g.fillRect(-0.6, -R.wide - 7, 1.2, R.wide * 2 + 14);
+      }
+      g.restore();
+    }
+  }
 }
 
 /**

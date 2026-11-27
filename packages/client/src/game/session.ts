@@ -174,6 +174,8 @@ export class Session {
     for (const p of world.props) props.add(p.def.id);
     // the animals, in every step of their walk
     for (const k of world.critters) props.add(k.def.id);
+    // what will fly over
+    for (const f of world.venue.flyby ?? []) props.add(f.prop);
     // and what the weather may leave standing
     for (const m of world.mods) if (m.def.leaves) props.add(m.def.leaves.prop);
     const bots = new Map<string, { id: string; paint: string }>();
@@ -267,6 +269,7 @@ export class Session {
     const C = this.watch ?? P;
     this.o.sound.step(DT);
     if (!P.ai || this.watch || this.o.sound.taping) this.hear(C);
+    this.fx.ambient.step(w, this.fx, this.o.sound, this.cam.x, this.cam.y);
     // the camera looks ahead of the car, the way it is going
     // never so far that the car leaves the middle third of the picture
     const lead = 0.42;

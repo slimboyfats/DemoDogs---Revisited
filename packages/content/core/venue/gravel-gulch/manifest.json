@@ -323,6 +323,96 @@
           "gap": 56
         }
       ]
+    },
+    {
+      "rule": "trek",
+      "prop": "prop.train-wagon",
+      "lead": "prop.steam-engine",
+      "count": 5,
+      "gap": 26,
+      "cross": {
+        "at": 0.8724,
+        "reach": 110
+      },
+      "speed": 85,
+      "every": 18,
+      "shift": 0.3,
+      "rails": true,
+      "ends": "prop.engine-shed"
+    },
+    {
+      "rule": "along",
+      "at": [0.8724],
+      "items": [
+        {
+          "prop": "prop.signal-lamp",
+          "lane": 1.2,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "lane": -1.2,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "trek",
+      "prop": "prop.rabbits",
+      "count": 6,
+      "gap": 5,
+      "cross": {
+        "at": 0.3663,
+        "reach": 44
+      },
+      "speed": 20,
+      "every": 30,
+      "shift": 0.2,
+      "back": true,
+      "wide": 3
+    },
+    {
+      "rule": "trek",
+      "prop": "prop.tractor",
+      "beside": {
+        "from": 0.7719,
+        "to": 0.8277,
+        "lane": -1.36
+      },
+      "speed": 20,
+      "every": 40,
+      "back": true
+    },
+    {
+      "rule": "along",
+      "at": [0.2328],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.hot-air-balloon",
+          "lane": 1.3,
+          "ahead": 50
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.03, 0.3222, 0.5297, 0.756],
+      "items": [
+        {
+          "prop": "prop.fans",
+          "lane": 1.36,
+          "n": 3,
+          "gap": 23
+        },
+        {
+          "prop": "prop.fans",
+          "lane": -1.36,
+          "n": 3,
+          "gap": 23,
+          "rot": 3.1416
+        }
+      ]
     }
   ],
   "bots": {
@@ -355,5 +445,20 @@
     "pickup.hackles",
     "pickup.scrap-jaws",
     "pickup.roll-cage"
+  ],
+  "flyby": [
+    {
+      "prop": "prop.crows",
+      "every": 15,
+      "high": 38,
+      "speed": 80,
+      "flock": 7
+    },
+    {
+      "prop": "prop.airship",
+      "every": 50,
+      "high": 60,
+      "speed": 36
+    }
   ]
 }

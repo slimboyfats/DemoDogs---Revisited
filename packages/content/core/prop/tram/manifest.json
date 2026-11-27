@@ -1,0 +1,23 @@
+{
+  "id": "prop.tram",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Tram car",
+    "description": "A yellow tram car. Two or three coupled run across the road on their rails, ringing as they set out; nothing stops them.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 9.9,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 1],
+    "roam": 20,
+    "walk": 3,
+    "run": 30,
+    "scare": 1,
+    "cry": "honk",
+    "mass": 11,
+    "shy": 40,
+    "step": 0
+  }
+}

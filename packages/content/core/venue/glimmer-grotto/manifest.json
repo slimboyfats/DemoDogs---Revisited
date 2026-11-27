@@ -721,6 +721,68 @@
           "lane": -0.5
         }
       ]
+    },
+    {
+      "rule": "trek",
+      "prop": "prop.train-wagon",
+      "lead": "prop.steam-engine",
+      "count": 3,
+      "gap": 26,
+      "cross": {
+        "at": 0.0876,
+        "reach": 110
+      },
+      "speed": 85,
+      "every": 18,
+      "shift": 0.3,
+      "rails": true,
+      "ends": "prop.engine-shed"
+    },
+    {
+      "rule": "along",
+      "at": [0.0876],
+      "items": [
+        {
+          "prop": "prop.signal-lamp",
+          "lane": 1.2,
+          "ahead": -24
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "lane": -1.2,
+          "ahead": -24
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.2252, 0.6499],
+      "mirror": true,
+      "items": [
+        {
+          "prop": "prop.fountain",
+          "lane": -1.5
+        }
+      ]
+    },
+    {
+      "rule": "along",
+      "at": [0.0236, 0.2448, 0.4237, 0.624, 0.8238],
+      "items": [
+        {
+          "prop": "prop.fans",
+          "lane": 1.36,
+          "n": 3,
+          "gap": 23
+        },
+        {
+          "prop": "prop.fans",
+          "lane": -1.36,
+          "n": 3,
+          "gap": 23,
+          "rot": 3.1416
+        }
+      ]
     }
   ],
   "bots": {
@@ -753,5 +815,14 @@
     "pickup.hackles",
     "pickup.scrap-jaws",
     "pickup.roll-cage"
+  ],
+  "flyby": [
+    {
+      "prop": "prop.crows",
+      "every": 15,
+      "high": 38,
+      "speed": 80,
+      "flock": 5
+    }
   ]
 }
