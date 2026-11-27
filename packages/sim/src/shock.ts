@@ -1,6 +1,6 @@
 import { DT, type Controls, type WeaponManifest } from '@demodogs/shared';
 import type { Car, Spill, StaticProp } from './entities';
-import { damage, ignite, light } from './damage';
+import { damage, ignite, light, raised } from './damage';
 import { earthed } from './guards';
 import { carGap } from './shapes';
 import type { World } from './world';
@@ -124,7 +124,14 @@ function pool(w: World, p: Pulse, s: Spill, fx: number, fy: number, fz: number):
     if (q.def === s.def && !p.pools.includes(q) && Math.hypot(q.x - s.x, q.y - s.y) < q.r + s.r)
       pool(w, p, q, s.x, s.y, 0);
   for (const c of w.cars)
-    if (!c.wrecked && c.z <= 2 && !p.struck.includes(c.index) && carGap(c, s.x, s.y) < s.r)
+    if (
+      !c.wrecked &&
+      c.z <= 2 &&
+      !p.struck.includes(c.index) &&
+      carGap(c, s.x, s.y) < s.r &&
+      // (one up on raised road is not standing in the water the map laid under it)
+      !(s.fixed && raised(w, c.x, c.y))
+    )
       strike(w, p, c, s.x, s.y, 0);
 }
 

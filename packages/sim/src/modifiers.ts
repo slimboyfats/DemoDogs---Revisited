@@ -1,5 +1,5 @@
 import { DT, type ModifierManifest } from '@demodogs/shared';
-import { batter, explode, laidOn, scatter, shed, spill } from './damage';
+import { batter, explode, laidOn, raised, scatter, shed, spill, wet } from './damage';
 import type { Car, Spill } from './entities';
 import { TAU } from './math';
 import { stand } from './stand';
@@ -344,11 +344,13 @@ function strike(w: World, m: Mod, x: number, y: number): void {
   const D = m.def;
   w.emit({ t: 'bolt', x, y });
   // engines first: the blast that follows throws the cars it catches off the ground
-  const wet = w.spills.filter((s) => s.def.conducts && Math.hypot(s.x - x, s.y - y) < s.r + 8);
+  const pools = w.spills.filter((s) => s.def.conducts && Math.hypot(s.x - x, s.y - y) < s.r + 8);
   for (const c of w.cars) {
     if (c.wrecked || c.z - c.deck > 2 || c.deck > 4) continue;
     const near = Math.hypot(c.x - x, c.y - y) < D.reach;
-    const soaked = wet.some((s) => Math.hypot(s.x - c.x, s.y - c.y) < s.r);
+    // (one up on raised road is not in the water the map laid under it)
+    const up = pools.length > 0 && raised(w, c.x, c.y);
+    const soaked = pools.some((s) => !(up && s.fixed) && Math.hypot(s.x - c.x, s.y - c.y) < s.r);
     if (!near && !soaked) continue;
     c.stall = Math.max(c.stall ?? 0, D.time);
     w.emit({ t: 'stall', car: c.index, by: -1, time: D.time });
@@ -487,7 +489,7 @@ function tinder(w: World, m: Mod, live: boolean): void {
     }
   if (!live || !due(w, m)) return;
   const [x, y] = spot(w, 2.2);
-  if (w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r)) return;
+  if (wet(w, x, y)) return;
   const life = w.rng.range(4, 6);
   w.blazes.push({ x, y, r: 8, t: life, bite: 0.25, owner: -1 });
   w.emit({ t: 'blaze', x, y, r: 8, life });

@@ -1,6 +1,6 @@
 import { DT } from '@demodogs/shared';
 import type { Car } from './entities';
-import { damage } from './damage';
+import { damage, raised } from './damage';
 import { fireproof } from './guards';
 import { pathAt } from './pads';
 import type { World } from './world';
@@ -23,7 +23,7 @@ export function scalding(w: World, c: Car): number {
     hot = k;
   }
   if (hot <= 0) return 0;
-  if ((w.relief?.platAt(c.x, c.y) ?? 0) > 1 || (w.paths.length && pathAt(w, c.x, c.y))) return 0;
+  if (raised(w, c.x, c.y) || (w.paths.length && pathAt(w, c.x, c.y))) return 0;
   return hot;
 }
 

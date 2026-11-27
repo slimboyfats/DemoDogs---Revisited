@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_TUNING, NO_CONTROLS, parseTrackFile, type TrackFile } from '@demodogs/shared';
+import {
+  DEFAULT_TUNING,
+  HELD,
+  NO_CONTROLS,
+  parseTrackFile,
+  type TrackFile,
+} from '@demodogs/shared';
 import {
   World,
+  footing,
   groundAt,
   installTrack,
   liftsOf,
@@ -9,6 +16,9 @@ import {
   laneWide,
   SHOULDER,
   newTrack,
+  spill,
+  steerTo,
+  thingsAhead,
   type Content,
 } from '@demodogs/sim';
 import { BENCH, put, runUntil, startRace, testContent } from './testing';
@@ -16,7 +26,10 @@ import { BENCH, put, runUntil, startRace, testContent } from './testing';
 const C: Content = testContent();
 
 /** A track with one stretch of its road raised into a platform, a third of the way round. */
-function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => number } {
+function raisedTrack(
+  height = 24,
+  autopilot = false,
+): { t: TrackFile; w: World; i: (f: number) => number } {
   const t = newTrack(C.venue.get(BENCH)!, 'raised', 'Raised');
   const flat = installTrack(C, t);
   const T = new World({ content: flat.content, venue: flat.venue, car: 'car.mutt', seed: 1 })
@@ -36,6 +49,7 @@ function raisedTrack(height = 24): { t: TrackFile; w: World; i: (f: number) => n
     car: 'car.mutt',
     seed: 1,
     rivals: 0,
+    autopilot,
   });
   return { t, w, i };
 }
@@ -322,5 +336,62 @@ describe('raised road', () => {
     delete old.raised;
     const was = parseTrackFile(JSON.stringify(old));
     expect(was.ok && was.track.raised).toEqual([]);
+  });
+});
+
+describe('raised road over a pool', () => {
+  /** A car driven flat out along the raised stretch for two seconds: its speed, and what held it. */
+  function cross(pool: string | null, later = false): { v: number; held: number; hp: number } {
+    const { w, i } = raisedTrack(24);
+    startRace(w);
+    w.props.length = w.spills.length = w.pads.length = 0;
+    const T = w.track!;
+    const k = i(0.4);
+    // (a pool far wider than the road, as a lagoon round a causeway is)
+    if (pool) spill(w, C.material.get(pool)!, T.x[k + 20]!, T.y[k + 20]!, 400, -1, !later);
+    const c = w.player;
+    put(c, T.x[k]!, T.y[k]!, T.a[k]!, 100);
+    let held = 0;
+    for (let n = 0; n < 120; n++) {
+      const a = (c.idx + 8) % T.n;
+      w.step({ ...NO_CONTROLS, throttle: 1, steer: steerTo(c, T.x[a]!, T.y[a]!)[0] });
+      held |= c.held;
+    }
+    expect(groundAt(w, c.x, c.y)).toBeCloseTo(24, 0);
+    return { v: Math.hypot(c.vx, c.vy), held, hp: c.hp };
+  }
+
+  it('is as fast over water, mud and lava as over dry ground, and nothing holds the car', () => {
+    const dry = cross(null);
+    for (const id of ['material.lagoon', 'material.mud', 'material.lava']) {
+      const over = cross(id);
+      expect(over.v, id).toBeCloseTo(dry.v, 6);
+      expect(over.held & (HELD.sticky | HELD.wet | HELD.hot), id).toBe(0);
+      expect(over.hp, id).toBe(dry.hp);
+    }
+  });
+
+  it('a pool poured on the road since (a burst drum, a slick) still holds a car up there', () => {
+    const over = cross('material.mud', true);
+    expect(over.v).toBeLessThan(cross(null).v * 0.8);
+    expect(over.held & HELD.sticky).toBe(HELD.sticky);
+  });
+
+  it('the ground beside the raised road is still in the pool, and a driver up top sees none', () => {
+    const { w, i } = raisedTrack(24, true);
+    startRace(w);
+    w.props.length = w.spills.length = w.pads.length = 0;
+    const T = w.track!;
+    const k = i(0.45);
+    spill(w, C.material.get('material.mud')!, T.x[k]!, T.y[k]!, 400, -1, true);
+    const nx = -Math.sin(T.a[k]!);
+    const ny = Math.cos(T.a[k]!);
+    const far = w.road / 2 + SHOULDER + 40;
+    expect(footing(w, T.x[k]!, T.y[k]!)[1]).toBe(0);
+    expect(footing(w, T.x[k]! + nx * far, T.y[k]! + ny * far)[1]).toBeGreaterThan(0.3);
+    const c = w.player;
+    put(c, T.x[k - 10]!, T.y[k - 10]!, T.a[k - 10]!, 100);
+    w.step(NO_CONTROLS);
+    expect(thingsAhead(w, c, 200).filter((t) => t.r > 100)).toHaveLength(0);
   });
 });

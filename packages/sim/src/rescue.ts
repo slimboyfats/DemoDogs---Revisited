@@ -1,7 +1,7 @@
 import { DT } from '@demodogs/shared';
 import { freshen } from './catchup';
 import type { Car, Spill } from './entities';
-import { waterAt } from './damage';
+import { raised, waterAt } from './damage';
 import { jumpGaps } from './leaps';
 import { pathAt } from './pads';
 import type { World } from './world';
@@ -26,11 +26,11 @@ export function pitsOf(w: World): Spill[] {
   return out;
 }
 
-/** Is (x, y) in the pool under a jump, and not on the jump's own pieces or a path over it? */
+/** Is (x, y) in the pool under a jump, and not on a path or raised road over it? */
 export function inPit(w: World, x: number, y: number): boolean {
   for (const s of w.pits) {
     if (Math.abs(s.x - x) > s.r || Math.hypot(s.x - x, s.y - y) > s.r) continue;
-    return !pathAt(w, x, y);
+    return !pathAt(w, x, y) && !raised(w, x, y);
   }
   return false;
 }
@@ -148,7 +148,7 @@ const DRY: [number, boolean] = [0, false];
  */
 export function wading(w: World, c: Car): [number, boolean] {
   if (w.spills.length === 0 || c.deck > 0 || c.z > 2 || c.buried) return DRY;
-  if ((w.relief?.platAt(c.x, c.y) ?? 0) > 1 || (w.paths.length && pathAt(w, c.x, c.y))) return DRY;
+  if (raised(w, c.x, c.y) || (w.paths.length && pathAt(w, c.x, c.y))) return DRY;
   return waterAt(w, c.x, c.y);
 }
 
