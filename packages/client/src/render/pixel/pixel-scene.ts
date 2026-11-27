@@ -289,18 +289,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   /** Where this frame's lamp pools are (x, y each), to keep a row of lamps from taking every light. */
   private readonly lit: number[] = [];
 
-  /** Each car's speed at the last frame and how far on its brake lamps are (0 to 1), and when. */
-  private readonly tailV: number[] = [];
-  private readonly tailOn: number[] = [];
-  private tailT = 0;
-
   private gatherLights(w: World, fx: Effects): void {
     const L = this.lights;
     L.clear();
     const t = w.time;
-    // the darker it is the further a light carries, a little
-    const night = Math.max(0, Math.min(1, (this.sky.now.dark - 0.42) / 0.58));
-    L.spread = this.sky.flat ? 1 : 1 + 0.25 * night;
     // and in daylight a fire, a flash or a lamp is no match for the sun: none of them lights the
     // ground or anything else. They come up as the light goes, from dusk on
     L.gain = this.sky.flat ? 1 : Math.max(0, Math.min(1, (this.sky.now.dark - 0.25) / 0.35));
@@ -335,7 +327,7 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     if (!this.sky.lamps) return;
     // dark enough for lamps: every running car throws a beam from its nose, your own first
     const lamp = (c: World['cars'][number]) => {
-      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 150)) return;
+      if (c.wrecked || !c.has.front || !this.visible(c.x, c.y, 110)) return;
       // (a beam from whichever head lamps are lit this instant: both, one to its side, or none)
       const out = lampsOut(c, w.time) & 3;
       if (out === 3) return;
@@ -373,36 +365,6 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     const most = fx.quality > 0.6 ? MAX_CONES : 3;
     for (const c of w.cars) if (c !== w.player && L.coneCount < most) lamp(c);
     const k = (this.sky.now.dark - 0.42) / 0.58;
-    // and every running car's two tail lamps each lay a small red glow on the ground right at
-    // its own corner of the bumper, as a car's do: dim while it runs, bright while it brakes
-    // (it is slowing hard, backing up or on the handbrake). None from a car in the air or on a deck.
-    const dt = Math.max(0, t - this.tailT);
-    this.tailT = t;
-    for (const c of w.cars) {
-      // what it has slowed by since the last frame, eased so the lamps do not flicker
-      const was = this.tailV[c.index] ?? c.vf;
-      this.tailV[c.index] = c.vf;
-      const slowing = dt > 0 && dt < 0.2 && c.vf > 5 && (was - c.vf) / dt > 45;
-      const on = slowing || c.handbrake || c.vf < -1 ? 1 : 0;
-      const lit = (this.tailOn[c.index] ?? 0) + (on - (this.tailOn[c.index] ?? 0)) * 0.35;
-      this.tailOn[c.index] = lit;
-      if (c.wrecked || !this.visible(c.x, c.y, 60)) continue;
-      // (your own only, on a phone that is struggling)
-      if (c !== w.player && fx.quality <= 0.6) continue;
-      if (c.z - c.deck > 1 || c.deck >= 1) continue;
-      const cs = Math.cos(c.h);
-      const sn = Math.sin(c.h);
-      const back = (c.def.body.halfLength + 1.5) * c.size;
-      const side = c.def.body.halfWidth * 0.6 * c.size;
-      for (const sgn of [-1, 1])
-        L.add(
-          c.x - cs * back - sn * side * sgn,
-          c.y - sn * back + cs * side * sgn,
-          (3.2 + 1.3 * lit) * c.size,
-          (0.4 + 0.9 * lit) * k,
-          0xff2030,
-        );
-    }
     // and scenery with a lamp in it lights the ground round its foot. A row of lit things (a run
     // of barriers) is a few pools, not one each: lights are few, and the cars' come first
     const lit = this.lit;
