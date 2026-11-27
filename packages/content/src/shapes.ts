@@ -1,4 +1,5 @@
 /** Small helpers for writing look shape functions. Pure; no state. */
+import type { Part } from '@demodogs/shared';
 
 /** Inside a rounded rectangle of half extents a, b and corner radius r? */
 export function rr(x: number, y: number, a: number, b: number, r: number): boolean {
@@ -65,4 +66,18 @@ export function puffs(x: number, y: number, z: number, of: readonly Puff[], squa
 export function band(x: number, y: number, z: number, low: number, high: number): 0 | 1 | 2 {
   const t = (z - low) / (high - low) - (x + y) * 0.035;
   return t > 0.62 ? 2 : t > 0.3 ? 1 : 0;
+}
+
+/**
+ * The same part `k` times the size, with pixels as fine as ever: its shape is asked for at
+ * every art px of the bigger thing, so curves stay round and bands stay sharp.
+ */
+export function grown(p: Part, k: number): Part {
+  return {
+    ...p,
+    w: Math.ceil((p.w * k) / 2) * 2,
+    h: Math.ceil((p.h * k) / 2) * 2,
+    layers: Math.ceil(p.layers * k),
+    fn: (x, y, z) => p.fn(x / k, y / k, z / k),
+  };
 }

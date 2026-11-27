@@ -3,6 +3,8 @@ import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { pathAt } from './pads';
 import { jumpGaps } from './leaps';
+import { spawnTrek } from './critters';
+import { newSlot, onTrek, planTreks } from './treks';
 import { putProp, stand } from './stand';
 import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
@@ -38,10 +40,13 @@ export function buildScenery(w: World, rng: Rng): void {
   // (nor on a path laid off the road, which is road; nor out in a lake of something deep)
   // (nor in the way of a car leaping the gap from a takeoff to its landing)
   const leaps = jumpGaps(w.venue, w.content);
+  // (nor on a way something travels along)
+  planTreks(w);
   const blocked = (id: string, x: number, y: number): boolean => {
     const def = prop(id);
     if (def.pad || !def.solid) return false;
     const r = def.radius + 8;
+    if (w.treks.length && !def.critter && onTrek(w, x, y, def.radius)) return true;
     for (const [ax, ay, bx, by, wide] of leaps) {
       const dx = bx - ax;
       const dy = by - ay;
@@ -77,6 +82,22 @@ export function buildScenery(w: World, rng: Rng): void {
   layRails(w, rng);
   for (const rule of w.venue.scenery)
     apply(w, rng, rule, rule.rule === 'place' ? loose : add, weighted, prop);
+  // the travellers last of all, so that whatever else changes in a venue, they are the same
+  w.treks.forEach((K, on) => {
+    spawnTrek(w, on, K, rng);
+    const id = K.rule.ends;
+    if (!id) return;
+    const S = newSlot();
+    for (const d of [0, 1]) {
+      const n = K.xs.length - 1;
+      const a = d
+        ? Math.atan2(K.ys[n]! - K.ys[n - 1]!, K.xs[n]! - K.xs[n - 1]!)
+        : Math.atan2(K.ys[1]! - K.ys[0]!, K.xs[1]! - K.xs[0]!);
+      S.x = K.xs[d ? n : 0]!;
+      S.y = K.ys[d ? n : 0]!;
+      loose(id, S.x, S.y, d ? a + Math.PI : a);
+    }
+  });
 }
 
 /** A pool laid with the map that is wider than this (px) and drags hard is a lake: nothing is stood in it. */
@@ -180,6 +201,9 @@ function apply(
   switch (rule.rule) {
     case 'along':
       layAlong(w, rule, add);
+      return;
+    case 'trek':
+      // (laid by `planTreks` before anything else, and peopled after everything else)
       return;
     case 'field':
       layField(w, rng, rule, add);

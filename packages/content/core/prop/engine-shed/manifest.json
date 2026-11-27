@@ -1,0 +1,63 @@
+{
+  "id": "prop.engine-shed",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Engine shed",
+    "description": "A brick shed with a doorway for a train to come out of. Stood at each end of a railway.",
+    "since": "core@0.12.0"
+  },
+  "body": "static",
+  "radius": 11,
+  "hit": {
+    "parts": [
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 10,
+        "round": 0.5,
+        "z": [0, 16]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 7,
+        "round": 0.5,
+        "z": [16, 18]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 4.5,
+        "round": 0.5,
+        "z": [18, 19]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 3.5,
+        "round": 0.5,
+        "z": [19, 20]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 2,
+        "round": 0.5,
+        "z": [20, 21]
+      },
+      {
+        "x": 0,
+        "y": 0,
+        "halfLength": 11,
+        "halfWidth": 1,
+        "round": 0.5,
+        "z": [21, 22]
+      }
+    ]
+  }
+}

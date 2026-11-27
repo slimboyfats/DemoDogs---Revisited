@@ -1,0 +1,23 @@
+{
+  "id": "prop.train-wagon",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Goods wagon",
+    "description": "An open wagon heaped with logs, to run behind a steam engine. As heavy as it looks.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 9.9,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 1],
+    "roam": 20,
+    "walk": 3,
+    "run": 30,
+    "scare": 1,
+    "cry": "toot",
+    "mass": 10,
+    "shy": 40,
+    "step": 0
+  }
+}

@@ -15,7 +15,8 @@ describe('venue.frostbite-quarry', () => {
     const ice = w.spills.filter((s) => s.fixed && s.def.id === 'material.ice');
     expect(ice.length).toBe(25);
     expect(ice.filter((s) => !w.offroad(s.x, s.y)).length).toBeGreaterThanOrEqual(11);
-    expect(footing(w, ice[0]!.x, ice[0]!.y)[0]).toBeLessThan(0.1);
+    // (all of it slippery but what lies under the raised road)
+    expect(ice.filter((s) => footing(w, s.x, s.y)[0] < 0.1).length).toBeGreaterThanOrEqual(20);
   });
 
   it('a blast digs a crater, and a second one in it only widens it', () => {

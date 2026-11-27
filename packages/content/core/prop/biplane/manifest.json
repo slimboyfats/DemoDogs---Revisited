@@ -1,0 +1,16 @@
+{
+  "id": "prop.biplane",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Biplane",
+    "description": "A red and yellow biplane towing a banner. It is for a venue's flyby: it crosses the sky over the race.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 6,
+  "hit": {
+    "radius": 6,
+    "top": 7
+  },
+  "solid": false
+}

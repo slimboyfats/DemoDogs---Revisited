@@ -8,6 +8,11 @@
   },
   "body": "static",
   "radius": 5,
+  "spout": {
+    "what": "smoke",
+    "at": [0, 0, 40],
+    "rate": 7
+  },
   "hit": {
     "parts": [
       {

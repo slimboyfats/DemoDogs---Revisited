@@ -1,0 +1,19 @@
+{
+  "id": "prop.sprinkler",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Sprinkler",
+    "description": "A lawn sprinkler: its arm goes round and throws two jets of water out over the grass. Nothing to hit.",
+    "since": "core@0.12.0"
+  },
+  "body": "static",
+  "radius": 1.7,
+  "solid": false,
+  "spout": {
+    "what": "jets",
+    "at": [0, 0, 4.8],
+    "rate": 90,
+    "spin": 2.2
+  },
+  "ambient": "water"
+}

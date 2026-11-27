@@ -27,6 +27,13 @@
     "x": -2.5,
     "z": 7
   },
+  "engine": {
+    "pitch": 1.18,
+    "lump": 0.2,
+    "rasp": 0.3,
+    "whine": 0,
+    "weight": 0.15
+  },
   "hit": {
     "parts": [
       {
@@ -123,12 +130,5 @@
         "z": [7, 8]
       }
     ]
-  },
-  "engine": {
-    "pitch": 1.18,
-    "lump": 0.2,
-    "rasp": 0.3,
-    "whine": 0,
-    "weight": 0.15
   }
 }

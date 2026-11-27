@@ -170,7 +170,19 @@ export const CritterSchema = z.strictObject({
   step: z.number().min(0).default(0.6),
   /** What the client calls out and plays when a car sends it flying or runs into it. */
   cry: z
-    .enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow', 'click'])
+    .enum([
+      'cluck',
+      'baa',
+      'moo',
+      'caw',
+      'squeak',
+      'snort',
+      'bellow',
+      'click',
+      'quack',
+      'toot',
+      'honk',
+    ])
     .default('squeak'),
   /** Points for the car that bowls it over (light ones only). */
   points: z.number().int().min(0).default(0),
@@ -221,6 +233,32 @@ export const pieceFields = {
   /** A piece of raised deck with rails: the prop that is the same piece with none. */
   bare: z.string().optional(),
   critter: CritterSchema.optional(),
+  /**
+   * Something comes out of it, for show (the client's alone; the sim never knows): `what`, from
+   * the place `at` (forward, sideways and up from the middle of its foot, art px), about `rate`
+   * puffs or drops a second.
+   * - `smoke`, `steam`: a column the wind carries off (a chimney, a locomotive's funnel).
+   * - `water`: thrown straight up, falling back all round (a fountain).
+   * - `jets`: two jets of water thrown out level, opposite ways, turning at `spin` rad a second
+   *   (a lawn sprinkler).
+   * - `sparks`: a shower of sparks in fits and starts (a welder at work).
+   */
+  spout: z
+    .strictObject({
+      what: z.enum(['smoke', 'steam', 'water', 'jets', 'sparks']),
+      at: z.tuple([z.number(), z.number(), z.number()]).default([0, 0, 0]),
+      rate: z.number().positive().default(8),
+      spin: z.number().default(0),
+    })
+    .optional(),
+  /**
+   * It floats (looks only; give it `solid: false`): it is drawn `high` art px up in the air,
+   * rising and sinking a little and drifting `drift` art px round the spot it was put at, and
+   * its shadow lies on the ground under it (a hot-air balloon tethered beside the road).
+   */
+  float: z
+    .strictObject({ high: z.number().positive(), drift: z.number().min(0).default(8) })
+    .optional(),
   /**
    * Static props that are not solid: flattened for good by a car that drives over them (long
    * grass, corn, flowers).
@@ -286,4 +324,48 @@ export const FieldRule = z.strictObject({
   deep: z.tuple([z.number().positive(), z.number().positive()]),
   step: z.number().positive(),
   clear: z.number().min(0),
+});
+
+/**
+ * Things that travel: a line of `count` of `prop` (an animal, or anything with a `critter`: a
+ * tractor, a train's wagons), `gap` art px apart behind a `lead` if there is one, that sets out
+ * along a way every `every` seconds at `speed` art px a second. The way is a crossing of the road
+ * (`cross`: at fraction `at` of the way round, square across it unless `skew`ed, from `reach` px
+ * beyond the one edge to `far` px beyond the other), a run beside it (`beside`: from fraction
+ * `from` to `to`, `lane` across as in the `along` rule), or `points` (offsets from the middle of
+ * the map, as the `place` rule's are). At the far end they are gone until the next time round;
+ * with `back` they wait there and come back the way they went. `wide` spreads them to either
+ * side of the way (a flock, not a file). `ends` is a prop stood at each end of the way, turned
+ * along it (a shed a train comes out of); `rails` has the client draw a railway under it.
+ * Where each of them is is a matter of the clock alone, so it can be read ahead (a `signal`
+ * within reach of the way shows red while something is on it). Scenery keeps off the way.
+ */
+export const TrekRule = z.strictObject({
+  rule: z.literal('trek'),
+  prop,
+  lead: prop.optional(),
+  count: z.number().int().min(1).max(12).default(1),
+  gap: z.number().positive().default(10),
+  wide: z.number().min(0).default(0),
+  cross: z
+    .strictObject({
+      at: unit,
+      reach: z.number().positive().default(110),
+      far: z.number().positive().optional(),
+      skew: z.number().min(-1).max(1).default(0),
+      flip: z.boolean().default(false),
+    })
+    .optional(),
+  beside: z.strictObject({ from: unit, to: unit, lane: z.number().min(-8).max(8) }).optional(),
+  points: z
+    .array(z.tuple([z.number(), z.number()]))
+    .min(2)
+    .max(24)
+    .optional(),
+  speed: z.number().positive(),
+  every: z.number().positive(),
+  shift: unit.default(0),
+  back: z.boolean().default(false),
+  ends: prop.optional(),
+  rails: z.boolean().default(false),
 });

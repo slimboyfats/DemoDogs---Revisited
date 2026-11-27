@@ -905,17 +905,24 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
   private queueShadows(w: World, fx: Effects, sun: boolean): void {
     const art = this.art;
     const cast = (s: StaticProp) => casts(s, fx.scarred.get(s) ?? art.prop(s.def.id));
-    queueShadows(this, art, w, cast, sun, (x, y, rx, ry, rot, a, box) =>
-      this.quads.push(
-        x,
-        this.my(y, this.rise(x, y)),
-        rx * 2,
-        ry * 2 * this.ys,
-        0x000000,
-        a * this.shade,
-        box ? Shape.Rect : Shape.Disc,
-        Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
-      ),
+    queueShadows(
+      this,
+      art,
+      w,
+      cast,
+      sun,
+      (x, y, rx, ry, rot, a, box) =>
+        this.quads.push(
+          x,
+          this.my(y, this.rise(x, y)),
+          rx * 2,
+          ry * 2 * this.ys,
+          0x000000,
+          a * this.shade,
+          box ? Shape.Rect : Shape.Disc,
+          Math.atan2(Math.sin(rot) * this.ys, Math.cos(rot)),
+        ),
+      fx.ambient,
     );
   }
 

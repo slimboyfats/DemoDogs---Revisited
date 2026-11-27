@@ -862,12 +862,50 @@ export class Sound {
     this.noise(0.14, 3200, 0.6, 0.07 * v, 'highpass');
   }
 
+  /** Something with an engine going over, not very high: a drone that comes and goes. */
+  flyover(v = 1): void {
+    this.tone(118, 2.6, 0.07 * v, 'sawtooth', 0.82);
+    this.tone(177, 2.6, 0.04 * v, 'square', 0.82, 0.03);
+    this.noise(2.4, 420, 0.8, 0.05 * v, 'lowpass');
+  }
+
   /** An animal's cry. */
   cry(
-    kind: 'cluck' | 'baa' | 'moo' | 'caw' | 'squeak' | 'snort' | 'bellow' | 'click',
+    kind:
+      | 'cluck'
+      | 'baa'
+      | 'moo'
+      | 'caw'
+      | 'squeak'
+      | 'snort'
+      | 'bellow'
+      | 'click'
+      | 'quack'
+      | 'toot'
+      | 'honk',
     v = 1,
   ): void {
     switch (kind) {
+      case 'quack':
+        // three flat quacks, each falling off
+        for (let i = 0; i < 3; i++) {
+          this.tone(480, 0.09, 0.1 * v, 'sawtooth', 0.7, i * 0.13);
+          this.noise(0.07, 1100, 4, 0.06 * v, 'bandpass', i * 0.13);
+        }
+        break;
+      case 'toot':
+        // a steam whistle: two notes a fifth apart, long, with breath in it
+        this.tone(660, 0.7, 0.13 * v, 'square', 1);
+        this.tone(990, 0.7, 0.09 * v, 'square', 1, 0.02);
+        this.noise(0.7, 2400, 1.2, 0.07 * v, 'bandpass');
+        break;
+      case 'honk':
+        // a two-tone horn, twice
+        for (let i = 0; i < 2; i++) {
+          this.tone(392, 0.18, 0.13 * v, 'square', 1, i * 0.26);
+          this.tone(494, 0.18, 0.1 * v, 'square', 1, i * 0.26);
+        }
+        break;
       case 'click':
         // claws snapping, and the scuttle of many legs
         for (let i = 0; i < 2; i++) this.noise(0.025, 3800, 4, 0.22 * v, 'bandpass', i * 0.11);

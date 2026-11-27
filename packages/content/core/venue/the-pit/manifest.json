@@ -260,6 +260,181 @@
           "rot": 0.637
         }
       ]
+    },
+    {
+      "rule": "trek",
+      "prop": "prop.chickens",
+      "count": 6,
+      "gap": 5,
+      "points": [
+        [-323, 202],
+        [-59, 279],
+        [235, 225]
+      ],
+      "speed": 12,
+      "every": 30,
+      "back": true
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.fans",
+          "x": 543.0,
+          "y": 97.4,
+          "rot": 5.049
+        },
+        {
+          "prop": "prop.fans",
+          "x": 535.0,
+          "y": 120.0,
+          "rot": 5.049
+        },
+        {
+          "prop": "prop.fans",
+          "x": 404.1,
+          "y": 289.7,
+          "rot": 5.63
+        },
+        {
+          "prop": "prop.fans",
+          "x": 385.0,
+          "y": 304.3,
+          "rot": 5.63
+        },
+        {
+          "prop": "prop.fans",
+          "x": 156.2,
+          "y": 403.3,
+          "rot": 6.081
+        },
+        {
+          "prop": "prop.fans",
+          "x": 132.7,
+          "y": 408.1,
+          "rot": 6.081
+        },
+        {
+          "prop": "prop.fans",
+          "x": -132.7,
+          "y": 408.1,
+          "rot": 0.202
+        },
+        {
+          "prop": "prop.fans",
+          "x": -156.2,
+          "y": 403.3,
+          "rot": 0.202
+        },
+        {
+          "prop": "prop.fans",
+          "x": -385.0,
+          "y": 304.3,
+          "rot": 0.653
+        },
+        {
+          "prop": "prop.fans",
+          "x": -404.1,
+          "y": 289.7,
+          "rot": 0.653
+        },
+        {
+          "prop": "prop.fans",
+          "x": -535.0,
+          "y": 120.0,
+          "rot": 1.234
+        },
+        {
+          "prop": "prop.fans",
+          "x": -543.0,
+          "y": 97.4,
+          "rot": 1.234
+        },
+        {
+          "prop": "prop.fans",
+          "x": -543.0,
+          "y": -97.4,
+          "rot": 1.908
+        },
+        {
+          "prop": "prop.fans",
+          "x": -535.0,
+          "y": -120.0,
+          "rot": 1.908
+        },
+        {
+          "prop": "prop.fans",
+          "x": -404.1,
+          "y": -289.7,
+          "rot": 2.488
+        },
+        {
+          "prop": "prop.fans",
+          "x": -385.0,
+          "y": -304.3,
+          "rot": 2.488
+        },
+        {
+          "prop": "prop.fans",
+          "x": -156.2,
+          "y": -403.3,
+          "rot": 2.939
+        },
+        {
+          "prop": "prop.fans",
+          "x": -132.7,
+          "y": -408.1,
+          "rot": 2.939
+        },
+        {
+          "prop": "prop.fans",
+          "x": 132.7,
+          "y": -408.1,
+          "rot": 3.344
+        },
+        {
+          "prop": "prop.fans",
+          "x": 156.2,
+          "y": -403.3,
+          "rot": 3.344
+        },
+        {
+          "prop": "prop.fans",
+          "x": 385.0,
+          "y": -304.3,
+          "rot": 3.795
+        },
+        {
+          "prop": "prop.fans",
+          "x": 404.1,
+          "y": -289.7,
+          "rot": 3.795
+        },
+        {
+          "prop": "prop.fans",
+          "x": 535.0,
+          "y": -120.0,
+          "rot": 4.376
+        },
+        {
+          "prop": "prop.fans",
+          "x": 543.0,
+          "y": -97.4,
+          "rot": 4.376
+        },
+        {
+          "prop": "prop.hot-air-balloon",
+          "x": 258,
+          "y": 197,
+          "rot": 0
+        },
+        {
+          "prop": "prop.hot-air-balloon",
+          "x": -258,
+          "y": -197,
+          "rot": 0
+        }
+      ]
     }
   ],
   "bots": {
@@ -287,5 +462,20 @@
     "pickup.hackles",
     "pickup.scrap-jaws",
     "pickup.roll-cage"
+  ],
+  "flyby": [
+    {
+      "prop": "prop.crows",
+      "every": 15,
+      "high": 38,
+      "speed": 80,
+      "flock": 7
+    },
+    {
+      "prop": "prop.biplane",
+      "every": 24,
+      "high": 46,
+      "speed": 110
+    }
   ]
 }

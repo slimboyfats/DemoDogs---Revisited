@@ -105,6 +105,7 @@ export function queueRig(
     const bz = pz + bone.at[2] * k;
     const rest = pa + (bone.face ?? 0);
     let a = rest;
+    let lift = 0;
     let strip = poses[0]!;
     const M = bone.move;
     if (M?.kind === 'turn') a = rest + time * M.rate + seed;
@@ -136,6 +137,17 @@ export function queueRig(
       const most = WATCH_RATE * dt;
       mem.a[i] = mem.a[i]! + Math.max(-most, Math.min(most, d * Math.min(1, dt * WATCH_EASE)));
       a = rest + mem.a[i]!;
+    } else if (M?.kind === 'cheer') {
+      // a spectator: it sways where it stands, and jumps for as long as a car is going by
+      let near = 0;
+      if (cars)
+        for (const t of cars)
+          if ((t.x - bx) * (t.x - bx) + (t.y - by) * (t.y - by) < M.reach * M.reach) near = 1;
+      mem.a[i] = mem.a[i]! + (near - mem.a[i]!) * Math.min(1, dt * (near ? 6 : 1.4));
+      const ph = seed * 1.7 + i * 2.1;
+      lift =
+        Math.abs(Math.sin(time * (7.5 + (i % 3)) + ph)) * M.high * mem.a[i]! +
+        Math.max(0, Math.sin(time * 1.6 + ph)) * 0.5 * (1 - mem.a[i]!);
     } else if (M?.kind === 'roll') {
       const turns = (M.by === 'wind' ? blown : time) * M.rate + seed * 0.37;
       strip = poses[rollPose(turns, M.fold ?? 1, poses.length)]!;
@@ -145,7 +157,7 @@ export function queueRig(
     f[1] = by;
     f[2] = bz;
     f[3] = a;
-    R.stack(strip, bx, by, bz, a, alpha);
+    R.stack(strip, bx, by, bz + lift, a, alpha);
   }
 }
 
