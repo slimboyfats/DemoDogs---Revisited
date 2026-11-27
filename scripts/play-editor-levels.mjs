@@ -63,6 +63,7 @@ const fail = (msg) => {
 };
 const check = (ok, msg) => ok || fail(msg);
 const shot = async (name) => {
+  if (globalThis.look) await globalThis.look();
   await page.waitForTimeout(500);
   await page.screenshot({ path: `${out}/${name}.png`, timeout: 180000 });
 };
@@ -173,6 +174,8 @@ const drag = async (a, b, { rest = 0, steps = 8, mid = null } = {}) => {
   await page.waitForTimeout(100);
   await page.waitForFunction(() => window.__dd.editor.settled, null, { timeout: 120000 });
   await page.waitForTimeout(200);
+  // (a drag near the edge slides the map: it is put back on the stretch for the next one)
+  if (globalThis.look) await globalThis.look();
   await frame(4);
 };
 
@@ -202,6 +205,8 @@ await page.waitForFunction(
 await act('fit');
 await act('in');
 await act('in');
+
+globalThis.look = async () => centre(...(await road(0.4)));
 
 // ---- raise a long stretch
 let live = 0;
@@ -309,8 +314,9 @@ await act('undo');
 await built();
 up = (await track()).raised;
 check(up[0].edge === 'wall' && up[0].levels?.length === 2, `UNDO: ${JSON.stringify(up[0])}`);
-await act('in');
 await centre(...(await road(0.4)));
+await page.touchscreen.tap(...(await at(...(await road(0.4)))));
+await page.waitForTimeout(400);
 await shot('8-walled-in-three-levels');
 
 check(errors.length === 0, `page errors: ${errors.join(' | ')}`);
