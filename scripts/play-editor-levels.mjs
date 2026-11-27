@@ -187,10 +187,11 @@ const built = async () => {
   await frame(5);
 };
 const statics = (id) =>
-  page.evaluate(
-    (id) => window.__dd.session.world.statics.filter((s) => s.def.id === id && !s.down).length,
-    id,
-  );
+  page.evaluate((id) => {
+    const w = window.__dd.session.world;
+    // (only what stands up on raised road: the track's own trackside is armco too)
+    return w.statics.filter((s) => s.def.id === id && !s.down && w.relief.at(s.x, s.y) > 5).length;
+  }, id);
 
 // ---- a new track, close enough to see the road well
 await page.goto(`${base}?autoplay&seed=7`);
@@ -204,14 +205,17 @@ await page.waitForFunction(
 );
 await act('fit');
 await act('in');
-await act('in');
 
-globalThis.look = async () => centre(...(await road(0.4)));
+// (the stretch a little below the middle: its height tabs stand above it, clear of the top bar)
+globalThis.look = async () => {
+  const [x, y] = await road(0.4);
+  await centre(x, y - 30);
+};
 
 // ---- raise a long stretch
 let live = 0;
 await tool('raise');
-await centre(...(await road(0.4)));
+await globalThis.look();
 await frame(3);
 await drag(await at(...(await road(0.28))), await at(...(await road(0.52))));
 let up = (await track()).raised;
@@ -226,7 +230,7 @@ check(up[0].levels?.length === 1, `ADD LEVEL added none: ${JSON.stringify(up)}`)
 let tab = await grip('lift', 1);
 await drag(tab, [tab[0], tab[1] - 62], {
   steps: 10,
-  mid: async () => (live = await stands(await road(0.47))),
+  mid: async () => (live = await stands(await road(0.44))),
 });
 up = (await track()).raised;
 check(up[0].levels[0].height === 40, `the second level stands ${up[0].levels[0].height}`);
@@ -262,8 +266,22 @@ await shot('4-three-levels');
 // ---- the slope at each end: steep where the road climbs on, gentle where it comes down
 const lap = await page.evaluate(() => window.__dd.session.world.track.len);
 await drag(await grip('rampIn'), await at(...(await road(0.28))));
-await drag(await grip('rampOut'), await at(...(await road(0.52 - 200 / lap))), {
-  mid: async () => (live = await stands(await road(0.52 - 100 / lap))),
+/** The road `back` px before where the stretch ends. */
+const before = (back) =>
+  page.evaluate((back) => {
+    const T = window.__dd.session.world.track;
+    const r = window.__dd.editor.track.raised[0];
+    let end = 0;
+    let bd = Infinity;
+    for (let i = 0; i < T.n; i++) {
+      const d = (T.x[i] - r.x1) ** 2 + (T.y[i] - r.y1) ** 2;
+      if (d < bd) [bd, end] = [d, i];
+    }
+    const i = (end - Math.round(back / T.step) + T.n) % T.n;
+    return [T.x[i], T.y[i]];
+  }, back);
+await drag(await grip('rampOut'), await at(...(await before(200))), {
+  mid: async () => (live = await stands(await before(100))),
 });
 up = (await track()).raised;
 check(up[0].rampIn <= 40, `the first slope is ${up[0].rampIn} long`);
@@ -314,7 +332,7 @@ await act('undo');
 await built();
 up = (await track()).raised;
 check(up[0].edge === 'wall' && up[0].levels?.length === 2, `UNDO: ${JSON.stringify(up[0])}`);
-await centre(...(await road(0.4)));
+await globalThis.look();
 await page.touchscreen.tap(...(await at(...(await road(0.4)))));
 await page.waitForTimeout(400);
 await shot('8-walled-in-three-levels');
