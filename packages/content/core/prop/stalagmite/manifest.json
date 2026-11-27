@@ -115,5 +115,6 @@
     ]
   },
   "made": "material.stone",
-  "integrity": 150
+  "integrity": 150,
+  "ambient": "drip"
 }

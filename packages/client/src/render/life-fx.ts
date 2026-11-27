@@ -27,6 +27,7 @@ const CRIES = {
   moo: 'MOO!',
   caw: 'CAW!',
   squeak: 'EEK!',
+  click: 'SNIP!',
   snort: 'SNORT!',
   bellow: 'ROAR!',
 } as const;
@@ -173,6 +174,11 @@ export class LifeFx {
           );
         }
         if (mine) fx.text(e.x, e.y, e.power > 0 ? 'GATE OPEN!' : 'CLICK', '#6fd6ff', true);
+        // the plate clunks down, and the posts it works grind into the ground
+        if (v > 0) {
+          S.clank(v);
+          if (e.power > 0) S.grind(v);
+        }
         return;
       }
       if (e.kind === 'vent') {
@@ -194,7 +200,10 @@ export class LifeFx {
             pick(WATER),
           );
         }
-        if (v > 0) S.whoosh(v);
+        if (v > 0) {
+          S.whoosh(v);
+          S.hiss(v, false);
+        }
         if (mine) {
           fx.text(e.x, e.y, 'WHOOSH!', '#9ae4fa', true);
           fx.shake = Math.max(fx.shake, 5);

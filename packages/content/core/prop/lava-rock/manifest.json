@@ -43,5 +43,6 @@
     ]
   },
   "made": "material.stone",
-  "integrity": 160
+  "integrity": 160,
+  "ambient": "bubble"
 }

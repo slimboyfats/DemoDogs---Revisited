@@ -12,7 +12,9 @@ import './styles.css';
 import './theme.css';
 import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
+import { engineNote } from './audio/engine';
 import { Sound } from './audio/sound';
+import { uiSounds } from './ui/ui-sounds';
 import {
   forfeit,
   newCareer,
@@ -115,6 +117,7 @@ const feel = new Feel(safeStore(), {
 });
 const padMenu = new PadMenu();
 const input = new Input(() => sound.init(), pads);
+uiSounds(document, sound);
 const keyHints = new KeyHints();
 const nameTags = new NameTags();
 // how hard the rival drivers are (EASY, NORMAL, HARD): ?rivals=hard picks one for a visit
@@ -219,6 +222,12 @@ function loadCareer(): Career {
   return career;
 }
 const careerScreen = new CareerScreen($('careerPanel'), content, art, {
+  heard: (what, car) => {
+    const c = car ? content.car.get(car) : null;
+    if (what === 'rev') {
+      if (c) sound.rev(engineNote(c.stats, c.engine));
+    } else sound.jingle(what);
+  },
   change: saveCareer,
   race: startCareerRace,
   cup: startCupRound,
@@ -859,6 +868,7 @@ async function launch(o: Launch, title: string, ready?: (s: Session) => void): P
   const mine = ++launching;
   hud.aim = null;
   sound.init();
+  sound.ui('go');
   goFullscreen();
   $('loadTitle').textContent = title;
   $('loadFill').style.width = '0';
@@ -1131,6 +1141,12 @@ function finish(gaveUp = false): void {
     else if (o.wrecked && rep?.kind !== 'derby') $('resTitle').textContent = 'WRECKED';
     else if (rep?.medal !== undefined) $('resTitle').textContent = MEDALS[rep.medal]!;
     if (rep) sub = `${rep.name} · ROUND ${rep.round} OF ${rep.rounds} · ${sub}`;
+    // the purse is counted out after the flag's own tune: a cup won gets the long one, a trophy
+    // the fanfare that opens the next, a tournament ended out of the places a shrug
+    if (payout.champion || rep?.place === 1) sound.jingle('cup', 1.2);
+    else if (rep?.place && rep.place <= 3) sound.jingle('unlock', 1.2);
+    else if (rep?.place) sound.jingle('cup-lost', 1.2);
+    else if (payout.total > 0) sound.jingle('cash', 1.6);
     const line = (label: string, cash: string, cls = '') => {
       const d = document.createElement('div');
       d.className = cls;
@@ -1429,6 +1445,7 @@ function frame(t: number): void {
     if (paused && !online.racing) session.idle(dt);
     spectate(dt);
     weatherAreas();
+    if (session && scene instanceof PixelScene) session.night = scene.sky.dark > 0.5;
     // the slice effects run on the frame's clock: the track creator stops the sim, not them
     session.fx.slices.frame(session.world, paused && !online.racing ? 0 : dt);
     const r0 = performance.now();
@@ -1543,13 +1560,22 @@ function boot(): void {
     showRes();
   });
   buildMenu();
+  // the car on the turntable blips its own engine, so you hear what you are choosing
+  const revCar = () => {
+    const c = cars[carIdx]!;
+    sound.init();
+    sound.rev(engineNote(c.stats, c.engine));
+  };
+  for (const id of ['prevCar', 'nextCar']) $(id).dataset.snd = '';
   $('prevCar').onclick = () => {
     carIdx = (carIdx + cars.length - 1) % cars.length;
     showCar();
+    revCar();
   };
   $('nextCar').onclick = () => {
     carIdx = (carIdx + 1) % cars.length;
     showCar();
+    revCar();
   };
   $('again').onclick = () => {
     if (online.room) {

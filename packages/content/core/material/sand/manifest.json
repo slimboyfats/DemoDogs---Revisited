@@ -10,5 +10,6 @@
   "drag": 1.1,
   "quenches": true,
   "colour": "#e0b07a",
-  "alpha": 0.75
+  "alpha": 0.75,
+  "sound": "soft"
 }

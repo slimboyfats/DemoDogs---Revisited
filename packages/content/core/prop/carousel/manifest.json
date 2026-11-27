@@ -205,5 +205,6 @@
     ]
   },
   "made": "material.steel",
-  "integrity": 220
+  "integrity": 220,
+  "ambient": "fair"
 }

@@ -230,5 +230,6 @@
     ]
   },
   "made": "material.steel",
-  "integrity": 60
+  "integrity": 60,
+  "ambient": "hum"
 }

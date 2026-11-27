@@ -243,5 +243,6 @@
     ]
   },
   "made": "material.stone",
-  "integrity": 220
+  "integrity": 220,
+  "ambient": "creak"
 }

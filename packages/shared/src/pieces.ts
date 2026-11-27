@@ -169,7 +169,9 @@ export const CritterSchema = z.strictObject({
   height: z.number().positive().default(34),
   step: z.number().min(0).default(0.6),
   /** What the client calls out and plays when a car sends it flying or runs into it. */
-  cry: z.enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow']).default('squeak'),
+  cry: z
+    .enum(['cluck', 'baa', 'moo', 'caw', 'squeak', 'snort', 'bellow', 'click'])
+    .default('squeak'),
   /** Points for the car that bowls it over (light ones only). */
   points: z.number().int().min(0).default(0),
   /**

@@ -43,14 +43,119 @@ const rangeAct = (tick) => {
   if (at) dd.dev.use(P.x + at[0], P.y + at[1], 'blast');
 };
 
+/**
+ * Nothing but the sounds named, a second apart, on a quiet range (`say` makes each one). The
+ * range opens with its guns firing, so these wait `WAIT` seconds, which are cut from the tape.
+ */
+const WAIT = 7;
+const sayEach = (list, say, gap = 60) =>
+  `(tick) => {
+    const dd = window.__dd;
+    if (tick === 0) {
+      dd.sound.engineStop();
+      dd.sound.music(null);
+    }
+    const list = ${JSON.stringify(list)};
+    const at = (tick - ${WAIT * 60 + 20}) / ${gap};
+    if (Number.isInteger(at) && list[at] !== undefined) (${say})(dd.sound, list[at]);
+  }`;
+const PLACES = [
+  'birds',
+  'crowd',
+  'flap',
+  'creak',
+  'hum',
+  'water',
+  'fire',
+  'surf',
+  'fair',
+  'bubble',
+  'drip',
+  'horn',
+  'wind',
+];
+const KNOCKS = ['car', 'metal', 'wood', 'stone', 'rubber', 'glass', 'soft'];
+const JINGLES = ['final-lap', 'win', 'podium', 'finish', 'lost', 'last-standing'];
+const SHOP = ['buy', 'denied', 'cash', 'unlock', 'cup', 'cup-lost'];
+const CARS = [
+  'terrier',
+  'pug',
+  'corgi',
+  'mutt',
+  'bruiser',
+  'dalmatian',
+  'whippet',
+  'husky',
+  'mastiff',
+  'greyhound',
+  'wolfhound',
+];
+
 const scenes = [
+  // each car's engine from a standing start, the same road for all of them
+  ...CARS.map((c) => ({
+    name: `engine-${c}`,
+    url: `?start=kennel-loop&car=${c}&autoplay&seed=7`,
+    seconds: 7,
+    noTune: true,
+  })),
+  // the big courses' own noise: the fair's organ, the bay's surf and horn, lava, a cave
+  ...['tailspin-funfair', 'bonefish-bay', 'cinder-peak', 'glimmer-grotto'].map((v) => ({
+    name: `place-${v}`,
+    url: `?start=${v}&car=mutt&autoplay&seed=3`,
+    seconds: 12,
+    noTune: true,
+  })),
+  // each noise of the place on its own, three seconds apart, as if the thing stood by the car
+  {
+    name: 'places',
+    url: '?dev&car=mutt',
+    seconds: 3 * PLACES.length + 1,
+    act: `(tick) => {
+      const s = window.__dd.session;
+      const list = ${JSON.stringify(PLACES)};
+      const at = Math.floor((tick - ${WAIT * 60}) / 180);
+      if (tick === 0) window.__dd.sound.music(null);
+      const air = { wind: 0 };
+      for (const k of list) air[k] = 0;
+      if (at >= 0 && list[at]) air[list[at]] = list[at] === 'wind' ? 0.8 : 0.9;
+      s.listen = () => air;
+    }`,
+    hide: 'devPanel',
+    skip: WAIT,
+  },
+  // what a crash sounds like by what was hit, the tunes for moments, and the shop's
+  {
+    name: 'knocks',
+    url: '?dev&car=mutt',
+    seconds: 8,
+    act: sayEach(KNOCKS, '(s, k) => s.crash(70, k)'),
+    hide: 'devPanel',
+    skip: WAIT,
+  },
+  {
+    name: 'jingles',
+    url: '?dev&car=mutt',
+    seconds: 15,
+    act: sayEach(JINGLES, '(s, k) => s.jingle(k)', 140),
+    hide: 'devPanel',
+    skip: WAIT,
+  },
+  {
+    name: 'shop',
+    url: '?dev&car=mutt',
+    seconds: 16,
+    act: sayEach(SHOP, '(s, k) => s.jingle(k)', 120),
+    hide: 'devPanel',
+    skip: WAIT,
+  },
   { name: 'race-grass', url: '?start=kennel-loop&car=mutt&autoplay&seed=7', seconds: 22 },
   { name: 'race-paved', url: '?start=brickworks&car=mutt&autoplay&seed=3', seconds: 14 },
   { name: 'race-dirt', url: '?start=sunbake-canyon&car=mutt&autoplay&seed=5', seconds: 12 },
   { name: 'race-snow', url: '?start=frostbite-quarry&car=mutt&autoplay&seed=5', seconds: 12 },
   { name: 'derby', url: '?start=the-pit&car=mutt&autoplay&seed=4', seconds: 14 },
   { name: 'blasts', url: '?dev&car=mutt', seconds: 8, act: rangeAct, hide: 'devPanel' },
-].filter((s) => !only || s.name === only);
+].filter((s) => !only || s.name === only || s.name.startsWith(`${only}-`));
 const cut = Number(args.find((a) => a.startsWith('--seconds='))?.slice(10));
 if (cut) for (const s of scenes) s.seconds = cut;
 
@@ -65,23 +170,27 @@ for (const scene of scenes) {
     deviceScaleFactor: 1,
   });
   page.on('pageerror', (e) => errors.push(`${scene.name}: ${e}`));
-  await page.goto(`${base}${scene.url}&tape=${scene.seconds + 2}`);
+  await page.goto(`${base}${scene.url}&tape=${scene.seconds + (scene.skip ?? 0) + 2}`);
   await page.waitForFunction(
     () => window.__dd?.session && document.body.dataset.screen === 'game',
     null,
     { timeout: 120000 },
   );
   // stop the game running by the clock: from here it moves only when told to
-  const lead = await page.evaluate((hide) => {
-    const dd = window.__dd;
-    dd.session.rate = 0;
-    if (hide) document.getElementById(hide).style.visibility = 'hidden';
-    return dd.sound.tapeTime;
-  }, scene.hide ?? null);
+  const lead = await page.evaluate(
+    ([hide, noTune]) => {
+      const dd = window.__dd;
+      dd.session.rate = 0;
+      if (noTune) dd.sound.music(null);
+      if (hide) document.getElementById(hide).style.visibility = 'hidden';
+      return dd.sound.tapeTime;
+    },
+    [scene.hide ?? null, !!scene.noTune],
+  );
   const dir = `${out}/${scene.name}-frames`;
   if (video) await mkdir(dir, { recursive: true });
   const act = scene.act ? `(${scene.act})` : null;
-  for (let f = 0; f < scene.seconds * 30; f++) {
+  for (let f = 0; f < (scene.seconds + (scene.skip ?? 0)) * 30; f++) {
     await page.evaluate(
       ([code, tick]) => {
         const s = window.__dd.session;
@@ -108,7 +217,7 @@ for (const scene of scenes) {
   // drop what was taped before the game was stopped, and what is left after the last frame
   execFileSync(
     'ffmpeg',
-    ['-y', '-ss', String(lead), '-t', String(scene.seconds), '-i', raw, file],
+    ['-y', '-ss', String(lead + (scene.skip ?? 0)), '-t', String(scene.seconds), '-i', raw, file],
     quiet,
   );
   await rm(raw);
