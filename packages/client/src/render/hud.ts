@@ -105,13 +105,6 @@ export class Hud {
   /** The place last shown and when it changed, so the numeral jumps as a car is passed. */
   private placeWas = 0;
   private placeAt = -1e9;
-  /** The gun's rounds last shown, whose they were, when one was last fired or a box of them
-   * picked up, and the most the gun has held, which is a full gauge. */
-  private gunOf: Car | null = null;
-  private roundsWas = 0;
-  private roundsTop = 1;
-  private firedAt = -1e9;
-  private loadedAt = -1e9;
   /** The message last shown and when it came up, so it lands with a bounce. */
   private msgWas = '';
   private msgLeft = 0;
@@ -484,82 +477,19 @@ export class Hud {
       P.boosting ? ['#ffffff', '#6fd0ff'] : ['#9be0ff', '#2f8fe6'],
       'bolt',
     );
-    // the gun's rounds: a gauge of their own with the count in big numerals at its end, since the
-    // gun fires by itself and this is all that says how long it will go on doing so
-    let row = pad + 88 * u;
     let cx = left - 2 * u;
-    /** Where the line of what is bolted on goes: under whatever is lowest. */
-    let below = 0;
-    if (P.gun) {
-      if (P !== this.gunOf) {
-        this.gunOf = P;
-        this.roundsWas = P.rounds;
-        this.roundsTop = Math.max(1, P.gun.ammo, P.rounds);
-      }
-      if (P.rounds < this.roundsWas) this.firedAt = now;
-      else if (P.rounds > this.roundsWas) this.loadedAt = now;
-      this.roundsWas = P.rounds;
-      this.roundsTop = Math.max(this.roundsTop, P.rounds);
-      const firing = now - this.firedAt < 0.14;
-      const loaded = now - this.loadedAt;
-      const out = P.rounds <= 0;
-      const few = !out && P.rounds <= this.roundsTop * 0.2;
-      const beat = Math.sin(now * 11) > 0;
-      const y = pad + 87 * u;
-      bar(
-        y,
-        P.rounds / this.roundsTop,
-        firing ? ['#ffffff', '#ffe680'] : few ? ['#ffc37a', '#f0701c'] : ['#fff0a0', '#ffc21a'],
+    cx = chip(cx, pad + 88 * u, 'star', 'SCORE', String(P.score), SUN);
+    // (the gun's rounds are on the speedometer; with that turned off, here)
+    if (P.gun && !this.dial.on)
+      cx = chip(
+        cx,
+        pad + 88 * u,
         'shell',
+        'AMMO',
+        String(P.rounds),
+        P.rounds > 0 ? '#fff' : '#ff8f80',
       );
-      // (a box of rounds picked up: the count jumps; a round fired: it kicks)
-      const pop =
-        loaded < 0.4
-          ? 1 + 0.5 * Math.sin((loaded / 0.4) * Math.PI) * (1 - loaded / 0.4)
-          : firing
-            ? 1.08
-            : 1;
-      const cols = out
-        ? beat
-          ? (['#ffd0c8', '#ff6a58', '#d1321f'] as const)
-          : (['#ffb0a6', '#ff4a38', '#b02414'] as const)
-        : few
-          ? (['#ffe9c2', '#ffa63d', '#f0701c'] as const)
-          : (['#ffffff', '#fff3b0', '#ffd60a'] as const);
-      // (on a plate of its own at the gauge's end: the count, then what it counts)
-      const big = font(20);
-      const name = out ? 'NO AMMO' : 'AMMO';
-      ctx.font = big;
-      const nw = ctx.measureText(String(P.rounds)).width;
-      ctx.font = fine(9);
-      const lw = ctx.measureText(name).width;
-      const pw = 9 * u + nw + 5 * u + lw + 9 * u;
-      const ph = 21 * u;
-      // (at the gauge's end; where the map and the standings are in the way of that, as on an
-      // upright phone, under the gauge with the score after it)
-      const beside = left + 11 * u + 128 * u + 9 * u;
-      const fits = beside + pw + 8 * u < W - pad - (this.mini?.cv.width ?? 0);
-      const px = fits ? beside : left - 2 * u;
-      const py = fits ? y + 6.5 * u - ph / 2 : pad + 106 * u;
-      plate(px, py, pw, ph, out && beat ? 'rgba(120,16,8,0.8)' : DARK);
-      ctx.save();
-      ctx.translate(px + 10 * u + nw / 2, py + ph / 2 + u);
-      ctx.scale(pop, pop);
-      ctx.textBaseline = 'middle';
-      plain(String(P.rounds), -nw / 2, 0, big, shade(cols, 0, 17 * u));
-      ctx.restore();
-      ctx.textBaseline = 'middle';
-      plain(name, px + 15 * u + nw, py + ph / 2 + u, fine(9), out ? '#ffb0a6' : '#b9c8e6');
-      ctx.textBaseline = 'top';
-      row = pad + 107 * u;
-      if (!fits) {
-        cx = px + pw + 6 * u;
-        row = py + 2.5 * u;
-        below = py + ph + 4 * u;
-      }
-    }
-    cx = chip(cx, row, 'star', 'SCORE', String(P.score), SUN);
-    if (watching) text(P.name, cx + 2 * u, row + 2 * u, small, '#7fe0ff');
+    if (watching) text(P.name, cx + 2 * u, pad + 90 * u, small, '#7fe0ff');
     // what is bolted on: the blade's seconds left, the leaps left in the springs
     const fitted = [
       P.blade ? `BLADE ${Math.ceil(P.blade.t)}s` : '',
@@ -581,7 +511,7 @@ export class Hud {
     ]
       .filter(Boolean)
       .join('  ');
-    if (fitted) text(fitted, left, below || row + 20 * u, font(12), SUN);
+    if (fitted) text(fitted, left, pad + 108 * u, font(12), SUN);
 
     const m = this.mini;
     if (m) {
@@ -778,6 +708,13 @@ export class Hud {
   /** The speedometer's settings: shown or not, where, how big (game/speedo.ts). */
   dial: DialSetup = { ...DIAL_DEFAULT };
 
+  /** Whose rounds the dial last showed, how many, the most the gun has held (a full ring), and
+   * when a box of them was last picked up. */
+  private gunOf: Car | null = null;
+  private roundsWas = 0;
+  private roundsTop = 1;
+  private loadedAt = -1e9;
+
   /** How long each reason has been showing, so a passing bump does not flash a word. */
   private heldT = new Map<number, number>();
   private lastT = 0;
@@ -820,6 +757,69 @@ export class Hud {
     }
     const shown = HELD_SAYS.filter(([bit]) => (this.heldT.get(bit) ?? 0) > 0.25);
     const slowed = shown.length > 0;
+    // the gun's rounds: a small tab out from behind the dial's shoulder with the count on it
+    // (the ring of pips round the dial's rim, further down, runs out with them)
+    const G = P.gun;
+    let pips = 0;
+    let pipCol = SUN;
+    if (G) {
+      if (P !== this.gunOf) {
+        this.gunOf = P;
+        this.roundsWas = P.rounds;
+        this.roundsTop = Math.max(1, G.ammo, P.rounds);
+      }
+      if (P.rounds > this.roundsWas) this.loadedAt = now;
+      this.roundsWas = P.rounds;
+      this.roundsTop = Math.max(this.roundsTop, P.rounds);
+      const out = P.rounds <= 0;
+      const few = !out && P.rounds <= this.roundsTop * 0.2;
+      const beat = Math.sin(now * 11) > 0;
+      pips = P.rounds / this.roundsTop;
+      pipCol = few ? '#ff9a3d' : SUN;
+      const col = out ? (beat ? '#ff6a58' : '#ffb0a6') : few ? '#ffb45c' : '#fff';
+      const n = String(P.rounds);
+      const nf = `italic 900 ${Math.round(15 * u)}px ${DISPLAY}`;
+      ctx.font = nf;
+      const nw = ctx.measureText(n).width;
+      const th = 19 * u;
+      const tw = r * 0.5 + 24 * u + nw + 9 * u;
+      const tx = cx + r * 0.62;
+      const ty = cy + 2 * u;
+      const lean = th * 0.26;
+      ctx.beginPath();
+      ctx.moveTo(tx + lean, ty);
+      ctx.lineTo(tx + tw + lean, ty);
+      ctx.lineTo(tx + tw, ty + th);
+      ctx.lineTo(tx, ty + th);
+      ctx.closePath();
+      ctx.fillStyle = out && beat ? 'rgba(140,20,10,0.86)' : 'rgba(10,20,64,0.8)';
+      ctx.fill();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2.4 * u;
+      ctx.strokeStyle = INK;
+      ctx.stroke();
+      // (a box of rounds picked up: the count jumps)
+      const age = now - this.loadedAt;
+      const pop = age < 0.4 ? 1 + 0.5 * Math.sin((age / 0.4) * Math.PI) * (1 - age / 0.4) : 1;
+      const mx = tx + r * 0.5 + 15 * u;
+      const my = ty + th / 2;
+      const size = 12 * u;
+      ctx.save();
+      ctx.translate(mx - size / 2, my - size / 2);
+      ctx.scale(size / 24, size / 24);
+      ctx.fillStyle = col;
+      ctx.fill(this.sign('shell'));
+      ctx.restore();
+      ctx.save();
+      ctx.translate(mx + 8 * u + nw / 2, my + 0.5 * u);
+      ctx.scale(pop, pop);
+      ctx.font = nf;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = col;
+      ctx.fillText(n, 0, 0);
+      ctx.restore();
+    }
     // the plate behind it: dark glass, lighter at the top, an ink line round it and a pale one in
     ctx.beginPath();
     ctx.arc(cx, cy, r + 10 * u, Math.PI * 0.75, Math.PI * 2.25);
@@ -838,6 +838,21 @@ export class Hud {
     ctx.lineWidth = u;
     ctx.strokeStyle = 'rgba(255,255,255,0.3)';
     ctx.stroke();
+    // the gun's rounds as a ring of pips on the rim, running out from the right as they are spent
+    if (G) {
+      const N = 12;
+      const lit = Math.ceil(pips * N - 1e-6);
+      ctx.lineCap = 'butt';
+      ctx.lineWidth = 3.2 * u;
+      for (let i = 0; i < N; i++) {
+        const b0 = a0 + ((a1 - a0) * (i + 0.12)) / N;
+        const b1 = a0 + ((a1 - a0) * (i + 0.88)) / N;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 7.4 * u, b0, b1);
+        ctx.strokeStyle = i < lit ? pipCol : 'rgba(4,10,40,0.6)';
+        ctx.stroke();
+      }
+    }
     // marks round the inside of the arc
     ctx.lineCap = 'round';
     ctx.lineWidth = 1.6 * u;
