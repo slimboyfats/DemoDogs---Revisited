@@ -72,7 +72,7 @@
     radial-gradient(130% 100% at 18% 0%, #4c86ff 0, #1f4fff 36%, #0c22b0 74%, #070f66 100%);
 }
 /* (the bands are one sheet slid sideways, the dots one sheet that stays: nothing is painted again) */
-.screen:not(#pauseMenu, #results, #editSetup, #settings, #tutEnd)::before {
+.screen:not(#pauseMenu, #results, #settings, #tutEnd)::before {
   content: '';
   position: fixed;
   z-index: -1;
@@ -85,7 +85,7 @@
   animation: slide 9s linear infinite;
   pointer-events: none;
 }
-.screen:not(#pauseMenu, #results, #editSetup, #settings, #tutEnd)::after {
+.screen:not(#pauseMenu, #results, #settings, #tutEnd)::after {
   content: '';
   position: fixed;
   z-index: -1;
@@ -107,7 +107,6 @@
 /* a race shows behind these: a dark veil with the same bands in it */
 #pauseMenu,
 #results,
-#editSetup,
 #tutEnd {
   background:
     repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.04) 0 46px, transparent 46px 92px),
@@ -1452,9 +1451,7 @@ tr.me td:first-child {
 }
 #onlinePanel input,
 #onlinePanel select,
-#tracksPanel select,
-#editSetup input[type='text'],
-#editSetup select {
+#tracksPanel select {
   color: var(--navy);
   background: var(--mist);
   border: 2px solid #b4c0e6;

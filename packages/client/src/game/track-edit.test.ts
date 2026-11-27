@@ -16,6 +16,10 @@ import {
   LIFT_PX,
   moveLevel,
   moveRamp,
+  setRamp,
+  slopeLength,
+  slopeOf,
+  SLOPES,
   rampLeast,
   rampOf,
   setLevelHeight,
@@ -327,6 +331,31 @@ describe('editing a track', () => {
     reverse(t);
     expect([0.1, 0.22, 0.3, 0.4, 0.48, 0.7].map(high)).toEqual(before);
     expect(t.raised[0]!.lanes).toBe('right');
+  });
+
+  it('an end is given a slope by name: steep, medium or gentle', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]!];
+    };
+    const up = raisedBetween(T, 20, at(0.15), at(0.6));
+    // as laid it is the usual slope at both ends
+    expect(slopeOf(T, up, 0)).toBe('medium');
+    expect(slopeOf(T, up, 1)).toBe('medium');
+    expect(setRamp(T, up, 0, slopeLength(20, 'steep'))).toBe(true);
+    expect(up.rampIn).toBe(rampLeast(20));
+    expect(slopeOf(T, up, 0)).toBe('steep');
+    // (the other end keeps the slope it had)
+    expect(slopeOf(T, up, 1)).toBe('medium');
+    expect(setRamp(T, up, 1, slopeLength(20, 'gentle'))).toBe(true);
+    expect(up.rampOut).toBe(200);
+    expect(slopeOf(T, up, 1)).toBe('gentle');
+    // asked for what it already is: nothing changes
+    expect(setRamp(T, up, 1, slopeLength(20, 'gentle'))).toBe(false);
+    // the names are in order, the steepest the shortest
+    expect(SLOPES.map((k) => slopeLength(48, k))).toEqual([88, 240, 480]);
   });
 
   it('the slope at each end of a raised stretch has a length of its own, never a wall', () => {

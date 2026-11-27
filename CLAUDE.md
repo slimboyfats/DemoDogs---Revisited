@@ -27,7 +27,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, shares and races a track by touch (`PORTRAIT=1` puts the phone upright) |
 | `pnpm play:drag [out-dir] [--frames]`                           | the track creator's handles by touch and mouse: ends, edges, hold and drag to lift (`captures/editor-drag/`)  |
-| `pnpm play:levels [out-dir] [--frames]`                         | a raised stretch split into levels, its end slopes and its walls, shaped by touch (`captures/editor-levels/`) |
+| `pnpm play:levels [out-dir] [--frames]`                         | a raised stretch split into levels, slopes and walls, shaped on its side picture (`captures/editor-levels/`)  |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
@@ -198,7 +198,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   every other height in the sim stays relative to the ground under it. The client keeps the ground canvas a flat map
   and draws it raised through a picture-to-ground map baked once (`render/relief-map.ts`); stacks, particles and
   shadows lift themselves by the same heights in their shaders. The canvas fallback draws the ground flat.
-  A venue's `track.raised` (`from`, `to`, `height`; the track creator's ELEVATE tool writes it as `raised` in the
+  A venue's `track.raised` (`from`, `to`, `height`; the track creator's RAISE tool writes it as `raised` in the
   `TrackFile`) lifts a stretch of road into a platform in that same height map, with a ramp at each end and steep
   sides, so nothing else needs to know about it. The platform is wider than the road (`SHOULDER`), its edges are
   railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
@@ -292,6 +292,15 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `styles.css` carries `:is(*, #_)`. Signs are drawn once in the sheet at the top of `index.html` and used by name
   (`<use href="#i-...">`, class `ic`). What moves in a menu or over a race moves by `transform` or `opacity` only,
   and stops under `prefers-reduced-motion`.
+- **The track creator is the level builder** (client `ui/builder/`, `builder.css`; V2, in the menus' look): one
+  controller (`LevelBuilder` in builder.ts: the track, the tool in hand, what is picked, every pointer and key), the
+  DOM round the map (chrome.ts: a rail of eight tools, a top bar, one panel for the tool in hand or the thing picked,
+  the setup sheet), the catalogue of what can be put down (catalogue.ts) and the marks on the map (overlay.ts). It
+  is laid out for a thumb first (a phone on its side: panel down the right; upright: a sheet along the bottom) and
+  every action has a button, a key and a mouse way. The map stays quiet: a picked thing shows only the handles it
+  cannot do without, and a raised stretch is shaped on its side-on picture in the panel (profile.ts: drag a level
+  for its height, a knob for a step or a slope), never by small handles on the road. What changes a track is a pure
+  helper in `game/track-edit.ts` (tested); scripts find controls by `data-act`, `data-rail`, `data-choice`.
 - **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
   else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
   in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never

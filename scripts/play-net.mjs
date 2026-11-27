@@ -156,7 +156,7 @@ try {
       });
       return t.id;
     });
-    await host.locator('#editPanel button', { hasText: 'EXIT' }).click();
+    await host.locator('#builder [data-act="exit"]').click();
     await host.locator('#tracksPanel button', { hasText: 'BACK' }).click();
   }
   await host.click('#toOnline');
