@@ -133,7 +133,8 @@ export class TracedLight {
 
   /**
    * Trace the frame. `block` is the frame's map (already drawn), `sun` the sun's shadow map and
-   * `sunc` its light (left out: no sun), `glow` how far lamps stand out (0 to 1).
+   * `sunc` its light (left out: no sun), `glow` how far lamps stand out (0 to 1), `flame` how
+   * much light flames give (0 by day, when neither they nor lamps light the ground; 1 by night).
    * Leaves the framebuffer and viewport at `target`, `w` by `h`.
    */
   trace(
@@ -143,6 +144,7 @@ export class TracedLight {
     sun: SunShadow | null,
     sunc: readonly [number, number, number],
     glow: number,
+    flame: number,
     target: WebGLFramebuffer | null,
     w: number,
     h: number,
@@ -179,6 +181,7 @@ export class TracedLight {
     else bindTex(3, block.col, us.u_sh!);
     gl.uniform3f(us.u_sunc!, sun ? sunc[0] : 0, sun ? sunc[1] : 0, sun ? sunc[2] : 0);
     gl.uniform1f(us.u_glow!, glow);
+    gl.uniform1f(us.u_flame!, flame * FLAME);
     gl.uniform4fv(us.u_lpos!, lights.pos);
     gl.uniform3fv(us.u_lcol!, lights.col);
     gl.uniform1i(us.u_lcount!, lights.count);
@@ -250,6 +253,7 @@ export class TracedLight {
         'u_shear',
         'u_sunc',
         'u_glow',
+        'u_flame',
         'u_lpos',
         'u_lcol',
         'u_lcount',
@@ -294,6 +298,7 @@ uniform sampler2D u_em;
 uniform vec4 u_lmbox;
 uniform vec3 u_sunc;
 uniform float u_glow;
+uniform float u_flame;
 uniform vec4 u_lpos[${MAX_LIGHTS}];
 uniform vec3 u_lcol[${MAX_LIGHTS}];
 uniform int u_lcount;
@@ -313,12 +318,12 @@ void main() {
   ivec2 t = ivec2(gl_FragCoord.xy);
   vec2 m = texelFetch(u_lm, t, 0).rg;
   // (a lamp's texel has its strength as alpha and glows as the sky's dark lets it; a flame has
-  // none, and burns as bright by day)
+  // none. By day both are 0: nothing that glows lays light on the ground in the sun)
   vec4 g = texelFetch(u_em, t, 0);
   // (a lamp carried up off the ground, on a car in the air, fades out of this flat scene: there
   // its glow would flood the ground under the car and the car itself)
   float up = m.r > 0.0 ? (1.0 - m.g) * 255.0 : 0.0;
-  vec3 e = g.rgb * (g.a > 0.0 ? u_glow * 7.0 * clamp(3.0 - up * 0.5, 0.0, 1.0) : ${FLAME.toFixed(1)});
+  vec3 e = g.rgb * (g.a > 0.0 ? u_glow * 7.0 * clamp(3.0 - up * 0.5, 0.0, 1.0) : u_flame);
   float solid = 0.0;
   vec2 wp = u_lmbox.xy + gl_FragCoord.xy;
   // a blast's ball, a fire, a rocket's flame: each of the frame's lights is itself a ball of

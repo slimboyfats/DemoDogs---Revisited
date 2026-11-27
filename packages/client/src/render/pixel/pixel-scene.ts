@@ -662,7 +662,9 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
       block.begin(view);
       this.stacks.block(block);
       // (the flames too, as light: the traced light takes its shape from them)
-      if (this.traced && this.flames && fx.quality > 0.6) this.gas?.emit(block.box);
+      // (not by day: in the sun a flame lays no pool of light on the road)
+      const lamps = this.lights.gain;
+      if (this.traced && this.flames && lamps > 0 && fx.quality > 0.6) this.gas?.emit(block.box);
       block.end(null, W, H);
       sky.block = block;
       // (the rays are walked while nothing else is bound: the frame's own target comes after)
@@ -675,7 +677,8 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
           this.relief!,
           cast ? this.sun : null,
           [A.sun[0]! * k, A.sun[1]! * k, A.sun[2]! * k],
-          A.glow,
+          A.glow * lamps,
+          lamps,
           null,
           W,
           H,
