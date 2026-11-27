@@ -316,7 +316,10 @@ export function updatePickups(w: World): void {
         break;
       }
       const hurt = c.hp < 70;
-      const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
+      const all = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
+      // (where money counts for nothing, no crate holds any, unless a venue has nothing else)
+      const rest = w.cashless ? all.filter((k) => k.kind !== 'cash') : all;
+      const kinds = rest.length ? rest : all;
       // where the car is running leans the odds: the back of the field rolls the strong ones
       const at = place(w, c);
       const total = kinds.reduce((s, k) => s + odds(k, hurt, at, w.mode.crates), 0);
