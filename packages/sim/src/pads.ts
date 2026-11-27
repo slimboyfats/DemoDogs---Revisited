@@ -119,6 +119,17 @@ export function updatePads(w: World, c: Car): void {
   w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
 }
 
+/**
+ * Is the flap on pumping takeoff `s` up at time t (default now)? Up, it throws a car its whole
+ * `lift`; flat, only its `low` part of that. A takeoff that does not pump is always up.
+ */
+export function pumpUp(w: World, s: StaticProp, t = w.time): boolean {
+  const P = s.def.leap?.pump;
+  if (!P) return true;
+  const p = (((t + (s.seed / 10) * P.period) % P.period) + P.period) % P.period;
+  return p < P.up;
+}
+
 /** How far back from a takeoff's lip it throws a car (art px). */
 const LIP = 18;
 
@@ -136,7 +147,8 @@ function leapOff(w: World, c: Car): boolean {
     const along = c.vx * Math.cos(s.rot) + c.vy * Math.sin(s.rot);
     if (along < L.min) return false;
     c.pad = s.index;
-    c.vz = Math.max(c.vz, L.lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
+    const lift = L.lift * (pumpUp(w, s) ? 1 : L.pump!.low);
+    c.vz = Math.max(c.vz, lift * Math.min(1.25, Math.max(0.55, along / BASE_SPEED)));
     c.z = Math.max(c.z, c.deck + 0.7);
     w.emit({ t: 'pad', kind: 'jump', car: c.index, prop: s.index, x: c.x, y: c.y, power: along });
     return true;

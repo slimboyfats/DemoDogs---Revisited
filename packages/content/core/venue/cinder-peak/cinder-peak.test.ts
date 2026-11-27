@@ -15,7 +15,7 @@ describe('venue.cinder-peak', () => {
     const R = w.relief!;
     expect(R.at(w.w / 2, w.h / 2 - 100)).toBeGreaterThan(80);
     expect(R.at(60, 60)).toBeLessThan(12);
-    expect(w.pads.filter((s) => s.def.pad!.kind === 'vent').length).toBe(4);
+    expect(w.pads.filter((s) => s.def.pad!.kind === 'vent').length).toBe(5);
     expect(w.paths.length).toBeGreaterThan(4);
     expect(w.statics.some((s) => s.def.id === 'prop.crater')).toBe(true);
   });

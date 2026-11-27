@@ -11,6 +11,24 @@ export const WATER_IN = 111;
 /** A box of the map's texels that changed: x0, y0, x1, y1 (the last two past the end). */
 export type Box = [number, number, number, number];
 
+/** The colour a map keeps for a pool of a material, or null where the pool is not its business. */
+export type Tint = (m: MaterialManifest) => readonly [number, number, number] | null;
+
+/** Water: every material with `water`, in its own colour. */
+export const waterTint: Tint = (m) => {
+  if (!m.water) return null;
+  const rgb = parseInt(m.colour.slice(1), 16);
+  return [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255];
+};
+
+/**
+ * The pools with a look of their own that are not water (pools.ts in the painter: lava, ice).
+ * The "colour" is which look it is, a channel each, so that it can be read between texels: red
+ * for molten, green for ice.
+ */
+export const poolTint: Tint = (m) =>
+  m.look === 'molten' ? [255, 0, 0] : m.look === 'ice' ? [0, 255, 0] : null;
+
 /** Deep water is the same water, darker and bluer: there is more of it to look down into. */
 export function deepOf(rgb: readonly [number, number, number]): [number, number, number] {
   return [rgb[0] * 0.45 + 8, rgb[1] * 0.5 + 24, rgb[2] * 0.56 + 40];
@@ -50,6 +68,8 @@ export class WaterMap {
   constructor(
     readonly w: number,
     readonly h: number,
+    /** Which pools are this map's, and what it keeps of each (water by default). */
+    readonly tintOf: Tint = waterTint,
   ) {
     this.gw = Math.ceil(w / WATER_Q) + 1;
     this.gh = Math.ceil(h / WATER_Q) + 1;
@@ -61,18 +81,19 @@ export class WaterMap {
   }
 
   /** The water a world starts with, and what stands in it. */
-  static of(w: World): WaterMap {
-    const M = new WaterMap(w.w, w.h);
-    for (const s of w.spills) if (s.def.water) M.pour(s.def, s.x, s.y, s.r);
-    if (M.any) M.stand(w);
+  static of(w: World, tint: Tint = waterTint): WaterMap {
+    const M = new WaterMap(w.w, w.h, tint);
+    for (const s of w.spills) M.pour(s.def, s.x, s.y, s.r);
+    // (what stands on lava or ice stands on it, not in it: only water laps round a foot)
+    if (M.any && tint === waterTint) M.stand(w);
     M.settle();
     return M;
   }
 
-  /** A pool of water of radius r at (x, y): new, or one that has grown. */
-  pour(m: MaterialManifest, x: number, y: number, r: number): void {
-    const rgb = parseInt(m.colour.slice(1), 16);
-    const col = [(rgb >> 16) & 255, (rgb >> 8) & 255, rgb & 255] as const;
+  /** A pool of radius r at (x, y): new, or one that has grown. Whether it was this map's to take. */
+  pour(m: MaterialManifest, x: number, y: number, r: number): boolean {
+    const col = this.tintOf(m);
+    if (!col) return false;
     const deepFrom = m.water?.deep;
     const R = r + WATER_OUT;
     const x0 = Math.max(0, Math.floor((x - R) / WATER_Q));
@@ -104,6 +125,7 @@ export class WaterMap {
       P[2] = Math.max(P[2], x1);
       P[3] = Math.max(P[3], y1);
     }
+    return true;
   }
 
   /**

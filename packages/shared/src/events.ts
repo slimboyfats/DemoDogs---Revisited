@@ -39,6 +39,8 @@ export type SimEvent =
   | { t: 'plunge'; car: number; x: number; y: number }
   /** A car drove or fell into water too deep to wade at (x, y), and is going under. */
   | { t: 'sink'; car: number; x: number; y: number }
+  /** A car drove into a pool that scalds (lava) at (x, y); `out` when it leaves it again. */
+  | { t: 'scald'; car: number; x: number; y: number; out?: boolean }
   | { t: 'land'; car: number; impact: number }
   /** A drift came to a stage of its charge (`go` false) or was let go and paid out (`go` true). */
   | { t: 'drift'; car: number; stage: number; go: boolean }
@@ -265,6 +267,10 @@ export type SimEvent =
   | { t: 'unpit'; car: number; x: number; y: number }
   /** A car went down a pit that closed over it: it is out, with no wreck left. */
   | { t: 'buried'; car: number; by: number }
+  /** A scrapped driver's ghost car got up from its wreck (`on`), or went away again. */
+  | { t: 'haunt'; car: number; on: boolean }
+  /** A ghost car shoved running car `car` at (x, y); nobody is hurt. */
+  | { t: 'spook'; ghost: number; car: number; x: number; y: number; impact: number }
   /** The pit at (x, y) filled itself in. */
   | { t: 'fill'; x: number; y: number; r: number }
   /** A snap of cold went out from a car at (x, y) to radius r. */

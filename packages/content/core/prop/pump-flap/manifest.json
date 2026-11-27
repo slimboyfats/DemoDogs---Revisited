@@ -1,0 +1,12 @@
+{
+  "id": "prop.pump-flap",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Pump flap",
+    "description": "The flap across a pump takeoff's lip: a striped steel plate that stands up and lies flat. Drawn by the takeoff, never placed.",
+    "since": "core@0.11.0"
+  },
+  "body": "static",
+  "radius": 32,
+  "solid": false
+}

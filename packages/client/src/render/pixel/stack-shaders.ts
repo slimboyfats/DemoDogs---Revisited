@@ -570,6 +570,7 @@ void main() {
 #endif
     vec3 wc = c * 255.0;
     waterOver(wc, gp, ivec2(floor(gp * u_fine)));
+    poolOver(wc, gp, ivec2(floor(gp * u_fine)));
     c = clamp(wc / 255.0, 0.0, 1.0);
   }
 #else
@@ -791,6 +792,10 @@ void main() {
     }
   } else back = lstep(min(vec3(0.6), bounced(wp)), 6.0, b);
   c = shoulder(c * (u_amb * occ + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
+#ifdef PAINT
+  // (what glows of itself is as bright by night and in the shade: lava)
+  if (g_glow > 0.0) c = mix(c, shoulder(g_glowc), g_glow);
+#endif
   o = vec4(c, 1.0);
 }`;
 

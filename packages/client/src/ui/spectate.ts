@@ -6,6 +6,8 @@ export interface SpectateActions {
   zoom(): void;
   /** Stop watching and go to the results. */
   skip(): void;
+  /** Drive the ghost of this screen's scrapped car (`on`), or go back to watching. */
+  ghost(on: boolean): void;
 }
 
 /**
@@ -40,14 +42,22 @@ export class SpectateBar {
     // click that follows would land on whatever results button is there
     press('specSkip', () => undefined);
     document.getElementById('specSkip')!.addEventListener('click', () => act.skip());
+    press('specGhost', () => act.ghost(true));
+    press('ghostWatch', () => act.ghost(false));
+    press('ghostSkip', () => undefined);
+    document.getElementById('ghostSkip')!.addEventListener('click', () => act.skip());
     addEventListener('keydown', (e) => {
-      if (!this.on || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if ((!this.on && !this.ghosting) || e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
       const k = e.key.toLowerCase();
-      if (isKey('watch', k)) {
+      if (isKey('ghost', k)) {
+        if (this.ghosting) act.ghost(false);
+        else if (this.ghostable) act.ghost(true);
+      } else if (isKey('skip', k) && this.skippable) act.skip();
+      else if (!this.on) return;
+      else if (isKey('watch', k)) {
         e.preventDefault();
         act.next(e.shiftKey ? -1 : 1);
       } else if (isKey('zoom', k)) act.zoom();
-      else if (isKey('skip', k) && this.skippable) act.skip();
     });
   }
 
@@ -58,6 +68,27 @@ export class SpectateBar {
     if (on === this.skippable) return;
     this.skippable = on;
     document.getElementById('specSkip')!.classList.toggle('hidden', !on);
+    document.getElementById('ghostSkip')!.classList.toggle('hidden', !on);
+  }
+
+  /** A ghost car is on offer: this screen's car is scrapped for good in a race that goes on. */
+  private ghostable = false;
+  /** This screen's driver is driving the ghost: the small bar is up and the driving controls are back. */
+  private ghosting = false;
+  private readonly bar = document.getElementById('ghostBar')!;
+  private readonly say = document.getElementById('ghostSay')!;
+
+  setGhost(offered: boolean, driving: boolean, say: string): void {
+    if (offered !== this.ghostable) {
+      this.ghostable = offered;
+      document.getElementById('specGhost')!.classList.toggle('hidden', !offered);
+    }
+    if (driving !== this.ghosting) {
+      this.ghosting = driving;
+      this.bar.classList.toggle('hidden', !driving);
+      document.body.classList.toggle('ghosting', driving);
+    }
+    if (driving && this.say.textContent !== say) this.say.textContent = say;
   }
 
   get shown(): boolean {

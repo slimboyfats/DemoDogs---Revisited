@@ -3,7 +3,7 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Bonefish Bay",
-    "description": "Race. A long lap of the beach: round the lighthouse on the causeway, along the sands, and round the lagoon, or over it on the boardwalk.",
+    "description": "Race. A long lap of the beach: round the lighthouse on the causeway, along the sands, and round the lagoon, or over it on the boardwalk, when the pier's flap is up.",
     "since": "core@0.10.0"
   },
   "mode": "mode.race",
@@ -287,7 +287,36 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.jump-takeoff",
+          "prop": "prop.signal-lamp",
+          "x": -377.5,
+          "y": 593.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -332.1,
+          "y": 659.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -661.6,
+          "y": 573.1,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -675.6,
+          "y": 651.9,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.pump-takeoff",
           "x": -825.6,
           "y": 514.6,
           "rot": -2.5252
@@ -308,52 +337,6 @@
           "x": -253.7,
           "y": 477,
           "rot": 0
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.switch-bollard",
-          "x": -848.8,
-          "y": 530,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -841.3,
-          "y": 519.4,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -833.8,
-          "y": 508.8,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -826.2,
-          "y": 498.2,
-          "rot": -2.5252
-        },
-        {
-          "prop": "prop.switch-bollard",
-          "x": -818.7,
-          "y": 487.6,
-          "rot": -2.5252
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.floor-switch",
-          "x": -559.6,
-          "y": 611.5,
-          "rot": -2.9755
         }
       ]
     },
@@ -473,6 +456,174 @@
           "x": 890,
           "y": 2650,
           "r": 260
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3404,
+          "y": 604,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3449,
+          "y": 655,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3487,
+          "y": 716,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3514,
+          "y": 778,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3536,
+          "y": 843,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3551,
+          "y": 909,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1422,
+          "y": 273,
+          "r": 96
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1679,
+          "y": 595,
+          "r": 84
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1758,
+          "y": 582,
+          "r": 60
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2037,
+          "y": 292,
+          "r": 104
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2129,
+          "y": 330,
+          "r": 70
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2470,
+          "y": 660,
+          "r": 90
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2689,
+          "y": 313,
+          "r": 80
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2768,
+          "y": 308,
+          "r": 64
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3282,
+          "y": 1314,
+          "r": 100
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3221,
+          "y": 1391,
+          "r": 72
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3059,
+          "y": 1775,
+          "r": 88
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2587,
+          "y": 1452,
+          "r": 96
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2495,
+          "y": 1462,
+          "r": 66
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2195,
+          "y": 1766,
+          "r": 84
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2114,
+          "y": 1762,
+          "r": 60
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1563,
+          "y": 1722,
+          "r": 104
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1527,
+          "y": 2280,
+          "r": 92
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1442,
+          "y": 2309,
+          "r": 70
+        },
+        {
+          "material": "material.lagoon",
+          "x": 898,
+          "y": 2077,
+          "r": 86
+        },
+        {
+          "material": "material.lagoon",
+          "x": 403,
+          "y": 2148,
+          "r": 100
+        },
+        {
+          "material": "material.lagoon",
+          "x": 376,
+          "y": 2058,
+          "r": 64
+        },
+        {
+          "material": "material.lagoon",
+          "x": 608,
+          "y": 1026,
+          "r": 84
         },
         {
           "material": "material.lagoon",

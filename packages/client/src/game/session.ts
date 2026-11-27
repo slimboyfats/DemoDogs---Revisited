@@ -1,6 +1,7 @@
 import {
   BASE_SPEED,
   DT,
+  NO_CONTROLS,
   type Controls,
   type SimEvent,
   type Difficulty,
@@ -218,9 +219,21 @@ export class Session {
     this.viewH = h / Math.sin(PITCH);
   }
 
+  /**
+   * This screen's driver has chosen to drive the ghost of a scrapped car (sim/haunt.ts). Off, a
+   * wreck's driver sends nothing, so no ghost gets up while they watch the others.
+   */
+  ghost = false;
+
+  /** What this screen's driver is doing with the controls this tick. */
+  private controls(): Controls {
+    const ctl = this.o.input.read(this.world.player.h);
+    return this.world.player.wrecked && !this.ghost ? NO_CONTROLS : ctl;
+  }
+
   /** One fixed tick: read input, step the world, play its events, move the camera. */
   step(): void {
-    this.tickWith(() => this.world.step(this.o.input.read(this.world.player.h)));
+    this.tickWith(() => this.world.step(this.controls()));
   }
 
   /** One online tick with every seat's controls. */
@@ -322,7 +335,7 @@ export class Session {
     try {
       this.sway(dt);
       if (this.net) {
-        this.net.local(this.o.input.read(this.world.player.h));
+        this.net.local(this.controls());
         this.net.pump(dt, {
           step: (seats) => this.stepSeats(seats),
           hash: () => this.world.hash(),
@@ -365,7 +378,7 @@ export class Session {
     }
     this.o.sound.drive({
       frac: top(C),
-      throttle: C.wrecked ? 0 : Math.abs(C.throttle),
+      throttle: C.wrecked && !C.haunt?.up ? 0 : Math.abs(C.throttle),
       boost: C.boosting,
       slide:
         C.sliding && moving > 40 ? Math.min(1, 0.35 + side / 110 + (C.handbrake ? 0.2 : 0)) : 0,

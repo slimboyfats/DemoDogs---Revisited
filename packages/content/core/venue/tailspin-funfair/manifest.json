@@ -248,6 +248,35 @@
       "rule": "place",
       "items": [
         {
+          "prop": "prop.signal-lamp",
+          "x": -744,
+          "y": 609,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -738.6,
+          "y": 688.8,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -970.6,
+          "y": 467,
+          "rot": 0
+        },
+        {
+          "prop": "prop.signal-lamp",
+          "x": -1032.2,
+          "y": 518,
+          "rot": 0
+        }
+      ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
           "prop": "prop.jump-takeoff",
           "x": -1059.5,
           "y": 328.5,
@@ -276,33 +305,33 @@
       "rule": "place",
       "items": [
         {
-          "prop": "prop.switch-bollard",
-          "x": -1087.3,
-          "y": 326.5,
+          "prop": "prop.pop-bollard",
+          "x": -1083.5,
+          "y": 325.4,
           "rot": -1.8677
         },
         {
-          "prop": "prop.switch-bollard",
-          "x": -1074.9,
-          "y": 322.7,
+          "prop": "prop.pop-bollard",
+          "x": -1072.9,
+          "y": 322.2,
           "rot": -1.8677
         },
         {
-          "prop": "prop.switch-bollard",
+          "prop": "prop.pop-bollard",
           "x": -1062.4,
           "y": 318.9,
           "rot": -1.8677
         },
         {
-          "prop": "prop.switch-bollard",
-          "x": -1050,
-          "y": 315.1,
+          "prop": "prop.pop-bollard",
+          "x": -1051.9,
+          "y": 315.7,
           "rot": -1.8677
         },
         {
-          "prop": "prop.switch-bollard",
-          "x": -1037.6,
-          "y": 311.3,
+          "prop": "prop.pop-bollard",
+          "x": -1041.4,
+          "y": 312.5,
           "rot": -1.8677
         }
       ]
@@ -428,17 +457,6 @@
           "x": -1188.9,
           "y": 95.7,
           "rot": 0
-        }
-      ]
-    },
-    {
-      "rule": "place",
-      "items": [
-        {
-          "prop": "prop.floor-switch",
-          "x": -893.4,
-          "y": 558.9,
-          "rot": -2.4643
         }
       ]
     },

@@ -1110,6 +1110,20 @@ export function char(s: Strip): void {
   }
   s.stale = true;
 }
+/**
+ * Turn a strip into the ghost of itself: every colour washed most of the way to a cold white, its
+ * shapes and shading still to be read (a scrapped driver's ghost car).
+ */
+export function pale(s: Strip): void {
+  const px = pixels(s);
+  for (let j = 0; j < px.length; j += 4) {
+    if (!px[j + 3]) continue;
+    px[j] = px[j]! * 0.3 + 140;
+    px[j + 1] = px[j + 1]! * 0.3 + 166;
+    px[j + 2] = px[j + 2]! * 0.3 + 178;
+  }
+  s.stale = true;
+}
 /** What each shade of red, green and blue chars to (a whole car is charred in the tick it is wrecked). */
 const charred = (add: number): Uint8ClampedArray =>
   Uint8ClampedArray.from({ length: 256 }, (_, i) => i * 0.22 + add);
