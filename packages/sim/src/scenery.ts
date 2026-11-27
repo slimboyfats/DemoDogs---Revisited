@@ -2,7 +2,7 @@ import { DECK_SURFACE, type PropManifest, type SceneryRule } from '@demodogs/sha
 import type { StaticProp } from './entities';
 import { spill } from './damage';
 import { pathAt } from './pads';
-import { leapGaps, leapPieces } from './leaps';
+import { jumpGaps } from './leaps';
 import { putProp, stand } from './stand';
 import { layAlong, layField } from './pieces';
 import { harbour, stacks } from './docks';
@@ -37,7 +37,7 @@ export function buildScenery(w: World, rng: Rng): void {
   const half = w.road / 2;
   // (nor on a path laid off the road, which is road; nor out in a lake of something deep)
   // (nor in the way of a car leaping the gap from a takeoff to its landing)
-  const leaps = leapGaps(leapPieces(w.venue, w.content));
+  const leaps = jumpGaps(w.venue, w.content);
   const blocked = (id: string, x: number, y: number): boolean => {
     const def = prop(id);
     if (def.pad || !def.solid) return false;

@@ -27,6 +27,7 @@ import type {
   LooseProp,
   Mine,
   Pickup,
+  Hunter,
   Rocket,
   Setup,
   Spill,
@@ -58,8 +59,11 @@ import {
 import { standings, trackIndex } from './race';
 import { blinded, updateDrops, type Cloud, type Spike } from './drops';
 import { updateCatchup } from './catchup';
+import { updateHunters } from './hunt';
 import { phased, trickControls, updateTricks } from './tricks';
-import { updateRescue } from './rescue';
+import { away, haunt } from './haunt';
+import { pitsOf, updateRescue } from './rescue';
+import { updateScald } from './heat';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -211,6 +215,8 @@ export class World {
   readonly critters: Critter[] = [];
   readonly props: LooseProp[] = [];
   readonly rockets: Rocket[] = [];
+  /** Hunting rockets on their way to the car in front (see hunt.ts). */
+  readonly hunters: Hunter[] = [];
   readonly mines: Mine[] = [];
   /** Shock pulses still spreading. */
   readonly pulses: Pulse[] = [];
@@ -231,6 +237,8 @@ export class World {
   readonly craters: Crater[] = [];
   /** Pools of oil, fuel, water and the like on the ground. */
   readonly spills: Spill[] = [];
+  /** The pools jumps are made over: a car that comes down in one has fallen short (rescue.ts). */
+  pits: Spill[] = [];
   /** Smoke clouds and spikes dropped behind cars. */
   readonly clouds: Cloud[] = [];
   readonly spikes: Spike[] = [];
@@ -341,6 +349,7 @@ export class World {
       );
     this.timeLeft = mode.timeLimit ?? 0;
     buildScenery(this, new Rng(venue.seed));
+    if (leaps.length) this.pits = pitsOf(this);
     // a secret way's crates float over their stands
     for (const s of this.statics)
       if (s.def.gives)
@@ -376,7 +385,9 @@ export class World {
       if (!def) throw new Error(`no car ${e.car}`);
       rivals.push(makeCar(this, def, e.paint, e.name, false, this.sandbox ? null : aiDef, e));
     }
-    const count = opts.field ? 0 : (opts.rivals ?? Math.max(0, FIELD_SIZE - this.humans.length));
+    const count = opts.field
+      ? 0
+      : (opts.rivals ?? Math.max(0, (mode.field ?? FIELD_SIZE) - this.humans.length));
     for (let i = 0; i < count; i++) {
       const t = types[(types.indexOf(opts.car) + 1 + i) % types.length]!;
       rivals.push(
@@ -394,9 +405,10 @@ export class World {
       const order = [...rivals.slice(0, 3), player, ...others, ...rivals.slice(3)];
       order.forEach((c, k) => this.placeOnTrack(c, this.gridSlot(k), k % 2 ? 1 : -1));
       this.cars.push(...order);
-      for (let q = 1; q <= 4; q++) {
+      // (a row of crates every fifth of a lap or so: with a full field there is one for most)
+      for (let q = 1; q <= 5; q++) {
         const T = this.track;
-        const i = Math.floor((T.n * q) / 4.6) % T.n;
+        const i = Math.floor((T.n * q) / 5.6) % T.n;
         const a = T.a[i]!;
         for (let k = -1; k <= 1; k++)
           this.pickups.push({
@@ -685,6 +697,8 @@ export class World {
           c.wreckT > this.mode.respawnSeconds
         )
           respawn(this, c);
+        // a driver who is out for good can still drive the ghost of the car
+        else if (c.isPlayer) ctl = haunt(this, c, seats[c.seat] ?? NO_CONTROLS);
       } else if (live) {
         ctl = c.ai
           ? c.ai.behaviour.drive(this, c)
@@ -705,6 +719,7 @@ export class World {
       updatePads(this, c);
       updateRide(this, c);
       updateRescue(this, c);
+      updateScald(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }
@@ -723,8 +738,8 @@ export class World {
         const o = this.cars[j]!;
         // a car down a pit is not there to be hit
         if (c.buried || o.buried || (c.sunk ?? 0) > 0 || (o.sunk ?? 0) > 0) continue;
-        // nor is a ghost
-        if (phased(c) || phased(o)) continue;
+        // nor is a ghost, nor a scrapped driver's ghost car that has gone away
+        if (phased(c) || phased(o) || away(c) || away(o)) continue;
         collideCars(this, c, o);
       }
     for (const c of this.cars) {
@@ -743,6 +758,7 @@ export class World {
     updateGuards(this, (x, y, power, z) => explode(this, x, y, power, null, z));
     updateAddons(this);
     updateRockets(this);
+    updateHunters(this);
     updateMines(this);
     updateDrops(this);
     updatePulses(this);
@@ -807,7 +823,7 @@ export class World {
         .num(c.nitro)
         .num(c.cash)
         .num(fitHash(c))
-        .num(c.wrecked ? 1 : 0);
+        .num(c.wrecked ? (c.haunt ? (c.haunt.up ? 3 : 2) : 1) : 0);
     for (const b of this.bots)
       H.num(b.x)
         .num(b.y)

@@ -9,6 +9,7 @@
   "grip": 0.45,
   "drag": 2.6,
   "quenches": true,
+  "water": {},
   "colour": "#2b4f63",
   "alpha": 0.8
 }

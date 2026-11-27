@@ -1,4 +1,4 @@
-import type { Car, World } from '@demodogs/sim';
+import { canHaunt, type Car, type World } from '@demodogs/sim';
 
 /** Seconds the camera stays on a car that has just been scrapped (yours, or the one watched). */
 export const LINGER = 1.4;
@@ -12,6 +12,11 @@ export function scrapped(w: World, c: Car): boolean {
 export function sidelined(w: World): boolean {
   if (w.sandbox || w.phase !== 'race') return false;
   return w.player.finished || scrapped(w, w.player);
+}
+
+/** This screen's driver can drive the ghost of their car: it is scrapped for good and the race goes on. */
+export function canGhost(w: World): boolean {
+  return w.phase === 'race' && w.endT < 0 && canHaunt(w, w.player);
 }
 
 /** The cars worth watching: every other car still in it, the human drivers first. */

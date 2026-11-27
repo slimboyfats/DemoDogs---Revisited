@@ -23,7 +23,9 @@ export type FxKind =
   /** Thin tyre smoke: a stippled cloud of single cells. */
   | 'smoke'
   /** Dust kicked off the dirt: a stippled cloud hugging the ground. */
-  | 'dust';
+  | 'dust'
+  /** Foam on water: one flat cell that slides out from where it was churned up, slows and is gone. */
+  | 'foam';
 
 export interface Particle {
   kind: FxKind;
@@ -190,6 +192,11 @@ export function drawParticle(p: Particle, normal: Put, glow: Put, cell = 1): voi
       );
       break;
     }
+    case 'foam':
+      // whole while it is fresh, then breaking up: there, not there, gone
+      if (t > 0.55 && (Math.floor(p.life * 14 + p.max * 60) & 1) === 0) break;
+      normal(p.x, p.y, 0, Math.max(cell, s), p.rgb, t < 0.55 ? 0.95 : 0.7, Shape.Rect);
+      break;
     default: {
       const grow = p.kind === 'smoke' ? 1 + t * 2.2 : 1 + t * 1.4;
       const a = (p.kind === 'smoke' ? 0.75 : 0.6) * (1 - t) * Math.min(1, t * 6 + 0.2);

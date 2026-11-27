@@ -33,7 +33,14 @@ export type SimEvent =
   | { t: 'wreck'; car: number; by: number }
   | { t: 'respawn'; car: number }
   /** A car off the course in a race was put back on the road, from (x, y). */
-  | { t: 'rescue'; car: number; x: number; y: number }
+  /** `fell`: out of the pool under a jump it fell short of. */
+  | { t: 'rescue'; car: number; x: number; y: number; fell?: boolean }
+  /** A car came down at (x, y) in the pool under a jump: it lies there until it is put back. */
+  | { t: 'plunge'; car: number; x: number; y: number }
+  /** A car drove or fell into water too deep to wade at (x, y), and is going under. */
+  | { t: 'sink'; car: number; x: number; y: number }
+  /** A car drove into a pool that scalds (lava) at (x, y); `out` when it leaves it again. */
+  | { t: 'scald'; car: number; x: number; y: number; out?: boolean }
   | { t: 'land'; car: number; impact: number }
   /** z: up on a deck, art px; absent on the ground. */
   | { t: 'explode'; x: number; y: number; power: number; z?: number }
@@ -157,10 +164,24 @@ export type SimEvent =
    * (`grow`) or was zapped small (`shrink`), came back to its own size (`back`), was flattened
    * under a much bigger car (`squash`), got a second wind (`wind`), had a lead collar clamped on or
    * drop off (`collar`, `collar-off`; `id` is the pickup), or bones were called down on it (`bones`).
+   * A hunting rocket left car `car` (`hunt`), found the car in front and is coming down on it
+   * (`hunt-lock`), landed on it (`hunt-hit`) or burnt out with nobody to land on (`hunt-off`).
    */
   | {
       t: 'catchup';
-      what: 'grow' | 'shrink' | 'back' | 'squash' | 'wind' | 'collar' | 'collar-off' | 'bones';
+      what:
+        | 'grow'
+        | 'shrink'
+        | 'back'
+        | 'squash'
+        | 'wind'
+        | 'collar'
+        | 'collar-off'
+        | 'bones'
+        | 'hunt'
+        | 'hunt-lock'
+        | 'hunt-hit'
+        | 'hunt-off';
       car: number;
       by: number;
       id: string;
@@ -244,6 +265,10 @@ export type SimEvent =
   | { t: 'unpit'; car: number; x: number; y: number }
   /** A car went down a pit that closed over it: it is out, with no wreck left. */
   | { t: 'buried'; car: number; by: number }
+  /** A scrapped driver's ghost car got up from its wreck (`on`), or went away again. */
+  | { t: 'haunt'; car: number; on: boolean }
+  /** A ghost car shoved running car `car` at (x, y); nobody is hurt. */
+  | { t: 'spook'; ghost: number; car: number; x: number; y: number; impact: number }
   /** The pit at (x, y) filled itself in. */
   | { t: 'fill'; x: number; y: number; r: number }
   /** A snap of cold went out from a car at (x, y) to radius r. */

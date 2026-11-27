@@ -26,7 +26,7 @@ describe('weapon.sniffer', () => {
     w.step({ ...NO_CONTROLS, fire: true });
     expect(w.rockets.length).toBe(1);
     expect(w.rockets[0]!.target).toBe(b.index);
-    expect(me.ammo).toBe(1);
+    expect(me.ammo).toBe(sniffer().ammo - 1);
   });
 
   it('chases its target wherever it drives, and hits it', () => {

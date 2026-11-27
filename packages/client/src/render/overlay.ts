@@ -3,6 +3,7 @@ import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { Camera } from './scene';
 import { drawMud } from './tricks-fx';
+import { fitWords, type Word } from './words';
 
 /** World to device pixels, for drawing flat things over the world. */
 export interface Projector {
@@ -36,16 +37,41 @@ export function drawOverlay(
   // floating words
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  for (const tx of fx.texts) {
-    ctx.globalAlpha = Math.min(1, (tx.life / tx.max) * 2.5);
-    ctx.font = `900 ${Math.round((tx.big ? 22 : 15) * dpr)}px system-ui, sans-serif`;
-    const sx = P.sx(tx.x);
-    const sy = P.sy(tx.y, tx.z + P.rise(tx.x, tx.y));
-    ctx.lineWidth = 4 * dpr;
+  // (they are for fun: small, none over another, none cut off by the edge of the screen)
+  const spots = fx.texts.map((tx): Word => {
+    const px = Math.round((tx.big ? 17 : 13) * dpr);
+    ctx.font = `900 ${px}px system-ui, sans-serif`;
+    return {
+      x: P.sx(tx.x),
+      y: P.sy(tx.y, tx.z + P.rise(tx.x, tx.y)),
+      w: ctx.measureText(tx.text).width + 6 * dpr,
+      h: px * 1.15,
+    };
+  });
+  // what they keep off: the gauges, the map and the standings, and every car with its name
+  const taken: Word[] = [
+    { x: 105 * dpr, y: 62 * dpr, w: 210 * dpr, h: 124 * dpr },
+    { x: W - 70 * dpr, y: 95 * dpr, w: 140 * dpr, h: 190 * dpr },
+  ];
+  for (const c of w.cars) {
+    if (c.wrecked) continue;
+    const sx = P.sx(c.x);
+    const sy = P.sy(c.y, c.z + 8 + P.rise(c.x, c.y));
+    if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
+    taken.push({ x: sx, y: sy - 8 * dpr, w: 52 * dpr, h: 50 * dpr });
+  }
+  fitWords(spots, W, H, 6 * dpr, taken);
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < spots.length; i++) {
+    const tx = fx.texts[i]!;
+    const at = spots[i]!;
+    ctx.globalAlpha = Math.min(0.92, (tx.life / tx.max) * 2.5);
+    ctx.font = `900 ${Math.round((tx.big ? 17 : 13) * dpr)}px system-ui, sans-serif`;
+    ctx.lineWidth = 3.5 * dpr;
     ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.strokeText(tx.text, sx, sy);
+    ctx.strokeText(tx.text, at.x, at.y);
     ctx.fillStyle = tx.col;
-    ctx.fillText(tx.text, sx, sy);
+    ctx.fillText(tx.text, at.x, at.y);
   }
   ctx.globalAlpha = 1;
 

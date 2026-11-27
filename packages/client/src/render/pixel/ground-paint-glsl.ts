@@ -1,6 +1,7 @@
 import { NEAR_Q, OFF, WILD_Q, type GroundPaint } from '../ground-paint';
 import { Field, LEDGES } from '../terrain';
 import { SHOULDER } from '@demodogs/sim';
+import { WATER_OUT, WATER_Q } from '../water';
 
 const TERRAINS = ['grass', 'dirt', 'sand', 'snow', 'gravel', 'paved'];
 
@@ -24,6 +25,11 @@ export const PAINT_UNIFORMS = [
   'u_wn',
   'u_ws',
   'u_wayN',
+  'u_wm',
+  'u_wmSize',
+  'u_wt',
+  'u_pm',
+  'u_pmSize',
 ] as const;
 
 /**
@@ -408,13 +414,26 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
   // tidy verge with a clean edge.
   if (d <= half_) {
 #ifdef DIRT_ROAD
+    // packed earth, always a good deal darker than the country it runs through (a brown road
+    // on brown ground is told by its tone), with a chalk line down each edge
     col = sunny((u_cD * 0.75 + u_cG * 0.25) * 0.84);
+    float roadL = dot(col, vec3(0.3, 0.55, 0.15));
+    float groundL = dot(sunny(u_cG), vec3(0.3, 0.55, 0.15));
+    if (roadL > groundL * 0.6) col *= groundL * 0.6 / roadL;
     if (abs(d - half_ * 0.44) < 5.0) col *= 1.08;
-    if (d > half_ - 3.0) col *= 0.86;
+    if (d > half_ - 6.2 && d < half_ - 2.8 && !(g_way > 0.5 && mod(al, 14.0) < 7.0)) col = vec3(250.0, 240.0, 214.0);
+    else if (d > half_ - 2.8) col *= 0.88;
+#else
+#if TERRAIN == 5
+    // (in a town the ground is paving as grey as a road: the road is dark asphalt with yellow
+    // lines down its edges)
+    col = vec3(84.0, 88.0, 104.0);
+    if (d > half_ - 6.0 && d < half_ - 2.6 && !(g_way > 0.5 && mod(al, 14.0) < 7.0)) col = vec3(250.0, 204.0, 48.0);
 #else
     col = vec3(122.0, 126.0, 140.0);
     // (the line along the edge is broken where a way leaves)
     if (d > half_ - 5.6 && d < half_ - 2.6 && !(g_way > 0.5 && mod(al, 14.0) < 7.0)) col = vec3(250.0, 248.0, 238.0);
+#endif
     else if (d < 1.5 && mod(al, 30.0) < 15.0 && !lane) col = vec3(250.0, 248.0, 238.0);
 #endif
   } else if (kerbed && d <= half_ + 7.0) {
@@ -427,7 +446,9 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
 #if TERRAIN == 3
     col = vec3(240.0, 244.0, 250.0);
 #elif TERRAIN == 5
-    col = sunny(u_cG * 1.3);
+    // a pale kerbstone all the way round, then the pavement
+    col = e < 4.0 ? vec3(236.0, 234.0, 226.0) : sunny(u_cG * 1.3);
+    if (e < 4.0 && mod(al, 12.0) < 0.8) col *= 0.84;
 #else
     col = sunny(u_cD);
 #endif
@@ -596,6 +617,167 @@ void roadOver(inout vec3 c, vec2 wp, ivec2 gc, vec4 F) {
   c = col * m;
 }
 #endif
+uniform sampler2D u_wm;      // the water (water.ts): its colour, and how far in from the shore
+uniform vec2 u_wmSize;
+uniform vec2 u_wt;           // the water's clock (s), and whether there is any water at all
+// Whether this cell is water (nothing grows, lies or is ground into it).
+float g_water = 0.0;
+// Water laid over the ground in c: see-through where it laps the shore and plain further out, in
+// flat tones that step, like the rest of the country. All that moves is here: the line of foam
+// that runs up the shore and back, the rings that leave it, the wavelets that drift across open
+// water and wink out, the slow swell under them, a glint here and there. The same foam gathers
+// round whatever stands in the water, since the map counts its foot as shore.
+void waterOver(inout vec3 c, vec2 wp, ivec2 gc) {
+  if (u_wt.y < 0.5) return;
+  vec4 W = texture(u_wm, (wp / ${f(WATER_Q)} + 0.5) / u_wmSize);
+  float d = W.a * 127.5 - ${f(WATER_OUT)};
+  if (d < -5.0) return;
+  vec4 F = fieldsAt(wp);
+  float t = u_wt.x;
+  // (a shore is never a line drawn with compasses)
+  d += (F.a - 0.5) * 3.0;
+  // the waterline runs up the shore and back, each stretch of it in its own time
+  float lap = sin(t * 1.3 + F.g * 19.0);
+  float dl = d + lap * 1.1;
+  if (dl <= 0.0) {
+    // wet sand where the last wave reached
+    if (d > -1.3) c *= 0.84;
+    return;
+  }
+  g_water = 1.0;
+  vec3 w = W.rgb * 255.0;
+#ifdef BRIGHT
+  float wl = dot(w, vec3(0.3, 0.55, 0.15));
+  w = clamp((wl + (w - wl) * 1.12) * 1.08 + 6.0, 0.0, 255.0);
+#endif
+  // the slow swell: broad patches a tone lighter that slide by
+  float sw = sin(F.r * 15.0 + wp.x * 0.016 - wp.y * 0.011 + t * 0.45);
+  if (sw > 0.5) w *= 1.045;
+  else if (sw < -0.72) w *= 0.965;
+  // wavelets: short light dashes in rows, drifting with the breeze, each there a while and gone;
+  // and dark ones under them going the other way
+  vec2 q = vec2(wp.x + t * 5.0 + sin(wp.y * 0.19 + t * 0.8) * 2.2, wp.y + sin(wp.x * 0.07 + t * 0.6) * 1.2);
+  float ry = floor(q.y / 3.0);
+  float ox = q.x + ry * 7.3;
+  float rx = floor(ox / 11.0);
+  float hh = hash2(int(rx), int(ry), u_seed + 77);
+  if (hh > 0.62 && q.y - ry * 3.0 < 0.85 && ox - rx * 11.0 < 2.5 + hh * 5.0 && fract(hh * 13.0 + t * 0.3) < 0.62)
+    w *= 1.2;
+  else {
+    float oy = wp.y + sin(wp.x * 0.11 - t * 0.7) * 1.6;
+    float sy = floor(oy / 4.0);
+    float px = wp.x - t * 3.0 + sy * 5.1;
+    float sx = floor(px / 13.0);
+    float h2 = hash2(int(sx), int(sy), u_seed + 78);
+    if (h2 > 0.7 && oy - sy * 4.0 < 0.85 && px - sx * 13.0 < 3.0 + h2 * 6.0 && fract(h2 * 9.0 - t * 0.22) < 0.6)
+      w *= 0.88;
+  }
+  // a glint of the sun, a cell of it, here and there for a moment
+  float gh = hash2(gc.x >> 1, gc.y >> 1, u_seed + 79);
+  if (gh > 0.9985 && fract(gh * 311.0 + t * 0.9) < 0.3) w = vec3(250.0, 253.0, 255.0);
+  // see-through where it is thin: the bed shows in the first few px, less in the next few
+  float thin = dl < 3.0 ? 0.5 : dl < 8.0 ? 0.74 : dl < 15.0 ? 0.88 : 0.95;
+  c = mix(c, w * (dl < 8.0 ? 1.06 : 1.0), thin);
+  // the foam: a line where the water meets the shore, and now and then a ring leaving it that
+  // thins out and is gone a few px on
+  vec3 foam = vec3(247.0, 252.0, 255.0);
+  if (dl < 1.5) c = foam;
+  else {
+    float ph = fract(t * 0.21 + F.g * 5.0);
+    float rd = dl - (2.5 + ph * 8.0);
+    if (rd > 0.0 && rd < 1.05 && ph < 0.8 && F.b + ph * 0.3 < 0.86) c = mix(c, foam, 0.8 * (1.0 - ph));
+  }
+}
+uniform sampler2D u_pm;      // the pools with a look of their own (water.ts poolTint): which look, how far in
+uniform vec3 u_pmSize;       // its size, and whether there are any
+// How much of this cell gives its own light (lava: night and shade do not dim it), and the colour.
+float g_glow = 0.0;
+vec3 g_glowc = vec3(0.0);
+// Smooth noise, 0 to 1, a cell to the unit.
+float vnoise(vec2 p, int seed) {
+  vec2 i = floor(p);
+  vec2 f = p - i;
+  f = f * f * (3.0 - 2.0 * f);
+  int x = int(i.x);
+  int y = int(i.y);
+  return mix(mix(hash2(x, y, seed), hash2(x + 1, y, seed), f.x), mix(hash2(x, y + 1, seed), hash2(x + 1, y + 1, seed), f.x), f.y);
+}
+// A pool that is not water but moves all the same, laid over the ground in c in flat tones.
+// Lava: sheets of crust sliding over the glow, yellow where they part, bubbles that swell and
+// burst, a white-hot line against the scorched rock round it. Ice: a clean pale sheet with a rim
+// of frost, a few still cracks, bars of sheen that slide across it and a sparkle now and then.
+void poolOver(inout vec3 c, vec2 wp, ivec2 gc) {
+  if (u_pmSize.z < 0.5) return;
+  vec4 W = texture(u_pm, (wp / ${f(WATER_Q)} + 0.5) / u_pmSize.xy);
+  float d = W.a * 127.5 - ${f(WATER_OUT)};
+  if (d < -9.0) return;
+  vec4 F = fieldsAt(wp);
+  float t = u_wt.x;
+  d += (F.a - 0.5) * 4.0;
+  if (W.r >= W.g) {
+    if (d <= 0.0) {
+      // the rock round it is scorched black, and lit by it
+      float k = 1.0 + d / 8.0;
+      if (k <= 0.0) return;
+      c = mix(c, vec3(52.0, 34.0, 36.0), k > 0.6 ? 0.78 : k > 0.3 ? 0.5 : 0.24);
+      float beat = 0.8 + 0.2 * sin(t * 2.4 + F.g * 17.0);
+      c += vec3(120.0, 44.0, 4.0) * k * k * beat;
+      g_glow = k * k * 0.7;
+      g_glowc = c / 255.0;
+      return;
+    }
+    g_water = 1.0;
+    // two sheets of noise sliding past each other: where they agree the crust has parted
+    vec2 fl = vec2(t * 2.2, t * 1.3);
+    float n1 = vnoise((wp + fl) / 13.0, u_seed + 88);
+    float n2 = vnoise((wp - fl * 0.8) / 17.0 + 9.3, u_seed + 89);
+    float v = abs(n1 - n2) + 0.02 * sin(t * 1.7 + F.r * 21.0);
+    vec3 l = v < 0.035 ? vec3(255.0, 238.0, 132.0)
+      : v < 0.1 ? vec3(255.0, 160.0, 34.0)
+      : v < 0.27 ? vec3(244.0, 98.0, 18.0)
+      : v < 0.4 ? vec3(176.0, 52.0, 22.0) : vec3(96.0, 36.0, 32.0);
+    // bubbles: one to a patch, each on its own clock, swelling until it bursts in a bright ring
+    vec2 bq = floor(wp / 20.0);
+    float bh = hash2(int(bq.x), int(bq.y), u_seed + 91);
+    if (bh > 0.7) {
+      vec2 bo = (bq + 0.25 + 0.5 * vec2(hash2(int(bq.x), int(bq.y), u_seed + 92), hash2(int(bq.x), int(bq.y), u_seed + 93))) * 20.0;
+      float ph = fract(t * (0.22 + bh * 0.3) + bh * 7.0);
+      float bd = distance(wp, bo);
+      if (ph < 0.78) {
+        float br = 0.8 + ph * 3.4;
+        if (bd < br) l = bd > br - 1.1 ? vec3(255.0, 240.0, 150.0) : vec3(255.0, 176.0, 44.0);
+      } else {
+        float rr = 4.0 + (ph - 0.78) * 18.0;
+        if (abs(bd - rr) < 0.8) l = vec3(255.0, 248.0, 196.0);
+      }
+    }
+    // a cooled shelf along the shore, and the white-hot line where it meets the rock
+    if (d < 1.5) l = vec3(255.0, 232.0, 120.0);
+    else if (d < 3.6 && F.b < 0.75) l = vec3(110.0, 38.0, 30.0);
+    c = l;
+    g_glow = 1.0;
+    g_glowc = l / 255.0;
+    return;
+  }
+  if (d <= 0.0) {
+    // frost creeps a little way onto the ground
+    if (d > -1.6) c = mix(c, vec3(244.0, 250.0, 255.0), 0.55);
+    return;
+  }
+  g_water = 1.0;
+  vec3 ic = F.r > 0.55 ? vec3(198.0, 234.0, 250.0) : vec3(178.0, 222.0, 246.0);
+  // a few cracks, still
+  if (d > 5.0 && abs(vnoise(wp / 21.0, u_seed + 96) - vnoise(wp / 29.0 + 4.1, u_seed + 97)) < 0.012) ic = vec3(128.0, 184.0, 224.0);
+  // the sheen: slanted bars of light that slide slowly over the sheet
+  float sb = fract((wp.x * 0.7 + wp.y) / 76.0 - t * 0.11 + F.g * 0.2);
+  if (sb < 0.06 || (sb > 0.1 && sb < 0.125)) ic = mix(ic, vec3(255.0), 0.62);
+  float gh = hash2(gc.x >> 1, gc.y >> 1, u_seed + 95);
+  if (gh > 0.9975 && fract(gh * 311.0 + t * 1.3) < 0.35) ic = vec3(255.0);
+  // a rim of frost, and the edge of the sheet under it
+  if (d < 2.2) ic = vec3(247.0, 251.0, 255.0);
+  else if (d < 3.4) ic = vec3(146.0, 198.0, 232.0);
+  c = mix(c, ic, 0.93);
+}
 vec3 groundPaint(vec2 wp, ivec2 gc) {
   vec2 p = wp - 0.5;
   vec4 F = fieldsAt(p);

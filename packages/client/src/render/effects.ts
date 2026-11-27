@@ -1,5 +1,5 @@
 import { DECK_SURFACE, DT, type MaterialManifest, type SimEvent } from '@demodogs/shared';
-import type { Car, StaticProp, World } from '@demodogs/sim';
+import { wading, type Car, type StaticProp, type World } from '@demodogs/sim';
 import { roll } from './dice';
 import { SliceFx } from './slice-fx';
 import { Spread } from './spread';
@@ -17,6 +17,7 @@ import {
   stripOf,
   blowApart,
   dropLoose,
+  pale,
   restore,
   stripCrown,
   voxelsOf,
@@ -366,8 +367,9 @@ export class Effects {
     for (const s of w.statics) if (s.def.rubble) kinds.add(s.def.rubble.prop);
     for (const id of kinds) this.unCut.push(art.prop(id));
     // the pools the map starts with
+    // (water is not painted on: the ground's painter draws it from the water map, see water.ts)
     for (const s of w.spills)
-      if (s.fixed) {
+      if (s.fixed && !(s.def.water && ground.water) && !(s.def.look && ground.pools)) {
         if (s.r > TERRAIN_FROM) this.terrain(s.def, s.x, s.y, s.r);
         else this.pool(s.def, s.x, s.y, s.r);
       }
@@ -738,7 +740,7 @@ export class Effects {
   }
 
   text(x: number, y: number, text: string, col = '#fff', big = false): void {
-    this.texts.push({ x, y, z: 18, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
+    this.texts.push({ x, y, z: 26, text, col, life: big ? 1.8 : 1.2, max: big ? 1.8 : 1.2, big });
   }
 
   fling(
@@ -874,6 +876,7 @@ export class Effects {
    * out the same way.
    */
   terrain(m: MaterialManifest, x: number, y: number, r: number): void {
+    if (this.pour(m, x, y, r)) return;
     const rgb = parseInt(m.colour.slice(1), 16);
     const k = 3 + Math.floor(rand(0, 3));
     const ph = rand(0, TAU);
@@ -915,7 +918,232 @@ export class Effects {
   }
 
   /** A pool on the ground: a ragged blot of the material's colour, cell by cell, with a sheen. */
+  /** One cell of foam on the water at (x, y), sliding off at (vx, vy). */
+  private foam(x: number, y: number, vx: number, vy: number, life: number, size = 1): void {
+    this.emit('foam', x, y, 0, vx, vy, 0, life, size, roll() < 0.3 ? 0xd6f1fb : 0xf7fcff);
+  }
+
+  /** Drops thrown up off the water at (x, y): `n` of them, as hard as `v`, about (vx, vy). */
+  private drops(x: number, y: number, n: number, v: number, vx = 0, vy = 0): void {
+    for (let i = 0; i < n; i++) {
+      const a = rand(0, TAU);
+      const out = rand(0.2, 1) * v;
+      this.emit(
+        'pip',
+        x + rand(-2, 2),
+        y + rand(-2, 2),
+        rand(0.5, 2),
+        vx + Math.cos(a) * out,
+        vy + Math.sin(a) * out,
+        rand(0.6, 1.5) * v + 30,
+        rand(0.3, 0.6),
+        0.5,
+        roll() < 0.5 ? 0xf7fcff : 0xbfe9f7,
+      );
+    }
+  }
+
+  /**
+   * Something went into the water at (x, y), as hard as `k` (1 a car driving in, 3 one dropping
+   * in off a jump): drops thrown up, and a ring of foam that runs out from it.
+   */
+  splash(x: number, y: number, k: number): void {
+    const q = this.quality;
+    this.drops(x, y, Math.round((6 + 10 * k) * q), 28 + 16 * k);
+    const n = Math.round((10 + 9 * k) * q);
+    const ph = rand(0, TAU);
+    for (let i = 0; i < n; i++) {
+      const a = ph + (i / n) * TAU;
+      const v = (20 + 12 * k) * rand(0.85, 1.15);
+      this.foam(
+        x + Math.cos(a) * 5,
+        y + Math.sin(a) * 5,
+        Math.cos(a) * v,
+        Math.sin(a) * v,
+        rand(0.5, 0.8) + 0.12 * k,
+        k > 2 ? 1.5 : 1,
+      );
+    }
+    const v = this.vol(x, y);
+    if (v > 0) {
+      this.sound.hiss(Math.min(1, 0.25 + 0.2 * k) * v);
+      if (k > 2) this.sound.thud(0.7 * v);
+    }
+  }
+
+  /** Seconds each car's tyres stay alight after it has come out of lava. */
+  private readonly alight: number[] = [];
+
+  /**
+   * A car in lava burns where it stands, boldly: flames up round the whole body, sparks and a
+   * column of black smoke, and when it gets out its tyres stay alight for a moment and trail
+   * fire. On ice it throws up chips of ice from under the wheels and leaves no rut. Returns
+   * whether the ground under it is such a pool (nothing to mark, no dust to raise).
+   */
+  private poolFx(c: Car, i: number, cs: number, sn: number): boolean {
+    const hot = (c.scald ?? 0) > 0;
+    const lit = (this.alight[i] ?? 0) > 0;
+    const k = c.size;
+    const L = c.def.body.halfLength * k;
+    const W = c.def.body.halfWidth * k;
+    const q = this.quality;
+    if (hot) this.alight[i] = 1.6;
+    else if (lit) this.alight[i]! -= DT;
+    if ((hot || lit) && !c.wrecked && this.near(c.x, c.y, 280)) {
+      const n = hot ? 5 : 1;
+      for (let j = 0; j < n; j++) {
+        if (roll() > (hot ? 0.9 : 0.6) * q) continue;
+        // (out of the lava it is the four wheels that burn)
+        const fx = hot ? rand(-1, 1) : roll() < 0.5 ? -0.7 : 0.7;
+        const fy = hot ? rand(-1, 1) : roll() < 0.5 ? -1 : 1;
+        const x = c.x + cs * L * fx - sn * W * fy;
+        const y = c.y + sn * L * fx + cs * W * fy;
+        this.flame(
+          x,
+          y,
+          c.z + (hot ? rand(0, 4) : 0),
+          hot ? rand(5, 8) : 3,
+          c.vx * 0.5,
+          c.vy * 0.5,
+        );
+      }
+      if (hot) {
+        if (roll() < 0.5 * q) this.plume(c.x, c.y, c.z + 6, rand(3, 5));
+        if (roll() < 0.4 * q) this.spark(c.x + rand(-L, L), c.y + rand(-W, W), c.z + 2, 30);
+        if (roll() < 0.25 * q) this.ember(c.x, c.y, c.z + 4);
+      } else if (roll() < 0.3 * q) this.puff(c.x, c.y, c.z + 2, 'smoke');
+    }
+    if (hot) return true;
+    const P = this.ground.pools;
+    if (!P || c.deck > 0 || c.z - c.deck > 0.5 || P.depth(c.x, c.y) <= 0) return false;
+    // (not lava, so ice) chips fly from under the wheels when it slides or is driven hard
+    const v = Math.hypot(c.vx, c.vy);
+    if (v > 30 && this.near(c.x, c.y, 260) && roll() < (c.sliding ? 0.9 : 0.35) * q) {
+      const side = roll() < 0.5 ? -1 : 1;
+      const end = roll() < 0.5 ? -0.7 : 0.7;
+      const a = rand(0, TAU);
+      this.emit(
+        'pip',
+        c.x + cs * L * end - sn * W * side,
+        c.y + sn * L * end + cs * W * side,
+        0.5,
+        c.vx * 0.3 + Math.cos(a) * 18,
+        c.vy * 0.3 + Math.sin(a) * 18,
+        rand(20, 45),
+        rand(0.3, 0.6),
+        roll() < 0.3 ? 1 : 0.5,
+        roll() < 0.5 ? 0xffffff : 0xcfeaf8,
+      );
+    }
+    return true;
+  }
+
+  /** Whether each car was in water a tick ago, and how high over the ground it was. */
+  readonly wetWas: boolean[] = [];
+  private readonly highWas: number[] = [];
+
+  /**
+   * A car in water (`wading` in the sim: the pools it is slowed by are the water drawn): a splash
+   * as it goes in, then foam folded back off its nose down both sides and churned up behind it,
+   * and small drops off the wheels, all of it more the faster it goes. One going under in deep
+   * water boils. Returns whether it is in water.
+   */
+  private wade(c: Car, i: number, cs: number, sn: number): boolean {
+    const w = this.w;
+    const wet = (w.spills.length > 0 && wading(w, c)[0] > 0) || (c.drown ?? 0) > 0;
+    const was = this.wetWas[i] ?? false;
+    const fell = (this.highWas[i] ?? 0) > 3;
+    this.wetWas[i] = wet;
+    this.highWas[i] = c.z - c.deck;
+    if (!wet) return false;
+    const v = Math.hypot(c.vx, c.vy);
+    const k = c.size;
+    if (!was && (v > 25 || fell)) this.splash(c.x, c.y, fell ? 3 : Math.min(2, v / 70));
+    if (!this.near(c.x, c.y, 260)) return true;
+    const q = this.quality;
+    if ((c.drown ?? 0) > 0) {
+      // going under: the water closes over it, bubbling
+      if (roll() < 0.7 * q) {
+        const a = rand(0, TAU);
+        const r = rand(2, 9) * k;
+        this.foam(
+          c.x + Math.cos(a) * r,
+          c.y + Math.sin(a) * r,
+          Math.cos(a) * 9,
+          Math.sin(a) * 9,
+          0.4,
+        );
+      }
+      if (roll() < 0.2 * q) this.drops(c.x, c.y, 1, 14);
+      return true;
+    }
+    const L = c.def.body.halfLength * k;
+    const W = c.def.body.halfWidth * k;
+    const go = Math.min(1, v / 55);
+    if (v < 6) {
+      // standing in it: a ripple off the body now and then
+      if (roll() < 0.04 * q) {
+        const a = rand(0, TAU);
+        this.foam(
+          c.x + Math.cos(a) * L,
+          c.y + Math.sin(a) * W,
+          Math.cos(a) * 7,
+          Math.sin(a) * 7,
+          0.5,
+        );
+      }
+      return true;
+    }
+    // which way it is really going (it slides about in water), and across that
+    const ux = c.vx / v;
+    const uy = c.vy / v;
+    for (const side of [-1, 1]) {
+      // the bow wave: off each corner of the end that leads, out and back
+      if (roll() < (0.35 + 0.5 * go) * q) {
+        const lead = c.vf >= 0 ? 1 : -1;
+        const bx = c.x + cs * L * lead - sn * W * side * 0.8;
+        const by = c.y + sn * L * lead + cs * W * side * 0.8;
+        const out = (10 + 22 * go) * rand(0.7, 1.2);
+        this.foam(
+          bx,
+          by,
+          -uy * side * out + ux * v * 0.25,
+          ux * side * out + uy * v * 0.25,
+          rand(0.45, 0.8) + 0.3 * go,
+        );
+      }
+      // the wake: churned water left behind the wheels, spreading a little
+      if (roll() < (0.25 + 0.5 * go) * q) {
+        const tail = c.vf >= 0 ? -1 : 1;
+        const tx = c.x + cs * L * tail * rand(0.8, 1.1) - sn * W * side * rand(0.2, 0.9);
+        const ty = c.y + sn * L * tail * rand(0.8, 1.1) + cs * W * side * rand(0.2, 0.9);
+        this.foam(tx, ty, -uy * side * rand(3, 12), ux * side * rand(3, 12), rand(0.8, 1.7));
+      }
+      // small splashes off the wheels
+      if (roll() < 0.3 * go * q) {
+        const wx = c.x + cs * L * 0.6 * (roll() < 0.5 ? 1 : -1) - sn * W * side;
+        const wy = c.y + sn * L * 0.6 * (roll() < 0.5 ? 1 : -1) + cs * W * side;
+        this.drops(
+          wx,
+          wy,
+          1,
+          16 + 14 * go,
+          c.vx * 0.4 - uy * side * 14,
+          c.vy * 0.4 + ux * side * 14,
+        );
+      }
+    }
+    return true;
+  }
+
+  /** Water is poured into the ground's water map, where there is one, not blotted on. */
+  private pour(m: MaterialManifest, x: number, y: number, r: number): boolean {
+    // (and so is a pool with a look of its own: lava, ice)
+    return !!(this.ground.water?.pour(m, x, y, r) || this.ground.pools?.pour(m, x, y, r));
+  }
+
   pool(m: MaterialManifest, x: number, y: number, r: number): void {
+    if (this.pour(m, x, y, r)) return;
     const rgb = parseInt(m.colour.slice(1), 16);
     const k = 2 + Math.floor(rand(0, 3));
     const ph = rand(0, TAU);
@@ -1055,14 +1283,20 @@ export class Effects {
             this.burst(broke.chips, 90, { ...from, speed: 30 + e.amount * 3 });
             this.burst(broke.loose, 60, { ...from, speed: 25 }, true);
           });
-          if (c === w.player && e.amount > 6)
-            this.shake = Math.max(this.shake, Math.min(10, e.amount * 0.35));
+          // a blow to this screen's car is felt hard; one it lands on another, a little
+          if (c === w.player && e.amount > 3)
+            this.shake = Math.max(this.shake, Math.min(12, 2 + e.amount * 0.6));
+          else if (e.by === w.player.index && e.amount > 6)
+            this.shake = Math.max(this.shake, Math.min(6, 1.5 + e.amount * 0.3));
           break;
         }
         case 'crash': {
           for (let i = 0; i < 6; i++) this.spark(e.x, e.y, 3, e.impact * 0.4);
           const v = this.vol(e.x, e.y);
           if (v > 0) S.crash(e.impact * v);
+          // driving into something hard jolts the picture, whether or not it cost anything
+          if (e.player && e.impact > 25)
+            this.shake = Math.max(this.shake, Math.min(8, e.impact * 0.07));
           break;
         }
         case 'press': {
@@ -1171,14 +1405,59 @@ export class Effects {
           this.slices.start(c, c.z);
           break;
         }
+        case 'sink': {
+          // into water too deep to wade: a great splash, and it starts to go under
+          this.splash(e.x, e.y, 3);
+          if (e.car === w.player.index) this.setMsg('TOO DEEP!', 1.2);
+          break;
+        }
+        case 'plunge': {
+          // short of the jump and down in the pool under it: a fountain of what the pool is made of
+          const pit = w.pits.find((p) => Math.hypot(p.x - e.x, p.y - e.y) < p.r);
+          const rgb = pit ? parseInt(pit.def.colour.slice(1, 7), 16) : 0x36b4d2;
+          for (let k = 0; k < 16; k++)
+            this.spray(e.x + rand(-7, 7), e.y + rand(-7, 7), rgb, 0, 0, 70);
+          for (let k = 0; k < 6; k++) this.puff(e.x, e.y, 2, 'smoke');
+          if (this.near(e.x, e.y, 320)) S.crash(8);
+          if (e.car === w.player.index) {
+            this.shake = Math.max(this.shake, 4);
+            this.setMsg('FELL SHORT!', 1.6);
+          } else if (this.near(e.x, e.y, 300)) this.text(e.x, e.y, 'FELL SHORT', '#9fe8ff');
+          break;
+        }
         case 'rescue': {
           const c = w.cars[e.car]!;
-          // gone from where it sat in a burst, and put together on the road slice by slice
-          for (let k = 0; k < 10; k++) this.puff(e.x, e.y, 3, 'smoke');
+          // gone from where it sat in a burst (out of water, in a last ring of foam), and put
+          // together on the road slice by slice
+          if ((this.ground.water?.depth(e.x, e.y) ?? 0) > 0) this.splash(e.x, e.y, 1);
+          else for (let k = 0; k < 10; k++) this.puff(e.x, e.y, 3, 'smoke');
           this.slices.start(c, c.z);
           if (this.near(c.x, c.y, 320)) S.whoosh();
-          if (e.car === w.player.index) this.setMsg('BACK ON THE ROAD', 1.4);
+          if (e.car === w.player.index)
+            this.setMsg(e.fell ? 'BACK WHERE YOU LEFT THE ROAD' : 'BACK ON THE ROAD', 1.4);
           else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'LIFTED BACK', '#9fe8ff');
+          break;
+        }
+        case 'scald': {
+          // into the lava: a great hiss, a burst of flame and sparks, and it says so
+          const c = w.cars[e.car]!;
+          const v = this.vol(e.x, e.y);
+          if (e.out) {
+            if (v > 0) S.hiss(0.3 * v);
+            break;
+          }
+          for (let k = 0; k < 6; k++)
+            this.flame(e.x + rand(-7, 7), e.y + rand(-5, 5), c.z, rand(4, 6));
+          for (let k = 0; k < 14; k++) this.spark(e.x, e.y, 2, 90);
+          for (let k = 0; k < 4; k++) this.plume(e.x + rand(-5, 5), e.y + rand(-5, 5), 4, 5);
+          if (v > 0) {
+            S.hiss(0.9 * v, true);
+            S.hiss(0.6 * v);
+          }
+          if (e.car === w.player.index) {
+            this.setMsg('OUCH! LAVA BURNS', 1.4);
+            this.shake = Math.max(this.shake, 3);
+          } else if (this.near(c.x, c.y, 300)) this.text(c.x, c.y, 'SIZZLE!', '#ffb03a');
           break;
         }
         case 'land':
@@ -1810,6 +2089,24 @@ export class Effects {
         case 'trick':
           this.tricks.handle(this, w, e, S, this.art);
           break;
+        case 'haunt':
+          if (e.on) {
+            // the wreck gets up whole: its body is painted back into the same strip, as for a
+            // car towed back, and put together where it stands
+            const c = w.cars[e.car]!;
+            const body = this.bodies[e.car]!;
+            this.heavy.settle(body);
+            restore(body, this.carArt(c).body);
+            pale(body);
+            this.changed.add(body);
+            this.smokeT[e.car] = 0;
+            this.slices.start(c, c.z);
+          }
+          this.tricks.haunt(this, w, e, S);
+          break;
+        case 'spook':
+          this.tricks.haunt(this, w, e, S);
+          break;
         case 'catch':
         case 'leash':
         case 'snap':
@@ -2051,7 +2348,11 @@ export class Effects {
       const soft = c.offroad && Math.abs(c.vf) > 14;
       const down = c.deck < 1 && c.z - c.deck < 0.5 && !c.wrecked;
       const last = (this.ruts[i] ??= [0, 0, 0, 0, 0]);
-      if (down && (c.sliding || soft)) {
+      // in water there is no ground to mark and no dust to raise: it wades, with a wake
+      // (nor on lava or ice: it burns, or throws up chips of ice)
+      const wet = this.wade(c, i, cs, sn) || this.poolFx(c, i, cs, sn);
+      if (wet) last[4] = 0;
+      else if (down && (c.sliding || soft)) {
         const g = this.ground.g;
         let spray = 0x8a8680;
         if (c.offroad) {
@@ -2086,10 +2387,10 @@ export class Effects {
         }
         last[4] = 1;
       } else last[4] = 0;
-      if (c.sliding && roll() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
-      if (c.offroad && Math.abs(c.vf) > 50 && roll() < 0.25)
+      if (!wet && c.sliding && roll() < 0.3) this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'smoke');
+      if (!wet && c.offroad && Math.abs(c.vf) > 50 && roll() < 0.25)
         this.puff(c.x - cs * 9, c.y - sn * 9, 1, 'dust');
-      if (!c.buried && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
+      if (!c.buried && !c.haunt && !((c.sunk ?? 0) > 0) && (c.wrecked || c.hp < 45)) {
         const t = (this.smokeT[i] ?? 0) - DT;
         this.smokeT[i] = t;
         if (t <= 0) {
@@ -2205,7 +2506,7 @@ export class Effects {
     this.shock.step(DT);
     howlTick(this, w);
     guardTick(this, w, this.sound);
-    this.catchup.step(this, w);
+    this.catchup.step(this, w, this.sound);
     this.tricks.step(this, w);
     this.life.step(this, w);
     // hollows in the road are light and shade on the ground: each painted once, as it is laid

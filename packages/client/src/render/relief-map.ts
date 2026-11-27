@@ -28,6 +28,13 @@ export const FAR_DARK = 0.62;
 const REACH = 20;
 const SOUTH = 56;
 
+/** How much paler built road is for each px it stands high, and the most it is. */
+const HIGH_PER = 0.011;
+const HIGH_MOST = 0.2;
+
+/** The look of a face that is the side of raised road (alpha on a face: see leaps.ts for the rest). */
+export const WALL = 224;
+
 /** A part of the map, in px: from (x0, y0) up to but not including (x1, y1). */
 export interface Box {
   x0: number;
@@ -102,7 +109,8 @@ export class ReliefBake {
     const reach = (sides + 2) * B;
     const X0 = clampX(D.x0 - reach);
     const X1 = clampX(D.x1 + reach);
-    const Y0 = clampY(D.y0 - (south + 3) * B - tall);
+    // (from the top of a block: a level block's tone is that of the first px of it met)
+    const Y0 = clampY(Math.floor((D.y0 - (south + 3) * B - tall) / B) * B);
     const Y1 = clampY(D.y1 + reach);
     if (D.x1 <= D.x0 || D.y1 <= D.y0) return { x0: 0, y0: 0, x1: 0, y1: 0 };
     // the height of every px, read between the grid's points a row at a time
@@ -160,6 +168,19 @@ export class ReliefBake {
         level[by * bw + bx] = a === b ? 1 : b - a < 1 ? 2 : 0;
         above[by * bw + bx] = up;
       }
+    // Built road (a platform, its ramps, an on-ramp's lane) is one even surface, and how high it
+    // stands is told two ways that are both smooth: it is a little paler the higher it is, so a
+    // ramp fades up from the ground's own tone to the deck's, and its slope takes the light evenly.
+    const platAt = (x: number, y: number): number => (R.plat ? R.platAt(x + 0.5, y + 0.5) : 0);
+    const high = (p: number): number => 1 + Math.min(HIGH_MOST, p * HIGH_PER);
+    // (its slope is read over a wider span than open ground's, so where a ramp begins and ends
+    // the light turns over a car's length, not at a crease)
+    const ramp = (x: number, y: number, p: number): number => {
+      const lit = (at(x + 8, y) - at(x - 8, y) + at(x, y + 8) - at(x, y - 8)) / 16;
+      return (1 + Math.max(-0.27, Math.min(0.27, lit * 0.95))) * high(p);
+    };
+    // (a level block's tone, worked out once)
+    const tone = new Uint8Array(bw * bh);
     // (the row before the first is where each column of the picture had got to)
     for (let x = X0; x < X1; x++)
       last[x] = Y0 > 0 ? Math.round(Y0 - 1 - hh[(Y0 - 1) * w + x]! * rise) : -1;
@@ -183,11 +204,14 @@ export class ReliefBake {
         if (calm) {
           // level ground all round: where it is, in flat light. Gently rolling ground: lit by its
           // slope and nothing else (no face, drop, lip or shade can be within reach of it)
-          let g = 128;
+          let g = tone[blk]!;
           if (calm === 2) {
             const lit = (at(x + 3, y) - at(x - 3, y) + at(x, y + 3) - at(x, y - 3)) / 6;
-            g = Math.round(128 * (1 + Math.max(-0.46, Math.min(0.4, lit * 1.7))));
-          }
+            const p = platAt(x, y);
+            g = Math.round(
+              128 * (p > 0.1 ? ramp(x, y, p) : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7))),
+            );
+          } else if (g === 0) g = tone[blk] = Math.round(128 * high(platAt(x, y)));
           for (let j = Math.max(0, Math.min(prev + 1, s)); j <= end; j++) {
             const k = (j * w + x) * 4;
             out[k] = Math.min(255, y - j);
@@ -204,8 +228,10 @@ export class ReliefBake {
         const sy = (at(x, y + 1) - at(x, y - 1)) / 2;
         const slope = Math.hypot(sx, sy);
         // (a jump piece's side is wall from where it leaves the ground, however low it is there)
-        const code = faces ? faces(x + 0.5, y + 0.5) : 0;
-        let steep = slope > (code ? 0.45 : 1);
+        // (and so is the side of raised road, which is a wall of its own look: `WALL`)
+        const plat = platAt(x, y);
+        const code = (faces ? faces(x + 0.5, y + 0.5) : 0) || (plat > 0 ? WALL : 0);
+        let steep = slope > (code === WALL ? 0.7 : code ? 0.45 : 1);
         // the side of a platform eases out at its foot, and the foot is still wall: a gentle
         // slope there with the steep of the side just above it is face too, or grass shows in it
         if (!steep && slope > 0.04 && R.plat && R.platAt(x + 0.5, y + 0.5) > 0.1)
@@ -220,7 +246,9 @@ export class ReliefBake {
           ? 1
           : steep
             ? 1 + Math.max(-0.5, Math.min(0.22, lit * 0.5))
-            : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
+            : plat > 0.1
+              ? ramp(x, y, plat)
+              : 1 + Math.max(-0.46, Math.min(0.4, lit * 1.7));
         // and higher ground up and to the left throws its shadow here
         let dark =
           at(x - 5, y - 5) - v > 4 || at(x - 12, y - 12) - v > 10 || at(x - 20, y - 20) - v > 17;
@@ -232,7 +260,7 @@ export class ReliefBake {
         if (dark) shade *= 0.64;
         // the lip of a drop catches the light
         else if (v - Math.min(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) > 4)
-          shade *= 1.16;
+          shade *= plat > 0.1 ? 1.3 : 1.16;
         // and the foot of a face is in its shade, whichever way it looks
         else if (Math.max(at(x + 2, y), at(x, y + 2), at(x - 2, y), at(x, y - 2)) - v > 4)
           shade *= 0.8;

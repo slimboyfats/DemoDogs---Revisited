@@ -77,5 +77,6 @@ describe('the picture-to-ground map', () => {
       before = now;
     }
     expect(reliefChange(before, build([]))).toBeNull();
-  });
+    // (six maps baked whole: slow when the whole suite runs beside it)
+  }, 60000);
 });

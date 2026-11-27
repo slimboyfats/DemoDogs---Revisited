@@ -4,7 +4,8 @@ import type { World } from './world';
 
 /**
  * Gates (props with a `gate`, see shared/pieces.ts): solid things that sink into the ground to let
- * cars by and rise again. One with a `period` keeps a beat; one without stands until a switch
+ * cars by and rise again. One with a `period` keeps a beat (a row with a `wave` one after another,
+ * so the gap in it moves along the row); one without stands until a switch
  * plate within reach is pressed (pads.ts), then lies down for its `open` seconds. Down, it is
  * `down` like anything knocked over: out of the way of cars, shots and blasts. It never rises
  * onto a car, but waits until none is over it.
@@ -14,7 +15,9 @@ import type { World } from './world';
 export function gateOpen(w: World, s: StaticProp, t = w.time): boolean {
   const G = s.def.gate!;
   if (G.period > 0) {
-    const p = (((t / G.period + G.shift) % 1) + 1) % 1;
+    // (in a wave, later the further across its own turn it stands)
+    const across = G.wave > 0 ? (-s.x * Math.sin(s.rot) + s.y * Math.cos(s.rot)) / G.wave : 0;
+    const p = (((t / G.period + G.shift - across) % 1) + 1) % 1;
     return p < G.open / G.period;
   }
   return (s.openT ?? 0) > 0;

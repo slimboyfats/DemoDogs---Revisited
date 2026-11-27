@@ -1,9 +1,14 @@
 import { fitted, mounts, place } from './addon-mounts';
 import { wayPainted } from './ways';
 import {
+  away,
+  SINK_TIME,
+  gateOpen,
   moundAt,
   pressOpen,
   pressWarning,
+  pumpUp,
+  ventOpen,
   type Bot,
   type Car,
   type Critter,
@@ -162,6 +167,14 @@ export function queueStacks(
     R.group(r.y);
     R.stack(art.prop(r.def.id), r.x, r.y, r.z + 4, r.h);
   }
+  // a hunting rocket, high over the road: twice the size of the thing itself, to be seen from afar
+  for (const H of w.hunters)
+    if (R.visible(H.x, H.y, 20, H.z + 10)) {
+      R.group(H.y + 40);
+      R.zoom(2);
+      R.stack(art.prop(H.def.id), H.x, H.y, H.z, H.h);
+      R.zoom(1);
+    }
   queueArms(R, art, w);
   queueDecoys(R, art, w);
   queueTrickThings(R, art, w, fx.tricks);
@@ -203,12 +216,17 @@ function queueStatic(
   P: Car,
   still?: StaticHook,
 ): void {
+  if (s.def.leap?.pump) queueFlap(R, art, w, s);
   if (s.def.pad) {
     queuePad(R, art, w, s);
     return;
   }
   if (s.def.gate) {
     queueGate(R, art, w, s);
+    return;
+  }
+  if (s.def.signal) {
+    queueSignal(R, art, w, s);
     return;
   }
   const strip = fx.scarred.get(s) ?? art.prop(s.def.id);
@@ -305,6 +323,80 @@ function queueGate(R: StackSink, art: Art, w: World, s: StaticProp): void {
     const z = i / strip.res - drop;
     if (z >= 0) R.slice(strip, i, s.x, s.y, z, s.rot);
   }
+}
+
+/** How far a pump takeoff's flap has risen (0 flat, 1 up), eased from tick to tick. */
+const flaps = new WeakMap<StaticProp, number>();
+/** How high the flap's front stands when up (art px), and the seconds it takes to rise or fall. */
+const FLAP_HIGH = 9;
+const FLAP_SWING = 0.25;
+
+/**
+ * The flap across a pumping takeoff's lip: flat on the ramp while it throws short, tipped up at
+ * its front while it throws far (drawn as the plate lifted, each slice a little higher).
+ */
+function queueFlap(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  const L = s.def.leap!;
+  const want = pumpUp(w, s) ? 1 : 0;
+  const was = flaps.get(s) ?? want;
+  const step = 1 / 60 / FLAP_SWING;
+  const k = want > was ? Math.min(want, was + step) : Math.max(want, was - step);
+  flaps.set(s, k);
+  // on the last of the ramp before its lip
+  const u = L.long / 2 - 12;
+  const x = s.x + Math.cos(s.rot) * u;
+  const y = s.y + Math.sin(s.rot) * u;
+  if (!R.visible(x, y, 40, 16)) return;
+  R.group(y);
+  R.stack(art.prop(L.pump!.plate), x, y, 0.6 + k * FLAP_HIGH, s.rot);
+}
+
+/** Seconds before the beat turns that a signal lamp shows amber. */
+const SIGNAL_WARN = 0.7;
+
+/** What each signal lamp reads: the nearest gate on a beat or vent within its reach (null: none). */
+const reads = new WeakMap<StaticProp, StaticProp | null>();
+
+/** Is the thing a signal reads open (a gate down, a vent blowing) at time t? */
+function beatOpen(w: World, o: StaticProp, t: number): boolean {
+  if (o.def.gate) return gateOpen(w, o, t);
+  return o.def.leap ? pumpUp(w, o, t) : ventOpen(w, o, 0, t);
+}
+
+/**
+ * A signal lamp, in the pose that says what the beat it reads is doing: red (its look's first
+ * pose) while that is shut, amber when it is about to turn either way, green while it is open.
+ */
+function queueSignal(R: StackSink, art: Art, w: World, s: StaticProp): void {
+  if (!R.visible(s.x, s.y, s.def.radius + 8, 28)) return;
+  let o = reads.get(s);
+  if (o === undefined) {
+    o = null;
+    let near = s.def.signal!.reach;
+    for (const g of [...w.gates, ...w.pads, ...w.leaps]) {
+      const beat = g.def.gate
+        ? g.def.gate.period > 0
+        : g.def.leap
+          ? !!g.def.leap.pump
+          : g.def.pad?.kind === 'vent';
+      const d = Math.hypot(g.x - s.x, g.y - s.y);
+      if (!beat || d >= near) continue;
+      near = d;
+      o = g;
+    }
+    reads.set(s, o);
+  }
+  const now = o ? beatOpen(w, o, w.time) : false;
+  const soon = o ? beatOpen(w, o, w.time + SIGNAL_WARN) : false;
+  const pose = now !== soon ? 1 : now ? 2 : 0;
+  R.group(s.y);
+  R.stack(
+    art.prop(s.def.id, undefined, Math.min(pose, art.poses(s.def.id) - 1)),
+    s.x,
+    s.y,
+    0,
+    s.rot,
+  );
 }
 
 /** Steps of a tile's running light a second. */
@@ -418,7 +510,8 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const flat = squashed(c);
   // going down a pit: it tips over the edge the way it went in, and gets small and dark
   const fall = falling(c);
-  if (fall >= 1) return;
+  // (nor is there anything to draw of a ghost car that has gone away)
+  if (fall >= 1 || away(c)) return;
   const k = c.size * (1 + (1 - Math.min(1, flat)) * 0.95) * (1 - 0.8 * fall ** 1.5);
   if (!R.visible(c.x, c.y, 20 * k, 14 * k)) return;
   R.group(c.y);
@@ -449,11 +542,13 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   // the wheels go some of the way with a body that is tipping in
   const wtx = ((c.sunkTip?.[0] ?? 0) * cs - (c.sunkTip?.[1] ?? 0) * sn) * tip * 0.3;
   const wty = ((c.sunkTip?.[0] ?? 0) * sn + (c.sunkTip?.[1] ?? 0) * cs) * tip * 0.3;
-  for (const wh of D.wheels)
+  // wading: its wheels and the foot of its body are under the water
+  const wet = !!fx.wetWas[c.index] && fall === 0 && !c.wrecked;
+  for (const wh of wet ? [] : D.wheels)
     for (const sg of [-1, 1]) {
       const wx = wh[0];
       const wy = wh[1] * sg;
-      const steer = wx > 0 && !c.wrecked ? c.steer * 0.45 : 0;
+      const steer = wx > 0 && (!c.wrecked || c.haunt) ? c.steer * 0.45 : 0;
       R.stack(
         wheel,
         c.x + cs * wx - sn * wy + wtx,
@@ -467,7 +562,7 @@ function queueCar(R: StackSink, art: Art, w: World, fx: Effects, c: Car): void {
   const rx = -sn;
   const ry = cs;
   const up = k * flat;
-  for (let i = 0; i < body.n; i++) {
+  for (let i = wet ? Math.min(body.n - 1, Math.round(1.2 * body.res)) : 0; i < body.n; i++) {
     const t = i / (body.n - 1);
     const o = roll * t * flat;
     const l = lurch * t * flat;
@@ -624,10 +719,12 @@ function rideLift(w: World, c: Car, k: number): number {
   return Math.max(axles, mid * 0.7);
 }
 
-/** How far down a pit a car is: 0 not at all, 1 out of sight. */
+/** How far down a pit (or under deep water) a car is: 0 not at all, 1 out of sight. */
 export function falling(c: Car): number {
   if (c.buried) return Math.min(1, c.wreckT / 0.5);
   if ((c.sunk ?? 0) > 0) return Math.min(1, ((c.sunkFrom ?? 0) - c.sunk!) / 0.5);
+  // (going under in deep water is the same sight, slower: smaller and dimmer till it is gone)
+  if ((c.drown ?? 0) > 0) return Math.min(0.97, (c.drown! / SINK_TIME) ** 1.4);
   return 0;
 }
 
@@ -725,7 +822,7 @@ export function queueShadows(
   if (sun) return;
   for (const c of w.cars)
     // a car up on a deck has its shadow on the deck, which the ground's shadows cannot reach
-    if (c.deck < 4 && falling(c) === 0 && R.visible(c.x, c.y, 20))
+    if (c.deck < 4 && falling(c) === 0 && !away(c) && R.visible(c.x, c.y, 20))
       // (off the ground its shadow falls away from it, down and to the right, and thins: it is
       // how you see a car has left an edge and is in the air)
       shadow(

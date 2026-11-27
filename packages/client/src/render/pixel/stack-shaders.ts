@@ -561,6 +561,18 @@ void main() {
   // (planks stand over whatever lies on the ground: a pool is under them, not on them)
   if ((g_way > 1.5 && g_way < 2.5) || g_way > 4.5) mk = vec4(0.0);
   c = c * (1.0 - mk.a) + mk.rgb;
+  // water lies over the ground and what is marked on it, but not over a way (which is built
+  // over it or through it), nor on the face of ground raised out of it
+#ifdef RELIEF
+  if (g_way < 0.5 && rl.b <= 0.75) {
+#else
+  if (g_way < 0.5) {
+#endif
+    vec3 wc = c * 255.0;
+    waterOver(wc, gp, ivec2(floor(gp * u_fine)));
+    poolOver(wc, gp, ivec2(floor(gp * u_fine)));
+    c = clamp(wc / 255.0, 0.0, 1.0);
+  }
 #else
   vec2 i = floor(p);
   vec2 f = p - i;
@@ -618,6 +630,13 @@ void main() {
   float pebble = pb > 0.965 ? (mod(cell.y, 2.0) < 1.0 ? 1.22 : 0.82) : 1.0;
   float grit = a1 < 0.08 ? 0.86 : a1 > 0.94 ? 1.1 : 1.0;
   float m = grass * g + tar * t + dirt * pebble * grit;
+#ifdef PAINT
+  // (water has no grain: what moves on it is its own)
+  if (g_water > 0.5) {
+    k = 1.0;
+    m = 1.0;
+  }
+#endif
 #ifdef BRIGHT
   // (the bright look is plain: only a breath of grain)
   c = clamp(c * (1.0 + (k * m - 1.0) * 0.25), 0.0, 1.0);
@@ -634,7 +653,16 @@ void main() {
     // a jump piece's face is in its own look (leaps.ts): stone, timber, earth or concrete
     float code = floor(rl.a * 255.0 + 0.5);
     float sk = floor(code / 32.0);
-    if (sk > 0.5) {
+    if (sk > 6.5) {
+      // the side of raised road is a built wall: one plain face of concrete, lit as it lies,
+      // whatever lies at its foot and whichever way it runs (beds drawn by height come out as
+      // a checker on a wall seen end on)
+#ifdef BRIGHT
+      c = vec3(0.38, 0.39, 0.44);
+#else
+      c = vec3(0.27, 0.28, 0.31);
+#endif
+    } else if (sk > 0.5) {
       // along the wall, whichever of the piece's sides it is, and up it
       float turn = (code - sk * 32.0) * 0.19634954;
       vec2 dir = vec2(cos(turn), sin(turn));
@@ -677,13 +705,26 @@ void main() {
   c = min(vec3(1.0), c * shd);
   gl_FragDepth = clamp(1.0 - (wp.y * u_depth.x + shift * u_hk * u_depth.y - 4.0 - u_depth.z) * u_depth.w, 0.0, 1.0);
 #endif
-  // Snow settles in patches, a cell at a time, and last on the tarmac where the cars keep it off.
+  // Snow settles in patches, and last on the tarmac where the cars keep it off.
   if (u_snow > 0.0) {
+    float drift = soft(wp / 16.0 + 40.0);
+#ifdef BRIGHT
+    // (the bright look is plain: one soft white laid in round drifts with a soft edge, no cells,
+    // no specks, and only a thin drift here and there across the road)
+    float lie = mix(drift * 0.6 + soft(wp.yx / 9.0 + 7.0) * 0.4, drift * 0.55 + soft(wp.yx / 6.0 + 3.0) * 0.45, tar);
+    float full = u_snow * (1.3 - 0.9 * tar) - 0.12;
+    float on = (1.0 - smoothstep(full - 0.07, full + 0.02, lie)) * (1.0 - 0.25 * tar);
+    vec3 s = mix(vec3(0.88, 0.91, 0.97), vec3(0.94, 0.96, 1.0), soft(wp.yx / 21.0 + 90.0));
+    c = mix(c, s, on);
+#else
     // on grass and dirt it lies in drifts with dithered edges; on tarmac the cars keep it to a
     // thin dusting, a cell here and there, thicker where a drift has blown across
-    float drift = soft(wp / 16.0 + 40.0);
     float fine = bayer(ci);
     float lie = mix(drift * 0.55 + soft(wp / 4.0 + 7.0) * 0.25 + fine * 0.2, drift * 0.3 + h1 * 0.35 + fine * 0.35, tar);
+#ifdef PAINT
+    // (it does not lie on water)
+    lie += g_water * 9.0;
+#endif
     if (lie < u_snow * (1.3 - 0.86 * tar) - 0.12) {
       // snow in two close tones dithered into each other (hollows a little blue), a fleck of
       // shadow here and there, and grass tips showing through until it lies deep
@@ -692,6 +733,7 @@ void main() {
       if (h1 < 0.04) s *= 0.92;
       c = grass > 0.5 && tip > 0.5 && u_snow < 0.9 ? c : s;
     }
+#endif
   }
   // Wet ground is darker, and darker and bluer again where water stands (the stacks' reflections
   // are drawn into the same puddles).
@@ -750,6 +792,10 @@ void main() {
     }
   } else back = lstep(min(vec3(0.6), bounced(wp)), 6.0, b);
   c = shoulder(c * (u_amb * occ + q * 1.1 + back) + q * (30.0 / 255.0) + back * 0.06);
+#ifdef PAINT
+  // (what glows of itself is as bright by night and in the shade: lava)
+  if (g_glow > 0.0) c = mix(c, shoulder(g_glowc), g_glow);
+#endif
   o = vec4(c, 1.0);
 }`;
 
