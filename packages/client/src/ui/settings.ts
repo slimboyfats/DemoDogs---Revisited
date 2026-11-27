@@ -42,6 +42,10 @@ export class Settings {
       });
       mark();
     }
+    // a slider's track is lit as far as its thumb
+    this.root.addEventListener('input', (e) => {
+      if (e.target instanceof HTMLInputElement) lit(e.target);
+    });
     for (const b of document.querySelectorAll<HTMLButtonElement>('.settingsBtn'))
       b.addEventListener('click', () => this.open());
     document.getElementById('settingsBack')!.onclick = () => this.close();
@@ -60,6 +64,7 @@ export class Settings {
     this.root.classList.toggle('over', !this.fromPause);
     if (this.fromPause) document.getElementById('pauseMenu')!.classList.add('hidden');
     this.hooks.opened();
+    for (const r of this.root.querySelectorAll<HTMLInputElement>('.slide input')) lit(r);
     this.root.classList.remove('hidden');
   }
 
@@ -68,4 +73,12 @@ export class Settings {
     this.root.classList.add('hidden');
     this.hooks.closed(this.fromPause);
   }
+}
+
+/** Light a slider's track as far as its thumb (`--fill`, read by theme.css). */
+function lit(r: HTMLInputElement): void {
+  if (r.type !== 'range') return;
+  const lo = Number(r.min || 0);
+  const hi = Number(r.max || 100);
+  r.style.setProperty('--fill', `${hi > lo ? ((Number(r.value) - lo) / (hi - lo)) * 100 : 0}%`);
 }

@@ -1,4 +1,5 @@
 import { rangeGive, rangeMend, rangeMove, type Car, type World } from '@demodogs/sim';
+import { DISPLAY } from '../render/type';
 import {
   CHEERS,
   Lesson,
@@ -15,8 +16,8 @@ import type { Sound } from '../audio/sound';
 import type { Projector } from '../render/overlay';
 import { PITCH } from '../render/scene';
 
-const INK = '#1b2233';
-const SUN = '#ffd23f';
+const INK = '#0a1440';
+const SUN = '#ffd60a';
 const PAPER = '#fff8e6';
 const TAU = Math.PI * 2;
 
@@ -319,7 +320,7 @@ export class Tutor {
     px: number,
     col: string,
   ): void {
-    ctx.font = `900 ${Math.round(px)}px system-ui, sans-serif`;
+    ctx.font = `italic 900 ${Math.round(px)}px ${DISPLAY}`;
     ctx.lineWidth = Math.max(4, px * 0.26);
     ctx.strokeStyle = INK;
     ctx.strokeText(text, x, y + px * 0.08);
