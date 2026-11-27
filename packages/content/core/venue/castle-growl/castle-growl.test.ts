@@ -10,12 +10,13 @@ describe('venue.castle-growl', () => {
     for (const c of w.cars) expect(c.lap).toBeGreaterThanOrEqual(1);
   });
 
-  it('runs through a castle: two gates over the road, and walls either side between them', () => {
+  it('runs through a castle: gates over the road all round the lap, and a walled ward between two of them', () => {
     const w = makeWorld({ venue: 'venue.castle-growl' });
     const arch = w.statics.filter((s) => s.def.id === 'prop.castle-arch');
-    expect(new Set(arch.map((s) => s.group)).size).toBe(2);
+    // (the ward's two, and four more round the lap, each with a run of wall either side)
+    expect(new Set(arch.map((s) => s.group)).size).toBeGreaterThanOrEqual(5);
     expect(arch.every((s) => !w.offroad(s.x, s.y) || w.grid!.at(s.x, s.y) < w.road)).toBe(true);
-    expect(w.statics.filter((s) => s.def.id === 'prop.castle-wall').length).toBeGreaterThan(120);
+    expect(w.statics.filter((s) => s.def.id === 'prop.castle-wall').length).toBeGreaterThan(300);
     // the ward's road is clear from gate to gate
     const T = w.track!;
     for (let i = Math.floor(0.41 * T.n); i < 0.53 * T.n; i += 5)

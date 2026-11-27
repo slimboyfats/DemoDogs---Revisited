@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MaterialManifest } from '@demodogs/shared';
 import type { World } from '@demodogs/sim';
-import { WATER_OUT, WATER_Q, WaterMap, deepOf } from './water';
+import { WATER_OUT, WATER_Q, WaterMap, deepOf, poolTint } from './water';
 
 const water = (deep?: number): MaterialManifest =>
   ({ colour: '#36b4d2', water: deep === undefined ? {} : { deep } }) as MaterialManifest;
@@ -75,5 +75,32 @@ describe('the water map', () => {
     expect(M.depth(240, 152)).toBeGreaterThan(25);
     // and a world with no water has a map with none
     expect(WaterMap.of({ ...w, spills: [] } as unknown as World).any).toBe(false);
+  });
+});
+
+describe('the map of pools with a look of their own', () => {
+  const lava = { colour: '#ff6a14', look: 'molten' } as MaterialManifest;
+  const ice = { colour: '#bcd9e6', look: 'ice' } as MaterialManifest;
+
+  it('takes lava and ice and says which is which, and leaves water and mud alone', () => {
+    const M = new WaterMap(400, 300, poolTint);
+    expect(M.pour(water(), 100, 100, 30)).toBe(false);
+    expect(M.pour({ colour: '#3d2e1e' } as MaterialManifest, 100, 100, 30)).toBe(false);
+    expect(M.any).toBe(false);
+    expect(M.pour(lava, 100, 152, 40)).toBe(true);
+    expect(M.pour(ice, 300, 152, 40)).toBe(true);
+    M.settle();
+    const a = texel(M, 100, 152);
+    const b = texel(M, 300, 152);
+    expect(a[0]).toBeGreaterThan(a[1]);
+    expect(b[1]).toBeGreaterThan(b[0]);
+    expect(M.depth(100, 152)).toBeGreaterThan(20);
+    expect(M.depth(200, 20)).toBeLessThan(0);
+  });
+
+  it('the water map does not take them', () => {
+    const M = new WaterMap(400, 300);
+    expect(M.pour(lava, 100, 152, 40)).toBe(false);
+    expect(M.any).toBe(false);
   });
 });

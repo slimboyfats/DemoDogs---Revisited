@@ -20,6 +20,7 @@ export { putProp, stand } from './stand';
 export { boostAhead, onPad, padAt, pathAt, pumpUp, ventOpen } from './pads';
 export { groundAt, moundAt, moundHeight } from './mounds';
 export { PLUNGE_TIME, SINK_TIME, inPit, rescueIn, wading } from './rescue';
+export { scalding } from './heat';
 export { away, canHaunt, haunting, HAUNT_AFTER, HAUNT_REST, type Haunt } from './haunt';
 export type { Critter } from './critters';
 export { pressOpen, pressWarning } from './hazards';

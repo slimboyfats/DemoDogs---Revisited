@@ -1255,6 +1255,18 @@ export const MaterialSchema = z.strictObject({
    * where a car in a race sinks and is put back on the road it left (sim/rescue.ts).
    */
   water: z.strictObject({ deep: z.number().positive().optional() }).optional(),
+  /**
+   * Molten: armour a car standing in a pool of it loses each second (sim/heat.ts). It comes out
+   * with its tyres alight.
+   */
+  scalds: z.number().positive().optional(),
+  /**
+   * How a pool of it is drawn where the ground is painted in the shader (client render/pools.ts):
+   * `molten` glows and flows, with a crust that drifts and bubbles that burst; `ice` is a clean
+   * sheet with cracks, a rim of frost and a sheen that slides over it. Looks only. Without one it
+   * is a blot of its colour.
+   */
+  look: z.enum(['molten', 'ice']).optional(),
   /** How the client paints it on the ground. */
   colour: z.string().regex(/^#[0-9a-f]{6}$/),
   alpha: z.number().min(0).max(1).default(0.7),

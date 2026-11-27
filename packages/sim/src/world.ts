@@ -63,6 +63,7 @@ import { updateHunters } from './hunt';
 import { phased, trickControls, updateTricks } from './tricks';
 import { away, haunt } from './haunt';
 import { pitsOf, updateRescue } from './rescue';
+import { updateScald } from './heat';
 import { stallControls, updatePulses, type Pulse } from './shock';
 import { updateHowls, type Howl } from './howl';
 import { newArsenal, updateArsenal, type Arsenal } from './arsenal';
@@ -718,6 +719,7 @@ export class World {
       updatePads(this, c);
       updateRide(this, c);
       updateRescue(this, c);
+      updateScald(this, c);
       if (ctl.fire) fire(this, c);
       if (live && !c.wrecked && (c.ai || c.isPlayer)) shoot(this, c);
     }

@@ -442,6 +442,174 @@
         },
         {
           "material": "material.lagoon",
+          "x": 3404,
+          "y": 604,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3449,
+          "y": 655,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3487,
+          "y": 716,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3514,
+          "y": 778,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3536,
+          "y": 843,
+          "r": 172
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3551,
+          "y": 909,
+          "r": 188
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1422,
+          "y": 273,
+          "r": 96
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1679,
+          "y": 595,
+          "r": 84
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1758,
+          "y": 582,
+          "r": 60
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2037,
+          "y": 292,
+          "r": 104
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2129,
+          "y": 330,
+          "r": 70
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2470,
+          "y": 660,
+          "r": 90
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2689,
+          "y": 313,
+          "r": 80
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2768,
+          "y": 308,
+          "r": 64
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3282,
+          "y": 1314,
+          "r": 100
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3221,
+          "y": 1391,
+          "r": 72
+        },
+        {
+          "material": "material.lagoon",
+          "x": 3059,
+          "y": 1775,
+          "r": 88
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2587,
+          "y": 1452,
+          "r": 96
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2495,
+          "y": 1462,
+          "r": 66
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2195,
+          "y": 1766,
+          "r": 84
+        },
+        {
+          "material": "material.lagoon",
+          "x": 2114,
+          "y": 1762,
+          "r": 60
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1563,
+          "y": 1722,
+          "r": 104
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1527,
+          "y": 2280,
+          "r": 92
+        },
+        {
+          "material": "material.lagoon",
+          "x": 1442,
+          "y": 2309,
+          "r": 70
+        },
+        {
+          "material": "material.lagoon",
+          "x": 898,
+          "y": 2077,
+          "r": 86
+        },
+        {
+          "material": "material.lagoon",
+          "x": 403,
+          "y": 2148,
+          "r": 100
+        },
+        {
+          "material": "material.lagoon",
+          "x": 376,
+          "y": 2058,
+          "r": 64
+        },
+        {
+          "material": "material.lagoon",
+          "x": 608,
+          "y": 1026,
+          "r": 84
+        },
+        {
+          "material": "material.lagoon",
           "x": 1011,
           "y": 1734,
           "r": 120

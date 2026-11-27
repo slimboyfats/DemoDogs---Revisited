@@ -190,7 +190,7 @@ export function thingsAhead(w: World, c: Car, reach: number, rivals = true): Thi
       if (s.owner !== c.index && seen(s.x, s.y, 4)) out.push({ x: s.x, y: s.y, r: 5, w: 1.2 });
     for (const s of w.spills)
       if ((s.def.grip < 0.85 || s.def.drag > 0.2) && seen(s.x, s.y, s.r))
-        out.push({ x: s.x, y: s.y, r: s.r * 0.8, w: 0.8 });
+        out.push({ x: s.x, y: s.y, r: s.r * (s.def.scalds ? 1 : 0.8), w: s.def.scalds ? 2 : 0.8 });
     for (const b of w.blazes)
       if (seen(b.x, b.y, b.r)) out.push({ x: b.x, y: b.y, r: b.r * 0.8, w: 1.5 });
     for (const k of w.craters)

@@ -43,6 +43,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
 | `pnpm water [out-dir] [--clip] [--spots] [--only=venue]`        | a car wading the lagoon and going under in the deep, and a still of every water (`captures/water/`)           |
+| `pnpm pools [out-dir] [--seconds=7] [--only=lava]`              | a car driven into Cinder Peak's lava and over Frostbite Quarry's ice: frames and stills (`captures/pools/`)   |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -179,6 +180,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   by the ground's painter (`waterOver`): the moving surface, the foam along the shore and round what stands in it
   are all worked out there from the race's clock, so water costs nothing where there is none. Wakes and splashes
   are effects (`wade`, `splash` in effects.ts, the `foam` particle). The canvas fallback still blots it on.
+- **Lava and ice are pools with a look** (a material's `look`: `molten`, `ice`). Where the ground is painted in the
+  shader they are kept in a second map like the water's (`Ground.pools`, the same `WaterMap` with `poolTint`: which
+  look, how far in from the edge) and drawn moving by `poolOver` in the painter; a stretch of road surfaced in such
+  a material is poured into the same map (`surfacePools` in render/ground.ts), and any other surfaced stretch is one
+  clean band on the canvas. What glows of itself (`g_glow`) is not dimmed by night. A material that `scalds` burns
+  the armour off a car standing in it (sim/heat.ts, the `scald` event, `HELD.hot`); the client sets the car alight
+  (`poolFx` in effects.ts). A dirt road is painted darker than its ground with a chalk line down each edge, and a
+  paved town's road is dark asphalt with yellow lines, so a road is always told from the ground by tone.
 - **The look is bright and plain** (`groundMode.bright`, `#define BRIGHT` in the painter): sunny colours, a mown
   lawn, one flat pale tarmac with whole white lines, bold kerbs, no grit or specks, lighter shadows. The worn, gritty
   look it replaced is `?look=classic`; a change to the ground is made for both.

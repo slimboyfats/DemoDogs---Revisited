@@ -3,11 +3,13 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Lava",
-    "description": "Molten rock, glowing. It drags at a car like tar and is slippery with it.",
+    "description": "Molten rock, glowing. It drags at a car like tar, is slippery with it, and burns the armour off whatever stands in it.",
     "since": "core@0.10.0"
   },
   "grip": 0.55,
   "drag": 2.4,
+  "scalds": 16,
+  "look": "molten",
   "colour": "#ff6a14",
   "alpha": 0.95
 }
