@@ -66,16 +66,43 @@
   font-synthesis: none;
   padding: calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
     calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
-  background:
-    linear-gradient(118deg, transparent 0 58%, rgba(255, 255, 255, 0.07) 58% 71%, transparent 71%),
-    linear-gradient(118deg, transparent 0 76%, rgba(255, 214, 10, 0.16) 76% 79%, transparent 79%),
-    radial-gradient(130% 100% at 18% 0%, #4c86ff 0, #1f4fff 36%, #0c22b0 74%, #070f66 100%);
+  background: none;
 }
-/* (the bands are one sheet slid sideways, the dots one sheet that stays: nothing is painted again) */
-.screen:not(#pauseMenu, #results, #settings, #tutEnd)::before {
-  content: '';
+/* ---- the hall itself is one thing behind every menu (#hall in index.html), so its light keeps
+   moving from screen to screen: wide beams that sway, bands that slide, a wheel that turns, dots
+   that drift, a chequered flag that runs, and now and then a streak going by. Each is one sheet
+   moved by transform, painted once */
+#hall {
   position: fixed;
-  z-index: -1;
+  inset: 0;
+  display: none;
+  overflow: hidden;
+  pointer-events: none;
+  background: radial-gradient(
+    130% 100% at 18% 0%,
+    #4c86ff 0,
+    #1f4fff 36%,
+    #0c22b0 74%,
+    #070f66 100%
+  );
+}
+body:has(> :is(#menu, #quick, #help, #tutAsk, #online, #tracks, #career, #loader):not(.hidden))
+  #hall {
+  display: block;
+}
+#hall i {
+  position: absolute;
+  display: block;
+}
+#hall .beams {
+  inset: 0 -12%;
+  background:
+    linear-gradient(118deg, transparent 0 56%, rgba(255, 255, 255, 0.08) 56% 68%, transparent 68%),
+    linear-gradient(118deg, transparent 0 73%, rgba(255, 214, 10, 0.18) 73% 76%, transparent 76%),
+    linear-gradient(118deg, transparent 0 18%, rgba(255, 255, 255, 0.04) 18% 23%, transparent 23%);
+  animation: sway 11s ease-in-out infinite alternate;
+}
+#hall .bands {
   inset: 0 -196px 0 0;
   background: repeating-linear-gradient(
     118deg,
@@ -83,25 +110,132 @@
     transparent 46px 92px
   );
   animation: slide 9s linear infinite;
-  pointer-events: none;
 }
-.screen:not(#pauseMenu, #results, #settings, #tutEnd)::after {
-  content: '';
-  position: fixed;
-  z-index: -1;
+/* (a big wheel half out of the corner, turning slowly) */
+#hall .ring {
+  left: -24vmax;
+  bottom: -30vmax;
+  width: 62vmax;
+  height: 62vmax;
+  border-radius: 50%;
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.07) 0 6deg, transparent 6deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, transparent 0 52%, #000 52.5% 66%, transparent 66.5%);
+  mask-image: radial-gradient(circle, transparent 0 52%, #000 52.5% 66%, transparent 66.5%);
+  animation: turn 70s linear infinite;
+}
+#hall .dots {
   right: 0;
   bottom: 0;
-  width: 46vmax;
-  height: 46vmax;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0 2.2px, transparent 2.6px) 0 0 /
-    15px 15px;
+  width: 50vmax;
+  height: 50vmax;
+  overflow: hidden;
   -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0, transparent 68%);
   mask-image: radial-gradient(circle at 100% 100%, #000 0, transparent 68%);
-  pointer-events: none;
+}
+#hall .dots::before {
+  content: '';
+  position: absolute;
+  inset: -15px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0 2.2px, transparent 2.6px) 0 0 /
+    15px 15px;
+  animation: drift 2.6s linear infinite;
+}
+/* (a chequered flag leaning out of the top corner, running) */
+#hall .flag {
+  right: -6vmax;
+  top: -9vmax;
+  width: 46vmax;
+  height: 22vmax;
+  overflow: hidden;
+  opacity: 0.1;
+  transform: rotate(-14deg) skewX(-18deg);
+  -webkit-mask-image: linear-gradient(200deg, #000 20%, transparent 72%);
+  mask-image: linear-gradient(200deg, #000 20%, transparent 72%);
+}
+#hall .flag::before {
+  content: '';
+  position: absolute;
+  inset: 0 -56px 0 0;
+  background: repeating-conic-gradient(#fff 0 25%, transparent 0 50%) 0 0 / 56px 56px;
+  animation: run 2.2s linear infinite;
+}
+/* (streaks of light going by, one after another, never two alike) */
+#hall .streak {
+  left: 100%;
+  width: 26vmax;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75));
+  animation: streak 6s linear infinite;
+}
+#hall .streak:nth-of-type(6) {
+  top: 16%;
+  animation-delay: -0.4s;
+}
+#hall .streak:nth-of-type(7) {
+  top: 38%;
+  width: 16vmax;
+  height: 2px;
+  animation-duration: 7.5s;
+  animation-delay: -3.1s;
+}
+#hall .streak:nth-of-type(8) {
+  top: 57%;
+  width: 34vmax;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, rgba(255, 214, 10, 0.8));
+  animation-duration: 9s;
+  animation-delay: -5.2s;
+}
+#hall .streak:nth-of-type(9) {
+  top: 74%;
+  width: 20vmax;
+  animation-duration: 6.6s;
+  animation-delay: -2s;
+}
+#hall .streak:nth-of-type(10) {
+  top: 90%;
+  width: 14vmax;
+  height: 2px;
+  animation-duration: 8.2s;
+  animation-delay: -6.4s;
 }
 @keyframes slide {
   to {
     transform: translateX(-104.2px);
+  }
+}
+@keyframes sway {
+  from {
+    transform: translateX(-7%);
+  }
+  to {
+    transform: translateX(7%);
+  }
+}
+@keyframes turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes drift {
+  to {
+    transform: translate(-15px, -15px);
+  }
+}
+@keyframes run {
+  to {
+    transform: translateX(-56px);
+  }
+}
+/* (most of its time a streak is waiting off the side) */
+@keyframes streak {
+  0%,
+  78% {
+    transform: translateX(0) skewX(-28deg);
+  }
+  100% {
+    transform: translateX(calc(-100vw - 40vmax)) skewX(-28deg);
   }
 }
 /* a race shows behind these: a dark veil with the same bands in it */
@@ -113,7 +247,7 @@
     linear-gradient(180deg, rgba(10, 20, 64, 0.72), rgba(7, 15, 102, 0.6));
 }
 /* a screen arrives: its things slide in from the side they lean to */
-.screen:not(.hidden) > :is(.panel, .home, .pick) {
+.screen:not(.hidden) > :is(.panel, .pick) {
   animation: arrive 0.28s cubic-bezier(0.2, 1.1, 0.3, 1) backwards;
 }
 @keyframes arrive {
@@ -403,36 +537,62 @@ h1.logo {
 .gear:active .ic {
   transform: rotate(90deg);
 }
-/* the stand: a yellow slab leaning behind the car, its name and numbers across the foot */
+/* the stand: a yellow slab leaning behind the car, its name and numbers under it */
 .stage {
-  position: relative;
+  min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+}
+.show {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 90px;
 }
 .stage .slab {
   position: absolute;
-  inset: 4% 12% 30% 12%;
+  inset: 5% 12% 9% 12%;
   border-radius: 22px;
-  background:
-    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0 14px, transparent 14px 28px),
-    linear-gradient(180deg, var(--yel), var(--yel2));
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--yel), var(--yel2));
   box-shadow:
     10px 10px 0 rgba(4, 8, 40, 0.35),
     inset 0 0 0 4px rgba(255, 255, 255, 0.55);
   transform: skewX(-12deg);
+}
+/* (its stripes run, slowly) */
+.stage .slab::before {
+  content: '';
+  position: absolute;
+  inset: 0 -64px 0 0;
+  background: repeating-linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.24) 0 14px,
+    transparent 14px 28px
+  );
+  animation: stripesRun 2.8s linear infinite;
+}
+@keyframes stripesRun {
+  to {
+    transform: translateX(-31.71px);
+  }
 }
 #garage {
   position: absolute;
   left: 0;
   top: 0;
   width: 100%;
-  height: 72%;
+  height: 100%;
+  animation: bob 2.6s ease-in-out infinite alternate;
+}
+@keyframes bob {
+  to {
+    transform: translateY(-4px);
+  }
 }
 #menu button.turn {
   position: absolute;
-  top: 34%;
+  top: 48%;
   display: grid;
   place-items: center;
   width: 46px;
@@ -454,20 +614,22 @@ h1.logo {
 }
 .carCard {
   position: relative;
+  flex: none;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: end;
-  gap: 2px 16px;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, 46%);
+  align-items: center;
+  gap: 3px 14px;
   padding: 0 4px calc(4px + env(safe-area-inset-bottom));
 }
 #carName {
-  grid-column: 1;
+  grid-column: 1 / -1;
   font-family: var(--display);
   font-style: italic;
   font-weight: 900;
-  font-size: clamp(30px, 9.5vmin, 46px);
+  font-size: clamp(26px, 8.5vmin, 44px);
   line-height: 0.95;
   letter-spacing: -0.01em;
+  white-space: nowrap;
   color: #fff;
   text-shadow:
     0 4px 0 var(--navy),
@@ -477,14 +639,17 @@ h1.logo {
   grid-column: 1;
   font-size: 12.5px;
   font-weight: 500;
+  line-height: 1.25;
   opacity: 0.9;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .carCard .stats {
   grid-column: 2;
-  grid-row: 1 / span 2;
   margin: 0;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 12px;
   background: rgba(7, 15, 102, 0.55);
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.18);
@@ -678,23 +843,18 @@ h1.logo {
 }
 /* a phone held upright: the stand over the ways in, and the page scrolls if it must */
 @media (orientation: portrait) {
-  #menu {
-    align-items: flex-start;
-  }
   .home {
+    min-height: 100%;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
+    grid-template-rows: auto minmax(210px, 1fr) auto;
     gap: 8px;
-  }
-  .stage {
-    height: min(46vh, 380px);
   }
   #menu button.mode {
     flex: none;
-    min-height: 62px;
+    min-height: 56px;
   }
   #menu button.mode.race {
-    min-height: 78px;
+    min-height: 72px;
   }
 }
 
@@ -2104,6 +2264,267 @@ body.lessonEnd[data-screen='game'] #pauseBtn {
 }
 #tracks {
   align-items: flex-start;
+}
+
+/* ---- a phone on its side is short: home is packed so that nothing is cut off or lies under
+   anything else, down to about 280px of height */
+@media (orientation: landscape) and (max-height: 400px) {
+  .home {
+    gap: 2px 16px;
+  }
+  .logo svg {
+    width: 156px;
+  }
+  #menu button.gear {
+    width: 36px;
+    min-height: 36px;
+  }
+  .homeNav {
+    gap: 6px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  #menu button.mode {
+    min-height: 32px;
+  }
+  .mode > .ic {
+    width: 20px;
+    margin: 4px 0;
+    padding: 0 9px;
+  }
+  .mode b {
+    font-size: 17px;
+  }
+  .mode.race b {
+    font-size: 23px;
+  }
+  .mode small {
+    font-size: 10.5px;
+  }
+  #menu button.link {
+    min-height: 30px;
+    font-size: 11px;
+  }
+  .show {
+    min-height: 64px;
+  }
+  #carName {
+    font-size: 25px;
+  }
+  #carBlurb {
+    font-size: 11.5px;
+    -webkit-line-clamp: 2;
+  }
+  .carCard .stats {
+    padding: 5px 9px;
+  }
+  .stats {
+    gap: 3px 10px;
+  }
+  .stats label {
+    font-size: 9px;
+  }
+  .stats i {
+    height: 7px;
+  }
+}
+/* (and the cards in the middle of a screen: tighter, wider, so that their last button is on it) */
+@media (orientation: landscape) and (max-height: 400px) {
+  .panel.narrow {
+    padding: 10px 14px 12px;
+    gap: 6px;
+  }
+  .panel.narrow h2 {
+    font-size: 20px;
+  }
+  .panel.narrow h2::after {
+    display: none;
+  }
+  .panel.narrow button {
+    min-height: 38px;
+  }
+  #help .panel.narrow {
+    width: min(700px, 100%);
+  }
+  #help .how {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+  #online .panel.narrow {
+    width: min(540px, 100%);
+  }
+}
+@media (orientation: landscape) and (max-height: 330px) {
+  .mode:not(.race) small {
+    display: none;
+  }
+}
+
+/* ---- home comes in piece by piece: the name drops, its line is drawn under it, the stand pops,
+   the ways in slide over one after another */
+#menu:not(.hidden) .logo {
+  animation: logoIn 0.5s cubic-bezier(0.2, 1.5, 0.4, 1) backwards;
+}
+#menu:not(.hidden) .logo .slash {
+  transform-box: fill-box;
+  transform-origin: 0 50%;
+  animation: wipe 0.4s cubic-bezier(0.2, 1, 0.3, 1) 0.3s backwards;
+}
+#menu:not(.hidden) .gear {
+  animation: popIn 0.35s cubic-bezier(0.2, 1.6, 0.4, 1) 0.2s backwards;
+}
+#menu:not(.hidden) .slab {
+  animation: slabIn 0.45s cubic-bezier(0.2, 1.4, 0.4, 1) backwards;
+}
+#menu:not(.hidden) .carCard {
+  animation: riseIn 0.35s cubic-bezier(0.2, 1.1, 0.3, 1) 0.18s backwards;
+}
+#menu:not(.hidden) :is(.mode, .homeMore) {
+  animation: tileIn 0.4s cubic-bezier(0.2, 1.2, 0.3, 1) backwards;
+}
+#menu:not(.hidden) .mode:nth-child(2) {
+  animation-delay: 0.06s;
+}
+#menu:not(.hidden) .mode:nth-child(3) {
+  animation-delay: 0.12s;
+}
+#menu:not(.hidden) .mode:nth-child(4) {
+  animation-delay: 0.18s;
+}
+#menu:not(.hidden) .homeMore {
+  animation-delay: 0.26s;
+}
+/* another car: it comes in from the side and its name lands */
+.stage.swap #garage {
+  animation:
+    carIn 0.34s cubic-bezier(0.2, 1.3, 0.4, 1),
+    bob 2.6s ease-in-out 0.34s infinite alternate;
+}
+.stage.swap #carName {
+  transform-origin: 0 100%;
+  animation: nameIn 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+.stage.swap #carBlurb {
+  animation: riseIn 0.3s ease-out 0.06s backwards;
+}
+/* the arrow on RACE keeps pointing, a tile's sign leans when it is pressed */
+.mode.race::after {
+  opacity: 0.8;
+  animation: point 0.8s ease-in-out infinite alternate;
+}
+.mode > .ic {
+  transition: transform 0.18s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.mode:active > .ic {
+  transform: rotate(-10deg) scale(1.12);
+}
+.turn .ic {
+  transition: transform 0.15s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+#prevCar:active .ic {
+  transform: translateX(-4px);
+}
+#nextCar:active .ic {
+  transform: translateX(4px);
+}
+/* the tracks are dealt out one after another, and a heading's yellow line is drawn */
+#quick:not(.hidden) .venue {
+  animation: dealIn 0.36s cubic-bezier(0.2, 1.2, 0.3, 1) backwards;
+}
+#quick:not(.hidden) .venue:nth-child(2) {
+  animation-delay: 0.05s;
+}
+#quick:not(.hidden) .venue:nth-child(3) {
+  animation-delay: 0.1s;
+}
+#quick:not(.hidden) .venue:nth-child(4) {
+  animation-delay: 0.15s;
+}
+#quick:not(.hidden) .venue:nth-child(5) {
+  animation-delay: 0.2s;
+}
+#quick:not(.hidden) .venue:nth-child(n + 6) {
+  animation-delay: 0.25s;
+}
+.screen:not(.hidden) .panel.narrow h2::after {
+  transform-origin: 0 50%;
+  animation: wipe 0.4s cubic-bezier(0.2, 1, 0.3, 1) 0.15s backwards;
+}
+.screen .tabs button.on:is(*, #_) {
+  animation: picked 0.22s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.screen:not(.hidden) .events .item {
+  animation: riseIn 0.3s cubic-bezier(0.2, 1.1, 0.3, 1) backwards;
+}
+.screen:not(.hidden) .events .item:nth-child(2) {
+  animation-delay: 0.04s;
+}
+.screen:not(.hidden) .events .item:nth-child(3) {
+  animation-delay: 0.08s;
+}
+.screen:not(.hidden) .events .item:nth-child(n + 4) {
+  animation-delay: 0.12s;
+}
+@keyframes logoIn {
+  from {
+    opacity: 0;
+    transform: translateY(-26px) rotate(-5deg);
+  }
+}
+@keyframes wipe {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-90deg);
+  }
+}
+@keyframes slabIn {
+  from {
+    opacity: 0;
+    transform: skewX(-12deg) scale(0.82);
+  }
+}
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes tileIn {
+  from {
+    opacity: 0;
+    transform: translateX(46px);
+  }
+}
+@keyframes carIn {
+  from {
+    opacity: 0;
+    transform: translateX(42px) scale(0.92);
+  }
+}
+@keyframes nameIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7) rotate(-4deg);
+  }
+}
+@keyframes point {
+  from {
+    transform: rotate(45deg);
+  }
+  to {
+    transform: translateX(5px) rotate(45deg);
+  }
+}
+@keyframes dealIn {
+  from {
+    opacity: 0;
+    transform: translateY(22px) rotate(2deg);
+  }
 }
 
 /* ---- nothing moves for somebody who has asked for that */

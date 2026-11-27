@@ -196,6 +196,12 @@
     <div id="builder" class="hidden"></div>
 
     <!-- home: the car on its stand, and the four ways in -->
+    <!-- the hall behind every menu: its light, its patterns, all moving, painted once -->
+    <div id="hall" aria-hidden="true">
+      <i class="beams"></i><i class="bands"></i><i class="ring"></i><i class="dots"></i>
+      <i class="flag"></i><i class="streak"></i><i class="streak"></i><i class="streak"></i>
+      <i class="streak"></i><i class="streak"></i>
+    </div>
     <section id="menu" class="screen">
       <div class="home">
         <header class="homeTop">
@@ -213,14 +219,16 @@
           </button>
         </header>
         <div class="stage">
-          <div class="slab" aria-hidden="true"></div>
-          <canvas id="garage"></canvas>
-          <button id="prevCar" class="turn" aria-label="Previous car">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg>
-          </button>
-          <button id="nextCar" class="turn" aria-label="Next car">
-            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-next" /></svg>
-          </button>
+          <div class="show">
+            <div class="slab" aria-hidden="true"></div>
+            <canvas id="garage"></canvas>
+            <button id="prevCar" class="turn" aria-label="Previous car">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg>
+            </button>
+            <button id="nextCar" class="turn" aria-label="Next car">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-next" /></svg>
+            </button>
+          </div>
           <div class="carCard">
             <b id="carName">MUTT</b>
             <small id="carBlurb"></small>

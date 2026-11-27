@@ -1238,6 +1238,13 @@ function togglePause(): void {
 function showCar(): void {
   const c = cars[carIdx]!;
   $('carName').textContent = c.meta.name.toUpperCase();
+  // (the stand notices: the car comes in from the side and its name lands)
+  const stage = document.querySelector('.stage');
+  if (stage) {
+    stage.classList.remove('swap');
+    void (stage as HTMLElement).offsetWidth;
+    stage.classList.add('swap');
+  }
   $('carBlurb').textContent = c.meta.description;
   const stat = (v: number, lo: number, hi: number) =>
     `${Math.round(Math.min(1, Math.max(0.1, (v - lo) / (hi - lo))) * 100)}%`;
