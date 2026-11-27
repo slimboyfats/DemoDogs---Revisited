@@ -1,4 +1,4 @@
-import { SHOULDER, laneWide, lanesOf, liftsOf, type World } from '@demodogs/sim';
+import { SHOULDER, edgesOf, laneWide, lanesOf, liftsOf, type World } from '@demodogs/sim';
 import {
   Field,
   VERGE,
@@ -143,7 +143,9 @@ export function bakePaint(w: World, F: Fields, bright = false): GroundPaint {
       }
     }
     const raised = V.track?.raised;
-    const L = raised?.length ? lanesOf(T, liftsOf(T, raised), w.road, w.tuning) : null;
+    const L = raised?.length
+      ? lanesOf(T, liftsOf(T, raised), w.road, w.tuning, edgesOf(T, raised))
+      : null;
     const samples = new Float32Array(T.n * 12);
     const outer = new Float32Array(T.n);
     let lanes = false;

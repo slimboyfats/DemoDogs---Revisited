@@ -185,6 +185,7 @@ export function resolveContent(src: ContentSource): Content {
     }
     for (const s of v.track?.surfaces ?? []) need(v.id, 'material', s.material);
     if (v.track?.rail) need(v.id, 'prop', v.track.rail);
+    if (v.track?.wall) need(v.id, 'prop', v.track.wall);
     if (!v.track && !v.oval) problems.push(`${v.id}: needs a track or an oval`);
   }
   for (const p of out.prop.values()) {

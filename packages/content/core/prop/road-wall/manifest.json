@@ -1,0 +1,18 @@
+{
+  "id": "prop.road-wall",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Road wall",
+    "description": "A length of thick cast wall with a red and white cap, the kind that lines a raised road. Nothing breaks it and nothing drives through it.",
+    "since": "core@0.9.0"
+  },
+  "body": "static",
+  "radius": 4.4,
+  "hit": {
+    "halfLength": 4.5,
+    "halfWidth": 1.6,
+    "round": 0.5,
+    "top": 11
+  },
+  "made": "material.concrete"
+}

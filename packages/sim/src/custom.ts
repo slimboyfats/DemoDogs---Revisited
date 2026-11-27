@@ -1,7 +1,10 @@
 import {
+  RAISE_LEVELS,
   RAISE_MAX,
   RAISE_MIN,
   RAISE_STEP,
+  RAMP_MAX,
+  RAMP_MIN,
   SceneryRuleSchema,
   TRACK_FORMAT,
   TRACK_MARGIN,
@@ -194,10 +197,30 @@ export function trackFromVenue(
     surfaces: (v.track.surfaces ?? [])
       .slice(0, 24)
       .map((s) => ({ material: s.material, ...stretch(s.from, s.to) })),
-    raised: (v.track.raised ?? []).slice(0, 12).map((r) => ({
-      ...stretch(r.from, r.to),
-      height: clamp(Math.round(r.height / RAISE_STEP) * RAISE_STEP, RAISE_MIN, RAISE_MAX),
-    })),
+    raised: (v.track.raised ?? []).slice(0, 12).map((r) => {
+      const high = (h: number): number =>
+        clamp(Math.round(h / RAISE_STEP) * RAISE_STEP, RAISE_MIN, RAISE_MAX);
+      const long = (l: number | undefined): number | undefined =>
+        l === undefined ? undefined : clamp(Math.round(l), RAMP_MIN, RAMP_MAX);
+      const rampIn = long(r.rampIn ?? r.ramp);
+      const rampOut = long(r.rampOut ?? r.ramp);
+      return {
+        ...stretch(r.from, r.to),
+        height: high(r.height),
+        ...(r.levels?.length
+          ? {
+              levels: r.levels.slice(0, RAISE_LEVELS).map((l) => {
+                const at = stretch(l.at, l.at);
+                return { x: at.x0, y: at.y0, height: high(l.height) };
+              }),
+            }
+          : {}),
+        ...(r.edge ? { edge: r.edge } : {}),
+        ...(r.lanes ? { lanes: r.lanes } : {}),
+        ...(rampIn !== undefined ? { rampIn } : {}),
+        ...(rampOut !== undefined ? { rampOut } : {}),
+      };
+    }),
     areas: [],
     ...(v.relief ? { relief: { ...v.relief } } : {}),
     ...(v.weather ? { weather: v.weather.map((a) => ({ ...a })) } : {}),
@@ -414,13 +437,11 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       material: s.material,
     }));
   // raised stretches of road: platforms, by where along the road they begin and end
-  const raised = t.raised
-    .map((r) => ({ from: near(r.x0, r.y0) / T.n, to: near(r.x1, r.y1) / T.n, height: r.height }))
-    .filter((r) => r.from !== r.to);
-  // (their edges are railed with whatever the pack's own raised roads are)
-  const rail = [...content.venue.values()]
-    .sort((a, b) => (a.id < b.id ? -1 : 1))
-    .find((v) => v.track?.rail)?.track?.rail;
+  const raised = raisedOf(t, (x, y) => near(x, y) / T.n);
+  // (their edges are railed, and walled, with whatever the pack's own raised roads are)
+  const venues = [...content.venue.values()].sort((a, b) => (a.id < b.id ? -1 : 1));
+  const rail = venues.find((v) => v.track?.rail)?.track?.rail;
+  const wall = venues.find((v) => v.track?.wall)?.track?.wall;
   let pickups = (t.pickups ?? []).filter((p) => content.pickup.has(p) || !dropped.add(p));
   if (pickups.length === 0) pickups = [...content.pickup.keys()].sort();
 
@@ -442,6 +463,7 @@ export function installTrack(content: Content, t: TrackFile): Installed {
       ...(surfaces.length ? { surfaces } : {}),
       ...(raised.length ? { raised } : {}),
       ...(raised.length && rail ? { rail } : {}),
+      ...(raised.some((r) => r.edge === 'wall') && wall ? { wall } : {}),
     },
     colors: t.colors,
     ...(t.relief ? { relief: t.relief } : {}),
@@ -456,6 +478,30 @@ export function installTrack(content: Content, t: TrackFile): Installed {
     laps: t.laps,
     dropped: [...dropped].sort(),
   };
+}
+
+/**
+ * A track's raised stretches as a venue has them: by how far round the road each begins, ends
+ * and changes level (`near`: that fraction for the point of the road nearest to a place).
+ */
+function raisedOf(
+  t: TrackFile,
+  near: (x: number, y: number) => number,
+): NonNullable<NonNullable<VenueManifest['track']>['raised']> {
+  return t.raised
+    .map((r) => ({
+      from: near(r.x0, r.y0),
+      to: near(r.x1, r.y1),
+      height: r.height,
+      ...(r.levels?.length
+        ? { levels: r.levels.map((l) => ({ at: near(l.x, l.y), height: l.height })) }
+        : {}),
+      ...(r.edge && r.edge !== 'rail' ? { edge: r.edge } : {}),
+      ...(r.lanes && r.lanes !== 'both' ? { lanes: r.lanes } : {}),
+      ...(r.rampIn !== undefined ? { rampIn: r.rampIn } : {}),
+      ...(r.rampOut !== undefined ? { rampOut: r.rampOut } : {}),
+    }))
+    .filter((r) => r.from !== r.to);
 }
 
 /**
@@ -481,9 +527,7 @@ export function liftGround(w: World, t: TrackFile): boolean {
     }
     return best / T.n;
   };
-  const raised = t.raised
-    .map((r) => ({ from: near(r.x0, r.y0), to: near(r.x1, r.y1), height: r.height }))
-    .filter((r) => r.from !== r.to);
+  const raised = raisedOf(t, near);
   const v = w.venue;
   (w as { relief: World['relief'] }).relief = buildRelief(
     v.relief ?? FLAT_RELIEF,

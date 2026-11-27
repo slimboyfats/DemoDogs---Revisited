@@ -27,6 +27,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, shares and races a track by touch (`PORTRAIT=1` puts the phone upright) |
 | `pnpm play:drag [out-dir] [--frames]`                           | the track creator's handles by touch and mouse: ends, edges, hold and drag to lift (`captures/editor-drag/`)  |
+| `pnpm play:levels [out-dir] [--frames]`                         | a raised stretch split into levels, its end slopes and its walls, shaped by touch (`captures/editor-levels/`) |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |
@@ -202,6 +203,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   sides, so nothing else needs to know about it. The platform is wider than the road (`SHOULDER`), its edges are
   railed with the venue's `track.rail` (open where an on-ramp joins), and the ways back up are on-ramps beside it
   that climb in the road's own direction and merge (`lanesOf`), never ramps across it.
+  A stretch says the rest of itself: `levels` (more heights further along it, a slope between each and the next;
+  `stepped` in sim/relief.ts), `rampIn` / `rampOut` (how long the slope at each end is), `edge` (`rail`, `wall`:
+  the venue's `track.wall`, a prop nothing breaks, with `w.walled` keeping cars inside it and no on-ramps; or
+  `open`) and `lanes` (which sides have on-ramps; `edgesOf` hands both to `lanesOf` and the rails).
 - **A course is a venue with one big idea**, and its pieces are plain props, so the track creator places them all.
   A shortcut is a run of path pieces (a pad of kind `road`: `prop.dirt-track`, `prop.boardwalk`, `prop.cobbles`,
   `prop.rickety-boards`, its `skin` saying what it is laid in; kept in `w.paths`): the ground under one is road to

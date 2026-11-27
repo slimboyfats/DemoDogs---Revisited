@@ -209,6 +209,8 @@ function loopCrossings(track: Track, y: number): number[] {
  */
 export const SHOULDER = 30;
 const SIDE = 9;
+/** How far in from a platform's edge its rail runs (px). */
+export const RAIL_IN = 7;
 /** A raised stretch climbs one px in this many unless it says how long its ramps are. */
 const RAMP = 5;
 /** How far an on-ramp runs level beside the road at its top, narrowing, for a car to move over (px). */
@@ -238,13 +240,15 @@ export const laneWide = (L: OnRamps, i: number, side: number): number =>
 
 /**
  * The on-ramps beside the track, given `liftsOf`'s heights. A lane lies on a side of the road
- * only where the road (`road` wide) does not bend towards that side too tightly for it.
+ * only where the road (`road` wide) does not bend towards that side too tightly for it, and
+ * where the stretch has not said it wants none there (`edges`: see `edgesOf`).
  */
 export function lanesOf(
   track: Track,
   lift: Float32Array,
   road: number,
   S: Lanes = DEFAULT_TUNING,
+  edges: Uint8Array | null = null,
 ): OnRamps {
   const N = track.n;
   const out = road / 2 + SHOULDER + S.laneWide + SIDE;
@@ -283,6 +287,8 @@ export function lanesOf(
         : 0;
     // which sides a lane starting `from` samples into the run has room on
     const room = (from: number, side: number): boolean => {
+      if (edges && edges[(i0 + from) % N]! & (side < 0 ? EDGING.noLeft : EDGING.noRight))
+        return false;
       for (let q = 0; q < whole; q += 2)
         if (bend((i0 + from + q) % N) * side * out > 0.55) return false;
       return true;
@@ -336,6 +342,10 @@ export function liftsOf(track: Track, raised: readonly Raised[]): Float32Array {
   for (const r of raised) {
     const i0 = Math.min(N - 1, Math.floor(r.from * N));
     const len = ((Math.min(N - 1, Math.floor(r.to * N)) - i0 + N) % N) + 1;
+    if (r.levels?.length || r.rampIn !== undefined || r.rampOut !== undefined) {
+      stepped(track, r, i0, len, out);
+      continue;
+    }
     // the ramps: as long as asked, but never more than half the stretch between them
     const ramp = Math.max(1, Math.min(len / 2, (r.ramp ?? r.height * RAMP) / track.step));
     for (let k = 0; k < len; k++) {
@@ -343,6 +353,97 @@ export function liftsOf(track: Track, raised: readonly Raised[]): Float32Array {
       const i = (i0 + k) % N;
       out[i] = Math.max(out[i]!, r.height * t * t * (3 - 2 * t));
     }
+  }
+  return out;
+}
+
+/**
+ * Where a raised stretch changes level: how many samples into it (`len` long, from sample `i0`)
+ * each of its `levels` begins, in order, and how high the road stands from there. Ones that are
+ * not inside the stretch are left out.
+ */
+export function levelsOf(
+  r: Raised,
+  i0: number,
+  len: number,
+  N: number,
+): { at: number; height: number }[] {
+  return (r.levels ?? [])
+    .map((l) => ({ at: (Math.min(N - 1, Math.floor(l.at * N)) - i0 + N) % N, height: l.height }))
+    .filter((l) => l.at > 0 && l.at < len - 1)
+    .sort((a, b) => a.at - b.at);
+}
+
+/**
+ * A raised stretch with levels, or with a slope of its own at each end: the road climbs to its
+ * first level over `rampIn`, goes from each level to the next up or down a slope about the place
+ * where they meet, and comes down from its last over `rampOut`. Where there is not the room for
+ * all of a slope it is as long as there is room for.
+ */
+function stepped(track: Track, r: Raised, i0: number, len: number, out: Float32Array): void {
+  const N = track.n;
+  const cuts = levelsOf(r, i0, len, N);
+  const hs = [r.height, ...cuts.map((c) => c.height)];
+  const at = [0, ...cuts.map((c) => c.at), len];
+  const m = cuts.length;
+  // how much of each section the slope at its start wants, and the one at its end (samples)
+  const head: number[] = [];
+  const tail: number[] = [];
+  for (let j = 0; j <= m; j++) {
+    head.push(
+      j === 0
+        ? (r.rampIn ?? r.ramp ?? hs[0]! * RAMP) / track.step
+        : (Math.abs(hs[j]! - hs[j - 1]!) * RAMP) / track.step / 2,
+    );
+    tail.push(
+      j === m
+        ? (r.rampOut ?? r.ramp ?? hs[m]! * RAMP) / track.step
+        : (Math.abs(hs[j + 1]! - hs[j]!) * RAMP) / track.step / 2,
+    );
+  }
+  // (a section too short for both gives each its share)
+  for (let j = 0; j <= m; j++) {
+    const room = at[j + 1]! - at[j]!;
+    const k = Math.min(1, room / (head[j]! + tail[j]! || 1));
+    head[j] = Math.max(0.5, head[j]! * k);
+    tail[j] = Math.max(0.5, tail[j]! * k);
+  }
+  const ease = (t: number): number => {
+    const c = clamp01(t);
+    return c * c * (3 - 2 * c);
+  };
+  for (let k = 0; k < len; k++) {
+    let v = hs[0]!;
+    for (let j = 1; j <= m; j++) {
+      // (a slope between two levels is as long either side of where they meet)
+      const half = Math.min(tail[j - 1]!, head[j]!);
+      v += (hs[j]! - hs[j - 1]!) * ease((k - at[j]! + half) / (2 * half));
+    }
+    const i = (i0 + k) % N;
+    out[i] = Math.max(out[i]!, v * ease((k + 1) / head[0]!) * ease((len - k) / tail[m]!));
+  }
+}
+
+/** What a raised stretch says of its edges, a byte to each sample of the road: these added up. */
+export const EDGING = { noLeft: 1, noRight: 2, wall: 4, open: 8 } as const;
+
+/**
+ * What stands along the edges of the raised road at each sample, and which sides an on-ramp may
+ * lie on there (`EDGING`); null when every stretch is the usual: railed, a ramp on either side.
+ */
+export function edgesOf(track: Track, raised: readonly Raised[]): Uint8Array | null {
+  if (!raised.some((r) => r.edge || r.lanes)) return null;
+  const N = track.n;
+  const out = new Uint8Array(N);
+  for (const r of raised) {
+    const i0 = Math.min(N - 1, Math.floor(r.from * N));
+    const len = ((Math.min(N - 1, Math.floor(r.to * N)) - i0 + N) % N) + 1;
+    const lanes = r.edge === 'wall' ? 'none' : (r.lanes ?? 'both');
+    const bits =
+      (lanes === 'none' || lanes === 'right' ? EDGING.noLeft : 0) |
+      (lanes === 'none' || lanes === 'left' ? EDGING.noRight : 0) |
+      (r.edge === 'wall' ? EDGING.wall : r.edge === 'open' ? EDGING.open : 0);
+    for (let k = 0; k < len; k++) out[(i0 + k) % N] = bits;
   }
   return out;
 }
@@ -373,7 +474,7 @@ export function buildRelief(
   // point of the grid is nearest to
   const lift = track && raised.length ? liftsOf(track, raised) : null;
   const near = lift ? new Int32Array(R.gw * R.gh).fill(-1) : null;
-  const lane = lift ? lanesOf(track!, lift, road, lanes) : null;
+  const lane = lift ? lanesOf(track!, lift, road, lanes, edgesOf(track!, raised)) : null;
   // (the on-ramps reach further out than the banks may)
   if (lift) reach = Math.max(reach, half + SHOULDER + lanes.laneWide + SIDE + 24);
   if (track) {

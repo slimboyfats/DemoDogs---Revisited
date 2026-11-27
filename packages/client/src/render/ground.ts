@@ -1,6 +1,7 @@
 import {
   SHOULDER,
   laneWide,
+  edgesOf,
   lanesOf,
   liftsOf,
   moundHeight,
@@ -157,7 +158,7 @@ function paintLanes(px: Uint8ClampedArray, w: World): void {
   const T = w.track;
   const raised = w.venue.track?.raised;
   if (!T || !raised?.length) return;
-  const L = lanesOf(T, liftsOf(T, raised), w.road, w.tuning);
+  const L = lanesOf(T, liftsOf(T, raised), w.road, w.tuning, edgesOf(T, raised));
   const half = w.road / 2;
   const from = px.slice();
   const W = w.w;

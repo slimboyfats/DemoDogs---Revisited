@@ -61,7 +61,8 @@
         "ramp": 180
       }
     ],
-    "rail": "prop.armco"
+    "rail": "prop.armco",
+    "wall": "prop.road-wall"
   },
   "colors": {
     "ground": "#c4ced4",
