@@ -1,7 +1,7 @@
 import { DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
 import type { Bot, Car, StaticProp } from './entities';
 import { angDiff, clamp } from './math';
-import { batter, breakProp, damage, explode, ignite, light, shed } from './damage';
+import { batter, breakProp, damage, explode, ignite, light, shed, wet } from './damage';
 import { inSmoke } from './drops';
 import type { World } from './world';
 import { carGap, thingGap } from './shapes';
@@ -969,7 +969,7 @@ function updateTrails(w: World): void {
     const back = (c.def.body.halfLength + 4) * c.size;
     const x = c.x - Math.cos(c.h) * back;
     const y = c.y - Math.sin(c.h) * back;
-    if (w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r)) continue;
+    if (wet(w, x, y)) continue;
     const life = d.fuse ?? 3.5;
     const r = d.radius ?? 8;
     w.blazes.push({ x, y, r, t: life, bite: 0.25, owner: c.index });

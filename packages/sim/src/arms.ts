@@ -1,7 +1,7 @@
 import { DT, GRAVITY, type WeaponManifest } from '@demodogs/shared';
 import type { Car, StaticProp } from './entities';
 import { angDiff } from './math';
-import { batter, breakProp, damage, explode, ignite, light, shed, spill } from './damage';
+import { batter, breakProp, damage, explode, ignite, light, shed, spill, wet } from './damage';
 import { bounced, fireproof, held, hidden } from './guards';
 import type { World } from './world';
 import {
@@ -259,7 +259,7 @@ function settle(w: World, g: Gob): void {
   if (w.rng.next() > 0.18) return;
   const [x, y] = w.keepInside(g.x, g.y, 2);
   if (d.lit) {
-    if (w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r)) {
+    if (wet(w, x, y)) {
       w.emit({ t: 'quench', x, y, r: 3 });
       return;
     }

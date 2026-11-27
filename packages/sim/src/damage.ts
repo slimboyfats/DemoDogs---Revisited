@@ -393,9 +393,15 @@ export function updateEmbers(w: World): void {
   if (w.blazes.length > 40) w.blazes.splice(0, w.blazes.length - 40);
 }
 
-/** Is this spot under something that puts fire out? */
-function wet(w: World, x: number, y: number): boolean {
-  return w.spills.some((s) => s.def.quenches && Math.hypot(s.x - x, s.y - y) < s.r);
+/** Is this spot in something that puts fire out? (Raised road stands dry over the map's water.) */
+export function wet(w: World, x: number, y: number): boolean {
+  let up = -1;
+  for (const s of w.spills) {
+    if (!s.def.quenches || Math.hypot(s.x - x, s.y - y) >= s.r) continue;
+    if (s.fixed && (up < 0 ? (up = raised(w, x, y) ? 1 : 0) : up) === 1) continue;
+    return true;
+  }
+  return false;
 }
 
 /** Pour a pool of a material on the ground. Water puts out the fire it lands on. */
@@ -466,7 +472,18 @@ export function pour(
   }
 }
 
-/** What a car's wheels are in at (x, y): [share of grip kept, drag]. The worst pool wins. */
+/**
+ * Is the ground at (x, y) raised road (its platform, ramps or sides)? It stands up out of the
+ * pools the map was laid with: those are on the ground under it, and what is on it is not in them.
+ */
+export function raised(w: World, x: number, y: number): boolean {
+  return (w.relief?.platAt(x, y) ?? 0) > 1;
+}
+
+/**
+ * What a car's wheels are in at (x, y): [share of grip kept, drag]. The worst pool wins. A pool
+ * of the map does not reach up onto raised road; one poured there since (a slick, a burst drum) does.
+ */
 export function footing(w: World, x: number, y: number): [number, number, boolean] {
   let grip = 1;
   let drag = 0;
@@ -477,8 +494,11 @@ export function footing(w: World, x: number, y: number): [number, number, boolea
     grip = 0.8;
     drag = 0.9;
   }
+  // (-1 until a pool of the map is found here: only then is the ground's height asked for)
+  let up = -1;
   for (const s of w.spills) {
     if (Math.abs(s.x - x) > s.r || Math.hypot(s.x - x, s.y - y) > s.r) continue;
+    if (s.fixed && (up < 0 ? (up = raised(w, x, y) ? 1 : 0) : up) === 1) continue;
     grip = Math.min(grip, s.def.grip);
     drag = Math.max(drag, s.def.drag);
   }
