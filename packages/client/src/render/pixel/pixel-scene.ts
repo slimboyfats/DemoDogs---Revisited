@@ -313,9 +313,10 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const c of w.cars)
       // (not from a car up on a deck: these lights lie on the ground, which there is the road
       // under the bridge)
-      if ((c.wrecked || c.hp < 20) && c.deck < 1 && this.visible(c.x, c.y, 60))
+      if ((c.wrecked || c.hp < 20) && !c.haunt && c.deck < 1 && this.visible(c.x, c.y, 60))
         L.add(c.x, c.y, 34, 0.7 + Math.sin(t * 23 + c.index * 3) * 0.2, 0xff7a20);
     for (const r of w.rockets) L.add(r.x, r.y, 28, 0.9, 0xffb060);
+    for (const H of w.hunters) L.add(H.x, H.y, 54, 1, 0xff6040);
     armsLights(L, w);
     arsenalLights(L, w);
     for (const f of fx.fires)
@@ -558,10 +559,12 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     for (const s of fx.changed) this.atlas.refresh(s);
     fx.changed.clear();
     this.groundLayer!.sync();
+    // (the water moves with the race's own clock: stopped, it is a still picture like the rest)
+    this.groundLayer!.waterTime = w.time % 3600;
 
     // the view: the camera point in the middle, origin snapped to whole device pixels (as mudders' Camera)
-    const cx = cam.x + ((Math.random() - 0.5) * cam.shake) / S;
-    const cy = cam.y + ((Math.random() - 0.5) * cam.shake) / S;
+    const cx = cam.x + cam.ox;
+    const cy = cam.y + cam.oy;
     this.vw = W;
     this.vh = H;
     this.ox = Math.round(W / 2 - cx * S);

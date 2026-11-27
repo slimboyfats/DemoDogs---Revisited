@@ -32,13 +32,18 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm tracks [out-dir] [venue ...] [--map] [--at=0,0.5]`        | every venue's whole map as the game draws it, and race frames at points round the road (`captures/tracks/`)   |
 | `pnpm audio [out-dir] [--video] [--only=scene]`, `?tape=40`     | tapes the game's sound in step with its ticks: a WAV and spectrogram a scene, an mp4 (`captures/audio/`)      |
 | `pnpm tricks [out-dir] [--frames] [--only=scene]`               | the ten tricks out of the Bag of Tricks crate, each staged on the range (`captures/tricks/`)                  |
+| `pnpm ghost [out-dir] [venue] [--frames]`, `?ghost=1`           | a derby where the player is scrapped and drives on as a ghost car, by touch (`captures/ghost/`)               |
+| `pnpm pack [out-dir] [venue] [--frames]`                        | a race of eight with what keeps it close set off in it: Runt Ray, Bloodhound, Sniffers (`captures/pack/`)     |
 | `pnpm ui [out-dir] [--portrait]`                                | the menus, settings sheet, pause menu, race HUD and results at 844×390, or upright (`captures/ui/`)           |
+| `pnpm feel [out-dir] [--frames] [--only=scene]`                 | a ram and a blast through the game's own loop: shake, hit-stop, buzzes; a made-up gamepad (`captures/feel/`)  |
 | `/?lesson`, menu → DRIVING LESSON; `pnpm play:lesson [out-dir]` | the driving lesson a new player is offered; the script takes it by touch (`--portrait`, `--frames`)           |
 | `pnpm bots [out-dir] [venue ...] [--seeds=1,2,3]`               | the bot lab: bots race every venue alone; laps, knocks, stuck time and shots counted (`captures/bots/`)       |
 | `pnpm bots:clip [out-dir] [--venue=x] [--seconds=30]`           | a clip of a race driven by bots alone, camera wide (`captures/bots/`); slow, a minute a second                |
 | `pnpm hitboxes [dir]`; `?hitboxes=heights`; `hitboxes:bake`     | hit shapes drawn over cars, scenery, guns and roads (`captures/hitboxes/`); bake them from the looks          |
 | `pnpm bench:sim`; `SIM_BENCH_OUT=f.json`, then `SIM_BENCH_REF=` | what a sim tick and building a track cost on every venue, and a fingerprint to prove a change changed nothing |
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
+| `pnpm water [out-dir] [--clip] [--spots] [--only=venue]`        | a car wading the lagoon and going under in the deep, and a still of every water (`captures/water/`)           |
+| `pnpm pools [out-dir] [--seconds=7] [--only=lava]`              | a car driven into Cinder Peak's lava and over Frostbite Quarry's ice: frames and stills (`captures/pools/`)   |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -124,6 +129,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   `Car.tricks`): they come out of one crate, `pickup.bag-of-tricks`, which rolls its `kits` by their own odds, so a
   new trick is a pickup folder and a line in that list, not a line in every venue. The client's side is
   render/tricks-fx.ts (one `trick` SimEvent: on, off, use).
+- **What keeps a race a pack is in one place** (sim/catchup.ts, sim/hunt.ts): a race's field is the mode's `field`
+  (8), a crate's odds lean by the car's place or by how far off the front it is (`place`), rivals are banded to the
+  humans by degrees (`band` in the racer AI), and the items do the rest: the Runt Ray on every other car, the
+  Bloodhound (`w.hunters`, a rocket up the road to the car in front), Sniffers that follow the road (`lock.road`).
+  A car towed or put back finds its feet (`Car.fresh`, `freshen`): safe from harm and slow for a few seconds.
 - **Rival drivers are built from the AI kit** (sim/ai-kit.ts): `thingsAhead` gathers what is in the way and what is
   worth having as plain `Thing`s (a place, a size, a weight), `pickPath` / `pickHeading` weigh a fan of ways past
   them, `cornerSpeed` reads the racing line (sim/line.ts, `world.line`), `recover` backs out of trouble, and
@@ -141,6 +151,13 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it asks about is (a car `c.z` to its roof, a rocket `ROCKET_HIGH`). `radius` stays for layout, blasts and drivers.
   A car bumps with its one hull, and a shot meets its body slice by slice (`carPoint`, the car manifest's `hit`).
   The HITBOXES view (`render/hitbox-view.ts`) draws these same shapes: a new thing that can be hit is drawn there too.
+- **A scrapped driver can come back as a ghost car** (sim/haunt.ts, `Car.haunt`): the wreck gets up when its
+  driver touches the gas, and goes away when left alone. It stays `wrecked`, so every rule that leaves wrecks alone
+  leaves it alone (no score, no pickups, no target, no win); all it does is shove running cars, never hurting them
+  (`collideCars`), and it goes through wrecks, loose props and breaks nothing. It is asked for with the seat's own
+  controls, so an online race needs nothing more on the wire; the client sends none while its driver watches
+  (`Session.ghost`, the GHOST CAR button on the spectator's bar). A rule that asks whether a wreck is there to be
+  hit or seen asks `away(c)` too.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.
@@ -155,6 +172,22 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   it, so a change to how the ground looks is made in both. A venue's `colors.terrain` (grass, dirt, sand, snow,
   gravel, paved) and `colors.road` (tarmac, dirt) pick the look; both are optional and looks only, so the sim never
   reads them. Light is smooth and shadows soft-edged; `?light=bands` is the older dithered look.
+- **Water is a material with `water`** (lagoon, river, brine, water): the sim's pools of it are the water, and
+  nothing else is. A car in it wades (`wading` in sim/rescue.ts: slow by the material's own `drag`, no tyre tracks);
+  `water.deep` px in from the shore it is too deep, dark water, and a racing car that goes in sinks and is put back
+  on the road it left (`drown`, the `sink` event; where nobody is put back it is waded). The client draws it from
+  one map of those same pools (`render/water.ts`: how far in from the shore, what colour, what stands in it), read
+  by the ground's painter (`waterOver`): the moving surface, the foam along the shore and round what stands in it
+  are all worked out there from the race's clock, so water costs nothing where there is none. Wakes and splashes
+  are effects (`wade`, `splash` in effects.ts, the `foam` particle). The canvas fallback still blots it on.
+- **Lava and ice are pools with a look** (a material's `look`: `molten`, `ice`). Where the ground is painted in the
+  shader they are kept in a second map like the water's (`Ground.pools`, the same `WaterMap` with `poolTint`: which
+  look, how far in from the edge) and drawn moving by `poolOver` in the painter; a stretch of road surfaced in such
+  a material is poured into the same map (`surfacePools` in render/ground.ts), and any other surfaced stretch is one
+  clean band on the canvas. What glows of itself (`g_glow`) is not dimmed by night. A material that `scalds` burns
+  the armour off a car standing in it (sim/heat.ts, the `scald` event, `HELD.hot`); the client sets the car alight
+  (`poolFx` in effects.ts). A dirt road is painted darker than its ground with a chalk line down each edge, and a
+  paved town's road is dark asphalt with yellow lines, so a road is always told from the ground by tone.
 - **The look is bright and plain** (`groundMode.bright`, `#define BRIGHT` in the painter): sunny colours, a mown
   lawn, one flat pale tarmac with whole white lines, bold kerbs, no grit or specks, lighter shadows. The worn, gritty
   look it replaced is `?look=classic`; a change to the ground is made for both.
@@ -185,8 +218,16 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   ground's shader, in the look of the way each joins (a path's skin, the road's tarmac or dirt, else rock;
   render/leaps.ts paints the top on the ground canvas only for a piece on no way). A way can be shut by a `gate` (`prop.pop-bollard` keeps a
   beat; `prop.switch-bollard` sinks for a few seconds when a `switch` pad near it, `prop.floor-switch`, is driven
-  over; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
+  over; `prop.piston-block` has a `wave`, so a row rises one after another and its gap moves; sim/gates.ts, `down` while sunk) or by `prop.blast-wall` (`material.cracked-rock`: only a blast breaks it).
   `prop.secret-crate` (`gives`) is a yellow crate that hands over all it lists (a boost refill and rockets). A
+  secret way is medium hard: its gate stands across the takeoff, up where the ramp's sides are too high to climb,
+  so there is no way round it, and a pool is laid under the gap (`pools`, the smallest one the gap's middle lies
+  in: `w.pits`). A car that comes down in it has fallen short (`plunge`, sim/rescue.ts) and is put back where it
+  left the road: a path is part of the course, but `Car.onIdx` is the last of the road itself. The timed pieces:
+  a takeoff with a `pump` (`prop.pump-takeoff`: the flap at its lip is up or flat on a beat, `pumpUp`, and flat it
+  throws short); a vent put down by hand before a landing (`prop.launch-geyser`) is the near side of a gap as a
+  takeoff is (`jumpGaps`); a press (`prop.crusher`) over a way; and a prop with a `signal` (`prop.signal-lamp`,
+  looks only) shows red, amber or green for the nearest of these beats, so a timed piece gets lamps at the fork. A
   pad of kind `vent` (`prop.geyser`) throws a car up on a beat; a prop with `bounce` (`prop.bumper`) throws a car
   back harder than it came. A venue's own `laps` beats the mode's (the big courses run 2). Relief `outfield: false`
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.
@@ -226,9 +267,14 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   an ink line and a hard shadow, dark words on light. A new screen is built from the pieces it lists (`.panel`,
   `.events button`, `.row button`, `.go`, `.quiet`, `.slide`, `.tog`) and wears it without rules of its own. The HUD
   drawn on the canvas (`render/hud.ts`) uses the same ink, paper and sun. Every setting lives on the one SETTINGS
-  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, DEV), wired by class, and it sits beside a paused race so a
+  sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused race so a
   slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
   in `theme.css`); nothing forces landscape.
+- **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
+  else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
+  in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never
+  online). All three are sliders on the FEEL tab. A gamepad (input/gamepad.ts, `Pads`) drives through `Input` and
+  works every menu through `ui/pad-menu.ts`, which finds buttons by itself: a new screen needs nothing for it.
 - **The driving lesson is a test range, not a mode.** It runs on a lawn of its own (`withSchool` in content, like
   `withRange`) as a sandbox world; the steps and what each waits for are `game/lesson.ts` (pure, tested), and
   `ui/tutor.ts` shows them and puts the crate and the targets down with the range's own tools. The sim knows nothing

@@ -1,0 +1,21 @@
+{
+  "id": "prop.launch-geyser",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Launch geyser",
+    "description": "A big hot spring across a path. Every few seconds it blows for a while, and a car over it then is thrown far enough to clear a gap: put a jump landing across a pool ahead of it. A car that comes while it is quiet drives on into the pool.",
+    "since": "core@0.11.0"
+  },
+  "body": "static",
+  "radius": 22,
+  "solid": false,
+  "pad": {
+    "kind": "vent",
+    "long": 40,
+    "wide": 52,
+    "lift": 230,
+    "period": 4.8,
+    "open": 2.2
+  },
+  "ambient": "bubble"
+}

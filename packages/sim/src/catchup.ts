@@ -3,6 +3,7 @@ import { damage } from './damage';
 import { absorb } from './defence';
 import type { Car } from './entities';
 import { clamp } from './math';
+import { launchHunter } from './hunt';
 import { standings } from './race';
 import type { World } from './world';
 
@@ -14,14 +15,19 @@ import type { World } from './world';
  *
  * - grow: the car swells. It is heavier, rams harder, shrugs off blows, breaks scenery it would
  *   have bounced off, and flattens any car much smaller than it is.
- * - shrink: every rival ahead is zapped small: slow, light, and flat under the first car of its
- *   own old size that catches it.
+ * - shrink: every other car in the race is zapped small: slow, light, and flat under the first car
+ *   of its own old size that catches it. The nearer the front a car is, the longer it stays small.
+ * - hunt: a rocket that flies up the road over the whole pack and lands on the car in front
+ *   (hunt.ts).
  * - wind: a burst of top speed, longer the further back the car is.
  * - collar: a lead weight on the car in front.
  * - bones: heavy loose props fall out of the sky onto the road in front of every rival ahead.
  *
  * Grow and shrink are in the derby too; there, and for anybody with nobody ahead of them, an item
  * that looks for "rivals ahead" takes the rivals within its `radius` instead.
+ *
+ * A car that has just been towed back, or put back on the road, finds its feet for a few seconds
+ * (`fresh`): it blinks, nothing can hurt it, and it is slow at first.
  */
 
 /** How fast a car changes size, in sizes per second. */
@@ -38,6 +44,8 @@ const DROP_FROM = 150;
 const DROP_STEP = 28;
 /** No more bones fall while this many of the kind are lying about. */
 const MAX_LITTER = 24;
+/** A car this much road behind the one in front rolls the back marker's odds, wherever it is placed. */
+const ADRIFT = 1500;
 
 const secs = (d: PickupManifest, fallback: number) => d.seconds ?? fallback;
 const NAME = (d: PickupManifest) => d.meta.name.toUpperCase();
@@ -47,13 +55,17 @@ export function place(w: World, c: Car): number {
   if (w.kind !== 'race' || !w.track || w.sandbox) return 0.5;
   let ahead = 0;
   let n = 0;
+  let front = c.progress;
   for (const o of w.cars) {
     if (o.finished) continue;
     n++;
     if (o !== c && (o.progress > c.progress || (o.progress === c.progress && o.index < c.index)))
       ahead++;
+    if (!o.wrecked) front = Math.max(front, o.progress);
   }
-  return n < 2 ? 0.5 : ahead / (n - 1);
+  // by its place, or by how far off the front it is, whichever makes it the further back: a car
+  // third of eight but half a lap adrift needs the help as much as the one at the back
+  return n < 2 ? 0.5 : Math.max(ahead / (n - 1), clamp((front - c.progress) / ADRIFT, 0, 1));
 }
 
 /**
@@ -107,8 +119,19 @@ export function fitCatchup(w: World, c: Car, got: PickupManifest): string | null
     }
     case 'shrink': {
       let n = 0;
-      for (const o of rivals(w, c, got.radius ?? 300)) if (zap(w, c, o, got)) n++;
+      const all = got.all === true && w.kind === 'race' && !!w.track && !w.sandbox;
+      const full = secs(got, 7);
+      const tail = got.tail ?? 1;
+      for (const o of all
+        ? w.cars.filter((o) => o !== c && !o.wrecked && !o.finished)
+        : rivals(w, c, got.radius ?? 300))
+        // (the car in front is held the whole time, the one at the back the least of it)
+        if (zap(w, c, o, got, all ? full * (1 - (1 - tail) * place(w, o)) : full)) n++;
       return n ? `${NAME(got)} x${n}` : `${NAME(got)}: NOBODY IN REACH`;
+    }
+    case 'hunt': {
+      const o = launchHunter(w, c, got);
+      return o ? `${NAME(got)}: AFTER ${o.name}` : `${NAME(got)}: NOBODY IN REACH`;
     }
     case 'wind': {
       // the further back, the longer it blows
@@ -170,7 +193,7 @@ export function fitCatchup(w: World, c: Car, got: PickupManifest): string | null
 }
 
 /** Car `by` zaps car o with shrink pickup `def`. A shield takes it; a swollen car is only brought back down. */
-function zap(w: World, by: Car, o: Car, def: PickupManifest): boolean {
+function zap(w: World, by: Car, o: Car, def: PickupManifest, time: number): boolean {
   if (o.invuln > 0) return false;
   w.emit({ t: 'arc', x: o.x + 14, y: o.y - 10, z: o.z + 150, tx: o.x, ty: o.y, tz: o.z + 4 });
   if (o.shield > 0) {
@@ -182,7 +205,7 @@ function zap(w: World, by: Car, o: Car, def: PickupManifest): boolean {
     say(w, 'back', o, by.index, def);
     return true;
   }
-  o.morph = { def, t: secs(def, 7) };
+  o.morph = { def, t: time };
   say(w, 'shrink', o, by.index, def);
   return true;
 }
@@ -252,7 +275,23 @@ export function updateCatchup(w: World): void {
       (c.wind?.def.pace ?? 1) *
       (c.collar?.def.pace ?? 1) *
       (front > -Infinity ? chase(w, c, front) : 1);
+    if (c.fresh > 0) {
+      // finding its feet: slow at first, all of its speed back by the end
+      const { freshSeconds, freshPace } = w.tuning;
+      c.pace *= 1 - (1 - freshPace) * clamp(c.fresh / Math.max(freshSeconds, 0.01), 0, 1);
+      c.fresh = Math.max(0, c.fresh - DT);
+    }
   }
+}
+
+/**
+ * A car is back on the road after a tow or a rescue: for `tuning.freshSeconds` it cannot be hurt
+ * and is slow, so it neither loses the place again at once nor gains by the trip.
+ */
+export function freshen(w: World, c: Car, least = 0): void {
+  const t = w.tuning.freshSeconds;
+  c.fresh = t;
+  c.invuln = Math.max(c.invuln, t, least);
 }
 
 function dropCollar(w: World, c: Car): void {

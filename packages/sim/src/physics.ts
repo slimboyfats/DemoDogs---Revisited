@@ -1,4 +1,5 @@
 import { batter, footing } from './damage';
+import { wading } from './rescue';
 import {
   BASE_SPEED,
   DT,
@@ -16,6 +17,7 @@ import { clamp } from './math';
 import { breakProp, damage, light } from './damage';
 import { dugIn, padded } from './guards';
 import { flatten } from './catchup';
+import { HAUNT_HEFT, haunting } from './haunt';
 import { crest, groundAt, moundAt } from './mounds';
 import { pathAt, wobbleAt } from './pads';
 import type { World } from './world';
@@ -144,6 +146,7 @@ export function makeCar(
     wrecked: false,
     wreckT: 0,
     downT: 0,
+    plunge: 0,
     onIdx: 0,
     onLap: 0,
     wreckTick: 0,
@@ -183,6 +186,7 @@ export function makeCar(
     size: 1,
     pace: 1,
     squashT: 0,
+    fresh: 0,
     morph: null,
     wind: null,
     collar: null,
@@ -227,7 +231,8 @@ function character(w: World, c: Car, ai: AiManifest, skill?: number): void {
 
 /** What a car weighs in a collision: its mass, by its size squared; more as a wreck or in a lead collar. */
 export function heft(c: Car): number {
-  return c.stats.mass * c.size * c.size * (c.wrecked ? 1.6 : 1) * (c.collar ? 1.5 : 1);
+  const k = c.haunt?.up ? HAUNT_HEFT : c.wrecked ? 1.6 : 1;
+  return c.stats.mass * c.size * c.size * k * (c.collar ? 1.5 : 1);
 }
 
 /** A world point in the car's frame: x forward, y to its right. */
@@ -299,7 +304,7 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     Math.sign(vf || 1) *
     (c.handbrake ? 1.4 : 1) *
     (0.45 + 0.55 * hold);
-  if (c.hp < 30) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
+  if (c.hp < 30 && !c.haunt) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
   // loose boards under the wheels wag the car from side to side as it goes over them (and
   // let it straighten as it leaves them)
   const loose = airborne || floor > 0 ? 0 : wobbleAt(w, c.x, c.y);
@@ -389,9 +394,15 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     : (harsh > 0.2 && T.offroadPace < 1 ? HELD.rough : 0) |
       // (a climb is named once it costs something: a pull of 20 px/s² is about a tenth off)
       (uphill * T.hillPull > 20 ? HELD.hill : 0) |
-      (bog > 0.3 ? HELD.sticky : 0) |
+      ((c.scald ?? 0) > 0
+        ? HELD.hot
+        : bog > 0.3
+          ? wading(w, c)[0] > 0
+            ? HELD.wet
+            : HELD.sticky
+          : 0) |
       (weak < 1 ? HELD.hurt : 0) |
-      (c.pace < 1 ? HELD.weighed : 0);
+      (c.fresh > 0 ? HELD.fresh : c.pace < 1 ? HELD.weighed : 0);
   c.vf = vf;
   const x0 = c.x;
   const y0 = c.y;
@@ -667,7 +678,7 @@ export function collideWorld(w: World, c: Car): void {
     const fy = s.y - c.y;
     if (fx > far || fx < -far || fy > far || fy < -far || fx * fx + fy * fy > far * far) continue;
     if (!s.def.solid) {
-      if (s.def.trample) trample(w, c, s);
+      if (s.def.trample && !c.haunt) trample(w, c, s);
       continue;
     }
     // high enough in the air, a car sails over what is low
@@ -712,6 +723,8 @@ export function collideWorld(w: World, c: Car): void {
     if (
       vn > (22 + 23 * s.def.hardness) / big &&
       c.z < 6 &&
+      // (a ghost car breaks nothing)
+      !c.haunt &&
       batter(w, s, (vn * big - 35) * 0.5 * c.def.stats.mass * big * big, 'impact', px, py)
     ) {
       const keep = big > 1 ? 0.9 : 0.72;
@@ -804,7 +817,12 @@ export function collideCars(w: World, a: Car, b: Car): void {
   // the two hulls: where they are deepest into each other, and the way from a into b there
   const gap = shapeGap(carShape(b, OTHER), carShape(a, HULL), AT);
   const best = gap < 0 ? { px: AT.px, py: AT.py, ov: -gap, nx: AT.nx, ny: AT.ny } : null;
-  if (!best || flatten(w, a, b)) return;
+  if (!best) return;
+  // a ghost car is in the way of the running cars and of nothing else: wrecks and other ghosts
+  // go through it. What it meets is shoved and never hurt.
+  const soft = haunting(a) || haunting(b);
+  if (soft && a.wrecked && b.wrecked) return;
+  if (flatten(w, a, b)) return;
   const ma = heft(a) * dugIn(a);
   const mb = heft(b) * dugIn(b);
   const tot = ma + mb;
@@ -813,8 +831,10 @@ export function collideCars(w: World, a: Car, b: Car): void {
   b.x += (best.nx * best.ov * ma) / tot;
   b.y += (best.ny * best.ov * ma) / tot;
   // spiked hubs chew whatever runs alongside, however gently the two are touching
-  grind(w, a, b, toLocal(a, best.px, best.py), best.px, best.py);
-  grind(w, b, a, toLocal(b, best.px, best.py), best.px, best.py);
+  if (!soft) {
+    grind(w, a, b, toLocal(a, best.px, best.py), best.px, best.py);
+    grind(w, b, a, toLocal(b, best.px, best.py), best.px, best.py);
+  }
   const vrel = (b.vx - a.vx) * best.nx + (b.vy - a.vy) * best.ny;
   if (vrel >= 0) return;
   const j = (-(1 + 0.32) * vrel) / (1 / ma + 1 / mb);
@@ -828,6 +848,15 @@ export function collideCars(w: World, a: Car, b: Car): void {
   a.spin += clamp(((-ra[1] * j * 0.0016) / ma) * Math.sign(ra[0] + 0.01), -5, 5);
   b.spin += clamp(((rb[1] * j * 0.0016) / mb) * Math.sign(rb[0] + 0.01), -5, 5);
   const impact = -vrel;
+  if (soft) {
+    const g = haunting(a) ? a : b;
+    if (impact > 12 && g.scrapeCd <= 0) {
+      g.scrapeCd = 0.25;
+      const car = (g === a ? b : a).index;
+      w.emit({ t: 'spook', ghost: g.index, car, x: best.px, y: best.py, impact });
+    }
+    return;
+  }
   // `player` is only what the events say (the screen's own car); the rules use isPlayer
   const player = a === w.player || b === w.player;
   if (impact < 20) {
@@ -855,6 +884,8 @@ export function collideCars(w: World, a: Car, b: Car): void {
 }
 
 export function collideProps(w: World, c: Car): void {
+  // a ghost car goes through what lies loose: it has no barrel to push into anybody
+  if (c.haunt) return;
   const long = reach(c) + 2;
   // (nothing loose is as big as this: most props are passed by on it alone)
   const coarse = long + 24;

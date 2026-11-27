@@ -3,6 +3,7 @@ import { armsWants } from './arms';
 import { arsenalWants } from './arsenal';
 import { dropsBehind } from './drops';
 import type { Car } from './entities';
+import { away } from './haunt';
 import { howlWants } from './howl';
 import { angDiff, clamp } from './math';
 import { onPad } from './pads';
@@ -52,7 +53,7 @@ export function recover(c: Car, out: Controls, d: number): Controls {
   }
   ai.jamT = 0;
   // (down a pit, stalled or flattened it is not stuck: there is nothing to back out of)
-  const held = (c.stall ?? 0) > 0 || (c.sunk ?? 0) > 0 || c.squashT > 0;
+  const held = (c.stall ?? 0) > 0 || (c.sunk ?? 0) > 0 || (c.drown ?? 0) > 0 || c.squashT > 0;
   if (out.throttle > 0.5 && !out.brake && Math.abs(c.vf) < 12 && !held) {
     ai.stuckT += DT;
     if (ai.stuckT > 0.7) {
@@ -125,7 +126,7 @@ export function thingsAhead(w: World, c: Car, reach: number, rivals = true): Thi
   const level = (z: number) => Math.abs(z - c.deck) <= 8;
   const mean = ai.aggro > 0.55 && c.hp > 40;
   for (const o of w.cars) {
-    if (o === c || o.buried || !level(o.deck) || o.z - o.deck > 10) continue;
+    if (o === c || o.buried || away(o) || !level(o.deck) || o.z - o.deck > 10) continue;
     const f = fwd(o.x, o.y);
     if (f < -14 || f > reach + 20) continue;
     const r = 12 * o.size;
@@ -189,7 +190,7 @@ export function thingsAhead(w: World, c: Car, reach: number, rivals = true): Thi
       if (s.owner !== c.index && seen(s.x, s.y, 4)) out.push({ x: s.x, y: s.y, r: 5, w: 1.2 });
     for (const s of w.spills)
       if ((s.def.grip < 0.85 || s.def.drag > 0.2) && seen(s.x, s.y, s.r))
-        out.push({ x: s.x, y: s.y, r: s.r * 0.8, w: 0.8 });
+        out.push({ x: s.x, y: s.y, r: s.r * (s.def.scalds ? 1 : 0.8), w: s.def.scalds ? 2 : 0.8 });
     for (const b of w.blazes)
       if (seen(b.x, b.y, b.r)) out.push({ x: b.x, y: b.y, r: b.r * 0.8, w: 1.5 });
     for (const k of w.craters)

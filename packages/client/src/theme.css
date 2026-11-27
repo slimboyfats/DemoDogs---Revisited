@@ -660,9 +660,9 @@ details.help p {
 .sheet .setTabs button {
   flex: 1 1 0;
   min-width: 0;
-  padding: 0 4px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
+  padding: 0 2px;
+  font-size: 11.5px;
+  letter-spacing: 0;
   white-space: nowrap;
   background: var(--paper2);
   box-shadow: none;
@@ -1043,33 +1043,37 @@ tr.me td {
 body.driven #stickZone .hint {
   opacity: 0;
 }
-#specBar button,
-#specWho {
+:is(#specBar, #ghostBar) button,
+:is(#specWho, #ghostWho) {
   color: var(--ink);
   border: var(--line) solid var(--ink);
   border-radius: 14px;
   background: var(--paper);
   box-shadow: var(--drop);
 }
-#specBar button {
+:is(#specBar, #ghostBar) button {
   min-width: 48px;
   min-height: 46px;
 }
-#specBar button:active {
+:is(#specBar, #ghostBar) button:active {
   background: var(--sun);
   transform: translateY(3px);
   box-shadow: 0 1px 0 var(--ink);
 }
-#specWho {
+:is(#specWho, #ghostWho) {
   border-color: var(--ink);
   background: var(--sun);
 }
-#specBar #specSkip {
+:is(#specBar #specSkip, #ghostBar #ghostSkip) {
   border-color: var(--ink);
   background: var(--orange);
 }
-#specBar small {
+:is(#specBar, #ghostBar) small {
   opacity: 0.85;
+}
+#specBar #specGhost,
+#ghostWho {
+  background: #d8f6ff;
 }
 
 /* ---- a phone held upright: the stick has the left of the screen, the buttons stand in a
@@ -1093,7 +1097,7 @@ body.driven #stickZone .hint {
   #stickZone .hint {
     bottom: calc(126px + env(safe-area-inset-bottom));
   }
-  #specBar {
+  :is(#specBar, #ghostBar) {
     flex-wrap: wrap;
     justify-content: center;
     width: calc(100% - 16px);
@@ -1165,6 +1169,16 @@ body.driven #stickZone .hint {
 }
 .events button.item.cup.iron {
   border-left-color: #9aa3b2;
+}
+
+/* ---- a gamepad's marker on the menus: where A will press */
+.padAt,
+.slide:has(> .padAt) {
+  outline: 4px solid var(--orange);
+  outline-offset: 3px;
+}
+.slide > .padAt {
+  outline: none;
 }
 
 /* ---- the driving lesson: a card that says what to do now, the one button it is about lit up,

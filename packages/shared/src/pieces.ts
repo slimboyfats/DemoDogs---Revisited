@@ -110,13 +110,27 @@ export const LeapSchema = z.strictObject({
   high: z.number().positive().max(60),
   lift: z.number().min(0).default(0),
   min: z.number().min(0).default(80),
+  /**
+   * A takeoff whose lip pumps on a beat: a flap across it (the prop `plate`, drawn by the client,
+   * never placed) stands up for `up` seconds of every `period` and then throws at `lift`; while
+   * it lies flat the takeoff throws only `low` of that, which falls short.
+   */
+  pump: z
+    .strictObject({
+      period: z.number().positive(),
+      up: z.number().positive(),
+      low: unit.default(0.5),
+      plate: z.string().regex(/^prop\.[a-z0-9-]+$/, 'a prop.* id'),
+    })
+    .optional(),
 });
 export type LeapManifest = z.infer<typeof LeapSchema>;
 
 /**
  * A gate: a solid static prop that sinks into the ground to let cars by and rises again. With a
  * `period` it keeps a beat, down for `open` seconds of every `period` (`shift`, 0 to 1, is how far
- * into the beat it starts, the same for every gate with the same numbers, so a row moves as one).
+ * into the beat it starts, the same for every gate with the same numbers, so a row moves as one;
+ * `wave` makes a row move as a wave instead).
  * With none it stands until a `switch` plate within reach is driven over, then is down for `open`
  * seconds. It never rises onto a car: it waits for the car to clear it.
  */
@@ -124,6 +138,12 @@ export const GateSchema = z.strictObject({
   period: z.number().min(0).default(0),
   open: z.number().positive().default(3),
   shift: unit.default(0),
+  /**
+   * With a `period`: art px across a row for one whole beat. Each gate's beat is then shifted by
+   * where it stands across its own turn, so a row of them sinks and rises as a wave that runs
+   * along it, and the way through is a gap that moves. 0: they all move as one.
+   */
+  wave: z.number().min(0).default(0),
 });
 export type GateManifest = z.infer<typeof GateSchema>;
 
@@ -183,6 +203,13 @@ export const pieceFields = {
   mound: MoundSchema.optional(),
   leap: LeapSchema.optional(),
   gate: GateSchema.optional(),
+  /**
+   * A signal: a lamp that shows the beat of the nearest thing on a beat within `reach` art px (a
+   * gate with a `period`, a vent, a takeoff that pumps), so a driver can read it from far off. Looks only: the client
+   * flips its look's poses, red while that is shut, amber when it is about to change, green
+   * while it is open. The sim does nothing with it.
+   */
+  signal: z.strictObject({ reach: z.number().positive() }).optional(),
   /**
    * A crate stand for a secret way (a yellow crate floats over it): a car that drives through it
    * gets every pickup listed, and it comes back as the mode's pickups do. Not solid.

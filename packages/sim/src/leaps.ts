@@ -58,3 +58,32 @@ export function leapGaps(pieces: readonly LeapPiece[]): [number, number, number,
   }
   return out;
 }
+
+/**
+ * A vent put down by hand (a geyser) throws a car as a takeoff does, off flat ground: with a
+ * landing ahead of it, it is the near side of a gap too. These are those vents, as takeoffs of
+ * no height that end where the vent does.
+ */
+export function ventPieces(v: VenueManifest, content: Content): LeapPiece[] {
+  const out: LeapPiece[] = [];
+  const cx = v.oval ? v.oval.cx : v.size.w / 2;
+  const cy = v.oval ? v.oval.cy : v.size.h / 2;
+  for (const r of v.scenery) {
+    if (r.rule !== 'place') continue;
+    for (const i of r.items) {
+      const P = content.prop.get(i.prop)?.pad;
+      if (P?.kind !== 'vent') continue;
+      const def: LeapManifest = { way: 'up', long: P.long, wide: P.wide, high: 0, lift: 0, min: 0 };
+      out.push({ x: cx + i.x, y: cy + i.y, rot: i.rot, def });
+    }
+  }
+  return out;
+}
+
+/** Every gap venue `v` has a jump over: from its takeoffs, and from vents laid before a landing. */
+export function jumpGaps(
+  v: VenueManifest,
+  content: Content,
+): [number, number, number, number, number][] {
+  return leapGaps([...leapPieces(v, content), ...ventPieces(v, content)]);
+}

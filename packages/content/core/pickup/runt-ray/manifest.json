@@ -3,16 +3,18 @@
   "schemaVersion": 1,
   "meta": {
     "name": "Runt Ray",
-    "description": "A bolt out of the sky for every rival ahead: each is zapped down to half its size, slow and light, and flattened by the first full-sized car that catches it.",
+    "description": "A bolt out of the sky for every other car in the race: each is zapped down to half its size, slow and light, and flattened by the first full-sized car that catches it. The nearer the front, the longer it lasts.",
     "since": "core@0.7.0"
   },
   "kind": "shrink",
   "weight": 0.08,
   "hurtWeight": 0.07,
-  "lead": 0.15,
+  "lead": 0,
   "trail": 3,
   "seconds": 7,
   "scale": 0.5,
-  "pace": 0.72,
-  "radius": 320
+  "pace": 0.66,
+  "radius": 320,
+  "all": true,
+  "tail": 0.45
 }

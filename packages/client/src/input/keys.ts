@@ -1,6 +1,16 @@
 /** One thing the player can do with a key. */
 export type Action =
-  'gas' | 'brake' | 'left' | 'right' | 'boost' | 'fire' | 'pause' | 'watch' | 'zoom' | 'skip';
+  | 'gas'
+  | 'brake'
+  | 'left'
+  | 'right'
+  | 'boost'
+  | 'fire'
+  | 'pause'
+  | 'watch'
+  | 'zoom'
+  | 'skip'
+  | 'ghost';
 
 /**
  * The keyboard: each action and the keys that do it (`KeyboardEvent.key`, lower case). The first key
@@ -20,6 +30,8 @@ export const KEYS: Readonly<Record<Action, readonly string[]>> = {
   zoom: ['z'],
   // and, where nobody else is waiting on the race, straight to the results
   skip: ['enter'],
+  // scrapped for good: drive the ghost of the car, or go back to watching
+  ghost: ['g'],
 };
 
 const NAMES: Readonly<Record<string, string>> = {

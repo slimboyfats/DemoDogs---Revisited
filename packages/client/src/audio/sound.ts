@@ -795,6 +795,17 @@ export class Sound {
     this.noise(0.5, 600, 0.5, 0.2, 'lowpass');
   }
 
+  /** A car going into deep water: the slap of it, the gulp, and the spray coming down. */
+  plop(v = 1): void {
+    this.heavy(0, () => {
+      this.noise(0.12, 420, 0.8, 0.9 * v, 'lowpass');
+      this.tone(220, 0.22, 0.25 * v, 'sine', 0.35, 0.02);
+      this.noise(0.6, 2200, 0.6, 0.35 * v, 'bandpass', 0.05);
+      for (let i = 0; i < 5; i++)
+        this.noise(0.04, 1400 + Math.random() * 1800, 2, 0.12 * v, 'bandpass', 0.25 + i * 0.09);
+    });
+  }
+
   /** A plate in the ground pressed down: a heavy clunk and a latch. */
   clank(v = 1): void {
     this.tone(150, 0.12, 0.25 * v, 'square', 0.5);

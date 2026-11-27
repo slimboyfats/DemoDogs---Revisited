@@ -4,7 +4,7 @@ import { loadContent } from './index';
 import { flatBench, makeWorld, put, startRace } from './testing';
 
 const GO = { steer: 0, throttle: 1, brake: false, boost: false, fire: false };
-const HELP = new Set(['grow', 'shrink', 'wind', 'collar', 'bones']);
+const HELP = new Set(['grow', 'shrink', 'wind', 'collar', 'bones', 'hunt']);
 
 describe('catch-up', () => {
   it('knows how far back a car is running: 0 in front, 1 at the back, 0.5 in a derby', () => {
