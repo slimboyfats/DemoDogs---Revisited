@@ -7,8 +7,20 @@ import {
   bridgeEnds,
   bridgeSpan,
   drawRoad,
+  joinLevel,
+  LEVEL_LEAST,
+  levelAt,
+  levelHeight,
+  levelsIn,
   liftTo,
   LIFT_PX,
+  moveLevel,
+  moveRamp,
+  rampLeast,
+  rampOf,
+  setLevelHeight,
+  splitLevel,
+  tidyLevels,
   moveEnd,
   stretchEnds,
   onArc,
@@ -260,6 +272,87 @@ describe('editing a track', () => {
     const before = t.raised[0]!.x0;
     resize(t, 1800, 1240);
     expect(t.raised[0]!.x0).toBe(before + 200);
+  });
+
+  it('a raised stretch is split into levels, each with a height, moved, joined and turned about', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]!];
+    };
+    const up = raisedBetween(T, 20, at(0.2), at(0.5));
+    t.raised.push(up);
+    // split: a second level begins at the middle, a step higher
+    expect(splitLevel(T, up, 0)).toBe(1);
+    expect(up.levels).toHaveLength(1);
+    expect(levelHeight(up, 1)).toBe(28);
+    expect(levelAt(T, up, ...at(0.25))).toBe(0);
+    expect(levelAt(T, up, ...at(0.45))).toBe(1);
+    setLevelHeight(up, 1, 44);
+    setLevelHeight(up, 0, 2);
+    expect([up.height, up.levels![0]!.height]).toEqual([12, 44]);
+    // the place where it begins is dragged along the road, and stops short of the end
+    expect(moveLevel(T, up, 1, ...at(0.3))).toBe(true);
+    expect(levelAt(T, up, ...at(0.33))).toBe(1);
+    moveLevel(T, up, 1, ...at(0.7));
+    const L = levelsIn(T, up);
+    expect((L.len - L.cuts[0]!) * T.step).toBeGreaterThanOrEqual(LEVEL_LEAST);
+    expect(parseTrackFile(JSON.stringify(t)).ok).toBe(true);
+    // split again and again: never more than a stretch has room for
+    while (splitLevel(T, up, 0) > 0);
+    const cuts = levelsIn(T, up).cuts;
+    for (let k = 1; k < cuts.length; k++)
+      expect((cuts[k]! - cuts[k - 1]!) * T.step).toBeGreaterThanOrEqual(LEVEL_LEAST);
+    expect(parseTrackFile(JSON.stringify(t)).ok).toBe(true);
+    // joined: one fewer, at the height of the one in hand
+    const n = up.levels!.length;
+    const h = levelHeight(up, n);
+    expect(joinLevel(up, n)).toBe(n - 1);
+    expect(up.levels).toHaveLength(n - 1);
+    expect(levelHeight(up, n - 1)).toBe(h);
+    // an end dragged past a level leaves it out when the road is tidied
+    const cut = structuredClone(up);
+    moveEnd(T, cut, 1, ...at(0.26), RAISE_LEAST);
+    tidyLevels(T, cut);
+    expect(cut.levels?.length ?? 0).toBeLessThan(n - 1);
+    // the race turned about: the same road is raised to the same heights
+    const high = (f: number): number => {
+      const R = sampleTrack(t.road.points, 4);
+      const r = t.raised[0]!;
+      return raisedAt(R, t, ...at(f), 40) < 0 ? 0 : levelHeight(r, levelAt(R, r, ...at(f)));
+    };
+    up.lanes = 'left';
+    const before = [0.1, 0.22, 0.3, 0.4, 0.48, 0.7].map(high);
+    reverse(t);
+    expect([0.1, 0.22, 0.3, 0.4, 0.48, 0.7].map(high)).toEqual(before);
+    expect(t.raised[0]!.lanes).toBe('right');
+  });
+
+  it('the slope at each end of a raised stretch has a length of its own, never a wall', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]!];
+    };
+    const up = raisedBetween(T, 40, at(0.2), at(0.5));
+    expect(rampOf(T, up, 0)).toBe(200);
+    // dragged right to the end: as steep as a car can still climb, and the other end as it was
+    expect(moveRamp(T, up, 0, up.x0, up.y0)).toBe(true);
+    expect(up.rampIn).toBe(rampLeast(40));
+    expect(up.rampOut).toBe(200);
+    // dragged far along: long and gentle, but it leaves the other slope its room
+    moveRamp(T, up, 1, up.x0, up.y0);
+    const len = levelsIn(T, up).len * T.step;
+    expect(up.rampOut!).toBeGreaterThan(200);
+    expect(up.rampIn! + up.rampOut!).toBeLessThanOrEqual(len);
+    // raised higher, a short slope grows so that it is still one
+    up.height = 12;
+    up.rampIn = 24;
+    setLevelHeight(up, 0, 48);
+    expect(up.rampIn).toBe(rampLeast(48));
+    expect(parseTrackFile(JSON.stringify({ ...t, raised: [up] })).ok).toBe(true);
   });
 
   it('a stretch is reshaped by its ends: the other end stays, and it is never too short', () => {

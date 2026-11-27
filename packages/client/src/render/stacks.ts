@@ -102,9 +102,10 @@ export function queueStacks(
   // a rail up a ramp lies along the ramp, each length tipped as the road climbs, so the run of
   // them is one line and not a flight of steps
   const railId = w.relief ? w.venue.track?.rail : undefined;
+  const wallId = w.walled ? w.venue.track?.wall : undefined;
   for (const s of w.statics) {
     if (s.down && !s.def.gate) continue;
-    const tip = s.def.id === railId && R.tilt ? sloped(w, s) : null;
+    const tip = (s.def.id === railId || s.def.id === wallId) && R.tilt ? sloped(w, s) : null;
     if (tip) R.tilt!(tip);
     queueStatic(R, art, w, fx, s, P, still);
     if (tip) R.tilt!(null);

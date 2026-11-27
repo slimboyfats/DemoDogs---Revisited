@@ -1,5 +1,13 @@
 import type { PropManifest, TrackFile } from '@demodogs/shared';
-import { RAISE_MAX, RAISE_MIN, RAISE_STEP } from '@demodogs/shared';
+import {
+  RAISE_LEVELS,
+  RAISE_MAX,
+  RAISE_MIN,
+  RAISE_STEP,
+  RAMP_MAX,
+  RAMP_MIN,
+  RAMP_STEP,
+} from '@demodogs/shared';
 import { clampPoint, sampleTrack, type Track } from '@demodogs/sim';
 
 /**
@@ -64,6 +72,29 @@ export function startAt(t: TrackFile, i: number): void {
 export function reverse(t: TrackFile): void {
   const [first, ...rest] = t.road.points;
   t.road.points = [first!, ...rest.reverse()];
+  // a stretch runs the way the race does: it keeps its place by changing its ends about
+  const turned = <S extends { x0: number; y0: number; x1: number; y1: number }>(s: S): S => ({
+    ...s,
+    x0: s.x1,
+    y0: s.y1,
+    x1: s.x0,
+    y1: s.y0,
+  });
+  t.surfaces = t.surfaces.map(turned);
+  t.raised = t.raised.map((r) => {
+    const { rampIn, rampOut, lanes, levels, ...rest } = turned(r);
+    const hs = [r.height, ...(levels ?? []).map((l) => l.height)];
+    return {
+      ...rest,
+      height: hs[hs.length - 1]!,
+      ...(levels?.length
+        ? { levels: levels.map((l, j) => ({ x: l.x, y: l.y, height: hs[j]! })).reverse() }
+        : {}),
+      ...(lanes ? { lanes: lanes === 'left' ? 'right' : lanes === 'right' ? 'left' : lanes } : {}),
+      ...(rampOut !== undefined ? { rampIn: rampOut } : {}),
+      ...(rampIn !== undefined ? { rampOut: rampIn } : {}),
+    };
+  });
 }
 
 /** Give the map a new size, keeping what is on it about its middle. */
@@ -91,6 +122,7 @@ export function resize(t: TrackFile, w: number, h: number): void {
     y0: s.y0 + dy,
     x1: s.x1 + dx,
     y1: s.y1 + dy,
+    ...(s.levels ? { levels: s.levels.map((l) => ({ ...l, x: l.x + dx, y: l.y + dy })) } : {}),
   }));
 }
 
@@ -119,6 +151,7 @@ export function snapBridges(t: TrackFile): void {
   };
   t.surfaces = t.surfaces.map(snap);
   t.raised = t.raised.map(snap);
+  for (const r of t.raised) tidyLevels(T, r);
 }
 
 /**
@@ -240,6 +273,184 @@ export function moveEnd(
   const at = end === 0 ? (b - len + T.n) % T.n : (a + len) % T.n;
   if (end === 0) Object.assign(s, { x0: Math.round(T.x[at]!), y0: Math.round(T.y[at]!) });
   else Object.assign(s, { x1: Math.round(T.x[at]!), y1: Math.round(T.y[at]!) });
+  return true;
+}
+
+type Up = TrackFile['raised'][number];
+
+/** The shortest a level of a raised stretch can be, px: room for the slopes at its two ends. */
+export const LEVEL_LEAST = 64;
+
+/**
+ * The levels of a raised stretch: the samples it runs from and to, how many samples long it is,
+ * how many samples into it each level after the first begins (`cuts`, in order), and how high
+ * each level stands (one more than there are cuts).
+ */
+export function levelsIn(
+  T: Track,
+  s: Up,
+): { a: number; b: number; len: number; cuts: number[]; heights: number[] } {
+  const [a, b] = stretchEnds(T, s);
+  const len = (b - a + T.n) % T.n;
+  const cuts = (s.levels ?? []).map((l) => (nearestSample(T, l.x, l.y).i - a + T.n) % T.n);
+  return { a, b, len, cuts, heights: [s.height, ...(s.levels ?? []).map((l) => l.height)] };
+}
+
+/**
+ * Put a stretch's levels in order along it, each on the road; ones the stretch no longer holds
+ * (its end was moved past them, or the road was) or that have closed up on a neighbour go.
+ */
+export function tidyLevels(T: Track, s: Up): void {
+  if (!s.levels) return;
+  const { a, len } = levelsIn(T, s);
+  const least = Math.max(1, Math.ceil(LEVEL_LEAST / 2 / T.step));
+  let last = 0;
+  const kept = s.levels
+    .map((l) => ({ l, at: (nearestSample(T, l.x, l.y).i - a + T.n) % T.n }))
+    .sort((p, q) => p.at - q.at)
+    .filter((p) => {
+      if (p.at < last + least || p.at > len - least) return false;
+      last = p.at;
+      return true;
+    })
+    .map(({ l, at }) => {
+      const i = (a + at) % T.n;
+      return { ...l, x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) };
+    });
+  if (kept.length) s.levels = kept;
+  else delete s.levels;
+}
+
+/** Which level of a raised stretch the road nearest (x, y) is on: 0 the first. */
+export function levelAt(T: Track, s: Up, x: number, y: number): number {
+  const { a, len, cuts } = levelsIn(T, s);
+  const at = (nearestSample(T, x, y).i - a + T.n) % T.n;
+  // (a place just off either end counts as that end)
+  const k = at > len ? (at - len < T.n - at ? len : 0) : at;
+  let part = 0;
+  while (part < cuts.length && k >= cuts[part]!) part++;
+  return part;
+}
+
+/** How high level `part` of a raised stretch stands. */
+export const levelHeight = (s: Up, part: number): number =>
+  part > 0 ? (s.levels?.[part - 1]?.height ?? s.height) : s.height;
+
+/** Stand level `part` of a raised stretch `h` high. */
+export function setLevelHeight(s: Up, part: number, h: number): void {
+  const high = Math.max(RAISE_MIN, Math.min(RAISE_MAX, h));
+  const l = part > 0 ? s.levels?.[part - 1] : undefined;
+  if (l) l.height = high;
+  else s.height = high;
+  // (a slope of its own at an end is never left so short for the new height as to be a wall)
+  const n = s.levels?.length ?? 0;
+  if (part === 0 && s.rampIn !== undefined) s.rampIn = Math.max(s.rampIn, rampLeast(high));
+  if (part === n && s.rampOut !== undefined) s.rampOut = Math.max(s.rampOut, rampLeast(high));
+}
+
+/**
+ * Split level `part` of a raised stretch in two at its middle (or, with a place, at the road
+ * nearest it): the half further on becomes a level of its own, a step higher (lower, if that is
+ * as high as road goes). Returns the new level, or -1 when there is no room for another.
+ */
+export function splitLevel(T: Track, s: Up, part: number, at?: readonly [number, number]): number {
+  const { a, len, cuts, heights } = levelsIn(T, s);
+  if (cuts.length >= RAISE_LEVELS || part < 0 || part > cuts.length) return -1;
+  const least = Math.ceil(LEVEL_LEAST / T.step);
+  const lo = (part > 0 ? cuts[part - 1]! : 0) + least;
+  const hi = (part < cuts.length ? cuts[part]! : len) - least;
+  if (hi < lo) return -1;
+  const mid = at ? (nearestSample(T, at[0], at[1]).i - a + T.n) % T.n : Math.round((lo + hi) / 2);
+  const k = Math.max(lo, Math.min(hi, mid));
+  const i = (a + k) % T.n;
+  const h = heights[part]!;
+  const height = h + 2 * RAISE_STEP <= RAISE_MAX ? h + 2 * RAISE_STEP : h - 2 * RAISE_STEP;
+  (s.levels ??= []).splice(part, 0, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!), height });
+  return part + 1;
+}
+
+/**
+ * Join level `part` of a raised stretch to the one before it (the first: to the one after), at
+ * the height of `part`. Returns the level they have become, or -1 if there is only the one.
+ */
+export function joinLevel(s: Up, part: number): number {
+  const n = s.levels?.length ?? 0;
+  if (!n || part < 0 || part > n) return -1;
+  const h = levelHeight(s, part);
+  const cut = Math.max(1, part);
+  s.levels!.splice(cut - 1, 1);
+  if (!s.levels!.length) delete s.levels;
+  setLevelHeight(s, cut - 1, h);
+  return cut - 1;
+}
+
+/**
+ * Drag the place where level `part` (1 or more) of a raised stretch begins to the road nearest
+ * (x, y): no nearer either neighbour, or an end, than a level can be short. Whether it moved.
+ */
+export function moveLevel(T: Track, s: Up, part: number, x: number, y: number): boolean {
+  const l = s.levels?.[part - 1];
+  if (!l) return false;
+  const { a, len, cuts } = levelsIn(T, s);
+  const least = Math.ceil(LEVEL_LEAST / T.step);
+  const lo = (part > 1 ? cuts[part - 2]! : 0) + least;
+  const hi = (part < cuts.length ? cuts[part]! : len) - least;
+  if (hi < lo) return false;
+  const want = (nearestSample(T, x, y).i - a + T.n) % T.n;
+  // (off the stretch altogether: whichever end it is nearer)
+  const k = Math.max(lo, Math.min(hi, want > len ? (want - len < T.n - want ? hi : lo) : want));
+  if (k === cuts[part - 1]) return false;
+  const i = (a + k) % T.n;
+  Object.assign(l, { x: Math.round(T.x[i]!), y: Math.round(T.y[i]!) });
+  return true;
+}
+
+/** The shortest slope (px) that a car can still drive up to road `h` high: any shorter is a wall. */
+export const rampLeast = (h: number): number =>
+  Math.max(RAMP_MIN, Math.ceil((h * 1.7) / RAMP_STEP) * RAMP_STEP);
+
+/**
+ * How long the slope at an end of a raised stretch (0: up to it at its start, 1: down from it at
+ * its end) is, px: what it says, else about five along for each px up, and never more than the
+ * level it climbs to has room for.
+ */
+export function rampOf(T: Track, s: Up, end: 0 | 1): number {
+  const { len, cuts, heights } = levelsIn(T, s);
+  const h = end === 0 ? heights[0]! : heights[heights.length - 1]!;
+  const said = end === 0 ? s.rampIn : s.rampOut;
+  const room = (cuts.length ? (end === 0 ? cuts[0]! : len - cuts[cuts.length - 1]!) : len) * T.step;
+  const plain = !cuts.length && s.rampIn === undefined && s.rampOut === undefined;
+  return Math.min(said ?? h * 5, plain ? room / 2 : room);
+}
+
+/**
+ * Drag the top of the slope at an end of a raised stretch to the road nearest (x, y): near the
+ * end is a short, steep slope, far from it a long, gentle one. It is never so short as to be a
+ * wall, and leaves the other end's slope (or the next level) its room. Whether it changed.
+ */
+export function moveRamp(T: Track, s: Up, end: 0 | 1, x: number, y: number): boolean {
+  const { a, len, cuts, heights } = levelsIn(T, s);
+  const h = end === 0 ? heights[0]! : heights[heights.length - 1]!;
+  const at = (nearestSample(T, x, y).i - a + T.n) % T.n;
+  const k = at > len ? (at - len < T.n - at ? len : 0) : at;
+  const first = cuts.length ? (end === 0 ? cuts[0]! : len - cuts[cuts.length - 1]!) : len;
+  // (with no levels the two slopes share the one stretch)
+  const other = cuts.length ? 0 : rampOf(T, s, end === 0 ? 1 : 0);
+  const most = Math.min(RAMP_MAX, Math.floor((first * T.step - other) / RAMP_STEP) * RAMP_STEP);
+  const least = rampLeast(h);
+  if (most < least) return false;
+  const want = snapTo((end === 0 ? k : len - k) * T.step, RAMP_STEP);
+  const long = Math.max(least, Math.min(most, want));
+  if (long === (end === 0 ? s.rampIn : s.rampOut)) return false;
+  // (a slope of its own at one end makes the other end's its own too, as long as it was)
+  const was = rampOf(T, s, end === 0 ? 1 : 0);
+  if (end === 0) {
+    s.rampIn = long;
+    s.rampOut ??= snapTo(Math.max(RAMP_MIN, Math.min(RAMP_MAX, was)), RAMP_STEP);
+  } else {
+    s.rampOut = long;
+    s.rampIn ??= snapTo(Math.max(RAMP_MIN, Math.min(RAMP_MAX, was)), RAMP_STEP);
+  }
   return true;
 }
 

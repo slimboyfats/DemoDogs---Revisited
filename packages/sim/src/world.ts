@@ -189,6 +189,11 @@ export class World {
   deckPiece: Int32Array | null = null;
   /** Where the deck has no rails (1): a car can leave its edge there. */
   deckOpen: Uint8Array | null = null;
+  /**
+   * Where raised road is walled along both edges (a stretch whose `edge` is `wall`), a 1 to each
+   * sample of the road: no car on it there gets past its edge. Null: nowhere.
+   */
+  walled: Uint8Array | null = null;
   readonly road: number;
   readonly knockout: boolean;
   readonly playOn: boolean;

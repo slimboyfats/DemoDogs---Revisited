@@ -11,6 +11,7 @@ import {
   footing,
   groundAt,
   installTrack,
+  edgesOf,
   liftsOf,
   lanesOf,
   laneWide,
@@ -393,5 +394,117 @@ describe('raised road over a pool', () => {
     put(c, T.x[k - 10]!, T.y[k - 10]!, T.a[k - 10]!, 100);
     w.step(NO_CONTROLS);
     expect(thingsAhead(w, c, 200).filter((t) => t.r > 100)).toHaveLength(0);
+  });
+
+  /** The bench road with 0.3 to 0.6 of it raised, and whatever more the stretch says of itself. */
+  function shaped(more: (at: (f: number) => { x: number; y: number }) => object): World {
+    const t = newTrack(C.venue.get(BENCH)!, 'shaped', 'Shaped');
+    const flat = installTrack(C, t);
+    const T = new World({ content: flat.content, venue: flat.venue, car: 'car.mutt', seed: 1 })
+      .track!;
+    const at = (f: number): { x: number; y: number } => {
+      const k = Math.floor(f * T.n);
+      return { x: Math.round(T.x[k]!), y: Math.round(T.y[k]!) };
+    };
+    const [a, b] = [at(0.3), at(0.6)];
+    const up = { x0: a.x, y0: a.y, x1: b.x, y1: b.y, height: 16, ...more(at) };
+    const read = parseTrackFile(JSON.stringify({ ...t, raised: [up] }));
+    if (!read.ok) throw new Error('the track file was not read');
+    const made = installTrack(C, read.track);
+    return new World({
+      content: made.content,
+      venue: made.venue,
+      car: 'car.mutt',
+      seed: 1,
+      rivals: 0,
+    });
+  }
+
+  it('stands at several levels, with a slope a car can drive between each and the next', () => {
+    const w = shaped((at) => ({
+      levels: [
+        { ...at(0.4), height: 40 },
+        { ...at(0.5), height: 24 },
+      ],
+    }));
+    const T = w.track!;
+    const lift = liftsOf(T, w.venue.track!.raised!);
+    const i = (f: number): number => Math.floor(f * T.n);
+    expect(lift[i(0.35)]).toBe(16);
+    expect(lift[i(0.45)]).toBe(40);
+    expect(lift[i(0.55)]).toBe(24);
+    expect(groundAt(w, T.x[i(0.45)]!, T.y[i(0.45)]!)).toBeCloseTo(40, 0);
+    // part way between two levels where they meet, and never a step
+    expect(lift[i(0.4)]).toBeGreaterThan(18);
+    expect(lift[i(0.4)]).toBeLessThan(38);
+    for (let k = 1; k < T.n; k++)
+      expect(Math.abs(lift[k]! - lift[k - 1]!) / T.step).toBeLessThan(0.6);
+    // a car driven along it goes up and down them and stays on the road
+    startRace(w);
+    w.props.length = w.pads.length = 0;
+    const c = w.player;
+    put(c, T.x[i(0.33)]!, T.y[i(0.33)]!, T.a[i(0.33)]!, 60);
+    let top = 0;
+    w.step(NO_CONTROLS);
+    for (let n = 0; n < 900 && c.idx < i(0.53); n++) {
+      const aim = (c.idx + 8) % T.n;
+      w.step({ ...NO_CONTROLS, throttle: 1, steer: steerTo(c, T.x[aim]!, T.y[aim]!)[0] });
+      top = Math.max(top, groundAt(w, c.x, c.y));
+    }
+    expect(c.idx).toBeGreaterThanOrEqual(i(0.53));
+    expect(top).toBeGreaterThan(38);
+    expect(groundAt(w, c.x, c.y)).toBeCloseTo(24, 0);
+  });
+
+  it('climbs steeply at one end and gently at the other when each has a slope of its own', () => {
+    const w = shaped(() => ({ height: 24, rampIn: 48, rampOut: 240 }));
+    const T = w.track!;
+    const lift = liftsOf(T, w.venue.track!.raised!);
+    const i = (f: number): number => Math.floor(f * T.n);
+    const steps = (px: number): number => Math.round(px / T.step);
+    expect(lift[i(0.3) + steps(56)]).toBe(24);
+    expect(lift[i(0.6) - steps(56)]).toBeLessThan(6);
+    expect(lift[i(0.6) - steps(120)]).toBeGreaterThan(8);
+    expect(lift[i(0.6) - steps(120)]).toBeLessThan(16);
+    expect(lift[i(0.6) - steps(248)]).toBe(24);
+  });
+
+  it('walled, it has no on-ramps and nothing drives, or is blown, off its edge', () => {
+    const w = shaped(() => ({ height: 24, edge: 'wall' }));
+    const T = w.track!;
+    const raised = w.venue.track!.raised!;
+    expect(w.venue.track!.wall).toBeDefined();
+    expect(w.relief!.slip).toBeNull();
+    const walls = w.statics.filter((o) => o.def.id === w.venue.track!.wall);
+    expect(walls.length).toBeGreaterThan(40);
+    expect(
+      w.statics.some((o) => o.def.id === w.venue.track!.rail && groundAt(w, o.x, o.y) > 5),
+    ).toBe(false);
+    expect(liftsOf(T, raised)[Math.floor(0.45 * T.n)]).toBe(24);
+    startRace(w);
+    w.props.length = w.pads.length = 0;
+    const k = Math.floor(0.45 * T.n);
+    for (const side of [-1, 1]) {
+      // flat out straight at the edge, boosting
+      const h = T.a[k]! + (side * Math.PI) / 2;
+      const c = w.player;
+      put(c, T.x[k]!, T.y[k]!, h, 420);
+      for (let n = 0; n < 120; n++) w.step({ ...NO_CONTROLS, throttle: 1, boost: true });
+      expect(groundAt(w, c.x, c.y), `side ${side}`).toBeCloseTo(24, 0);
+      // and the walls are all still standing
+      expect(walls.every((o) => !o.down)).toBe(true);
+    }
+  });
+
+  it('can be left open, with no rails at all, or have its on-ramps on one side only', () => {
+    const open = shaped(() => ({ height: 24, edge: 'open', lanes: 'none' }));
+    expect(open.statics.filter((o) => groundAt(open, o.x, o.y) > 5)).toEqual([]);
+    expect(open.relief!.slip).toBeNull();
+    const one = shaped(() => ({ height: 24, lanes: 'left' }));
+    const T = one.track!;
+    const raised = one.venue.track!.raised!;
+    const L = lanesOf(T, liftsOf(T, raised), one.road, one.tuning, edgesOf(T, raised));
+    expect(L.left.some((v) => v > 0)).toBe(true);
+    expect(L.right.every((v) => v === 0)).toBe(true);
   });
 });

@@ -425,6 +425,12 @@ export const SceneryRuleSchema = z.discriminatedUnion('rule', [
 ]);
 export type SceneryRule = z.infer<typeof SceneryRuleSchema>;
 
+/** What can stand along the edges of a raised stretch of road, and where its on-ramps may be. */
+export const RAISED_EDGES = ['rail', 'wall', 'open'] as const;
+export const RAISED_LANES = ['both', 'left', 'right', 'none'] as const;
+export type RaisedEdge = (typeof RAISED_EDGES)[number];
+export type RaisedLanes = (typeof RAISED_LANES)[number];
+
 export const VenueSchema = z.strictObject({
   ...base,
   id: id('venue'),
@@ -462,6 +468,28 @@ export const VenueSchema = z.strictObject({
             to: unit,
             height: z.number().positive().max(60),
             ramp: z.number().positive().optional(),
+            /**
+             * More levels: from fraction `at` of the way round (a place inside the stretch) on,
+             * the road stands `height` up instead, with a slope from the one level to the next.
+             */
+            levels: z
+              .array(z.strictObject({ at: unit, height: z.number().positive().max(60) }))
+              .max(6)
+              .optional(),
+            /**
+             * What stands along its edges: the venue's `rail` (the usual), its `wall`, which
+             * nothing gets through or over, so that no car leaves the road and there are no
+             * on-ramps; or nothing at all (`open`).
+             */
+            edge: z.enum(RAISED_EDGES).optional(),
+            /** Which sides of it on-ramps climb beside: both (the usual), one, or neither. */
+            lanes: z.enum(RAISED_LANES).optional(),
+            /**
+             * How long the slope up to it at its start is, and the one down from it at its end
+             * (px), where they are not the same: each beats `ramp`.
+             */
+            rampIn: z.number().positive().optional(),
+            rampOut: z.number().positive().optional(),
           }),
         )
         .optional(),
@@ -470,6 +498,8 @@ export const VenueSchema = z.strictObject({
        * along both edges, open only where an on-ramp joins. None if left out.
        */
       rail: id('prop').optional(),
+      /** What a raised stretch whose `edge` is `wall` is walled with (else the rail). */
+      wall: id('prop').optional(),
     })
     .optional(),
   /** Derby venues: the walled oval. */

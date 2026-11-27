@@ -24,6 +24,7 @@
     "play:smoke": "pnpm build && node scripts/play-smoke.mjs",
     "play:editor": "pnpm build && node scripts/play-editor.mjs",
     "play:drag": "pnpm build && node scripts/play-editor-drag.mjs",
+    "play:levels": "pnpm build && node scripts/play-editor-levels.mjs",
     "play:cups": "pnpm build && node scripts/play-cups.mjs",
     "overdraw": "pnpm build && node scripts/overdraw.mjs",
     "look": "pnpm build && node scripts/capture-look.mjs",

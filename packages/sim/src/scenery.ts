@@ -12,7 +12,7 @@ import type { Rng } from './prng';
 import type { World } from './world';
 import { layRiver } from './river';
 import { canopy, flyover } from './heights';
-import { SHOULDER, laneWide, lanesOf, liftsOf } from './relief';
+import { EDGING, RAIL_IN, SHOULDER, edgesOf, laneWide, lanesOf, liftsOf } from './relief';
 
 export { stand };
 
@@ -82,23 +82,32 @@ export function buildScenery(w: World, rng: Rng): void {
 /** A pool laid with the map that is wider than this (px) and drags hard is a lake: nothing is stood in it. */
 const DEEP_FROM = 60;
 
-/** How high road must stand to be railed, and how far in from the platform's edge the rail runs (px). */
+/** How high road must stand to be railed (px). */
 const RAIL_FROM = 7;
-const RAIL_IN = 7;
 
 /**
  * Rails along both edges of raised road (the venue's `track.rail`), end to end from part way up
  * one end ramp to part way down the other. Where an on-ramp comes level with the road the rail
- * opens to let it in, and runs along the lane's own outer edge instead.
+ * opens to let it in, and runs along the lane's own outer edge instead. A stretch can ask for
+ * walls in their place (`edge`: the venue's `track.wall`, noted in `w.walled` for the rule that
+ * keeps cars inside them) or for nothing.
  */
 function layRails(w: World, rng: Rng): void {
   const T = w.track;
   const id = w.venue.track?.rail;
   const raised = w.venue.track?.raised;
-  const def = id ? w.content.prop.get(id) : undefined;
-  if (!T || !def || !raised?.length) return;
+  const rail = id ? w.content.prop.get(id) : undefined;
+  if (!T || !raised?.length) return;
   const lift = liftsOf(T, raised);
-  const lane = lanesOf(T, lift, w.road, w.tuning);
+  const edges = edgesOf(T, raised);
+  // (a stretch that is walled is walled with the venue's `wall`, or its rail if it has none)
+  const wall = w.content.prop.get(w.venue.track?.wall ?? '') ?? rail;
+  if (edges)
+    for (let i = 0; i < T.n; i++)
+      if (edges[i]! & EDGING.wall && lift[i]! >= RAIL_FROM && !(w.deckH && w.deckH[i]! > 0))
+        (w.walled ??= new Uint8Array(T.n))[i] = 1;
+  if (!rail && !(wall && w.walled)) return;
+  const lane = lanesOf(T, lift, w.road, w.tuning, edges);
   const edge = w.road / 2 + SHOULDER - RAIL_IN;
   // two lines a side: the road's own edge, and the outer edge of each lane beside it
   for (const outer of [false, true])
@@ -106,9 +115,13 @@ function layRails(w: World, rng: Rng): void {
       let lx = -1e9;
       let ly = -1e9;
       const run: number[] = [];
+      const defs: PropManifest[] = [];
       for (let i = 0; i < T.n; i++) {
         const top = lift[i]!;
         if (top < RAIL_FROM || (w.deckH && w.deckH[i]! > 0)) continue;
+        const e = edges ? edges[i]! : 0;
+        const def = e & EDGING.wall ? wall : e & EDGING.open ? undefined : rail;
+        if (!def) continue;
         const wide = laneWide(lane, i, side);
         const up = top * lane.rise[i]!;
         // the road's edge opens where the lane beside it is nearly up; the lane's is railed
@@ -124,14 +137,16 @@ function layRails(w: World, rng: Rng): void {
         if (near >= 0 && Math.min((near - i + T.n) % T.n, (i - near + T.n) % T.n) > 8) continue;
         if (x < 8 || y < 8 || x > w.w - 8 || y > w.h - 8) continue;
         run.push(x, y, a);
+        defs.push(def);
         lx = x;
         ly = y;
       }
       // each length points along the line of rails itself, not the road: where a lane widens or
       // the road bends the line runs askew of it, and lengths laid square to the road would
       // stand in steps instead of end to end
-      const near = def.radius * 3;
       for (let j = 0; j < run.length; j += 3) {
+        const def = defs[j / 3]!;
+        const near = def.radius * 3;
         const x = run[j]!;
         const y = run[j + 1]!;
         let ax = 0;

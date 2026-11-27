@@ -40,6 +40,7 @@ import {
 } from './shapes';
 
 export { circles, hull } from './shapes';
+import { RAIL_IN, SHOULDER } from './relief';
 
 /** What `footing` gives for firm, dry ground. */
 const FIRM: readonly [number, number, boolean] = [1, 0, false];
@@ -745,6 +746,7 @@ export function collideWorld(w: World, c: Car): void {
     if (!w.deckOpen?.[c.idx]) rails(w, c);
     return;
   }
+  if (w.walled?.[c.idx] && c.z < WALL_HIGH) walls(w, c);
   // (the circle that holds the whole hull: what is further off than that and its own is not looked at)
   const long = Math.hypot(reach(c), hull(c));
   for (const s of w.near(c.x, c.y, long + 4, WORLD_NEAR)) {
@@ -857,6 +859,51 @@ function rails(w: World, c: Car): void {
   const lim = w.road / 2 - R;
   const P = cornersOf(S);
   // the corner of the hull furthest over each rail
+  for (const sg of [1, -1]) {
+    let worst = -1;
+    let over = lim;
+    for (let k = 0; k < 8; k += 2) {
+      const off = ((P[k]! - T.x[i]!) * nx + (P[k + 1]! - T.y[i]!) * ny) * sg;
+      if (off > over) {
+        over = off;
+        worst = k;
+      }
+    }
+    if (worst < 0) continue;
+    bump(
+      w,
+      c,
+      P[worst]! + nx * sg * R,
+      P[worst + 1]! + ny * sg * R,
+      -nx * sg,
+      -ny * sg,
+      over - lim,
+      0.7,
+    );
+  }
+}
+
+/** A car thrown this high (px over the road) clears the walls of a walled stretch of raised road. */
+const WALL_HIGH = 12;
+
+/**
+ * A car on raised road that is walled along its edges is kept on it: the walls are props that
+ * nothing breaks, and this is the same line they stand on, so that a car going fast enough to
+ * be through one between two ticks is not.
+ */
+function walls(w: World, c: Car): void {
+  const T = w.track!;
+  const i = c.idx;
+  const a = T.a[i]!;
+  const nx = -Math.sin(a);
+  const ny = Math.cos(a);
+  const mid = (c.x - T.x[i]!) * nx + (c.y - T.y[i]!) * ny;
+  // (only a car up on the road: one on the ground beside it has the platform's side to meet)
+  if (Math.abs(mid) > w.road / 2 + SHOULDER) return;
+  const S = carShape(c, HULL);
+  const R = S.r;
+  const lim = w.road / 2 + SHOULDER - RAIL_IN - 1 - R;
+  const P = cornersOf(S);
   for (const sg of [1, -1]) {
     let worst = -1;
     let over = lim;

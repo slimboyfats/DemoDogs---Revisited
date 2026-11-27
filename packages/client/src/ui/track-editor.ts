@@ -1,4 +1,9 @@
 import {
+  RAISED_EDGES,
+  RAISED_LANES,
+  RAISE_LEVELS,
+  type RaisedEdge,
+  type RaisedLanes,
   RAISE_MAX,
   RAISE_MIN,
   RAISE_STEP,
@@ -26,7 +31,17 @@ import {
   drawRoad,
   History,
   insertPoint,
+  joinLevel,
+  levelAt,
+  levelHeight,
+  levelsIn,
   liftTo,
+  moveLevel,
+  moveRamp,
+  rampOf,
+  setLevelHeight,
+  splitLevel,
+  tidyLevels,
   moveEnd,
   nearest,
   nearestSample,
@@ -159,7 +174,19 @@ type Pick = {
  * A handle on what is chosen, to drag it into shape by: an end of a stretch of road or of a
  * bridge, the edge of an area or a pool, or the tab a raised road is pulled up and down by.
  */
-type Grip = 'from' | 'to' | 'lift' | 'edge';
+type Grip = 'from' | 'to' | 'lift' | 'edge' | 'level' | 'rampIn' | 'rampOut';
+
+/** A handle where it is on the screen (device px); `part`: which level of a raised stretch. */
+type Handle = { grip: Grip; part?: number; x: number; y: number; dx: number; dy: number };
+
+/** The words on the buttons that say what stands along a raised stretch and where its ramps are. */
+const EDGE_NAMES: Record<RaisedEdge, string> = { rail: 'RAILS', wall: 'WALLS', open: 'OPEN' };
+const LANE_NAMES: Record<RaisedLanes, string> = {
+  both: 'BOTH SIDES',
+  left: 'LEFT',
+  right: 'RIGHT',
+  none: 'NONE',
+};
 
 /** The shortest stretch of surface that can be left when its ends are dragged together (px). */
 const SURFACE_LEAST = 16;
@@ -252,6 +279,8 @@ export class TrackEditor {
   size = 1;
   /** How high the next stretch of road to be raised will stand. */
   height = RAISE_FIRST;
+  /** Which level of the chosen raised stretch the buttons work on (0: its first). */
+  part = 0;
   /** Whether the next bridge to be raised has rails. */
   rails = true;
   /** What is wrong with the track, if anything (it cannot be raced until it is put right). */
@@ -277,8 +306,9 @@ export class TrackEditor {
     moved: boolean;
     /** What the drag does: slides the map, moves what was grabbed, draws, lays a surface. */
     mode: 'pan' | 'grab' | 'pencil' | 'lay' | 'turn' | 'size' | 'grip';
-    /** The handle in hand, when it is one of the chosen thing's. */
+    /** The handle in hand, when it is one of the chosen thing's (and which level it is of). */
     grip?: Grip;
+    part?: number;
     /** Resizing: the thing's size and the finger's distance from it when the drag began. */
     k0?: number;
     dist0?: number;
@@ -694,11 +724,44 @@ export class TrackEditor {
       if (sel?.kind === 'surface') del('Take the chosen stretch of surface away', false);
     } else if (tool === 'raise') {
       const up = sel?.kind === 'raised' ? t.raised[sel.index] : undefined;
-      const h = up ? up.height : this.height;
+      const n = up?.levels?.length ?? 0;
+      const part = Math.min(this.part, n);
+      const h = up ? levelHeight(up, part) : this.height;
       btn('', 'Lower', () => this.raiseBy(-RAISE_STEP), h <= RAISE_MIN, false, 'minus');
-      r.append(el('label', { textContent: `${up ? 'CHOSEN' : 'NEXT'} ↑ ${h}` }));
+      const what = up ? (n ? `LEVEL ${part + 1}` : 'CHOSEN') : 'NEXT';
+      r.append(el('label', { textContent: `${what} ↑ ${h}` }));
       btn('', 'Higher', () => this.raiseBy(RAISE_STEP), h >= RAISE_MAX, false, 'plus');
-      if (up) del('Put the chosen stretch back on the ground', false);
+      if (up) {
+        btn(
+          'ADD LEVEL',
+          'Split this level in two, each with a height of its own',
+          () => this.split(),
+          n >= RAISE_LEVELS,
+        );
+        if (n) btn('JOIN', 'Join this level to the one beside it', () => this.join());
+        const edge = up.edge ?? 'rail';
+        btn(
+          `EDGES: ${EDGE_NAMES[edge]}`,
+          'What stands along its edges: rails, walls nothing gets past, or nothing',
+          () =>
+            this.change(() => {
+              const next = RAISED_EDGES[(RAISED_EDGES.indexOf(edge) + 1) % RAISED_EDGES.length]!;
+              if (next === 'rail') delete up.edge;
+              else up.edge = next;
+            }),
+        );
+        // (a walled road cannot be left, so nothing needs a way back up to it)
+        const lanes = up.lanes ?? 'both';
+        if (edge !== 'wall')
+          btn(`SIDE RAMPS: ${LANE_NAMES[lanes]}`, 'Which sides have ramps back up to it', () =>
+            this.change(() => {
+              const next = RAISED_LANES[(RAISED_LANES.indexOf(lanes) + 1) % RAISED_LANES.length]!;
+              if (next === 'both') delete up.lanes;
+              else up.lanes = next;
+            }),
+          );
+        del('Put the chosen stretch back on the ground', false);
+      }
     } else if (tool === 'area') {
       const a = sel?.kind === 'area' ? t.areas[sel.index] : undefined;
       if (a) {
@@ -984,14 +1047,14 @@ export class TrackEditor {
    * edge of an area or a pool. `dx`, `dy` is the way an end's arrows point (for the tab: the
    * place on the road it is tied to).
    */
-  private grips(): { grip: Grip; x: number; y: number; dx: number; dy: number }[] {
+  private grips(): Handle[] {
     const t = this.track;
     const sel = this.sel;
     if (!t || !sel || !this.s || this.tool === 'erase') return [];
     const v = this.hooks.view();
     const k = v.dpr;
     const sq = Math.sin(PITCH);
-    const out: { grip: Grip; x: number; y: number; dx: number; dy: number }[] = [];
+    const out: Handle[] = [];
     if (sel.kind === 'area' || sel.kind === 'pool') {
       const o = sel.kind === 'area' ? t.areas[sel.index] : t.pools[sel.index];
       if (!o) return [];
@@ -1022,24 +1085,49 @@ export class TrackEditor {
       const [dx, dy] = along(i);
       out.push({ grip: e === 0 ? 'from' : 'to', x, y, dx, dy });
     });
-    if (sel.kind === 'raised') {
-      // the tab stands beside the road at the middle of the stretch, on the side up the screen
-      const m = (ends[0] + Math.floor(((ends[1] - ends[0] + T.n) % T.n) / 2)) % T.n;
-      const [x, y] = this.toScreen(T.x[m]!, T.y[m]!);
-      let nx = -Math.sin(T.a[m]!);
-      let ny = Math.cos(T.a[m]!) * sq;
-      const nl = Math.hypot(nx, ny) || 1;
-      if (ny > 0 || (ny === 0 && nx < 0)) [nx, ny] = [-nx, -ny];
-      const off = (t.road.width / 2) * v.scale * nl + 34 * k;
-      out.push({ grip: 'lift', x: x + (nx / nl) * off, y: y + (ny / nl) * off, dx: x, dy: y });
+    const up = sel.kind === 'raised' ? t.raised[sel.index] : undefined;
+    if (up) {
+      const { a, len, cuts } = levelsIn(T, up);
+      const at = [0, ...cuts, len];
+      // a place beside the road at sample `i`, `far` CSS px clear of it: up the screen, or down
+      const beside = (i: number, far: number, below = false): [number, number, number, number] => {
+        const [x, y] = this.toScreen(T.x[i]!, T.y[i]!);
+        let nx = -Math.sin(T.a[i]!);
+        let ny = Math.cos(T.a[i]!) * sq;
+        const nl = Math.hypot(nx, ny) || 1;
+        if (ny > 0 || (ny === 0 && nx < 0)) [nx, ny] = [-nx, -ny];
+        if (below) [nx, ny] = [-nx, -ny];
+        const off = (t.road.width / 2) * v.scale * nl + far * k;
+        return [x + (nx / nl) * off, y + (ny / nl) * off, x, y];
+      };
+      // a tab beside the middle of each level, on the side up the screen
+      for (let part = 0; part + 1 < at.length; part++) {
+        const m = (a + Math.floor((at[part]! + at[part + 1]!) / 2)) % T.n;
+        const [x, y, dx, dy] = beside(m, 34);
+        out.push({ grip: 'lift', part, x, y, dx, dy });
+      }
+      // where each level after the first begins: on the road itself
+      cuts.forEach((c, j) => {
+        const i = (a + c) % T.n;
+        const [x, y] = this.toScreen(T.x[i]!, T.y[i]!);
+        const [dx, dy] = along(i);
+        out.push({ grip: 'level', part: j + 1, x, y, dx, dy });
+      });
+      // the top of the slope at each end: beside the road, on the side down the screen
+      for (const end of [0, 1] as const) {
+        const by = Math.round(rampOf(T, up, end) / T.step);
+        const i = (a + (end === 0 ? by : len - by) + T.n) % T.n;
+        const [x, y, dx, dy] = beside(i, 26, true);
+        out.push({ grip: end === 0 ? 'rampIn' : 'rampOut', x, y, dx, dy });
+      }
     }
     return out;
   }
 
   /** The handle under a point of the screen (CSS px), if one of the chosen thing's is there. */
-  private gripAt(cx: number, cy: number): Grip | null {
+  private gripAt(cx: number, cy: number): Handle | null {
     const k = this.hooks.view().dpr;
-    let best: Grip | null = null;
+    let best: Handle | null = null;
     let bd = 26 * k;
     for (const h of this.grips()) {
       // the tab is a wide pill: a finger anywhere on it has it
@@ -1047,7 +1135,7 @@ export class TrackEditor {
       const d = Math.hypot(Math.max(0, Math.abs(cx * k - h.x) - wide), cy * k - h.y);
       if (d < bd) {
         bd = d;
-        best = h.grip;
+        best = h;
       }
     }
     return best;
@@ -1317,7 +1405,11 @@ export class TrackEditor {
     }
     if (this.tool !== 'raise' && this.tool !== 'hand') this.pick('raise');
     this.sel = { kind: 'raised', index };
-    Object.assign(d, { mode: 'grip', grip: 'lift', grab: this.sel, k0: t.raised[index]!.height });
+    // (the level under the finger is the one that is lifted)
+    const part = levelAt(T, t.raised[index]!, x, y);
+    this.part = part;
+    const k0 = levelHeight(t.raised[index]!, part);
+    Object.assign(d, { mode: 'grip', grip: 'lift', part, grab: this.sel, k0 });
     this.showRow2();
     this.say('Drag up to lift it, down to lower it.');
     navigator.vibrate?.(12);
@@ -1356,11 +1448,17 @@ export class TrackEditor {
     // the middle and right buttons of a mouse always slide the map
     if (e.button !== 1 && e.button !== 2) {
       // a handle of what is chosen comes before anything under it
-      const grip = this.pencil ? null : this.gripAt(e.clientX, e.clientY);
-      if (grip && this.sel) {
+      const h = this.pencil ? null : this.gripAt(e.clientX, e.clientY);
+      if (h && this.sel) {
         const sel = this.sel;
-        const k0 = sel.kind === 'raised' ? (t.raised[sel.index]?.height ?? 0) : 0;
-        this.drag = { ...drag, mode: 'grip', grip, grab: sel, k0 };
+        const up = sel.kind === 'raised' ? t.raised[sel.index] : undefined;
+        const k0 = up ? levelHeight(up, h.part ?? 0) : 0;
+        if (up && h.part !== undefined && this.part !== h.part) {
+          this.part = h.part;
+          this.showRow2();
+        }
+        this.drag = { ...drag, mode: 'grip', grip: h.grip, grab: sel, k0 };
+        if (h.part !== undefined) this.drag.part = h.part;
         this.tap.style.cursor = 'grabbing';
         return;
       }
@@ -1429,7 +1527,7 @@ export class TrackEditor {
       // a mouse over the map shows what a click would put down
       if (e.pointerType === 'mouse') {
         this.hover = this.toWorld(e.clientX, e.clientY);
-        const grip = this.gripAt(e.clientX, e.clientY);
+        const grip = this.gripAt(e.clientX, e.clientY)?.grip;
         this.tap.style.cursor = grip === 'lift' ? 'ns-resize' : grip ? 'grab' : '';
       }
       return;
@@ -1530,21 +1628,35 @@ export class TrackEditor {
     if (g.kind === 'raised' || g.kind === 'surface') {
       const s = g.kind === 'raised' ? t.raised[g.index] : t.surfaces[g.index];
       if (!s) return;
-      if (d.grip === 'lift' && g.kind === 'raised') {
-        const up = t.raised[g.index]!;
-        const h = liftTo(d.k0 ?? up.height, dy);
-        if (h === up.height) return;
+      const up = g.kind === 'raised' ? t.raised[g.index] : undefined;
+      if (up && d.grip !== 'from' && d.grip !== 'to') {
+        // (the track as it was is remembered before anything is moved, so a copy is tried first)
+        const tried = structuredClone(up);
+        const part = d.part ?? 0;
+        if (d.grip === 'lift') {
+          const h = liftTo(d.k0 ?? levelHeight(up, part), dy);
+          if (h === levelHeight(up, part)) return;
+          setLevelHeight(tried, part, h);
+          this.height = h;
+        } else if (d.grip === 'level') {
+          if (!moveLevel(T, tried, part, x, y)) return;
+        } else if (!moveRamp(T, tried, d.grip === 'rampIn' ? 0 : 1, x, y)) return;
         before();
-        up.height = h;
-        this.height = h;
+        t.raised[g.index] = tried;
         this.relift = true;
         this.showRow2();
         return;
       }
       // (the track as it was is remembered before the end is moved, so a copy is tried first)
-      const tried = { ...s };
+      const tried = structuredClone(s);
       const least = g.kind === 'raised' ? RAISE_LEAST : SURFACE_LEAST;
       if (!moveEnd(T, tried, d.grip === 'from' ? 0 : 1, x, y, least)) return;
+      if (up?.levels) {
+        // an end stops short of the level nearest it: it does not swallow it
+        const had = up.levels.length;
+        tidyLevels(T, tried as typeof up);
+        if (((tried as typeof up).levels?.length ?? 0) !== had) return;
+      }
       before();
       Object.assign(s, tried);
       if (g.kind === 'raised') this.relift = true;
@@ -1664,11 +1776,43 @@ export class TrackEditor {
     if (!t) return;
     const step = (h: number): number => Math.max(RAISE_MIN, Math.min(RAISE_MAX, h + by));
     const up = this.sel?.kind === 'raised' ? t.raised[this.sel.index] : undefined;
-    if (up) this.change(() => (up.height = step(up.height)));
-    else {
+    if (up) {
+      const part = Math.min(this.part, up.levels?.length ?? 0);
+      this.change(() => setLevelHeight(up, part, step(levelHeight(up, part))));
+    } else {
       this.height = step(this.height);
       this.showRow2();
     }
+  }
+
+  /** Split the level in hand of the chosen raised stretch in two: one more height to set. */
+  private split(): void {
+    const t = this.track;
+    const up = this.sel?.kind === 'raised' ? t?.raised[this.sel.index] : undefined;
+    if (!t || !up) return;
+    const tried = structuredClone(up);
+    const part = splitLevel(this.road(), tried, Math.min(this.part, up.levels?.length ?? 0));
+    if (part < 0) {
+      this.say('No room for another level here. Drag an end to make the stretch longer.');
+      return;
+    }
+    const index = this.sel!.index;
+    this.change(() => {
+      t.raised[index] = tried;
+      this.part = part;
+    });
+    this.say('Drag a tab up or down for its height, and the mark on the road to move the step.');
+  }
+
+  /** Join the level in hand of the chosen raised stretch to the one beside it. */
+  private join(): void {
+    const t = this.track;
+    const up = this.sel?.kind === 'raised' ? t?.raised[this.sel.index] : undefined;
+    if (!t || !up) return;
+    this.change(() => {
+      const part = joinLevel(up, Math.min(this.part, up.levels?.length ?? 0));
+      if (part >= 0) this.part = part;
+    });
   }
 
   /** Lay the surface in hand along the road between two points on the ground. */
@@ -1682,6 +1826,7 @@ export class TrackEditor {
       this.change(() => {
         t.raised.push(raisedBetween(this.road(), this.height, p, q));
         this.sel = { kind: 'raised', index: t.raised.length - 1 };
+        this.part = 0;
       });
       return;
     }
@@ -1770,6 +1915,9 @@ export class TrackEditor {
     }
     if (at) {
       this.sel = at;
+      // (a tap on a raised stretch picks the level of it under the finger)
+      const up = at.kind === 'raised' ? t.raised[at.index] : undefined;
+      if (up) this.part = levelAt(this.road(), up, x, y);
       this.showRow2();
       return;
     }
@@ -2138,11 +2286,15 @@ export class TrackEditor {
             band(a, b, 'rgba(22,20,28,0.45)', false);
             band(a, b, '#ffd23d', true, up.height * v.scale * Math.cos(PITCH));
           } else band(a, b, '#ffd23d', on);
-          // (the chosen one's height is written on the tab it is lifted by)
+          // (the chosen one's heights are written on the tabs it is lifted by)
           if (on && this.tool !== 'erase') return;
-          const midway = (a + Math.floor(((b - a + T.n) % T.n) / 2)) % T.n;
-          const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
-          this.label(g, `↑ ${up.height}`, x, y + 4 * k, k);
+          const L = levelsIn(T, up);
+          const at = [0, ...L.cuts, L.len];
+          L.heights.forEach((h, j) => {
+            const midway = (a + Math.floor((at[j]! + at[j + 1]!) / 2)) % T.n;
+            const [x, y] = this.toScreen(T.x[midway]!, T.y[midway]!);
+            this.label(g, `↑ ${h}`, x, y + 4 * k, k);
+          });
         });
         const d = this.drag;
         if (this.tool === 'raise' && d?.mode === 'lay' && d.moved) {
@@ -2380,11 +2532,73 @@ export class TrackEditor {
       g.fillStyle = ink;
       g.fill();
     };
+    const stem = (h: Handle): void => {
+      g.beginPath();
+      g.moveTo(h.dx, h.dy);
+      g.lineTo(h.x, h.y);
+      g.strokeStyle = ink;
+      g.lineWidth = 5 * k;
+      g.stroke();
+      g.strokeStyle = '#fff';
+      g.lineWidth = 2 * k;
+      g.stroke();
+    };
     for (const h of this.grips()) {
-      const on = held === h.grip;
+      const on = held === h.grip && (h.part === undefined || h.part === this.drag?.part);
+      const up = sel.kind === 'raised' ? t.raised[sel.index] : undefined;
+      if (h.grip === 'level') {
+        // where a level begins: a bar across the road, and a diamond on it to drag it by
+        const r = (on ? 16 : 14) * k;
+        const wide = Math.max(18 * k, (t.road.width / 2) * this.hooks.view().scale);
+        g.beginPath();
+        g.moveTo(h.x - h.dy * wide, h.y + h.dx * wide);
+        g.lineTo(h.x + h.dy * wide, h.y - h.dx * wide);
+        g.strokeStyle = ink;
+        g.lineWidth = 6 * k;
+        g.stroke();
+        g.strokeStyle = '#fff';
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        g.beginPath();
+        g.moveTo(h.x, h.y - r);
+        g.lineTo(h.x + r, h.y);
+        g.lineTo(h.x, h.y + r);
+        g.lineTo(h.x - r, h.y);
+        g.closePath();
+        g.fillStyle = on ? '#ff6a3d' : '#fff';
+        g.fill();
+        g.strokeStyle = ink;
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        head(h.x + h.dx * 4 * k, h.y + h.dy * 4 * k, h.dx, h.dy, 5 * k);
+        head(h.x - h.dx * 4 * k, h.y - h.dy * 4 * k, -h.dx, -h.dy, 5 * k);
+        continue;
+      }
+      if (h.grip === 'rampIn' || h.grip === 'rampOut') {
+        // the top of an end's slope: a blue wedge on a stem, dragged along the road
+        stem(h);
+        const r = (on ? 15 : 13) * k;
+        g.beginPath();
+        g.arc(h.x, h.y, r, 0, Math.PI * 2);
+        g.fillStyle = on ? '#ff6a3d' : '#7fd4ff';
+        g.fill();
+        g.strokeStyle = ink;
+        g.lineWidth = 2.5 * k;
+        g.stroke();
+        // (a little slope: low at the end of the stretch, high towards its middle)
+        const way = h.grip === 'rampIn' ? 1 : -1;
+        g.beginPath();
+        g.moveTo(h.x - 7 * k * way, h.y + 5 * k);
+        g.lineTo(h.x + 7 * k * way, h.y + 5 * k);
+        g.lineTo(h.x + 7 * k * way, h.y - 6 * k);
+        g.closePath();
+        g.fillStyle = ink;
+        g.fill();
+        continue;
+      }
       if (h.grip === 'lift') {
-        const up = sel.kind === 'raised' ? t.raised[sel.index] : undefined;
         if (!up) continue;
+        const mine = (h.part ?? 0) === Math.min(this.part, up.levels?.length ?? 0);
         // a stem from the road to the tab, so it is plain what the tab belongs to
         g.beginPath();
         g.moveTo(h.dx, h.dy);
@@ -2399,7 +2613,7 @@ export class TrackEditor {
         const hh = 32 * k;
         g.beginPath();
         g.roundRect(h.x - w / 2, h.y - hh / 2, w, hh, hh / 2);
-        g.fillStyle = on ? '#ff6a3d' : '#ffd23d';
+        g.fillStyle = on ? '#ff6a3d' : mine ? '#ffd23d' : '#fff3c2';
         g.fill();
         g.strokeStyle = ink;
         g.lineWidth = 2.5 * k;
@@ -2409,7 +2623,7 @@ export class TrackEditor {
         g.font = `800 ${14 * k}px system-ui, sans-serif`;
         g.textAlign = 'center';
         g.fillStyle = ink;
-        g.fillText(String(up.height), h.x + 8 * k, h.y + 5 * k);
+        g.fillText(String(levelHeight(up, h.part ?? 0)), h.x + 8 * k, h.y + 5 * k);
         continue;
       }
       g.beginPath();

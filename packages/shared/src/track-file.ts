@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { VenueSchema } from './manifests';
+import { RAISED_EDGES, RAISED_LANES, VenueSchema } from './manifests';
 
 /**
  * A track somebody built in the track creator, as it is saved: one JSON document that holds
@@ -25,6 +25,12 @@ export const SIZE_STEP = 0.25;
 export const RAISE_MIN = 12;
 export const RAISE_MAX = 48;
 export const RAISE_STEP = 4;
+/** How many more levels a raised stretch can have besides its first. */
+export const RAISE_LEVELS = 6;
+/** How short and how long the slope at an end of a raised stretch can be (px), and the editor's step. */
+export const RAMP_MIN = 24;
+export const RAMP_MAX = 400;
+export const RAMP_STEP = 8;
 
 /** The nearest size a thing can have to `k`. */
 export const sizeStep = (k: number): number =>
@@ -139,6 +145,30 @@ export const TrackFileSchema = z.object({
         x1: z.number(),
         y1: z.number(),
         height: z.number().min(RAISE_MIN).max(RAISE_MAX),
+        /**
+         * More levels: from the point of the road nearest to (x, y) on, a place inside the
+         * stretch, the road stands `height` up instead, with a slope between the two levels.
+         */
+        levels: z
+          .array(
+            z.strictObject({
+              x: z.number(),
+              y: z.number(),
+              height: z.number().min(RAISE_MIN).max(RAISE_MAX),
+            }),
+          )
+          .max(RAISE_LEVELS)
+          .optional(),
+        /** What stands along its edges: rails (the usual), walls no car gets past, or nothing. */
+        edge: z.enum(RAISED_EDGES).optional(),
+        /** Which sides on-ramps climb beside it: both (the usual), one, or neither. */
+        lanes: z.enum(RAISED_LANES).optional(),
+        /**
+         * How long the slope up to it at its start is, and the one down from it at its end (px):
+         * a short one is steep, a long one gentle. Left out, about one px up in five along.
+         */
+        rampIn: z.number().min(RAMP_MIN).max(RAMP_MAX).optional(),
+        rampOut: z.number().min(RAMP_MIN).max(RAMP_MAX).optional(),
       }),
     )
     .max(12)

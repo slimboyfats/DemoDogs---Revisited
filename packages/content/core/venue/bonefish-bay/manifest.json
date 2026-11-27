@@ -59,7 +59,8 @@
         "height": 16
       }
     ],
-    "rail": "prop.armco"
+    "rail": "prop.armco",
+    "wall": "prop.road-wall"
   },
   "colors": {
     "ground": "#e6cc8c",
