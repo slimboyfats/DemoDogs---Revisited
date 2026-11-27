@@ -196,6 +196,17 @@ export const TUNABLES = [
     unit: '',
     live: true,
   },
+  {
+    key: 'gunDamage',
+    label: 'GUN DAMAGE',
+    hint: "How hard the nose gun's rounds hit, times the gun's own (1: as built)",
+    min: 0.25,
+    max: 5,
+    step: 0.25,
+    value: 1,
+    unit: '',
+    live: true,
+  },
 ] as const satisfies readonly Tunable[];
 
 export type TuningKey = (typeof TUNABLES)[number]['key'];

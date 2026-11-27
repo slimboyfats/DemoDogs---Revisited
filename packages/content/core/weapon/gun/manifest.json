@@ -11,7 +11,7 @@
   "ammo": 50,
   "power": 0.1,
   "cooldown": 0.12,
-  "damage": 0.8,
+  "damage": 1.6,
   "range": 110,
   "aim": 0.12
 }
