@@ -6,8 +6,8 @@ import { BODY, DISPLAY } from './type';
 
 const TAU = Math.PI * 2;
 /** The HUD's colours, the menus' own (theme.css): an ink line round everything, paper and sun. */
-const INK = '#1b2233';
-const SUN = '#ffd23f';
+const INK = '#0a1440';
+const SUN = '#ffd60a';
 
 /** The guards a car carries, as the HUD names them: seconds left, or uses left. */
 export function guardLabels(c: Car): string[] {
@@ -65,7 +65,7 @@ type Paint = string | CanvasGradient;
 
 /** A place's colours, top to bottom: gold, silver and bronze for the first three. */
 const PLACE: readonly (readonly [string, string, string])[] = [
-  ['#fff8b8', '#ffd23f', '#ff9d1c'],
+  ['#fff8b8', '#ffd60a', '#ff9d1c'],
   ['#ffffff', '#dfe7f3', '#9fb0c8'],
   ['#ffe3c2', '#f2a566', '#c56d2c'],
   ['#ffffff', '#e2f3ff', '#9fd4ff'],
@@ -73,7 +73,7 @@ const PLACE: readonly (readonly [string, string, string])[] = [
 /** The start lights' colours as the countdown runs: red, amber, green. */
 const LIGHTS: readonly (readonly [string, string, string])[] = [
   ['#d8ffc9', '#6bd65a', '#2f9d3a'],
-  ['#fff8b8', '#ffd23f', '#ff9d1c'],
+  ['#fff8b8', '#ffd60a', '#ff9d1c'],
   ['#ffd0c9', '#ff6b5b', '#d1321f'],
 ];
 
@@ -125,8 +125,8 @@ export class Hud {
     g.beginPath();
     g.roundRect(e, e, cv.width - e * 2, cv.height - e * 2, 10 * dpr);
     const glass = g.createLinearGradient(0, 0, 0, cv.height);
-    glass.addColorStop(0, 'rgba(52,64,96,0.74)');
-    glass.addColorStop(1, 'rgba(27,34,51,0.6)');
+    glass.addColorStop(0, 'rgba(23,48,154,0.74)');
+    glass.addColorStop(1, 'rgba(10,20,64,0.6)');
     g.fillStyle = glass;
     g.fill();
     g.lineWidth = e * 2;
@@ -193,7 +193,7 @@ export class Hud {
     const now = performance.now() / 1000;
     const pad = 12 * u;
     const left = pad + 56 * u;
-    const font = (px: number) => `400 ${Math.round(px * u)}px ${DISPLAY}`;
+    const font = (px: number) => `italic 900 ${Math.round(px * u)}px ${DISPLAY}`;
     const fine = (px: number) => `700 ${Math.round(px * u)}px ${BODY}`;
     const small = font(13);
     /** Top to bottom through three colours, over `h` about `y`. */
@@ -215,13 +215,13 @@ export class Hud {
       ctx.font = f;
       ctx.textAlign = align;
       // an ink line round every letter, with round corners, and a hard shadow under the big ones
-      let px = parseFloat(f.slice(f.indexOf(' ') + 1));
+      let px = Number(/(\d+(?:\.\d+)?)px/.exec(f)?.[1] ?? 12);
       if (align === 'center') {
         // words across the middle are made to fit a narrow (upright) screen
         const over = ctx.measureText(t).width / (W - 28 * u);
         if (over > 1) {
           px = Math.floor(px / over);
-          ctx.font = `400 ${px}px ${DISPLAY}`;
+          ctx.font = `italic 900 ${px}px ${DISPLAY}`;
         }
       }
       ctx.lineJoin = 'round';
@@ -280,7 +280,7 @@ export class Hud {
         ctx.stroke();
       }
     };
-    const DARK = 'rgba(27,34,51,0.74)';
+    const DARK = 'rgba(10,20,64,0.74)';
     /** One of the small signs, `size` across with its middle at (x, y), with an ink line round it. */
     const sign = (k: Sign, x: number, y: number, size: number, col: Paint) => {
       ctx.save();
@@ -333,12 +333,12 @@ export class Hud {
         ctx.fillRect(x + (bw + lean) * k - 2 * u, y, 2 * u, bh);
       }
       // notched in quarters
-      ctx.fillStyle = 'rgba(27,34,51,0.5)';
+      ctx.fillStyle = 'rgba(10,20,64,0.5)';
       for (let i = 1; i < 4; i++) ctx.fillRect(x + ((bw + lean) * i) / 4, y, 1.4 * u, bh);
       ctx.restore();
       ctx.beginPath();
       ctx.arc(left + 8 * u, y + bh / 2, 10 * u, 0, TAU);
-      ctx.fillStyle = '#2a3550';
+      ctx.fillStyle = '#17309a';
       ctx.fill();
       ctx.lineWidth = 2.4 * u;
       ctx.strokeStyle = INK;
@@ -412,14 +412,20 @@ export class Hud {
     if (w.kind === 'race') {
       const place = st.indexOf(P) + 1;
       const x = numeral(place, placeName(place).slice(-2), PLACE[Math.min(place, 4) - 1]!);
-      // the lap on a sunny plate with a chequered end, the clock under it
+      // the lap on a white plate with a chequered end, the clock under it
       const lap = `${Math.min(Math.max(P.lap, 1), w.laps)}/${w.laps}`;
       ctx.font = font(15);
       const lw = ctx.measureText(lap).width;
       ctx.font = fine(9);
       const tw = ctx.measureText('LAP').width;
       const bw = 12 * u + tw + 5 * u + lw + 20 * u;
-      plate(x, pad + 2 * u, bw, 19 * u, shade(PLACE[0]!, pad + 11 * u, 19 * u));
+      plate(
+        x,
+        pad + 2 * u,
+        bw,
+        19 * u,
+        shade(['#ffffff', '#f3f6ff', '#d9e3ff'], pad + 11 * u, 19 * u),
+      );
       // (a chequered end: two columns of squares, leaning as the plate leans)
       ctx.fillStyle = INK;
       for (let r = 0; r < 3; r++)
@@ -432,7 +438,7 @@ export class Hud {
               5 * u,
             );
       ctx.textBaseline = 'middle';
-      plain('LAP', x + 10 * u, pad + 12 * u, fine(9), INK);
+      plain('LAP', x + 10 * u, pad + 12 * u, fine(9), '#66709a');
       plain(lap, x + 14 * u + tw, pad + 12 * u, font(15), INK);
       ctx.textBaseline = 'top';
       clock(x - 3 * u, pad + 25 * u, fmtTime(w.raceTime), '#fff');
@@ -558,7 +564,7 @@ export class Hud {
           y,
           rw,
           rh,
-          me ? SUN : c === focus ? '#7fe0ff' : out ? 'rgba(27,34,51,0.42)' : DARK,
+          me ? SUN : c === focus ? '#7fe0ff' : out ? 'rgba(10,20,64,0.42)' : DARK,
           1.6 * u,
         );
         plate(rx, y, 15 * u, rh, out ? '#8d95a6' : c.paint, 1.6 * u);
@@ -635,7 +641,7 @@ export class Hud {
         ctx.font = font(30);
         const bw = Math.min(W - 40 * u, ctx.measureText(name).width + 70 * u);
         plate(W / 2 - bw / 2 - 6 * u, H * 0.36 - 22 * u + 5 * u, bw, 46 * u, SUN, 0);
-        plate(W / 2 - bw / 2 - 6 * u, H * 0.36 - 23 * u, bw, 46 * u, DARK, 3 * u);
+        plate(W / 2 - bw / 2 - 6 * u, H * 0.36 - 23 * u, bw, 46 * u, '#12227a', 3 * u);
         text(name, W / 2, H * 0.36 - 3 * u, font(30), '#fff', 'center');
         ctx.textBaseline = 'middle';
         plain(
@@ -742,8 +748,8 @@ export class Hud {
     ctx.arc(cx, cy, r + 10 * u, Math.PI * 0.75, Math.PI * 2.25);
     ctx.closePath();
     const glass = ctx.createLinearGradient(0, cy - r - 10 * u, 0, cy + r);
-    glass.addColorStop(0, 'rgba(58,72,108,0.82)');
-    glass.addColorStop(1, 'rgba(27,34,51,0.72)');
+    glass.addColorStop(0, 'rgba(23,48,154,0.82)');
+    glass.addColorStop(1, 'rgba(10,20,64,0.72)');
     ctx.fillStyle = glass;
     ctx.fill();
     ctx.lineJoin = 'round';
@@ -770,7 +776,7 @@ export class Hud {
     ctx.lineWidth = 10 * u;
     ctx.beginPath();
     ctx.arc(cx, cy, r, a0, a1);
-    ctx.strokeStyle = 'rgba(12,16,28,0.55)';
+    ctx.strokeStyle = 'rgba(4,10,40,0.55)';
     ctx.stroke();
     ctx.lineCap = 'butt';
     // the car's own top speed, a tick on the arc
@@ -807,7 +813,7 @@ export class Hud {
     }
     ctx.textBaseline = 'middle';
     // the number, a line round it and a shadow under, its digits ticking over in place
-    const f = `400 ${Math.round(29 * u)}px ${DISPLAY}`;
+    const f = `italic 900 ${Math.round(29 * u)}px ${DISPLAY}`;
     ctx.lineJoin = 'round';
     ctx.lineWidth = 6 * u;
     ctx.strokeStyle = INK;
@@ -828,7 +834,7 @@ export class Hud {
     if (slowed) {
       // why it is slow, in a red chip above the dial that pulses so it is seen out of the eye's corner
       const say = shown.map(([, s]) => s).join(' · ');
-      ctx.font = `400 ${Math.round(12 * u)}px ${DISPLAY}`;
+      ctx.font = `italic 900 ${Math.round(12 * u)}px ${DISPLAY}`;
       const bw = ctx.measureText(say).width + 18 * u;
       const by = spot.below ? cy + r * 0.75 + 4 * u : cy - r - 32 * u;
       const pulse = 0.75 + 0.25 * Math.sin(now * 8);

@@ -796,6 +796,8 @@ showSpeedo();
 function show(id: string | null): void {
   for (const k of [
     'menu',
+    'quick',
+    'help',
     'results',
     'pauseMenu',
     'settings',
@@ -1591,6 +1593,11 @@ function boot(): void {
     } else if (lastCareer) openCareer();
     else startGame(lastVenue, lastCustom);
   };
+  // home's two side doors: the tracks to pick from, and how to play
+  $('toQuick').onclick = () => show('quick');
+  $('quickBack').onclick = () => show('menu');
+  $('toHelp').onclick = () => show('help');
+  $('helpBack').onclick = () => show('menu');
   $('toOnline').onclick = () => openOnline();
   $('toCareer').onclick = openCareer;
   $('toDev').onclick = () => startDev(cars[carIdx]!.id);

@@ -75,12 +75,18 @@ const toEnd = (sel) =>
       if (e.scrollHeight > e.clientHeight + 4) e.scrollTop = e.scrollHeight;
   }, sel);
 
-// the main menu, top and bottom
+// the home screen, the tracks to pick from, how to play
 await page.goto(base);
 await page.waitForTimeout(900);
 await shot('menu');
-await toEnd('#menu');
-await shot('menu-end');
+if (await tap('#toQuick')) {
+  await shot('pick-track');
+  await tap('#quickBack');
+}
+if (await tap('#toHelp')) {
+  await shot('how-to-play');
+  await tap('#helpBack');
+}
 
 // settings from the menu (where there is such a screen), and the dev settings
 if (await tap('.settingsBtn')) {

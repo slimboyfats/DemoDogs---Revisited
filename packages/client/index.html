@@ -76,6 +76,22 @@
         <path d="M12 1.6v5M12 17.4v5M1.6 12h5M17.4 12h5" fill="none" stroke-width="2.8" />
         <circle cx="12" cy="12" r="2.2" />
       </symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24">
+        <path d="M5 2.5v19" fill="none" stroke-width="2.6" />
+        <path
+          d="M6.3 3.5h13.2v10.5H6.3zM10.7 3.5v3.5h4.4V3.5zM6.3 7v3.5h4.4V7zM15.1 7v3.5h4.4V7zM10.7 10.5V14h4.4v-3.5z"
+          fill-rule="evenodd"
+        />
+      </symbol>
+      <symbol id="i-help" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke-width="2.6" />
+        <path
+          d="M9.2 9.4a2.9 2.9 0 1 1 4.3 2.5c-1 .6-1.5 1.1-1.5 2.3"
+          fill="none"
+          stroke-width="2.6"
+        />
+        <circle cx="12" cy="17.3" r="1.5" />
+      </symbol>
       <symbol id="i-wheel" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="8.8" fill="none" stroke-width="3" />
         <circle cx="12" cy="12" r="2.6" />
@@ -180,109 +196,112 @@
     <div id="editPanel" class="hidden"></div>
     <div id="editTray" class="hidden"></div>
 
+    <!-- home: the car on its stand, and the four ways in -->
     <section id="menu" class="screen">
-      <div class="panel">
-        <div class="cols">
-          <div class="menuSide">
-            <header class="menuTop">
-              <h1 class="logo" aria-label="DemoDogs">
-                <svg viewBox="0 0 300 84" role="img" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="lgA" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0.1" stop-color="#fff39a" />
-                      <stop offset="0.55" stop-color="#ffd23f" />
-                      <stop offset="1" stop-color="#ff9d1c" />
-                    </linearGradient>
-                    <linearGradient id="lgB" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0.1" stop-color="#ffc387" />
-                      <stop offset="0.55" stop-color="#ff8a3d" />
-                      <stop offset="1" stop-color="#ee4a1c" />
-                    </linearGradient>
-                    <clipPath id="lgClip"><text x="10" y="60">DEMODOGS</text></clipPath>
-                  </defs>
-                  <!-- prettier-ignore -->
-                  <g transform="rotate(-3 150 42)">
-                    <text class="out" x="10" y="66">DEMODOGS</text>
-                    <text class="out" x="10" y="60">DEMODOGS</text>
-                    <text x="10" y="60"><tspan fill="url(#lgA)">DEMO</tspan><tspan fill="url(#lgB)">DOGS</tspan></text>
-                    <path clip-path="url(#lgClip)" d="M0 0h300v30q-150 12-300 0z" fill="#fff" opacity="0.3" />
-                  </g>
-                </svg>
-              </h1>
-              <button class="settingsBtn gear" aria-label="Settings">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gear" /></svg
-                ><span>SETTINGS</span>
-              </button>
-            </header>
-            <p class="tag">Scrap-metal racing. Ram, wreck and outrun the pack.</p>
-            <div class="garageBox">
-              <canvas id="garage"></canvas>
-              <div class="carPick">
-                <button id="prevCar" aria-label="Previous car">
-                  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="#i-prev" />
-                  </svg>
-                </button>
-                <div><b id="carName">MUTT</b><small id="carBlurb"></small></div>
-                <button id="nextCar" aria-label="Next car">
-                  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="#i-next" />
-                  </svg>
-                </button>
-              </div>
-              <div class="stats">
-                <label
-                  >SPEED<i><b id="stSpeed"></b></i
-                ></label>
-                <label
-                  >ACCEL<i><b id="stAccel"></b></i
-                ></label>
-                <label
-                  >GRIP<i><b id="stGrip"></b></i
-                ></label>
-                <label
-                  >TOUGH<i><b id="stArmor"></b></i
-                ></label>
-              </div>
+      <div class="home">
+        <header class="homeTop">
+          <h1 class="logo" aria-label="DemoDogs">
+            <!-- prettier-ignore -->
+            <svg viewBox="0 0 308 66" role="img" aria-hidden="true">
+              <path class="slash" d="M22 50h286l-10 14H12z" />
+              <text class="out" x="6" y="47">DEMODOGS</text>
+              <text x="6" y="47"><tspan class="a">DEMO</tspan><tspan class="b">DOGS</tspan></text>
+            </svg>
+          </h1>
+          <button class="settingsBtn gear" aria-label="Settings">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gear" /></svg
+            ><span>SETTINGS</span>
+          </button>
+        </header>
+        <div class="stage">
+          <div class="slab" aria-hidden="true"></div>
+          <canvas id="garage"></canvas>
+          <button id="prevCar" class="turn" aria-label="Previous car">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg>
+          </button>
+          <button id="nextCar" class="turn" aria-label="Next car">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-next" /></svg>
+          </button>
+          <div class="carCard">
+            <b id="carName">MUTT</b>
+            <small id="carBlurb"></small>
+            <div class="stats">
+              <label
+                >SPEED<i><b id="stSpeed"></b></i
+              ></label>
+              <label
+                >ACCEL<i><b id="stAccel"></b></i
+              ></label>
+              <label
+                >GRIP<i><b id="stGrip"></b></i
+              ></label>
+              <label
+                >TOUGH<i><b id="stArmor"></b></i
+              ></label>
             </div>
-          </div>
-          <div class="events">
-            <div class="modes">
-              <button id="toCareer" class="career">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy" /></svg
-                ><b>CAREER</b
-                ><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
-              </button>
-              <button id="toOnline" class="career online">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe" /></svg
-                ><b>ONLINE</b><small>Race friends: host a room, share the code.</small>
-              </button>
-              <button id="toTracks" class="career tracks">
-                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-build" /></svg
-                ><b>TRACK CREATOR</b><small>Build your own track, save it, race it.</small>
-              </button>
-            </div>
-            <h3 class="sect">QUICK RACE <small>pick the weather, tap a track</small></h3>
-            <div id="worldPick">
-              <b>WORLD</b><small>Tap to switch on for quick races: weather, night and worse.</small>
-            </div>
-            <div id="venues"></div>
-            <button id="toLesson" class="lesson">
-              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wheel" /></svg
-              ><b>DRIVING LESSON</b><small>One minute: steer, boost, grab a crate, fire.</small>
-            </button>
-            <details class="help">
-              <summary>HOW TO PLAY</summary>
-              <p>
-                <b>Touch:</b> drag on the left to steer and drive. Hold BRAKE to reverse or slide,
-                BOOST for nitro, FIRE for pickups.<br /><b>Keys:</b> arrows/WASD, Space boost, X
-                fire, P pause, Tab names.<br /><b>Scrapped?</b> Tap (or Tab) to watch the next car,
-                ZOOM (or Z) to pull back.<br />Smash scrap bots for points and boost. Crates give
-                rockets, mines, repairs.
-              </p>
-            </details>
           </div>
         </div>
+        <nav class="homeNav">
+          <button id="toQuick" class="mode race">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-flag" /></svg>
+            <span><b>RACE</b><small>Pick a track and go.</small></span>
+          </button>
+          <button id="toCareer" class="mode career">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy" /></svg>
+            <span><b>CAREER</b><small>Win cash, upgrade, climb the ladder.</small></span>
+          </button>
+          <button id="toOnline" class="mode online">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe" /></svg>
+            <span><b>ONLINE</b><small>Host a room, share the code.</small></span>
+          </button>
+          <button id="toTracks" class="mode tracks">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-build" /></svg>
+            <span><b>TRACK CREATOR</b><small>Build your own and race it.</small></span>
+          </button>
+          <div class="homeMore">
+            <button id="toLesson" class="link">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wheel" /></svg
+              >DRIVING LESSON
+            </button>
+            <button id="toHelp" class="link">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-help" /></svg>HOW
+              TO PLAY
+            </button>
+          </div>
+        </nav>
+      </div>
+    </section>
+
+    <!-- a quick race: the weather along the top, the tracks as a row of cards to flick through -->
+    <section id="quick" class="screen hidden">
+      <div class="pick">
+        <header class="bar">
+          <button id="quickBack" class="back" aria-label="Back">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg
+            ><span>BACK</span>
+          </button>
+          <h2>PICK A TRACK</h2>
+          <div id="worldPick"><b>WORLD</b></div>
+        </header>
+        <div id="venues"></div>
+      </div>
+    </section>
+
+    <section id="help" class="screen hidden">
+      <div class="panel narrow">
+        <h2>HOW TO PLAY</h2>
+        <p class="how">
+          <b>Touch</b> Drag on the left to steer and drive. Hold BRAKE to reverse, or with the gas
+          on in a turn to drift. BOOST for nitro, FIRE for pickups.
+        </p>
+        <p class="how"><b>Keys</b> Arrows or WASD, Space boost, X fire, P pause, Tab names.</p>
+        <p class="how">
+          <b>Scrapped?</b> Tap (or Tab) to watch the next car, ZOOM (or Z) to pull back.
+        </p>
+        <p class="how">
+          <b>Score</b> Smash scrap bots for points and boost. Crates give rockets, mines, repairs.
+        </p>
+        <button id="helpBack" class="go">BACK</button>
       </div>
     </section>
 

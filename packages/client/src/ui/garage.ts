@@ -41,44 +41,10 @@ export class Garage {
     const cs = Math.cos(h);
     const sn = Math.sin(h);
     const wheel = this.art.wheels[((Math.floor(this.t * 10) % 3) + 3) % 3]!;
-    // the turntable: a pale round stand with an ink line and a thick edge, the car's shade on it
+    // the car's shade on whatever stage the page puts under it
     const px = R.sx(0);
     const py = R.sy(0, 0);
-    const rx = 16.5 * s;
-    const ry = 10 * s * R.ys;
-    const lip = 1.6 * s;
-    ctx.lineWidth = Math.max(2, 0.55 * s);
-    ctx.strokeStyle = '#1b2233';
-    ctx.fillStyle = '#7f8aa6';
-    ctx.beginPath();
-    ctx.ellipse(px, py + lip, rx, ry, 0, 0, TAU);
-    ctx.fill();
-    ctx.stroke();
-    const top = ctx.createLinearGradient(0, py - ry, 0, py + ry);
-    top.addColorStop(0, '#ffffff');
-    top.addColorStop(1, '#cfdcf0');
-    ctx.fillStyle = top;
-    ctx.beginPath();
-    ctx.ellipse(px, py, rx, ry, 0, 0, TAU);
-    ctx.fill();
-    ctx.stroke();
-    // (a ring of marks that turns with the car, so the stand is seen to turn)
-    ctx.fillStyle = 'rgba(27,34,51,0.16)';
-    for (let i = 0; i < 12; i++) {
-      const a = h0(this.t) + (i / 12) * TAU;
-      ctx.beginPath();
-      ctx.ellipse(
-        px + Math.cos(a) * rx * 0.86,
-        py + Math.sin(a) * ry * 0.86,
-        0.5 * s,
-        0.5 * s * R.ys,
-        0,
-        0,
-        TAU,
-      );
-      ctx.fill();
-    }
-    ctx.fillStyle = 'rgba(27,34,51,0.22)';
+    ctx.fillStyle = 'rgba(10,20,64,0.22)';
     ctx.beginPath();
     ctx.ellipse(px, py, 11.5 * s, 7 * s * R.ys, 0, 0, TAU);
     ctx.fill();

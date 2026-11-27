@@ -41,7 +41,7 @@ export function drawOverlay(
   // (they are for fun: small, none over another, none cut off by the edge of the screen)
   const spots = fx.texts.map((tx): Word => {
     const px = Math.round((tx.big ? 17 : 13) * dpr);
-    ctx.font = `400 ${px}px ${DISPLAY}`;
+    ctx.font = `italic 900 ${px}px ${DISPLAY}`;
     return {
       x: P.sx(tx.x),
       y: P.sy(tx.y, tx.z + P.rise(tx.x, tx.y)),
@@ -67,9 +67,9 @@ export function drawOverlay(
     const tx = fx.texts[i]!;
     const at = spots[i]!;
     ctx.globalAlpha = Math.min(0.92, (tx.life / tx.max) * 2.5);
-    ctx.font = `400 ${Math.round((tx.big ? 17 : 13) * dpr)}px ${DISPLAY}`;
+    ctx.font = `italic 900 ${Math.round((tx.big ? 17 : 13) * dpr)}px ${DISPLAY}`;
     ctx.lineWidth = 3.5 * dpr;
-    ctx.strokeStyle = 'rgba(27,34,51,0.92)';
+    ctx.strokeStyle = 'rgba(10,20,64,0.92)';
     ctx.strokeText(tx.text, at.x, at.y);
     ctx.fillStyle = tx.col;
     ctx.fillText(tx.text, at.x, at.y);
@@ -101,7 +101,7 @@ export function drawOverlay(
       ctx.fill();
       ctx.lineJoin = 'round';
       ctx.lineWidth = 2 * dpr;
-      ctx.strokeStyle = 'rgba(27,34,51,0.92)';
+      ctx.strokeStyle = 'rgba(10,20,64,0.92)';
       ctx.stroke();
       ctx.restore();
     }
@@ -133,9 +133,9 @@ export function drawNames(
     const sx = P.sx(c.x);
     const sy = P.sy(c.y, c.z + 16 + P.rise(c.x, c.y)) - 4 * dpr;
     if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
-    ctx.font = `400 ${Math.round((on ? 13 : 10) * dpr)}px ${DISPLAY}`;
+    ctx.font = `italic 900 ${Math.round((on ? 13 : 10) * dpr)}px ${DISPLAY}`;
     ctx.lineWidth = 3.5 * dpr;
-    ctx.strokeStyle = 'rgba(27,34,51,0.92)';
+    ctx.strokeStyle = 'rgba(10,20,64,0.92)';
     const label = on ? `▼ ${c.name}` : c.name;
     ctx.strokeText(label, sx, sy);
     ctx.fillStyle = on ? '#ffd24a' : c.paint;

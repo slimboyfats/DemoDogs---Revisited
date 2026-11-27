@@ -1,407 +1,329 @@
 /*
- * The look of the menus, to go with the bright world: paper cards and sunny buttons with an ink
- * line round them and a hard shadow under, dark words on light, everything a thumb can hit.
- * Loaded after styles.css, which keeps the layout; a new screen built from the same pieces
- * (.panel, .events button, .row button, .item, .tabs, .slide, .modChips) wears this by itself.
+ * The look of everything that is not the race itself (V2): a deep blue hall with light running
+ * across it, white slabs with a thick foot, one yellow for the way forward, heavy leaning letters.
+ * Loaded after styles.css, which keeps the bones of the older screens; a new screen built from the
+ * same pieces wears this by itself.
  *
  *   a card          .card, .panel.narrow, .garageBox, .trackRow
- *   a button        .events button, .panel.narrow button, .row button   (yellow)
- *     .go           the way forward (green)       .quiet / .small   a lesser one (paper)
+ *   a button        any button in a .screen: a white slab; its colour is --c, its words --ct
+ *     .go           the way forward (yellow)      .quiet / .small   a lesser one (pale)
  *     .warn         cannot be undone (red)        .on               picked (tabs, chips)
  *   a slider        label.slide > span + input[type=range]
  *   a switch        button.tog (drawn off when its label ends in OFF)
+ *
+ * A rule that restyles one kind of button carries an id (or `:is(*, #_)`), so that it beats the
+ * one rule that dresses them all.
  */
-/* The two typefaces (both SIL Open Font License, the licences beside them in fonts/): a chunky one
-   for names, buttons and numbers, a round one for the small print. One face each, whatever weight
-   a rule asks for, so nothing is ever faked bold. */
+/* One family (SIL Open Font License, the licence beside it in fonts/): heavy and leaning for names,
+   buttons and numbers, upright for the small print. */
 @font-face {
-  font-family: 'Lilita One';
-  font-weight: 400 900;
-  font-display: swap;
-  src: url('./fonts/lilita-one.woff2') format('woff2');
-}
-@font-face {
-  font-family: 'Fredoka';
+  font-family: 'Rubik';
+  font-style: normal;
   font-weight: 300 900;
   font-display: swap;
-  src: url('./fonts/fredoka.woff2') format('woff2');
+  src: url('./fonts/rubik.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Rubik';
+  font-style: italic;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('./fonts/rubik-italic.woff2') format('woff2');
 }
 :root {
-  --display: 'Lilita One', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --body: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  /* what a button or card stands on: the hard ink step, and a soft shadow under that */
-  --lift: 0 4px 0 var(--ink), 0 10px 14px -4px rgba(27, 34, 51, 0.35);
-  --lift-down: 0 1px 0 var(--ink), 0 3px 5px -2px rgba(27, 34, 51, 0.3);
-  --rim: inset 0 0 0 2px rgba(255, 255, 255, 0.5), inset 0 -5px 0 rgba(27, 34, 51, 0.12);
-  --ink: #1b2233;
-  --ink2: #55607a;
-  --paper: #fff8e6;
-  --paper2: #f1e6c6;
-  --sun: #ffd23f;
-  --orange: #ff8a3d;
-  --sky: #5cc0ff;
-  --grass: #6bd65a;
-  --red: #ff6b5b;
+  --display: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --body: 'Rubik', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --navy: #0a1440;
+  --navy2: #1a2a6c;
+  --blue: #1f5bff;
+  --blue2: #0b2fd0;
+  --cyan: #22c3ff;
+  --yel: #ffd60a;
+  --yel2: #ffab00;
+  --org: #ff7a1a;
+  --red: #ff3d57;
+  --grn: #1fcf66;
+  --mist: #e9efff;
+  --grey: #66709a;
+  /* (the names the lesson's card and older rules know these by) */
+  --ink: var(--navy);
+  --ink2: var(--grey);
+  --paper: #fff;
+  --paper2: var(--mist);
+  --sun: var(--yel);
+  --orange: var(--org);
+  --sky: var(--cyan);
+  --grass: var(--grn);
   --line: 3px;
-  --drop: var(--lift);
-  --round: 16px;
+  --round: 18px;
+  --drop: 0 12px 28px rgba(4, 8, 40, 0.45);
 }
 
-/* ---- the backdrop: a sky over a lawn; a veil where a race shows behind */
+/* ---- the hall: blue, lighter at one corner, bands of light sliding across it */
 .screen {
-  color: var(--ink);
-  padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right))
-    calc(10px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  color: #fff;
   font-family: var(--body);
   font-synthesis: none;
+  padding: calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right))
+    calc(10px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
   background:
-    radial-gradient(120% 34% at 50% 110%, #4fbf45 0 96%, #2f8f3a 97% 99.4%, transparent 99.5%),
-    radial-gradient(70% 30% at 8% 104%, #86e268 0 95%, #3c9c40 96% 99.4%, transparent 99.5%),
-    radial-gradient(64% 27% at 96% 104%, #77d95f 0 95%, #3c9c40 96% 99.4%, transparent 99.5%),
-    linear-gradient(#2f9bff, #6fc8ff 45%, #d6f3ff 82%);
+    linear-gradient(118deg, transparent 0 58%, rgba(255, 255, 255, 0.07) 58% 71%, transparent 71%),
+    linear-gradient(118deg, transparent 0 76%, rgba(255, 214, 10, 0.16) 76% 79%, transparent 79%),
+    radial-gradient(130% 100% at 18% 0%, #4c86ff 0, #1f4fff 36%, #0c22b0 74%, #070f66 100%);
 }
-/* sunbeams turning slowly behind everything, and clouds drifting over: both only ever moved as a
-   whole (transform), so a phone's compositor does it and nothing is painted again */
-:is(#menu, #career, #online, #tracks, #loader, #tutAsk)::before {
+/* (the bands are one sheet slid sideways, the dots one sheet that stays: nothing is painted again) */
+.screen:not(#pauseMenu, #results, #editSetup, #settings, #tutEnd)::before {
   content: '';
   position: fixed;
   z-index: -1;
-  left: 50%;
-  top: 104%;
-  width: 240vmax;
-  height: 240vmax;
-  margin: -120vmax 0 0 -120vmax;
-  background: repeating-conic-gradient(rgba(255, 255, 255, 0.16) 0 6deg, transparent 6deg 12deg);
-  -webkit-mask-image: radial-gradient(circle, #000 8%, transparent 46%);
-  mask-image: radial-gradient(circle, #000 8%, transparent 46%);
-  animation: beams 120s linear infinite;
+  inset: 0 -196px 0 0;
+  background: repeating-linear-gradient(
+    118deg,
+    rgba(255, 255, 255, 0.045) 0 46px,
+    transparent 46px 92px
+  );
+  animation: slide 9s linear infinite;
   pointer-events: none;
 }
-:is(#menu, #career, #online, #tracks, #loader, #tutAsk)::after {
+.screen:not(#pauseMenu, #results, #editSetup, #settings, #tutEnd)::after {
   content: '';
   position: fixed;
   z-index: -1;
-  left: 0;
-  top: 0;
-  width: calc(100% + 640px);
-  height: 46%;
-  background:
-    radial-gradient(54px 20px at 90px 46px, #fff 97%, transparent),
-    radial-gradient(34px 18px at 122px 34px, #fff 97%, transparent),
-    radial-gradient(40px 14px at 60px 52px, #eaf6ff 97%, transparent),
-    radial-gradient(70px 22px at 410px 96px, #fff 97%, transparent),
-    radial-gradient(40px 20px at 372px 82px, #fff 97%, transparent),
-    radial-gradient(46px 14px at 452px 104px, #eaf6ff 97%, transparent);
-  background-size: 640px 100%;
-  opacity: 0.92;
-  animation: clouds 70s linear infinite;
+  right: 0;
+  bottom: 0;
+  width: 46vmax;
+  height: 46vmax;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0 2.2px, transparent 2.6px) 0 0 /
+    15px 15px;
+  -webkit-mask-image: radial-gradient(circle at 100% 100%, #000 0, transparent 68%);
+  mask-image: radial-gradient(circle at 100% 100%, #000 0, transparent 68%);
   pointer-events: none;
 }
-@keyframes beams {
+@keyframes slide {
   to {
-    transform: rotate(360deg);
+    transform: translateX(-104.2px);
   }
 }
-@keyframes clouds {
-  to {
-    transform: translateX(-640px);
-  }
+/* a race shows behind these: a dark veil with the same bands in it */
+#pauseMenu,
+#results,
+#editSetup,
+#tutEnd {
+  background:
+    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.04) 0 46px, transparent 46px 92px),
+    linear-gradient(180deg, rgba(10, 20, 64, 0.72), rgba(7, 15, 102, 0.6));
 }
-/* a screen arrives: its panel settles into place with a small bounce */
-.screen:not(.hidden) > .panel,
-#tutEnd:not(.hidden) > .panel {
-  animation: arrive 0.3s cubic-bezier(0.2, 1.25, 0.35, 1) backwards;
+/* a screen arrives: its things slide in from the side they lean to */
+.screen:not(.hidden) > :is(.panel, .home, .pick) {
+  animation: arrive 0.28s cubic-bezier(0.2, 1.1, 0.3, 1) backwards;
 }
 @keyframes arrive {
   from {
     opacity: 0;
-    transform: translateY(16px) scale(0.97);
+    transform: translateX(26px);
   }
 }
-#pauseMenu,
-#results,
-#editSetup {
-  background:
-    repeating-linear-gradient(-45deg, rgba(255, 255, 255, 0.045) 0 14px, transparent 14px 28px),
-    radial-gradient(ellipse at center, rgba(27, 34, 51, 0.35), rgba(27, 34, 51, 0.62));
-}
 
-/* ---- cards */
+/* ---- cards: white, round, lifted off the hall */
 .card,
 .panel.narrow,
 .garageBox,
 .trackRow {
-  color: var(--ink);
-  background: linear-gradient(180deg, #fffdf5, var(--paper) 40%, #f9edcf);
-  border: var(--line) solid var(--ink);
+  color: var(--navy);
+  background: #fff;
+  border: 0;
   border-radius: var(--round);
   box-shadow:
-    inset 0 0 0 2px rgba(255, 255, 255, 0.8),
-    0 5px 0 var(--ink),
-    0 14px 22px -6px rgba(27, 34, 51, 0.4);
+    0 6px 0 rgba(4, 8, 40, 0.35),
+    var(--drop);
 }
 .panel.narrow {
-  width: min(340px, 100%);
-  padding: 14px;
+  width: min(360px, 100%);
+  padding: 16px;
   gap: 10px;
   max-height: none;
   margin: auto 0;
 }
 .panel.card {
-  padding: 10px 14px 14px;
+  padding: 0 0 14px;
   width: min(760px, 100%);
   max-height: none;
   margin: auto 0;
+  overflow: hidden;
 }
 
 /* ---- words */
-/* the name of the game: drawn letters with light on them, set at a tilt, bobbing a little */
-h1.logo {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: -4px 0 -2px -4px;
-  padding: 0;
-  font-size: 0;
-  line-height: 0;
-  text-shadow: none;
-  animation: bob 3.2s ease-in-out infinite alternate;
-  transform-origin: 30% 60%;
-}
-.logo svg {
-  display: block;
-  width: 100%;
-  max-width: clamp(210px, 46vmin, 320px);
-  height: auto;
-  overflow: visible;
-  filter: drop-shadow(0 8px 7px rgba(27, 34, 51, 0.28));
-}
-.logo text {
-  font: 400 62px var(--display);
-  letter-spacing: 1px;
-}
-.logo .out {
-  fill: var(--ink);
-  stroke: var(--ink);
-  stroke-width: 15px;
-  stroke-linejoin: round;
-}
-@keyframes bob {
-  from {
-    transform: rotate(-1.2deg) translateY(1px);
-  }
-  to {
-    transform: rotate(1deg) translateY(-2px);
-  }
-}
+h1,
 h2,
 h3,
 .sect {
   font-family: var(--display);
-  font-weight: 400;
-  font-style: normal;
+  font-style: italic;
+  font-weight: 900;
 }
 h2 {
-  color: var(--ink);
-  font-size: clamp(24px, 6vmin, 38px);
+  color: #fff;
+  font-size: clamp(24px, 6.4vmin, 38px);
   line-height: 1;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.01em;
+  text-shadow: 0 3px 0 var(--navy);
 }
-.screen:not(#pauseMenu, #results, #editSetup, #settings) > .panel:not(.narrow) > h2,
-.careerHead h2 {
-  color: var(--sun);
-  -webkit-text-stroke: 6px var(--ink);
-  letter-spacing: 0.04em;
-  paint-order: stroke fill;
-  text-shadow:
-    0 4px 0 var(--ink),
-    0 9px 8px rgba(27, 34, 51, 0.3);
-  padding: 2px 6px 6px 4px;
-  transform: rotate(-2deg);
-  transform-origin: 0 60%;
+.panel.narrow h2,
+.sheet h2 {
+  color: var(--navy);
+  text-shadow: none;
+}
+/* a card's heading has a yellow stroke under it, leaning the way the letters lean */
+.panel.narrow h2::after {
+  content: '';
+  display: block;
+  width: 54px;
+  height: 6px;
+  margin: 7px auto 0;
+  border-radius: 2px;
+  background: var(--yel);
+  transform: skewX(-24deg);
 }
 .tag {
   opacity: 1;
-  font-weight: 600;
-  color: var(--ink);
+  font-weight: 500;
+  color: inherit;
 }
 .note {
-  color: #b4420d;
+  color: var(--yel);
   font-weight: 600;
 }
-/* a heading over a stretch of the menu: white letters on a slanted ink ribbon */
+.panel.narrow .note,
+.sheet .note {
+  color: var(--grey);
+}
 .sect {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   margin: 8px 0 0;
-  font-size: 15px;
-  letter-spacing: 0.06em;
-  color: var(--ink);
-}
-#menu .sect {
-  align-self: flex-start;
-  padding: 5px 16px 5px 12px;
-  color: #fff;
-  background: var(--ink);
-  border-radius: 8px;
-  transform: skewX(-10deg);
-  box-shadow: 5px 4px 0 var(--orange);
-}
-#menu .sect small {
-  color: var(--sun);
-  opacity: 1;
+  font-size: 16px;
+  letter-spacing: 0.03em;
 }
 .sect small {
   font-family: var(--body);
+  font-style: normal;
   font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0;
-  opacity: 0.75;
+  font-weight: 500;
+  opacity: 0.8;
   margin-left: 6px;
 }
+p.how {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  font-weight: 500;
+}
+p.how b {
+  display: inline-block;
+  min-width: 78px;
+  font-style: italic;
+  font-weight: 900;
+  color: var(--blue2);
+}
 
-/* ---- buttons */
-/* a button's face: its own colour (--c) with light across the top, deepening to its foot (--c2) */
+/* ---- buttons: a slab in its own colour with a thick foot; it sinks when pressed */
 button {
-  --c: var(--sun);
-  --c2: initial;
-  --face:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0) 56%),
-    linear-gradient(180deg, var(--c), var(--c2, color-mix(in oklab, var(--c), #8a2c00 17%)));
+  --c: #fff;
+  --ct: var(--navy);
+  --cd: color-mix(in oklab, var(--c), #0a1440 34%);
 }
-.events button,
-.panel.narrow button,
-.row button,
-.trackRow button,
-.sheet button,
-.careerHead .small,
-.list .small,
-.gear {
+.screen button:is(*, #_),
+:is(#specBar, #ghostBar) button:is(*, #_),
+#tutSkip {
   position: relative;
-  color: var(--ink);
-  background: var(--face);
-  border: var(--line) solid var(--ink);
-  border-radius: 14px;
-  box-shadow: var(--rim), var(--lift);
-  min-height: 44px;
+  color: var(--ct);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--c), #fff 38%), var(--c) 62%);
+  border: 0;
+  border-radius: 13px;
+  box-shadow:
+    0 4px 0 var(--cd),
+    0 9px 14px rgba(4, 8, 40, 0.32);
   font-family: var(--display);
-  font-weight: 400;
-  letter-spacing: 0.035em;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  opacity: 1;
   transition:
-    transform 0.08s cubic-bezier(0.3, 1.6, 0.5, 1),
-    box-shadow 0.08s,
-    filter 0.08s;
+    transform 0.07s,
+    box-shadow 0.07s,
+    filter 0.07s;
 }
-/* what is said under a button's name is small print */
-:is(.events, .panel.narrow, .row, .trackRow, .sheet) button small {
+.screen button:is(*, #_):active,
+:is(#specBar, #ghostBar) button:is(*, #_):active,
+#tutSkip:active {
+  transform: translateY(3px);
+  filter: brightness(0.96);
+  box-shadow:
+    0 1px 0 var(--cd),
+    0 3px 5px rgba(4, 8, 40, 0.3);
+}
+.screen button {
+  min-height: 44px;
+}
+.screen button small {
   font-family: var(--body);
-  font-weight: 600;
+  font-style: normal;
+  font-weight: 500;
   letter-spacing: 0;
-}
-.events button:active,
-.panel.narrow button:active,
-.row button:active,
-.trackRow button:active,
-.sheet button:active,
-.careerHead .small:active,
-.list .small:active,
-.gear:active {
-  filter: brightness(0.94) saturate(1.1);
-  transform: translateY(3px) scale(0.985);
-  box-shadow: var(--rim), var(--lift-down);
-}
-.events button small {
-  opacity: 0.9;
+  opacity: 0.75;
 }
 .screen button.go,
-#tracksPanel button.go,
-#onlinePanel button.go {
-  --c: var(--grass);
-  --c2: initial;
-  border-color: var(--ink);
+#results .row button:first-child {
+  --c: var(--yel);
+  --cd: #c98600;
 }
 /* the way forward has a glint that runs across it now and then */
 .screen button.go {
   overflow: hidden;
 }
-.screen button.go::before,
-.events .modes #toCareer::before {
+.screen button.go::before {
   content: '';
   position: absolute;
   top: 0;
   bottom: 0;
   left: 0;
-  width: 46%;
-  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.75), transparent);
-  transform: translateX(-130%) skewX(-18deg);
-  animation: glint 3.6s ease-in-out infinite;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  transform: translateX(-140%) skewX(-24deg);
+  animation: glint 3.4s ease-in-out infinite;
   pointer-events: none;
 }
 @keyframes glint {
   0%,
-  62% {
-    transform: translateX(-130%) skewX(-18deg);
+  60% {
+    transform: translateX(-140%) skewX(-24deg);
   }
   100% {
-    transform: translateX(340%) skewX(-18deg);
+    transform: translateX(380%) skewX(-24deg);
   }
 }
-.screen button.warn,
-#tracksPanel button.warn {
+.screen button.warn {
   --c: var(--red);
-  --c2: initial;
-  border-color: var(--ink);
+  --ct: #fff;
 }
-.screen button.quiet,
-.events .small,
-.careerHead .small,
-.list .small,
-#onlinePanel button.small,
-.gear {
-  --c: #fffaea;
-  --c2: #f7e8c0;
-  border-color: var(--ink);
+/* (on a white card a lesser button is pale, so it is still seen) */
+.panel.narrow button.quiet,
+.panel.narrow button.small,
+.sheet button,
+.trackRow button {
+  --c: var(--mist);
+  --cd: #b4c0e6;
 }
 .events .small {
   padding: 8px 14px;
 }
-button:disabled,
-.events button.item:disabled {
-  opacity: 1;
-  color: var(--ink2);
-  --c: var(--paper2);
-  --c2: initial;
-  border-color: var(--ink2);
-  box-shadow: 0 4px 0 var(--ink2);
-  filter: saturate(0.6);
+.screen button:is(*, #_):disabled {
+  --c: #b9c2e0;
+  --ct: #5d678f;
+  --cd: #8c97bd;
   cursor: default;
+  filter: none;
+  transform: none;
 }
-
-/* ---- the main menu */
-.menuTop {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-}
-.gear {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 12px;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-}
-.gear .ic {
-  width: 24px;
-  height: 24px;
-  transition: transform 0.4s cubic-bezier(0.3, 1.5, 0.5, 1);
-}
-.gear:active .ic {
-  transform: rotate(90deg);
-}
-/* the drawn signs (the sheet of them is in index.html): ink, as thick as the line round a button */
+/* the drawn signs (the sheet of them is in index.html) */
 .ic {
   flex: none;
   width: 22px;
@@ -413,78 +335,181 @@ button:disabled,
   stroke-linejoin: round;
   pointer-events: none;
 }
-.menuSide {
-  flex: 1 1 260px;
+
+/* ---- home: the name along the top, the car on its stand, the four ways in beside it */
+#menu {
+  align-items: stretch;
+}
+.home {
+  width: min(1040px, 100%);
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 4px 20px;
+}
+.homeTop {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+h1.logo {
+  margin: 0;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  text-shadow: none;
   min-width: 0;
 }
-.menuSide .tag {
-  margin: 0 0 8px;
+.logo svg {
+  display: block;
+  width: clamp(190px, 44vmin, 300px);
+  height: auto;
+  overflow: visible;
+  filter: drop-shadow(0 5px 0 rgba(4, 8, 40, 0.45));
+}
+.logo text {
+  font: italic 900 50px var(--display);
+  letter-spacing: -1px;
+}
+.logo .out {
+  fill: var(--navy);
+  stroke: var(--navy);
+  stroke-width: 9px;
+  stroke-linejoin: round;
+}
+.logo .a {
+  fill: #fff;
+}
+.logo .b {
+  fill: var(--yel);
+}
+.logo .slash {
+  fill: var(--yel);
+}
+#menu button.gear {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 42px;
+  padding: 0 14px 0 11px;
+  border-radius: 999px;
   font-size: 13px;
 }
-.garageBox {
-  flex: 0 1 auto;
+.gear .ic {
+  transition: transform 0.35s cubic-bezier(0.3, 1.5, 0.5, 1);
+}
+.gear:active .ic {
+  transform: rotate(90deg);
+}
+/* the stand: a yellow slab leaning behind the car, its name and numbers across the foot */
+.stage {
   position: relative;
-  overflow: hidden;
-  padding: 8px 10px 10px;
-  /* a showroom: beams of light behind the car, a floor under it */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.stage .slab {
+  position: absolute;
+  inset: 4% 12% 30% 12%;
+  border-radius: 22px;
   background:
-    radial-gradient(120% 60% at 50% 0, rgba(255, 255, 255, 0.9), transparent 70%),
-    repeating-conic-gradient(
-      from -90deg at 50% 46%,
-      rgba(255, 255, 255, 0.5) 0 9deg,
-      transparent 9deg 18deg
-    ),
-    linear-gradient(#8fdcff, #d9f4ff 46%, var(--paper) 62%, #f9edcf);
+    repeating-linear-gradient(118deg, rgba(255, 255, 255, 0.22) 0 14px, transparent 14px 28px),
+    linear-gradient(180deg, var(--yel), var(--yel2));
+  box-shadow:
+    10px 10px 0 rgba(4, 8, 40, 0.35),
+    inset 0 0 0 4px rgba(255, 255, 255, 0.55);
+  transform: skewX(-12deg);
 }
-.carPick b {
-  color: var(--ink);
-  font-family: var(--display);
-  font-weight: 400;
-  font-size: 22px;
-  letter-spacing: 0.04em;
+#garage {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 72%;
 }
-.carPick small {
-  opacity: 0.85;
-  font-weight: 600;
-}
-.carPick button {
+#menu button.turn {
+  position: absolute;
+  top: 34%;
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
+  min-height: 0;
+  margin-top: -23px;
   padding: 0;
-  border: var(--line) solid var(--ink);
   border-radius: 50%;
-  background: var(--face);
-  color: var(--ink);
-  box-shadow: var(--rim), var(--lift);
-  transition: transform 0.08s cubic-bezier(0.3, 1.6, 0.5, 1);
 }
-.carPick button:active {
-  transform: translateY(3px) scale(0.94);
-  box-shadow: var(--rim), var(--lift-down);
+#prevCar {
+  left: 0;
 }
-.carPick .ic {
+#nextCar {
+  right: 0;
+}
+.turn .ic {
   width: 20px;
   height: 20px;
+}
+.carCard {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 2px 16px;
+  padding: 0 4px calc(4px + env(safe-area-inset-bottom));
+}
+#carName {
+  grid-column: 1;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: clamp(30px, 9.5vmin, 46px);
+  line-height: 0.95;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-shadow:
+    0 4px 0 var(--navy),
+    0 10px 18px rgba(4, 8, 40, 0.5);
+}
+#carBlurb {
+  grid-column: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  opacity: 0.9;
+  white-space: nowrap;
+}
+.carCard .stats {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(7, 15, 102, 0.55);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.18);
+}
+.stats {
+  gap: 5px 12px;
 }
 .stats label {
   opacity: 1;
   font-family: var(--display);
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.08em;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 10px;
+  letter-spacing: 0.06em;
 }
-/* a gauge: a dark slot with a lit bar in it, notched in fifths */
+/* a gauge: five leaning cells, lit as far as the number goes */
 .stats i {
   position: relative;
-  height: 12px;
-  border-radius: 7px;
-  border: 2px solid var(--ink);
-  background: #39435c;
-  box-shadow: inset 0 2px 0 rgba(0, 0, 0, 0.25);
+  height: 9px;
+  margin-top: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  transform: skewX(-24deg);
+  overflow: hidden;
 }
 .stats i::after {
   content: '';
@@ -492,322 +517,157 @@ button:disabled,
   inset: 0;
   background: repeating-linear-gradient(
     90deg,
-    transparent 0 calc(20% - 2px),
-    rgba(27, 34, 51, 0.55) calc(20% - 2px) 20%
+    transparent 0 calc(20% - 2.5px),
+    #0c1c8c calc(20% - 2.5px) 20%
   );
 }
 .stats i b {
   border-radius: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.65) 0 30%, transparent 31%),
-    linear-gradient(90deg, var(--orange), var(--sun));
-  transition: width 0.35s cubic-bezier(0.3, 1.4, 0.5, 1);
+  background: linear-gradient(90deg, #fff, var(--yel));
+  transition: width 0.3s cubic-bezier(0.3, 1.4, 0.5, 1);
 }
-.events {
-  gap: 10px;
-  min-width: 0;
+.garageBox .stats i {
+  background: var(--mist);
 }
-.modes {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 10px;
+.garageBox .stats i::after {
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 calc(20% - 2.5px),
+    #fff calc(20% - 2.5px) 20%
+  );
 }
-/* the three ways in: a tile each, its sign in a white roundel, stripes running across it */
-.events .modes button {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 9px;
-  padding: 9px 12px 9px 9px;
-  overflow: hidden;
-  text-align: left;
+.garageBox .stats i b {
+  background: linear-gradient(90deg, var(--org), var(--yel));
 }
-#menu .modes button {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0) 56%),
-    repeating-linear-gradient(-55deg, rgba(255, 255, 255, 0.16) 0 10px, transparent 10px 20px),
-    linear-gradient(180deg, var(--c), var(--c2, color-mix(in oklab, var(--c), #8a2c00 20%)));
-}
-.events .modes button > .ic {
-  grid-row: 1 / span 2;
-  box-sizing: content-box;
-  width: 22px;
-  height: 22px;
-  padding: 6px;
-  border: var(--line) solid var(--ink);
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 2px 0 var(--ink);
-}
-.events .modes button b {
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.05;
-  color: #fff;
-  -webkit-text-stroke: 4px var(--ink);
-  paint-order: stroke fill;
-  text-shadow: 0 2px 0 var(--ink);
-}
-.events .modes button small {
-  grid-column: 2;
-  color: var(--ink);
-  line-height: 1.2;
-}
-.events button.career {
-  --c: var(--orange);
-  --c2: initial;
-  border-color: var(--ink);
-}
-.events button.online {
-  --c: #3fb2ff;
-  --c2: initial;
-  border-color: var(--ink);
-}
-.events button.career.tracks {
-  --c: #58cf48;
-  --c2: initial;
-  border-color: var(--ink);
-}
-
-/* a venue's card: its little map, what it is, its name */
-#venues {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
-  gap: 10px;
-}
-.events button.venue {
-  position: relative;
+/* the ways in: a slab each, its sign on a tile of its own colour, an arrow at the far end */
+.homeNav {
   display: flex;
   flex-direction: column;
-  padding: 0 0 8px;
-  overflow: hidden;
-  --c: #fffaea;
-  --c2: #f7e8c0;
+  gap: 9px;
+  min-height: 0;
+  padding-bottom: calc(6px + env(safe-area-inset-bottom));
 }
-.venue .thumb {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 150 / 84;
-  display: block;
-  border-bottom: var(--line) solid var(--ink);
-}
-/* light across the top of the little map, and shade at its foot, as if under glass */
-.events button.venue::after,
-.tutModes button.venue::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  aspect-ratio: 150 / 84;
-  background:
-    linear-gradient(168deg, rgba(255, 255, 255, 0.42) 0 24%, transparent 24.5%),
-    linear-gradient(180deg, transparent 60%, rgba(27, 34, 51, 0.22));
-  pointer-events: none;
-}
-.venue em {
-  position: absolute;
-  z-index: 1;
-  left: -3px;
-  top: 7px;
-  padding: 3px 9px 3px 8px;
-  border: 2px solid var(--ink);
-  border-radius: 0 8px 8px 0;
-  background: linear-gradient(180deg, #ffe680, var(--sun));
-  box-shadow: 0 2px 0 var(--ink);
-  font-family: var(--display);
-  font-style: normal;
-  font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.07em;
-}
-.venue.derby em {
-  color: #fff;
-  background: linear-gradient(180deg, #ff8f80, #f04a38);
-  text-shadow: 0 1px 0 var(--ink);
-}
-.events button.venue b {
-  font-size: 14.5px;
-  font-weight: 400;
-  padding: 6px 9px 0;
-  line-height: 1.1;
-}
-.events button.venue small {
-  padding: 2px 9px 0;
-  font-size: 10.5px;
-  line-height: 1.25;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* the world's chips */
-#worldPick > b {
-  display: none;
-}
-#worldPick > small {
-  opacity: 0.8;
-  font-weight: 700;
-}
-.events .modChips button,
-.panel.narrow .modChips button {
-  min-height: 36px;
-  color: var(--ink);
-  padding: 0 13px;
-  border: var(--line) solid var(--ink);
-  border-radius: 999px;
-  --c: #fffaea;
-  --c2: #f7e8c0;
-  box-shadow:
-    var(--rim),
-    0 3px 0 var(--ink);
-  opacity: 1;
-}
-.events .modChips button.on,
-.panel.narrow .modChips button.on {
-  --c: var(--chip);
-  --c2: initial;
-  border-color: var(--ink);
-  color: var(--ink);
-  transform: translateY(2px);
-  box-shadow:
-    var(--rim),
-    0 1px 0 var(--ink);
-  animation: picked 0.25s cubic-bezier(0.3, 1.8, 0.5, 1);
-}
-@keyframes picked {
-  from {
-    transform: translateY(2px) scale(0.86);
-  }
-}
-.events .modChips button.on::before {
-  content: '✓ ';
-}
-details.help {
-  opacity: 1;
-  margin: 0;
-  border: var(--line) solid var(--ink);
-  border-radius: 14px;
-  background: var(--paper);
-  box-shadow: var(--lift);
-  font-size: 12px;
-  font-weight: 500;
-}
-details.help summary {
-  min-height: 40px;
+#menu button.mode {
+  --tile: var(--blue);
+  flex: 1 1 0;
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  font-family: var(--display);
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  list-style: none;
+  gap: 12px;
+  min-height: 48px;
+  padding: 0 34px 0 8px;
+  text-align: left;
+  overflow: hidden;
 }
-details.help summary::after {
-  content: '+';
-  margin-left: auto;
-  font-size: 18px;
+.mode > .ic {
+  box-sizing: content-box;
+  align-self: stretch;
+  width: 24px;
+  height: auto;
+  margin: 6px 0;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--tile), #fff 22%), var(--tile));
 }
-details.help[open] summary::after {
-  content: '–';
+.mode span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
-details.help p {
-  margin: 0;
-  padding: 0 14px 12px;
-  line-height: 1.5;
+.mode b {
+  font-size: clamp(17px, 5vmin, 22px);
+  line-height: 1.05;
+  white-space: nowrap;
 }
-
-/* a phone on its side: the car stays put, the list of things to do scrolls beside it */
-@media (orientation: landscape) and (min-width: 600px) {
-  #menu {
-    overflow: hidden;
-    align-items: stretch;
-    padding-top: calc(8px + env(safe-area-inset-top));
-    padding-bottom: 0;
-  }
-  #menu .panel {
-    width: min(980px, 100%);
-    height: 100%;
-    max-height: none;
-  }
-  #menu .cols {
-    height: 100%;
-    flex-wrap: nowrap;
-    gap: 14px;
-  }
-  .menuSide {
-    flex: 0 0 min(300px, 37%);
-    padding-bottom: calc(12px + env(safe-area-inset-bottom));
-  }
-  #menu .events {
-    flex: 1 1 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    touch-action: pan-y;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    /* (room for the buttons' shadows, and to scroll the last row clear of the edge) */
-    padding: 2px 4px calc(16px + env(safe-area-inset-bottom)) 2px;
-  }
-  #menu .events > * {
-    flex-shrink: 0;
-  }
+.mode small {
+  font-size: 11.5px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+.mode::after {
+  content: '';
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -6px;
+  border: solid currentColor;
+  border-width: 3.5px 3.5px 0 0;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  opacity: 0.55;
+}
+/* RACE is the yellow one, bigger, with light running over it */
+#menu button.mode.race {
+  --c: var(--yel);
+  --cd: #c98600;
+  --tile: var(--navy);
+  flex: 1.35 1 0;
+}
+.mode.race b {
+  font-size: clamp(22px, 7vmin, 30px);
+}
+.mode.race::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 34%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.8), transparent);
+  transform: translateX(-140%) skewX(-24deg);
+  animation: glint 3.4s ease-in-out infinite;
+  pointer-events: none;
+}
+.mode.career {
+  --tile: var(--org);
+}
+.mode.online {
+  --tile: var(--cyan);
+}
+.mode.tracks {
+  --tile: var(--grn);
+}
+.homeMore {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+#menu button.link {
+  --c: rgba(255, 255, 255, 0.14);
+  --ct: #fff;
+  --cd: rgba(4, 8, 40, 0.4);
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.link .ic {
+  width: 17px;
+  height: 17px;
+}
+/* a phone on its side */
 @media (max-height: 520px) {
-  h1 {
-    font-size: 34px;
-  }
-  .menuSide .tag {
-    display: none;
-  }
-  .menuTop {
-    margin-bottom: 6px;
-  }
-  #garage {
-    height: clamp(84px, 30vh, 130px);
-  }
-  .carPick button {
-    width: 44px;
-    height: 44px;
-  }
-  .events .modes button {
-    padding: 7px 10px;
-  }
-  .events .modes button small {
-    display: none;
-  }
-  .events .modes button b {
-    grid-row: 1 / span 2;
-    font-size: 16px;
-  }
-  .events .modes button > .ic {
-    width: 18px;
-    height: 18px;
-    padding: 5px;
-  }
   .gear span {
     display: none;
   }
-  .gear {
-    width: 46px;
-    justify-content: center;
+  #menu button.gear {
+    width: 42px;
     padding: 0;
+    justify-content: center;
   }
-  /* the world's chips in one row that slides sideways */
-  #worldPick > small {
-    display: none;
-  }
-  #worldPick .modChips {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    touch-action: pan-x;
-    margin: 0 -4px;
-    padding: 0 4px 5px;
-  }
-  #worldPick .modChips button {
-    flex: none;
+  .logo svg {
+    width: 200px;
   }
   .sheet header h2 {
     font-size: 20px;
@@ -816,31 +676,275 @@ details.help p {
   .sheet .setTabs button {
     min-height: 38px;
   }
-  .setTabs {
-    margin-top: 6px;
+}
+/* a phone held upright: the stand over the ways in, and the page scrolls if it must */
+@media (orientation: portrait) {
+  #menu {
+    align-items: flex-start;
+  }
+  .home {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    gap: 8px;
+  }
+  .stage {
+    height: min(46vh, 380px);
+  }
+  #menu button.mode {
+    flex: none;
+    min-height: 62px;
+  }
+  #menu button.mode.race {
+    min-height: 78px;
   }
 }
 
-/* ---- sliders: a fat track and a thumb to grab, the same everywhere */
+/* ---- a quick race: a bar along the top, the tracks as a row of cards to flick through */
+#quick {
+  align-items: stretch;
+  overflow: hidden;
+}
+.pick {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+.bar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.bar h2 {
+  flex: none;
+  margin: 0;
+  font-size: clamp(20px, 5.6vmin, 30px);
+  white-space: nowrap;
+}
+.screen button.back:is(*, #_),
+.careerHead .small {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 40px;
+  padding: 0 14px 0 9px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.back .ic {
+  width: 16px;
+  height: 16px;
+}
+/* the world's weather: chips in one row that slides sideways */
+#worldPick {
+  flex: 1 1 0;
+  min-width: 0;
+}
+#worldPick > b,
+#worldPick > small {
+  display: none;
+}
+#worldPick .modChips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  margin: 0;
+  padding: 2px 2px 7px;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 26px), transparent);
+}
+.screen .modChips button:is(*, #_) {
+  --c: rgba(255, 255, 255, 0.16);
+  --ct: #fff;
+  flex: none;
+  min-height: 34px;
+  padding: 0 13px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+  letter-spacing: 0.03em;
+}
+.screen .modChips button.on:is(*, #_) {
+  --ct: var(--navy);
+  background: var(--chip, var(--yel));
+  box-shadow:
+    inset 0 0 0 2px #fff,
+    0 3px 0 rgba(4, 8, 40, 0.4);
+  animation: picked 0.22s cubic-bezier(0.3, 1.8, 0.5, 1);
+}
+.modChips button.on::before {
+  content: '✓ ';
+}
+.panel.narrow .modChips button:is(*, #_):not(.on) {
+  --ct: var(--navy);
+  background: var(--mist);
+  box-shadow: inset 0 0 0 1.5px #b4c0e6;
+}
+@keyframes picked {
+  from {
+    transform: scale(0.86);
+  }
+}
+#venues {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  margin: 0 calc(-14px - env(safe-area-inset-right)) 0 calc(-14px - env(safe-area-inset-left));
+  padding: 6px calc(14px + env(safe-area-inset-right)) 14px calc(14px + env(safe-area-inset-left));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x proximity;
+  scroll-padding: 0 14px;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+/* a track's card: its map, what kind of event, its name, and GO */
+#venues button.venue,
+.tutModes button.venue:is(*, #_) {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  width: clamp(180px, 27vw, 236px);
+  max-height: 100%;
+  padding: 0 0 10px;
+  border-radius: 16px;
+  overflow: hidden;
+  text-align: left;
+  scroll-snap-align: start;
+}
+.venue .thumb {
+  flex: none;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 150 / 84;
+  display: block;
+}
+/* (light across the map, as if under glass) */
+.venue::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  aspect-ratio: 150 / 84;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.34) 0 22%, transparent 22.5%);
+  pointer-events: none;
+}
+.venue em {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  top: 8px;
+  padding: 3px 12px 3px 9px;
+  border-radius: 0 3px 3px 0;
+  color: var(--navy);
+  background: var(--yel);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  font-family: var(--display);
+  font-style: italic;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+.venue.derby em {
+  color: #fff;
+  background: var(--red);
+}
+.venue b {
+  display: block;
+  padding: 8px 11px 0;
+  font-size: 16px;
+  line-height: 1.05;
+}
+.screen .venue small {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 3px 11px 0;
+  font-size: 11px;
+  line-height: 1.28;
+  opacity: 0.8;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+#venues .venue::after {
+  content: 'GO';
+  align-self: flex-end;
+  flex: none;
+  margin: 6px 10px 0 0;
+  padding: 3px 16px 3px 14px;
+  border-radius: 3px;
+  color: var(--navy);
+  background: var(--yel);
+  clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  font-size: 13px;
+}
+@media (max-height: 380px) {
+  .screen .venue small {
+    -webkit-line-clamp: 2;
+  }
+}
+@media (orientation: portrait) {
+  #quick {
+    overflow: auto;
+  }
+  .pick {
+    height: auto;
+  }
+  .bar {
+    flex-wrap: wrap;
+  }
+  #worldPick {
+    flex: 1 1 100%;
+  }
+  #venues {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 12px;
+    flex: none;
+    overflow: visible;
+    margin: 0;
+    padding: 4px 0 16px;
+  }
+  #venues button.venue {
+    width: auto;
+    max-height: none;
+  }
+}
+
+/* ---- sliders: a dark track lit as far as a white thumb */
 .panel.narrow .slide,
 .sheet .slide,
 #volume,
 .tune {
-  color: var(--ink);
-  border: var(--line) solid var(--ink);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fff, #fff 60%, #f4efe2);
-  box-shadow: 0 3px 0 var(--ink);
+  color: var(--navy);
+  border: 0;
+  border-radius: 13px;
+  background: var(--mist);
 }
 .sheet .slide {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 7px 14px 2px;
+  padding: 8px 14px 2px;
   font-family: var(--display);
-  font-weight: 400;
-  font-size: 14px;
-  letter-spacing: 0.05em;
+  font-style: italic;
+  font-weight: 900;
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
 }
 .sheet .slide span,
 .tune span {
@@ -851,12 +955,11 @@ details.help p {
 .panel.narrow .slide b,
 .sheet .slide b,
 .tune span b {
-  color: #b4420d;
+  color: var(--blue2);
   font-variant-numeric: tabular-nums;
 }
 .tune.changed {
-  border-color: var(--ink);
-  background: #fff1b8;
+  background: #fff3b8;
 }
 .tune small {
   opacity: 0.8;
@@ -881,42 +984,45 @@ details.help p {
 .vol input::-webkit-slider-runnable-track,
 .panel.narrow .slide input[type='range']::-webkit-slider-runnable-track,
 .tune input[type='range']::-webkit-slider-runnable-track {
-  height: 14px;
-  border-radius: 8px;
-  border: 2px solid var(--ink);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0 32%, transparent 33%),
-    linear-gradient(to right, var(--orange), var(--sun) var(--fill, 0%), #39435c var(--fill, 0%));
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    to right,
+    var(--blue) 0,
+    var(--cyan) var(--fill, 0%),
+    #b9c5ea var(--fill, 0%)
+  );
 }
 .sheet input[type='range']::-moz-range-track,
 .vol input::-moz-range-track,
 .panel.narrow .slide input[type='range']::-moz-range-track,
 .tune input[type='range']::-moz-range-track {
-  height: 10px;
-  border-radius: 8px;
-  border: 2px solid var(--ink);
-  background: var(--paper2);
+  height: 12px;
+  border-radius: 6px;
+  background: #b9c5ea;
 }
 .sheet input[type='range']::-moz-range-progress,
 .vol input::-moz-range-progress {
-  height: 10px;
-  border-radius: 8px;
-  background: var(--sun);
+  height: 12px;
+  border-radius: 6px;
+  background: var(--blue);
 }
 .sheet input[type='range']::-webkit-slider-thumb,
 .vol input::-webkit-slider-thumb,
 .panel.narrow .slide input[type='range']::-webkit-slider-thumb,
 .tune input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 32px;
-  height: 32px;
-  margin-top: -11px;
+  width: 30px;
+  height: 30px;
+  margin-top: -9px;
   border-radius: 50%;
-  border: var(--line) solid var(--ink);
-  background: radial-gradient(circle at 36% 28%, #fff 0 13%, #ffc98a 14% 34%, var(--orange) 78%);
+  border: 0;
+  background: #fff;
   box-shadow:
-    0 3px 0 var(--ink),
-    0 6px 6px rgba(27, 34, 51, 0.3);
+    inset 0 0 0 7px #fff,
+    inset 0 0 0 30px var(--blue),
+    0 3px 0 #8f9cc9,
+    0 6px 8px rgba(4, 8, 40, 0.3);
 }
 .sheet input[type='range']::-moz-range-thumb,
 .vol input::-moz-range-thumb,
@@ -925,11 +1031,9 @@ details.help p {
   width: 26px;
   height: 26px;
   border-radius: 50%;
-  border: var(--line) solid var(--ink);
-  background: radial-gradient(circle at 36% 28%, #fff 0 13%, #ffc98a 14% 34%, var(--orange) 78%);
-  box-shadow:
-    0 3px 0 var(--ink),
-    0 6px 6px rgba(27, 34, 51, 0.3);
+  border: 7px solid #fff;
+  background: var(--blue);
+  box-shadow: 0 3px 0 #8f9cc9;
 }
 .sheet input[type='range']:disabled {
   opacity: 0.45;
@@ -952,21 +1056,17 @@ details.help p {
   touch-action: none;
 }
 #settings.over {
-  background: rgba(27, 34, 51, 0.42);
+  background: rgba(7, 15, 80, 0.55);
 }
 .sheet {
   width: min(360px, 100%);
   display: flex;
   flex-direction: column;
-  color: var(--ink);
-  background: linear-gradient(180deg, #fffdf5, var(--paper) 30%);
-  border-left: var(--line) solid var(--ink);
-  box-shadow:
-    inset 2px 0 0 rgba(255, 255, 255, 0.8),
-    -6px 0 0 rgba(27, 34, 51, 0.25),
-    -18px 0 30px rgba(27, 34, 51, 0.3);
+  color: var(--navy);
+  background: #fff;
+  box-shadow: -14px 0 34px rgba(4, 8, 40, 0.45);
   padding: calc(10px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 0 12px;
-  animation: sheetIn 0.26s cubic-bezier(0.2, 1.1, 0.35, 1) backwards;
+  animation: sheetIn 0.24s cubic-bezier(0.2, 1.05, 0.3, 1) backwards;
 }
 @keyframes sheetIn {
   from {
@@ -989,35 +1089,34 @@ details.help p {
   font-size: 24px;
 }
 .sheet header button {
-  padding: 0 20px;
+  padding: 0 22px;
   font-size: 15px;
 }
+/* the tabs: one pale strip, the chosen one a dark pill in it */
 .setTabs {
   display: flex;
-  gap: 6px;
+  gap: 2px;
   margin: 10px 0 0;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--mist);
 }
-.sheet .setTabs button {
+#settings .setTabs button {
   flex: 1 1 0;
   min-width: 0;
+  min-height: 38px;
   padding: 0 2px;
+  border-radius: 10px;
+  background: none;
+  box-shadow: none;
   font-size: 11.5px;
   letter-spacing: 0;
   white-space: nowrap;
-  --c: var(--paper2);
-  --c2: initial;
-  box-shadow: inset 0 -4px 0 rgba(27, 34, 51, 0.1);
-  border-radius: 12px 12px 0 0;
-  border-bottom-width: 0;
-  min-height: 42px;
-  margin-top: 5px;
 }
-.sheet .setTabs button.on {
-  --c: var(--sun);
-  --c2: initial;
-  box-shadow: var(--rim);
-  min-height: 47px;
-  margin-top: 0;
+#settings .setTabs button.on {
+  --ct: #fff;
+  background: var(--navy);
+  box-shadow: 0 3px 0 rgba(4, 8, 40, 0.25);
   transform: none;
 }
 .setBody {
@@ -1027,9 +1126,8 @@ details.help p {
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
-  border-top: var(--line) solid var(--ink);
-  margin: 0 -12px;
-  padding: 12px 12px calc(16px + env(safe-area-inset-bottom));
+  margin: 10px -12px 0;
+  padding: 2px 12px calc(16px + env(safe-area-inset-bottom));
 }
 .setBody > div {
   display: flex;
@@ -1039,17 +1137,13 @@ details.help p {
 .setBody > div.hidden {
   display: none;
 }
-.sheet .setBody button {
+#settings .setBody button {
   padding: 0 14px;
-  font-size: 14px;
-  letter-spacing: 0.04em;
+  font-size: 13.5px;
   text-align: left;
-  --c: #fff;
-  box-shadow:
-    var(--rim),
-    0 3px 0 var(--ink);
+  box-shadow: 0 3px 0 var(--cd);
 }
-/* a switch: its lamp is lit while it is on */
+/* a switch: its knob is across and it is green while it is on */
 .sheet .setBody button.tog {
   display: flex;
   align-items: center;
@@ -1060,23 +1154,16 @@ details.help p {
   flex: none;
   width: 46px;
   height: 26px;
-  border: var(--line) solid var(--ink);
   border-radius: 999px;
-  background:
-    radial-gradient(circle at 32px 50%, #fff 0 7px, var(--ink) 7.5px 9.5px, transparent 10px),
-    linear-gradient(180deg, #4fbf45, var(--grass));
-  box-shadow: inset 0 2px 0 rgba(27, 34, 51, 0.18);
-  transition: background-position 0.15s;
+  background: radial-gradient(circle at 33px 50%, #fff 0 9.5px, transparent 10px) var(--grn);
+  box-shadow: inset 0 2px 0 rgba(4, 8, 40, 0.14);
 }
 .sheet .setBody button.tog.off::after {
-  background:
-    radial-gradient(circle at 10px 50%, #fff 0 7px, var(--ink) 7.5px 9.5px, transparent 10px),
-    linear-gradient(180deg, #8d95a6, #b9bfcc);
+  background: radial-gradient(circle at 13px 50%, #fff 0 9.5px, transparent 10px) #a9b3d6;
 }
 #tuneRows {
   grid-template-columns: 1fr;
 }
-/* a phone held upright: the sheet comes up from the bottom, the race shows above it */
 @media (orientation: portrait) {
   #settings {
     flex-direction: column;
@@ -1085,13 +1172,11 @@ details.help p {
   .sheet {
     width: 100%;
     height: min(62%, 560px);
-    border-left: 0;
-    border-top: var(--line) solid var(--ink);
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 -5px 0 rgba(27, 34, 51, 0.25);
-    animation-name: sheetUp;
-    padding-top: 10px;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -14px 34px rgba(4, 8, 40, 0.45);
+    padding-top: 12px;
     padding-left: calc(12px + env(safe-area-inset-left));
+    animation-name: sheetUp;
   }
 }
 
@@ -1101,11 +1186,11 @@ details.help p {
 }
 #pauseMenu h2 {
   text-align: center;
-  margin: 0;
+  margin: 0 0 4px;
 }
 @media (max-height: 420px) {
   #pauseMenu .panel.narrow {
-    width: min(460px, 100%);
+    width: min(470px, 100%);
     display: grid;
     grid-template-columns: 1fr 1fr;
   }
@@ -1114,7 +1199,7 @@ details.help p {
   }
 }
 
-/* ---- the results */
+/* ---- the results: the placing on a blue band across the top of the board, a slab a driver */
 #results .panel.card {
   display: flex;
   flex-direction: column;
@@ -1123,56 +1208,33 @@ details.help p {
 }
 #results h2 {
   margin: 0;
-  align-self: flex-start;
-  font-size: clamp(30px, 8vmin, 46px);
-  color: var(--sun);
-  -webkit-text-stroke: 7px var(--ink);
-  letter-spacing: 0.04em;
-  paint-order: stroke fill;
-  text-shadow:
-    0 4px 0 var(--ink),
-    0 9px 8px rgba(27, 34, 51, 0.3);
-  padding: 2px 8px 6px 4px;
-  transform: rotate(-2.5deg);
-  animation: stamp 0.45s cubic-bezier(0.2, 1.7, 0.4, 1) 0.15s backwards;
+  padding: 12px 18px 0;
+  font-size: clamp(30px, 8.5vmin, 46px);
+  color: #fff;
+  background: linear-gradient(118deg, var(--blue) 0 62%, var(--blue2) 62%);
+  text-shadow: 0 4px 0 var(--navy);
+}
+#results h2 {
+  animation: stamp 0.4s cubic-bezier(0.2, 1.5, 0.4, 1) 0.1s backwards;
 }
 @keyframes stamp {
   from {
     opacity: 0;
-    transform: rotate(-12deg) scale(2.2);
-  }
-}
-/* the placings come in one after another */
-#resTable tr {
-  animation: rowIn 0.3s cubic-bezier(0.2, 1.1, 0.35, 1) backwards;
-}
-#resTable tr:nth-child(2) {
-  animation-delay: 0.2s;
-}
-#resTable tr:nth-child(3) {
-  animation-delay: 0.26s;
-}
-#resTable tr:nth-child(4) {
-  animation-delay: 0.32s;
-}
-#resTable tr:nth-child(5) {
-  animation-delay: 0.38s;
-}
-#resTable tr:nth-child(6) {
-  animation-delay: 0.44s;
-}
-#resTable tr:nth-child(n + 7) {
-  animation-delay: 0.5s;
-}
-@keyframes rowIn {
-  from {
-    opacity: 0;
-    transform: translateX(40px);
+    letter-spacing: 0.5em;
   }
 }
 #results .tag {
-  margin: 2px 0 4px;
+  margin: 0 0 6px;
+  padding: 3px 18px 10px;
   font-size: 13px;
+  color: #fff;
+  background: linear-gradient(118deg, var(--blue) 0 62%, var(--blue2) 62%);
+}
+#results #payout,
+#results .tableWrap,
+#results .row {
+  margin-left: 14px;
+  margin-right: 14px;
 }
 #results .tableWrap {
   flex: 1 1 auto;
@@ -1182,167 +1244,202 @@ details.help p {
 }
 table {
   border-collapse: separate;
-  border-spacing: 0 3px;
+  border-spacing: 0 4px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 600;
 }
 th {
-  opacity: 0.75;
+  opacity: 0.6;
   font-family: var(--display);
-  font-weight: 400;
+  font-style: italic;
+  font-weight: 900;
   text-transform: uppercase;
   padding: 0 8px;
 }
 td {
-  padding: 4px 8px;
+  padding: 5px 8px;
   border: 0;
-  background: #fff;
-  border-top: 2px solid var(--ink);
-  border-bottom: 2px solid var(--ink);
+  color: var(--navy);
+  background: var(--mist);
 }
 td:first-child {
-  width: 38px;
+  width: 40px;
   text-align: center;
   font-family: var(--display);
+  font-style: italic;
   font-size: 16px;
-  font-weight: 400;
-  border-left: 2px solid var(--ink);
-  border-radius: 10px 0 0 10px;
+  font-weight: 900;
+  color: #fff;
+  background: var(--navy2);
+  border-radius: 9px 0 0 9px;
 }
 td:last-child {
-  border-right: 2px solid var(--ink);
-  border-radius: 0 10px 10px 0;
+  border-radius: 0 9px 9px 0;
   font-weight: 900;
 }
 td small {
   opacity: 0.7;
 }
 tr.me td {
-  color: var(--ink);
-  background: linear-gradient(180deg, #ffe680, var(--sun));
-  font-weight: 700;
+  color: var(--navy);
+  background: var(--yel);
+  font-weight: 800;
+}
+tr.me td:first-child {
+  color: #fff;
+  background: var(--navy);
 }
 /* gold, silver and bronze for the first three */
 #resTable tr:nth-child(2) td:first-child {
+  color: var(--navy);
   background: linear-gradient(160deg, #fff3a8, #ffc21a 55%, #e89a00);
 }
 #resTable tr:nth-child(3) td:first-child {
+  color: var(--navy);
   background: linear-gradient(160deg, #fff, #cfd6e2 55%, #9aa5b8);
 }
 #resTable tr:nth-child(4) td:first-child {
+  color: var(--navy);
   background: linear-gradient(160deg, #ffd0a3, #e79a5b 55%, #b8662a);
+}
+/* the placings come in one after another */
+#resTable tr {
+  animation: rowIn 0.28s cubic-bezier(0.2, 1.1, 0.35, 1) backwards;
+}
+#resTable tr:nth-child(2) {
+  animation-delay: 0.16s;
+}
+#resTable tr:nth-child(3) {
+  animation-delay: 0.22s;
+}
+#resTable tr:nth-child(4) {
+  animation-delay: 0.28s;
+}
+#resTable tr:nth-child(5) {
+  animation-delay: 0.34s;
+}
+#resTable tr:nth-child(6) {
+  animation-delay: 0.4s;
+}
+#resTable tr:nth-child(n + 7) {
+  animation-delay: 0.46s;
+}
+@keyframes rowIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
 }
 .dot,
 .seats .dot {
   width: 12px;
   height: 12px;
-  border: 2px solid var(--ink);
+  border: 0;
   border-radius: 4px;
-  vertical-align: -2px;
+  box-shadow: 0 0 0 2px #fff;
+  vertical-align: -1px;
 }
 .row {
   margin-top: 10px;
-}
-#results .row button:first-child {
-  --c: var(--grass);
-  --c2: initial;
 }
 .row button {
   font-size: 18px;
 }
 #payout div.sum {
-  border-top-color: var(--ink);
-  color: #17803a;
+  border-top-color: var(--mist);
+  color: #0d8a43;
 }
 #payout div.neg b {
-  color: #d1321f;
+  color: #d1203b;
 }
 
 /* ---- the career hub, the online rooms, your tracks: the same pieces */
-.careerHead .cash,
-.item em {
-  color: #17803a;
-}
-.events .tabs button {
-  min-height: 40px;
-  border-color: var(--ink);
-  border-radius: 999px;
-  font-size: 12px;
-  --c: #fffaea;
-  --c2: #f7e8c0;
-  box-shadow:
-    var(--rim),
-    0 3px 0 var(--ink);
-}
-.events .tabs button.on {
-  border-color: var(--ink);
-  --c: var(--sun);
-  --c2: initial;
-  color: var(--ink);
-  transform: translateY(2px);
-  box-shadow:
-    var(--rim),
-    0 1px 0 var(--ink);
-}
-.events button.item {
-  --c: #fffaea;
-  --c2: #f7e8c0;
-}
-.events button.item b {
-  font-weight: 400;
-  letter-spacing: 0.03em;
-}
-.item em {
-  font-family: var(--display);
-  font-weight: 400;
-}
-.events button.item.final {
-  border-color: var(--ink);
-  --c: var(--orange);
-  --c2: initial;
-}
-.events button.item.picked {
-  border-color: var(--ink);
-  --c: #c9f5c1;
-  --c2: initial;
-}
 .careerHead .cash {
   font-family: var(--display);
-  font-weight: 400;
+  font-style: italic;
+  font-weight: 900;
   font-size: 24px;
-  -webkit-text-stroke: 4px #fff;
-  paint-order: stroke fill;
+  color: var(--yel);
+  text-shadow: 0 3px 0 var(--navy);
+}
+.item em {
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  color: #0d8a43;
+}
+.garageBox {
+  padding: 10px 12px 12px;
+  background: linear-gradient(180deg, #dbe6ff, #fff 58%);
+}
+.garageBox .carPick b {
+  color: var(--navy);
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 22px;
+}
+/* tabs: pills on the hall, the chosen one yellow */
+.screen .tabs button:is(*, #_) {
+  --c: rgba(255, 255, 255, 0.16);
+  --ct: #fff;
+  min-height: 38px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.45);
+  font-size: 12px;
+}
+.screen .tabs button.on:is(*, #_) {
+  --ct: var(--navy);
+  background: var(--yel);
+  box-shadow: 0 3px 0 rgba(4, 8, 40, 0.4);
+}
+.events button.item {
+  padding: 9px 14px;
+}
+.events button.item b {
+  font-size: 16px;
+}
+.screen .events button.item.final {
+  --c: var(--yel);
+  --cd: #c98600;
+}
+.screen .events button.item.picked {
+  --c: #c8f7d8;
 }
 .banner {
-  border: var(--line) solid var(--ink);
+  color: var(--navy);
+  border: 0;
   border-radius: 12px;
-  background: #c9f5c1;
+  background: #c8f7d8;
 }
+.banner small {
+  opacity: 0.85;
+}
+.help {
+  opacity: 0.85;
+}
+/* the loader: a dark slot that fills with road stripes running along it (slid, not painted) */
 .loadBar {
-  height: 20px;
-  border: var(--line) solid var(--ink);
-  border-radius: 11px;
-  background: #39435c;
-  box-shadow: inset 0 3px 0 rgba(0, 0, 0, 0.25);
+  height: 18px;
+  border: 0;
+  border-radius: 9px;
+  background: #c3cdec;
+  box-shadow: inset 0 2px 0 rgba(4, 8, 40, 0.15);
+  transform: skewX(-18deg);
 }
-/* the bar fills with road stripes that run along it while a race is got ready (the stripes are
-   slid as a whole, never painted again) */
 .loadBar b {
   position: relative;
   overflow: hidden;
-  background: var(--sun);
+  background: var(--yel);
   transition: width 0.15s;
 }
 .loadBar b::after {
   content: '';
   position: absolute;
   inset: 0 -49px 0 0;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0 30%, transparent 31%),
-    repeating-linear-gradient(-55deg, var(--sun) 0 10px, var(--orange) 10px 20px);
-  background-size:
-    auto,
-    49px 100%;
+  background: repeating-linear-gradient(-55deg, var(--yel) 0 10px, var(--yel2) 10px 20px);
+  background-size: 49px 100%;
   animation: stripes 0.6s linear infinite;
 }
 @keyframes stripes {
@@ -1358,27 +1455,33 @@ tr.me td {
 #tracksPanel select,
 #editSetup input[type='text'],
 #editSetup select {
-  color: var(--ink);
-  background: #fff;
-  border: var(--line) solid var(--ink);
+  color: var(--navy);
+  background: var(--mist);
+  border: 2px solid #b4c0e6;
   border-radius: 12px;
   min-height: 44px;
+  font-family: var(--body);
+  font-weight: 700;
+}
+#tracksPanel select {
+  background: #fff;
+  border-color: #fff;
 }
 .roomCode b {
-  color: #b4420d;
+  color: var(--blue2);
 }
 .seats li.me {
-  color: #b4420d;
+  color: var(--blue2);
 }
 #onlinePanel .note {
-  color: #0d5c94;
+  color: var(--blue2);
 }
 .trackRow {
-  padding: 8px 10px 10px;
+  padding: 10px 12px 12px;
 }
 .trackRow small {
   opacity: 0.8;
-  font-weight: 700;
+  font-weight: 500;
 }
 .trackRow button {
   padding: 0 14px;
@@ -1386,19 +1489,59 @@ tr.me td {
 #tracksPanel .newRow button {
   flex: 1 1 120px;
 }
+/* tournaments: medals and the cup table */
+.medal.m3,
+#payout div.m3 b {
+  color: #b07a00;
+}
+.medal.m2,
+#payout div.m2 b {
+  color: #6b7486;
+}
+.medal.m1,
+#payout div.m1 b {
+  color: #a8571c;
+}
+#payout div.cupHead {
+  color: var(--blue2);
+}
+#payout div.cupRow.me {
+  color: #0d8a43;
+  font-weight: 900;
+}
+.screen .events button.item.cup {
+  border-left: 10px solid var(--yel);
+}
+.screen .events button.item.cup.trial {
+  border-left-color: var(--cyan);
+}
+.screen .events button.item.cup.derby {
+  border-left-color: var(--org);
+}
+.screen .events button.item.cup.last {
+  border-left-color: #b57cff;
+}
+.screen .events button.item.cup.bounty {
+  border-left-color: var(--red);
+}
+.screen .events button.item.cup.iron {
+  border-left-color: #9aa3b2;
+}
 
-/* ---- in the race: the pause button and the touch buttons, bold enough to find by feel */
+/* ---- in the race: the pause button and the touch buttons */
 #pauseBtn {
-  width: 46px;
-  height: 46px;
   display: none;
   place-items: center;
+  width: 44px;
+  height: 44px;
   padding: 0;
-  color: var(--ink);
-  border: var(--line) solid var(--ink);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fff, var(--paper) 55%, #ecdcae);
-  box-shadow: var(--rim), var(--lift);
+  color: var(--navy);
+  border: 0;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fff, #dfe7ff);
+  box-shadow:
+    0 4px 0 rgba(10, 20, 64, 0.75),
+    0 8px 10px rgba(4, 8, 40, 0.3);
 }
 #pauseBtn .ic {
   width: 20px;
@@ -1408,97 +1551,86 @@ body[data-screen='game']:not(.editing) #pauseBtn {
   display: grid;
 }
 #pauseBtn:active {
-  transform: translateY(3px) scale(0.95);
-  box-shadow: var(--rim), var(--lift-down);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(10, 20, 64, 0.75);
 }
 #pauseKey {
-  top: calc(66px + env(safe-area-inset-top));
+  top: calc(64px + env(safe-area-inset-top));
 }
-/* a round button like a boiled sweet: its own colour, light on its brow, a pale ring inside the
-   ink line, see-through enough that the race shows under the thumb */
+/* a round button: its own colour through glass, a white ring, its sign over its name */
 .pad {
-  --c: 27, 34, 51;
-  --a: 0.72;
+  --c: 10, 20, 64;
+  --a: 0.6;
   flex-direction: column;
-  gap: 1px;
+  gap: 0;
   color: #fff;
-  border: var(--line) solid var(--ink);
+  border: 3px solid #fff;
   background:
-    radial-gradient(90% 55% at 50% 4%, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 70%),
-    radial-gradient(circle at 50% 120%, rgba(27, 34, 51, 0.35), transparent 60%),
+    radial-gradient(95% 60% at 50% 0%, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 70%),
     rgba(var(--c), var(--a));
   box-shadow:
-    0 5px 0 rgba(27, 34, 51, 0.75),
-    0 10px 12px rgba(27, 34, 51, 0.3),
-    inset 0 0 0 3px rgba(255, 255, 255, 0.6);
+    0 5px 0 rgba(10, 20, 64, 0.7),
+    0 10px 14px rgba(4, 8, 40, 0.35),
+    inset 0 -8px 12px rgba(10, 20, 64, 0.25);
   font-family: var(--display);
-  font-weight: 400;
-  font-size: 14px;
-  letter-spacing: 0.05em;
-  -webkit-text-stroke: 3.5px var(--ink);
-  paint-order: stroke fill;
-  transition: transform 0.06s cubic-bezier(0.3, 1.6, 0.5, 1);
+  font-style: italic;
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 0 rgba(10, 20, 64, 0.85);
+  transition: transform 0.06s;
 }
 .pad .ic {
   width: 26px;
   height: 26px;
-  color: #fff;
-  filter: drop-shadow(0 2px 0 var(--ink));
-  stroke: var(--ink);
-  stroke-width: 2.4px;
-  paint-order: stroke fill;
+  filter: drop-shadow(0 2px 0 rgba(10, 20, 64, 0.85));
 }
 .pad.down {
-  --a: 0.96;
+  --a: 0.95;
   transform: translateY(4px) scale(0.95);
   box-shadow:
-    0 1px 0 rgba(27, 34, 51, 0.75),
-    0 0 0 5px rgba(255, 255, 255, 0.45),
-    inset 0 0 0 3px #fff;
+    0 1px 0 rgba(10, 20, 64, 0.7),
+    0 0 0 6px rgba(255, 255, 255, 0.4);
 }
 #btnBoost {
+  --c: 20, 130, 255;
+  --a: 0.8;
   width: 96px;
   height: 96px;
   right: calc(16px + env(safe-area-inset-right));
   bottom: calc(18px + env(safe-area-inset-bottom));
-  border-color: var(--ink);
-  --c: 38, 150, 255;
-  --a: 0.8;
-  font-size: 17px;
+  font-size: 16px;
 }
 #btnBoost .ic {
   width: 32px;
   height: 32px;
 }
 #btnBrake {
+  --c: 255, 61, 87;
+  --a: 0.78;
   width: 78px;
   height: 78px;
   right: calc(122px + env(safe-area-inset-right));
   bottom: calc(14px + env(safe-area-inset-bottom));
-  --c: 255, 90, 70;
-  --a: 0.76;
 }
 #btnFire {
+  --c: 255, 196, 0;
+  --a: 0.92;
   width: 80px;
   height: 80px;
   right: calc(36px + env(safe-area-inset-right));
   bottom: calc(126px + env(safe-area-inset-bottom));
-  border-color: var(--ink);
-  --c: 255, 200, 40;
-  --a: 0.94;
-  font-size: 12px;
+  font-size: 11.5px;
   line-height: 1.05;
   padding: 0 6px;
 }
-/* something to fire: a ring round the button breathes until it is used (the ring alone is moved
-   and faded, so nothing is painted again while a race runs) */
+/* something to fire: a ring round the button breathes until it is used (moved and faded only) */
 #btnFire:not(.empty)::before {
   content: '';
   position: absolute;
-  inset: -9px;
+  inset: -10px;
   border-radius: 50%;
-  border: 4px solid var(--sun);
-  box-shadow: 0 0 0 2px var(--ink);
+  border: 4px solid var(--yel);
   opacity: 0;
   animation: armed 0.9s ease-in-out infinite alternate;
   pointer-events: none;
@@ -1508,9 +1640,9 @@ body[data-screen='game']:not(.editing) #pauseBtn {
   height: 24px;
 }
 #btnFire.empty {
-  opacity: 0.5;
-  --c: 27, 34, 51;
-  --a: 0.45;
+  --c: 10, 20, 64;
+  --a: 0.4;
+  opacity: 0.55;
 }
 @keyframes armed {
   from {
@@ -1518,7 +1650,7 @@ body[data-screen='game']:not(.editing) #pauseBtn {
     transform: scale(0.9);
   }
   to {
-    opacity: 0.9;
+    opacity: 0.95;
     transform: scale(1);
   }
 }
@@ -1526,30 +1658,29 @@ body[data-screen='game']:not(.editing) #pauseBtn {
   width: 124px;
   height: 124px;
   margin: -62px 0 0 -62px;
-  border: var(--line) solid var(--ink);
-  background: radial-gradient(circle, rgba(27, 34, 51, 0.12) 40%, rgba(27, 34, 51, 0.42));
-  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.55);
+  border: 3px solid #fff;
+  background: radial-gradient(circle, rgba(10, 20, 64, 0.15) 40%, rgba(10, 20, 64, 0.5));
 }
 #stickKnob {
   width: 56px;
   height: 56px;
   margin: -28px 0 0 -28px;
-  border: var(--line) solid var(--ink);
-  background: radial-gradient(circle at 38% 28%, #fff 0 14%, var(--paper) 15% 45%, #e6d5a4 100%);
+  border: 0;
+  background: radial-gradient(circle at 40% 30%, #fff 0 30%, #cfdaff 100%);
   box-shadow:
-    0 4px 0 rgba(27, 34, 51, 0.7),
-    0 9px 9px rgba(27, 34, 51, 0.3);
+    0 4px 0 rgba(10, 20, 64, 0.7),
+    0 9px 9px rgba(4, 8, 40, 0.3);
 }
 #stickZone .hint {
   left: calc(20px + env(safe-area-inset-left));
-  padding: 7px 12px;
-  border: 2px solid var(--ink);
+  padding: 7px 14px;
   border-radius: 999px;
-  color: var(--ink);
-  background: var(--paper);
-  box-shadow: 0 3px 0 var(--ink);
+  color: var(--navy);
+  background: #fff;
+  box-shadow: 0 3px 0 rgba(10, 20, 64, 0.7);
   font-family: var(--display);
-  font-weight: 400;
+  font-style: italic;
+  font-weight: 900;
   font-size: 12px;
   opacity: 0.95;
   transition: opacity 0.4s;
@@ -1564,49 +1695,37 @@ body[data-screen='game']:not(.editing) #pauseBtn {
 body.driven #stickZone .hint {
   opacity: 0;
 }
-:is(#specBar, #ghostBar) button,
 :is(#specWho, #ghostWho) {
-  color: var(--ink);
-  border: var(--line) solid var(--ink);
-  border-radius: 14px;
-  --c: #fffaea;
-  --c2: #f7e8c0;
-  background: var(--face);
-  box-shadow: var(--rim), var(--lift);
+  color: var(--navy);
+  border: 0;
+  border-radius: 13px;
+  background: var(--yel);
+  box-shadow: 0 4px 0 #c98600;
   font-family: var(--display);
-  font-weight: 400;
+  font-style: italic;
+  font-weight: 900;
 }
 :is(#specBar, #ghostBar) small {
   font-family: var(--body);
+  font-style: normal;
   font-weight: 600;
+  opacity: 0.8;
 }
 :is(#specBar, #ghostBar) button {
   min-width: 48px;
   min-height: 46px;
 }
-:is(#specBar, #ghostBar) button:active {
-  --c: var(--sun);
-  --c2: initial;
-  transform: translateY(3px);
-  box-shadow: var(--rim), var(--lift-down);
-}
-:is(#specWho, #ghostWho) {
-  border-color: var(--ink);
-  --c: var(--sun);
-  --c2: initial;
-}
 :is(#specBar #specSkip, #ghostBar #ghostSkip) {
-  border-color: var(--ink);
-  --c: var(--orange);
-  --c2: initial;
-}
-:is(#specBar, #ghostBar) small {
-  opacity: 0.85;
+  --c: var(--org);
+  --ct: #fff;
 }
 #specBar #specGhost,
 #ghostWho {
   --c: #c4f0ff;
-  --c2: initial;
+}
+#ghostWho {
+  background: #c4f0ff;
+  box-shadow: 0 4px 0 #6fb5d6;
 }
 
 /* ---- a phone held upright: the stick has the left of the screen, the buttons stand in a
@@ -1643,14 +1762,8 @@ body.driven #stickZone .hint {
   }
 }
 
-/* a narrow screen: CAREER has a row to itself, and the results keep to what matters */
+/* a narrow screen: the results keep to what matters */
 @media (max-width: 520px) {
-  .modes {
-    grid-template-columns: 1fr 1fr;
-  }
-  .modes #toCareer {
-    grid-column: 1 / -1;
-  }
   #resTable th:nth-child(4),
   #resTable td:nth-child(4),
   #resTable th:nth-child(5),
@@ -1659,55 +1772,10 @@ body.driven #stickZone .hint {
   }
 }
 
-/* ---- tournaments: medals and the cup table on paper */
-.medal.m3,
-#payout div.m3 b {
-  color: #b07a00;
-}
-.medal.m2,
-#payout div.m2 b {
-  color: #6b7486;
-}
-.medal.m1,
-#payout div.m1 b {
-  color: #a8571c;
-}
-#payout div.cupHead {
-  color: #b4420d;
-}
-#payout div.cupRow.me {
-  color: #17803a;
-  font-weight: 900;
-}
-.banner small {
-  opacity: 0.85;
-}
-.events button.item.cup {
-  border-left-width: 10px;
-}
-.events button.item.cup.cup {
-  border-left-color: var(--sun);
-}
-.events button.item.cup.trial {
-  border-left-color: var(--sky);
-}
-.events button.item.cup.derby {
-  border-left-color: var(--orange);
-}
-.events button.item.cup.last {
-  border-left-color: #b57cff;
-}
-.events button.item.cup.bounty {
-  border-left-color: var(--red);
-}
-.events button.item.cup.iron {
-  border-left-color: #9aa3b2;
-}
-
 /* ---- a gamepad's marker on the menus: where A will press */
 .padAt,
 .slide:has(> .padAt) {
-  outline: 4px solid var(--orange);
+  outline: 4px solid var(--org);
   outline-offset: 3px;
 }
 .slide > .padAt {
@@ -1735,10 +1803,11 @@ body.driven #stickZone .hint {
   gap: 3px;
   padding: 8px 14px 10px;
   text-align: center;
-  background: var(--paper);
-  border: var(--line) solid var(--ink);
+  background: #fff;
   border-radius: var(--round);
-  box-shadow: 0 5px 0 var(--ink);
+  box-shadow:
+    0 6px 0 #c3cff5,
+    var(--drop);
   animation: tutDrop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1);
 }
 #tutor.cheering #tutCard {
@@ -1768,8 +1837,9 @@ body.driven #stickZone .hint {
 }
 #tutTitle {
   font-family: var(--display);
+  font-style: italic;
   font-size: clamp(20px, 5.4vmin, 28px);
-  font-weight: 400;
+  font-weight: 900;
   line-height: 1.05;
   letter-spacing: 0.02em;
 }
@@ -1805,11 +1875,12 @@ body.driven #stickZone .hint {
   padding: 0 12px;
   pointer-events: auto;
   color: var(--ink);
-  background: var(--paper);
-  border: var(--line) solid var(--ink);
+  background: #fff;
+  border: 0;
   border-radius: 12px;
-  box-shadow: 0 3px 0 var(--ink);
+  box-shadow: 0 4px 0 rgba(4, 10, 40, 0.5);
   font-size: 12px;
+  font-style: italic;
   font-weight: 900;
   letter-spacing: 0.04em;
 }
@@ -1827,7 +1898,7 @@ body.driven #stickZone .hint {
   margin: 0 0 -62px -62px;
   border: 4px dashed #fff;
   border-radius: 50%;
-  background: rgba(27, 34, 51, 0.28);
+  background: rgba(10, 20, 64, 0.28);
   box-shadow: 0 0 0 3px var(--ink);
   animation: tutBeat 0.6s ease-in-out infinite alternate;
 }
@@ -1851,8 +1922,9 @@ body.driven #stickZone .hint {
   top: 42%;
   text-align: center;
   font-family: var(--display);
+  font-style: italic;
   font-size: clamp(40px, 13vmin, 76px);
-  font-weight: 400;
+  font-weight: 900;
   letter-spacing: 0.03em;
   color: var(--sun);
   -webkit-text-stroke: 9px var(--ink);
@@ -1932,14 +2004,14 @@ body.tutor #stickZone .hint {
 @keyframes tutPad {
   from {
     box-shadow:
-      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 5px 0 rgba(10, 20, 64, 0.7),
       0 0 0 4px var(--sun),
       0 0 0 7px var(--ink);
   }
   to {
     transform: scale(1.08);
     box-shadow:
-      0 5px 0 rgba(27, 34, 51, 0.7),
+      0 5px 0 rgba(10, 20, 64, 0.7),
       0 0 0 9px var(--sun),
       0 0 0 12px var(--ink);
   }
@@ -1947,26 +2019,6 @@ body.tutor #stickZone .hint {
 @keyframes tutArrow {
   to {
     transform: translateY(9px);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .screen::before,
-  .screen::after,
-  .screen > .panel,
-  .sheet,
-  h1.logo,
-  .screen button::before,
-  #resTable tr,
-  #results h2,
-  #btnFire::before,
-  #stickZone .hint,
-  .loadBar b::after,
-  #tutCard,
-  #tutDots i.on,
-  #tutHand,
-  body.tutor .pad.teach,
-  body.tutor .pad.teach::after {
-    animation: none;
   }
 }
 /* upright, or too narrow for the card to sit between PAUSE and SKIP: it goes under them */
@@ -1988,9 +2040,6 @@ body.lessonEnd[data-screen='game'] #pauseBtn {
   display: none;
 }
 /* the offer, and the lesson's last card: the two kinds of event as two cards to pick from */
-#tutEnd {
-  background: rgba(27, 34, 51, 0.42);
-}
 #tutAsk .panel.narrow,
 #tutEnd .panel.narrow {
   width: min(520px, 100%);
@@ -2024,8 +2073,6 @@ body.lessonEnd[data-screen='game'] #pauseBtn {
   flex-direction: column;
   padding: 0 0 9px;
   overflow: hidden;
-  --c: #fffaea;
-  --c2: #f7e8c0;
   text-align: left;
 }
 .tutModes button.venue b {
@@ -2040,22 +2087,6 @@ body.lessonEnd[data-screen='game'] #pauseBtn {
   font-weight: 700;
   line-height: 1.3;
 }
-.events button.lesson {
-  --c: #fffaea;
-  --c2: #f7e8c0;
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 10px;
-}
-.events button.lesson .ic {
-  grid-row: 1 / span 2;
-  width: 30px;
-  height: 30px;
-}
-.events button.lesson b {
-  font-weight: 400;
-}
 @media (max-height: 420px) {
   .tutModes .thumb {
     aspect-ratio: 150 / 56;
@@ -2063,69 +2094,27 @@ body.lessonEnd[data-screen='game'] #pauseBtn {
   }
 }
 
-/* ---- the main menu's things come in one after another, once, when it is shown */
-/* ---- a face is a button's own colour with light on it, whatever an older rule painted it */
-.events .tabs button,
-.events .tabs button.on,
-.events .modChips button,
-.events .modChips button.on,
-.panel.narrow .modChips button.on,
-.panel.narrow .modChips button,
-.events button.item,
-.events button.item:disabled,
-.events .small,
-.careerHead .small,
-.list .small,
-.events button.item.final,
-.events button.item.picked,
-.events button.venue,
-.events button.lesson,
-.tutModes button.venue,
-.sheet .setTabs button,
-.sheet .setBody button,
-.screen button.go,
-.screen button.warn,
-.screen button.quiet,
-#tracksPanel button,
-#tracksPanel button.go,
-#tracksPanel button.warn,
-#onlinePanel button,
-#onlinePanel button.go,
-#onlinePanel button.small,
-#onlinePanel button.arrow,
-#onlinePanel .roomHead button.invite {
-  background: var(--face);
+/* ---- the career's car stands in a card of its own height, and the tracks screen starts at the top */
+#career .garageBox {
+  align-self: flex-start;
+  border-radius: var(--round);
+  box-shadow:
+    0 6px 0 #c3cff5,
+    var(--drop);
 }
-.events .modChips button,
-.panel.narrow .modChips button {
-  font-family: var(--display);
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0.05em;
+#career .careerCar {
+  height: clamp(96px, 34vh, 190px);
+}
+#tracks {
+  align-items: flex-start;
 }
 
-/* ---- the main menu's things come in one after another, once, when it is shown */
-#menu:not(.hidden) .menuSide > *,
-#menu:not(.hidden) .events > * {
-  animation: arrive 0.34s cubic-bezier(0.2, 1.25, 0.35, 1) backwards;
-}
-#menu:not(.hidden) .menuSide > :nth-child(2),
-#menu:not(.hidden) .events > :nth-child(1) {
-  animation-delay: 0.05s;
-}
-#menu:not(.hidden) .menuSide > :nth-child(3),
-#menu:not(.hidden) .events > :nth-child(2) {
-  animation-delay: 0.1s;
-}
-#menu:not(.hidden) .events > :nth-child(3) {
-  animation-delay: 0.15s;
-}
-#menu:not(.hidden) .events > :nth-child(n + 4) {
-  animation-delay: 0.2s;
-}
+/* ---- nothing moves for somebody who has asked for that */
 @media (prefers-reduced-motion: reduce) {
-  #menu .menuSide > *,
-  #menu .events > * {
+  *,
+  *::before,
+  *::after {
     animation: none !important;
+    transition: none !important;
   }
 }
