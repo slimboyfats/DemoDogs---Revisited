@@ -26,6 +26,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm perf:start [venue ...]`; `STEPS=1`, `FRAMES=240`          | what a race's load and first frames cost the page: stalling GL calls, slowest frames, heap                    |
 | `pnpm slices [out-dir] [--video]`; `?slices=0` turns them off   | things built slice by slice, and tall scenery seen through when it hides your car (`captures/slices/`)        |
 | menu → TRACK CREATOR, or `/?edit`; `pnpm play:editor [out-dir]` | the track creator; the script builds, shares and races a track by touch (`PORTRAIT=1` puts the phone upright) |
+| `pnpm play:drag [out-dir] [--frames]`                           | the track creator's handles by touch and mouse: ends, edges, hold and drag to lift (`captures/editor-drag/`)  |
 | `pnpm bones [out-dir] [--only=scene] [--frames]`                | moving parts staged on the range and on tracks: windmill, radar tower, flags, animals (`captures/bones/`)     |
 | `pnpm bumps [out-dir] [--only=scene] [--frames]`                | cars on ramps, speed bumps, dips, potholes, a hill and a flyover, to see how they lie (`captures/bumps/`)     |
 | `pnpm cars [out-dir] [car ...] [--only=scene] [--frames]`       | the cars in a row by day and night, with every add-on at three sizes, and driven (`captures/cars/`)           |

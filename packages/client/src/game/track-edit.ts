@@ -1,5 +1,5 @@
 import type { PropManifest, TrackFile } from '@demodogs/shared';
-import { RAISE_MAX, RAISE_MIN } from '@demodogs/shared';
+import { RAISE_MAX, RAISE_MIN, RAISE_STEP } from '@demodogs/shared';
 import { clampPoint, sampleTrack, type Track } from '@demodogs/sim';
 
 /**
@@ -203,6 +203,74 @@ export function raisedAt(T: Track, t: TrackFile, x: number, y: number, reach: nu
     if (onArc(T.n, a, b, hit.i)) return k;
   }
   return -1;
+}
+
+/** The samples of the road a stretch (of surface, or raised) runs from and to. */
+export function stretchEnds(
+  T: Track,
+  s: { x0: number; y0: number; x1: number; y1: number },
+): [number, number] {
+  return [nearestSample(T, s.x0, s.y0).i, nearestSample(T, s.x1, s.y1).i];
+}
+
+/**
+ * Drag one end of a stretch (0: where it begins, 1: where it ends) to the road nearest (x, y).
+ * The other end stays put. The stretch is never shorter than `least` px, nor so long that less
+ * than that is left of the lap: an end dragged past either stops there. Returns whether it moved.
+ */
+export function moveEnd(
+  T: Track,
+  s: { x0: number; y0: number; x1: number; y1: number },
+  end: 0 | 1,
+  x: number,
+  y: number,
+  least: number,
+): boolean {
+  const [a, b] = stretchEnds(T, s);
+  const lo = Math.max(1, Math.min(Math.floor(T.n / 3), Math.ceil(least / T.step)));
+  const hi = T.n - lo;
+  const was = (b - a + T.n) % T.n;
+  const i = nearestSample(T, x, y).i;
+  let len = end === 0 ? (b - i + T.n) % T.n : (i - a + T.n) % T.n;
+  // past the other end (which would flip it to the long way round, or back), or round the whole
+  // lap: it stops at whichever limit it was nearer to
+  if (len < lo || len > hi || Math.abs(len - was) > T.n / 2)
+    len = Math.abs(was - lo) <= Math.abs(was - hi) ? lo : hi;
+  if (len === was) return false;
+  const at = end === 0 ? (b - len + T.n) % T.n : (a + len) % T.n;
+  if (end === 0) Object.assign(s, { x0: Math.round(T.x[at]!), y0: Math.round(T.y[at]!) });
+  else Object.assign(s, { x1: Math.round(T.x[at]!), y1: Math.round(T.y[at]!) });
+  return true;
+}
+
+/** A finger moves this many CSS px up or down the screen for each art px a road is raised by. */
+export const LIFT_PX = 5;
+
+/**
+ * How high a stretch stands after a finger that took hold of it at height `h0` has moved `dy`
+ * CSS px down the screen (up the screen, a negative `dy`, is higher), in the editor's steps.
+ */
+export function liftTo(h0: number, dy: number): number {
+  const h = Math.round((h0 - dy / LIFT_PX) / RAISE_STEP) * RAISE_STEP;
+  return Math.max(RAISE_MIN, Math.min(RAISE_MAX, h));
+}
+
+/** The samples of the road a bridge's deck begins and ends at. */
+export function bridgeEnds(
+  T: Track,
+  b: { x: number; y: number; length: number },
+): [number, number] {
+  const c = nearestSample(T, b.x, b.y).i;
+  const half = Math.min(Math.floor(T.n / 2) - 1, Math.round(b.length / 2 / T.step));
+  return [(c - half + T.n) % T.n, (c + half) % T.n];
+}
+
+/** How long a bridge is when one of its ends is dragged to the road nearest (x, y). */
+export function bridgeSpan(T: Track, b: { x: number; y: number }, x: number, y: number): number {
+  const c = nearestSample(T, b.x, b.y).i;
+  const i = nearestSample(T, x, y).i;
+  const away = Math.min((i - c + T.n) % T.n, (c - i + T.n) % T.n);
+  return Math.max(80, Math.min(600, snapTo(away * T.step * 2, 20)));
 }
 
 /** How long a line through these points is. */

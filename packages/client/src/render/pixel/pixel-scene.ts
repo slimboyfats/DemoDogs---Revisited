@@ -478,19 +478,31 @@ export class PixelScene implements WorldRenderer, StackSink, CountSource {
     if (ground === this.ground) return;
     const gl = this.gl;
     this.groundLayer?.dispose();
-    this.relief?.dispose();
-    this.relief = new ReliefLayer(
-      gl,
-      this.raised ? w.relief : null,
-      w.w,
-      w.h,
-      this.cosP / this.ys,
-      leapFaces(w),
-      leapHeights(w),
-    );
-    this.stacks.relief = this.relief;
+    const relief = this.raised ? w.relief : null;
+    const rise = this.cosP / this.ys;
+    const faces = leapFaces(w);
+    const heights = leapHeights(w);
+    // the same map with its ground changed here and there (the track creator, building a track
+    // again after a change): the heights it has are kept, and only what changed is baked again
+    const same = !faces && !heights && this.relief?.update(relief, w.w, w.h, rise);
+    if (!same) {
+      this.relief?.dispose();
+      // (a world that stands still to be built on keeps its bake, to change it part by part)
+      this.relief = new ReliefLayer(gl, relief, w.w, w.h, rise, faces, heights, w.sandbox);
+      this.stacks.relief = this.relief;
+    }
     this.groundLayer = new GroundLayer(gl, ground, this.relief);
     this.ground = ground;
+  }
+
+  /**
+   * The ground of the world on show has changed height where it stands (`liftGround`): the
+   * heights go to the GPU again, and the part of the picture that changed is baked again. False
+   * when it could not be done in place (then the world is built again, as for any change).
+   */
+  reground(w: World): boolean {
+    if (!this.relief || !this.raised) return false;
+    return this.relief.update(w.relief, w.w, w.h, this.cosP / this.ys, true);
   }
 
   /** Take a race in: its ground and heights on the GPU, its shadows mapped, last race's art dropped. */

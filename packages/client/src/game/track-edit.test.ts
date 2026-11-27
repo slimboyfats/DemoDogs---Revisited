@@ -4,7 +4,13 @@ import { sampleTrack, trackProblems } from '@demodogs/sim';
 import type { PropManifest } from '@demodogs/shared';
 import {
   arc,
+  bridgeEnds,
+  bridgeSpan,
   drawRoad,
+  liftTo,
+  LIFT_PX,
+  moveEnd,
+  stretchEnds,
   onArc,
   propGroup,
   raisedAt,
@@ -254,6 +260,69 @@ describe('editing a track', () => {
     const before = t.raised[0]!.x0;
     resize(t, 1800, 1240);
     expect(t.raised[0]!.x0).toBe(before + 200);
+  });
+
+  it('a stretch is reshaped by its ends: the other end stays, and it is never too short', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const at = (f: number): [number, number] => {
+      const i = Math.floor(f * T.n);
+      return [T.x[i]!, T.y[i]!];
+    };
+    const up = raisedBetween(T, 20, at(0.2), at(0.4));
+    const [a0, b0] = stretchEnds(T, up);
+    // the far end dragged on down the road: longer, and the near end where it was
+    expect(moveEnd(T, up, 1, ...at(0.5), RAISE_LEAST)).toBe(true);
+    let [a, b] = stretchEnds(T, up);
+    expect(a).toBe(a0);
+    expect(Math.abs(b - Math.floor(0.5 * T.n))).toBeLessThanOrEqual(1);
+    // the near end dragged back: longer still, the far end where it was put
+    expect(moveEnd(T, up, 0, ...at(0.1), RAISE_LEAST)).toBe(true);
+    [a, b] = stretchEnds(T, up);
+    expect(Math.abs(a - Math.floor(0.1 * T.n))).toBeLessThanOrEqual(1);
+    expect(b).toBeGreaterThan(b0);
+    // an end dragged past the other stops while there is still room to climb and come down
+    moveEnd(T, up, 1, ...at(0.11), RAISE_LEAST);
+    [a, b] = stretchEnds(T, up);
+    expect((b - a + T.n) % T.n).toBeGreaterThanOrEqual(Math.floor(RAISE_LEAST / T.step) - 1);
+    expect((b - a + T.n) % T.n).toBeLessThan(T.n / 3);
+    moveEnd(T, up, 1, ...at(0.05), RAISE_LEAST);
+    expect((stretchEnds(T, up)[1] - a + T.n) % T.n).toBeLessThan(T.n / 3);
+    // a finger that has not left its sample moves nothing
+    expect(moveEnd(T, up, 1, up.x1, up.y1, RAISE_LEAST)).toBe(false);
+    expect(parseTrackFile(JSON.stringify({ ...t, raised: [up] })).ok).toBe(true);
+    // a surface's ends the same way, down to a short patch
+    const sf = surfaceBetween(T, 'material.ice', at(0.6), at(0.7));
+    moveEnd(T, sf, 0, ...at(0.69), 16);
+    const [sa, sb] = stretchEnds(T, sf);
+    expect((sb - sa + T.n) % T.n).toBeGreaterThanOrEqual(1);
+    expect((sb - sa + T.n) % T.n).toBeLessThan(0.02 * T.n);
+  });
+
+  it('a finger dragged up the screen lifts a raised road, in steps, between its limits', () => {
+    expect(liftTo(20, 0)).toBe(20);
+    expect(liftTo(20, -1)).toBe(20);
+    expect(liftTo(20, -4 * LIFT_PX)).toBe(24);
+    expect(liftTo(20, 8 * LIFT_PX)).toBe(12);
+    expect(liftTo(20, 4000)).toBe(12);
+    expect(liftTo(20, -4000)).toBe(48);
+  });
+
+  it('a bridge is made longer and shorter by dragging an end, about its middle', () => {
+    const t = track();
+    const T = sampleTrack(t.road.points, 4);
+    const c = Math.floor(0.3 * T.n);
+    const b = { x: T.x[c]!, y: T.y[c]!, length: 200 };
+    const [from, to] = bridgeEnds(T, b);
+    expect(Math.abs((to - from) * T.step - 200)).toBeLessThan(T.step * 2 + 1);
+    const far = (c + Math.round(150 / T.step)) % T.n;
+    expect(bridgeSpan(T, b, T.x[far]!, T.y[far]!)).toBe(300);
+    // the same from the other end, and never out of what a bridge can be
+    const back = (c - Math.round(150 / T.step) + T.n) % T.n;
+    expect(bridgeSpan(T, b, T.x[back]!, T.y[back]!)).toBe(300);
+    expect(bridgeSpan(T, b, b.x, b.y)).toBe(80);
+    const round = (c + Math.floor(T.n / 2)) % T.n;
+    expect(bridgeSpan(T, b, T.x[round]!, T.y[round]!)).toBe(600);
   });
 
   it('the pencil: a loop drawn by hand becomes a road that can be raced', () => {

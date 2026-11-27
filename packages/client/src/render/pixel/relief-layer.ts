@@ -1,5 +1,5 @@
 import { Relief } from '@demodogs/sim';
-import { bakeRelief } from '../relief-map';
+import { ReliefBake, reliefChange } from '../relief-map';
 import { texture } from './gl';
 
 /**
@@ -19,17 +19,24 @@ export class ReliefLayer {
   readonly gw: number = 1;
   readonly gh: number = 1;
   /** The highest the ground stands. */
-  readonly top: number = 0;
+  top: number = 0;
+  /** The map as baked, kept so that a change to the ground bakes only what it changed again. */
+  private readonly baked: ReliefBake | null = null;
+  /** Whether the map looks at jump pieces, which are a world's own and not in the relief. */
+  readonly pieces: boolean;
 
   constructor(
     private readonly gl: WebGL2RenderingContext,
-    private readonly relief: Relief | null,
+    private relief: Relief | null,
     w = 1,
     h = 1,
-    rise = 1,
+    private readonly rise = 1,
     faces: ((x: number, y: number) => number) | null = null,
     blocks: ((x: number, y: number) => number) | null = null,
+    /** Keep the bake (a few bytes to every px of the map) so `update` can change it in part. */
+    keep = false,
   ) {
+    this.pieces = !!(faces || blocks);
     this.heights = texture(gl, gl.LINEAR);
     if (!relief) {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, 1, 2, 0, gl.RGBA, gl.FLOAT, new Float32Array(8));
@@ -38,9 +45,20 @@ export class ReliefLayer {
     this.gw = relief.gw;
     this.gh = relief.gh;
     this.top = relief.max;
+    this.loadHeights(relief);
+    this.map = texture(gl, gl.NEAREST);
+    const baked = new ReliefBake(w, h, rise, faces, blocks);
+    baked.bake(relief);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    // two grids, one above the other: hills, terraces and the raised road's side and height;
-    // then the on-ramps' height and width
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, baked.out);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    if (keep) this.baked = baked;
+  }
+
+  /** The heights as the shaders read them: two grids, one above the other. */
+  private loadHeights(relief: Relief): void {
+    const gl = this.gl;
+    // hills, terraces and the raised road's side and height; then the on-ramps' height and width
     const n = this.gw * this.gh;
     const all = new Float32Array(n * 8);
     const P = relief.plat;
@@ -53,11 +71,46 @@ export class ReliefLayer {
       all[(n + i) * 4] = P[i * 4 + 2]!;
       all[(n + i) * 4 + 1] = P[i * 4 + 3]!;
     }
+    gl.bindTexture(gl.TEXTURE_2D, this.heights);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.gw, this.gh * 2, 0, gl.RGBA, gl.FLOAT, all);
-    this.map = texture(gl, gl.NEAREST);
-    const px = bakeRelief(relief, w, h, rise, faces, blocks);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, px);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+  }
+
+  /**
+   * The same map with its ground changed (the track creator, as a stretch of road is lifted, or
+   * the same track built again): the heights go up anew, and only the part of the picture the
+   * change can be seen in is baked again. False when this layer cannot become that relief (a
+   * map of another size or pitch, flat ground either side, jump pieces unless `pieces` says they
+   * are the ones it was made with): a new one must be made.
+   */
+  update(relief: Relief | null, w: number, h: number, rise: number, pieces = false): boolean {
+    const B = this.baked;
+    const old = this.relief;
+    if (!B || !old || !relief || !this.map) return false;
+    if (B.w !== w || B.h !== h || rise !== this.rise || relief.gw !== this.gw) return false;
+    if (relief.gh !== this.gh || (this.pieces && !pieces)) return false;
+    const changed = reliefChange(old, relief);
+    this.relief = relief;
+    this.top = relief.max;
+    if (!changed) return true;
+    const gl = this.gl;
+    this.loadHeights(relief);
+    const box = B.bake(relief, changed);
+    const bw = box.x1 - box.x0;
+    const bh = box.y1 - box.y0;
+    if (bw <= 0 || bh <= 0) return true;
+    gl.bindTexture(gl.TEXTURE_2D, this.map);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, w);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, box.x0);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, box.y0);
+    gl.texSubImage2D(gl.TEXTURE_2D, 0, box.x0, box.y0, bw, bh, gl.RGBA, gl.UNSIGNED_BYTE, B.out);
+    gl.pixelStorei(gl.UNPACK_ROW_LENGTH, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_PIXELS, 0);
+    gl.pixelStorei(gl.UNPACK_SKIP_ROWS, 0);
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+    return true;
   }
 
   /** How high the ground stands at (x, y). */
