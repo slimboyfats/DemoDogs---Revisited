@@ -196,12 +196,12 @@ float beam(vec2 wp, vec4 c, float gap) {
   float wide = 2.5 + along * 0.34;
   if (gap > 0.0) {
     across = abs(across - gap);
-    wide = 2.0 + along * 0.27;
+    wide = 1.4 + along * 0.2;
   }
   float side = across / wide;
   if (side >= 1.0) return 0.0;
   float e = 1.0 - along / ${CONE_REACH.toFixed(1)};
-  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.25;
+  return e * (0.5 + 0.5 * e) * (1.0 - side * side) * 1.15;
 }${BLOCK_GLSL}`;
 
 export const STACK_FS = `#version 300 es

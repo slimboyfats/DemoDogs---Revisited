@@ -1,5 +1,5 @@
 // A night chase to judge the feel by: the player weaves off the road and back with the rivals
-// racing round it, under a dark sky, so the beams swinging with the cars, the tail lamps' pools,
+// racing round it, under a dark sky, so the beams swinging with the cars,
 // the tracks left in soft ground and what the wheels throw up are all in one clip.
 // `pnpm chase [out-dir] [venue] [sky] [--seconds=8] [--still] [--dpr=1]` (default captures/chase/,
 // frostbite-quarry, snow-night): frames f0000.png ... for ffmpeg, and three stills.
