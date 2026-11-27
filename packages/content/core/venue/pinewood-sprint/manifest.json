@@ -366,12 +366,12 @@
         {
           "prop": "prop.signal-lamp",
           "lane": 1.2,
-          "ahead": -18
+          "ahead": -24
         },
         {
           "prop": "prop.signal-lamp",
           "lane": -1.2,
-          "ahead": -18
+          "ahead": -24
         }
       ]
     },

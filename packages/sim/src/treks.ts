@@ -220,9 +220,14 @@ export function trekNear(
 ): boolean {
   for (const K of w.treks) {
     if (offWay(K, x, y) > reach) continue;
+    // (a way across the road is judged from the middle of the road, so that the lamps on both
+    // sides of it show the same)
+    const last = K.xs.length - 1;
+    const cx = K.rule.cross ? (K.xs[0]! + K.xs[last]!) / 2 : x;
+    const cy = K.rule.cross ? (K.ys[0]! + K.ys[last]!) / 2 : y;
     for (let i = 0; i < K.rule.count; i++) {
       const S = slotAt(K, i, 0, t, AHEAD);
-      if (S.on && Math.abs(S.x - x) < near && Math.abs(S.y - y) < near) return true;
+      if (S.on && Math.abs(S.x - cx) < near && Math.abs(S.y - cy) < near) return true;
     }
   }
   return false;
