@@ -1,0 +1,9 @@
+{
+  "name": "DemoDogs",
+  "short_name": "DemoDogs",
+  "start_url": "./index.html",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#5cc0ff",
+  "theme_color": "#5cc0ff"
+}

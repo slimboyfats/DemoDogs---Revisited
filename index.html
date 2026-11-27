@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#5cc0ff" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <title>DemoDogs</title>
+    <script type="module" crossorigin src="/DemoDogs---Revisited/assets/index-BxmYFnHS.js"></script>
+    <link rel="stylesheet" crossorigin href="/DemoDogs---Revisited/assets/index-RHY_bjfb.css">
+  </head>
+  <body data-screen="menu">
+    <!-- the signs the menus and the buttons wear, drawn once here and used by name -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-trophy" viewBox="0 0 24 24">
+        <path
+          d="M6.5 2.5h11v5.2a5.5 5.5 0 0 1-11 0zM10.6 13h2.8v3.6h-2.8zM7.5 16.6h9a1.2 1.2 0 0 1 1.2 1.2v2.4a1.2 1.2 0 0 1-1.2 1.2h-9a1.2 1.2 0 0 1-1.2-1.2v-2.4a1.2 1.2 0 0 1 1.2-1.2z"
+        />
+        <path
+          d="M6.5 4.6H3.4v1.2a4 4 0 0 0 3.8 4M17.5 4.6h3.1v1.2a4 4 0 0 1-3.8 4"
+          fill="none"
+          stroke-width="2.2"
+        />
+      </symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24">
+        <g fill="none" stroke-width="2.3">
+          <circle cx="12" cy="12" r="9" />
+          <ellipse cx="12" cy="12" rx="4" ry="9" />
+          <path d="M3.4 9h17.2M3.4 15h17.2" />
+        </g>
+      </symbol>
+      <symbol id="i-build" viewBox="0 0 24 24">
+        <path d="M14.6 3.6l5.8 5.8-9.9 9.9-6.9 1.1 1.1-6.9z" />
+        <path d="M12.3 6.9l4.8 4.8" fill="none" stroke="#fff" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24">
+        <g fill="none">
+          <circle cx="12" cy="12" r="5.6" stroke-width="3.6" />
+          <circle
+            cx="12"
+            cy="12"
+            r="8.6"
+            stroke-width="3.8"
+            stroke-dasharray="3.38 3.38"
+            stroke-linecap="butt"
+          />
+        </g>
+      </symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24">
+        <path d="M15.5 4.5L7.5 12l8 7.5" fill="none" stroke-width="4.6" />
+      </symbol>
+      <symbol id="i-next" viewBox="0 0 24 24">
+        <path d="M8.5 4.5l8 7.5-8 7.5" fill="none" stroke-width="4.6" />
+      </symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24">
+        <rect x="5" y="4" width="5" height="16" rx="1.6" />
+        <rect x="14" y="4" width="5" height="16" rx="1.6" />
+      </symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24">
+        <path d="M14.2 1.8L4.6 13.4h5.6L8.6 22.2l10.8-12.4h-6.2z" />
+      </symbol>
+      <symbol id="i-brake" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="6.4" />
+        <path
+          d="M4.2 5.6a10 10 0 0 0 0 12.8M19.8 5.6a10 10 0 0 1 0 12.8"
+          fill="none"
+          stroke-width="2.6"
+        />
+      </symbol>
+      <symbol id="i-aim" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="6.6" fill="none" stroke-width="2.8" />
+        <path d="M12 1.6v5M12 17.4v5M1.6 12h5M17.4 12h5" fill="none" stroke-width="2.8" />
+        <circle cx="12" cy="12" r="2.2" />
+      </symbol>
+      <symbol id="i-flag" viewBox="0 0 24 24">
+        <path d="M5 2.5v19" fill="none" stroke-width="2.6" />
+        <path
+          d="M6.3 3.5h13.2v10.5H6.3zM10.7 3.5v3.5h4.4V3.5zM6.3 7v3.5h4.4V7zM15.1 7v3.5h4.4V7zM10.7 10.5V14h4.4v-3.5z"
+          fill-rule="evenodd"
+        />
+      </symbol>
+      <symbol id="i-help" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9" fill="none" stroke-width="2.6" />
+        <path
+          d="M9.2 9.4a2.9 2.9 0 1 1 4.3 2.5c-1 .6-1.5 1.1-1.5 2.3"
+          fill="none"
+          stroke-width="2.6"
+        />
+        <circle cx="12" cy="17.3" r="1.5" />
+      </symbol>
+      <symbol id="i-wheel" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.8" fill="none" stroke-width="3" />
+        <circle cx="12" cy="12" r="2.6" />
+        <path d="M3.6 10.4L12 12M20.4 10.4L12 12M12 12v8.6" fill="none" stroke-width="2.8" />
+      </symbol>
+    </svg>
+    <canvas id="game"></canvas>
+    <canvas id="overlay"></canvas>
+
+    <!-- touch controls: left half is a floating stick, buttons on the right -->
+    <div id="controls">
+      <div id="stickZone"><span class="hint">DRAG TO DRIVE</span></div>
+      <div id="stickBase"><div id="stickKnob"></div></div>
+      <button id="btnFire" class="pad empty">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-aim" /></svg
+        ><span id="fireLabel">FIRE</span><kbd data-act="fire"></kbd>
+      </button>
+      <button id="btnBrake" class="pad">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-brake" /></svg
+        ><span>BRAKE</span><kbd data-act="brake"></kbd>
+      </button>
+      <button id="btnBoost" class="pad">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bolt" /></svg
+        ><span>BOOST</span><kbd data-act="boost"></kbd>
+      </button>
+      <!-- key hints: with a mouse these stand where the touch buttons would be -->
+      <div id="keyHints" aria-hidden="true">
+        <div class="khDrive">
+          <div class="khPad">
+            <kbd data-act="gas"></kbd><kbd data-act="left"></kbd><kbd data-act="brake"></kbd
+            ><kbd data-act="right"></kbd>
+          </div>
+          <b>DRIVE</b>
+        </div>
+        <div class="khActs">
+          <div id="khFire" class="khRow fire empty"><b>FIRE</b><kbd data-act="fire"></kbd></div>
+          <div class="khRow"><b>BRAKE</b><kbd data-act="brake"></kbd></div>
+          <div class="khRow boost"><b>BOOST</b><kbd data-act="boost"></kbd></div>
+          <div class="khRow names"><b>NAMES</b><kbd data-act="watch"></kbd></div>
+        </div>
+      </div>
+    </div>
+    <!-- spectating, once your car is out of it: tap anywhere for the next car -->
+    <div id="spectate" class="hidden">
+      <div id="specTap"></div>
+      <div id="specBar">
+        <button id="specPrev" aria-label="Previous car">&#9664;</button>
+        <div id="specWho">
+          <small>WATCHING · TAP FOR NEXT</small>
+          <b><i id="specDot"></i><span id="specName"></span></b>
+          <small id="specSub"></small>
+        </div>
+        <button id="specNext" aria-label="Next car">&#9654;<kbd data-act="watch"></kbd></button>
+        <button id="specZoom">
+          <small>ZOOM</small><span id="specZoomLabel">CLOSE</span><kbd data-act="zoom"></kbd>
+        </button>
+        <button id="specGhost" class="hidden">
+          <small>DRIVE A</small><span>GHOST CAR</span><kbd data-act="ghost"></kbd>
+        </button>
+        <button id="specSkip">
+          <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
+        </button>
+      </div>
+    </div>
+    <!-- driving the ghost of your scrapped car: the driving controls stay, this bar goes back -->
+    <div id="ghostBar" class="hidden">
+      <div id="ghostWho">
+        <small>GHOST CAR · YOU DO NO DAMAGE</small>
+        <b id="ghostSay">GET IN THEIR WAY</b>
+      </div>
+      <button id="ghostWatch">
+        <small>JUST</small><span>WATCH</span><kbd data-act="ghost"></kbd>
+      </button>
+      <button id="ghostSkip">
+        <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
+      </button>
+    </div>
+    <button id="pauseBtn" aria-label="Pause">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pause" /></svg>
+    </button>
+    <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
+    <!-- the driving lesson: what to do now, said big, and a way out of it -->
+    <div id="tutor" class="hidden">
+      <div id="tutCard">
+        <div id="tutDots"></div>
+        <b id="tutTitle"></b>
+        <small id="tutSub"></small>
+        <i id="tutMeter"><b></b></i>
+      </div>
+      <button id="tutSkip">SKIP LESSON &#9654;&#9654;</button>
+      <div id="tutHand" aria-hidden="true"><i></i></div>
+      <div id="tutCheer" aria-hidden="true"></div>
+    </div>
+    <button id="backToEdit">&#9998; EDIT</button>
+    <div id="recDot"></div>
+    <div id="netDot"></div>
+    <div id="netBanner" role="status"></div>
+    <div id="devTap" class="hidden"></div>
+    <div id="devPanel" class="hidden"></div>
+    <!-- the level builder: the layer that takes taps on the map, and its buttons over it -->
+    <div id="buildTap" class="hidden"></div>
+    <div id="builder" class="hidden"></div>
+
+    <!-- home: the car on its stand, and the four ways in -->
+    <section id="menu" class="screen">
+      <div class="home">
+        <header class="homeTop">
+          <h1 class="logo" aria-label="DemoDogs">
+            <!-- prettier-ignore -->
+            <svg viewBox="0 0 308 66" role="img" aria-hidden="true">
+              <path class="slash" d="M22 50h286l-10 14H12z" />
+              <text class="out" x="6" y="47">DEMODOGS</text>
+              <text x="6" y="47"><tspan class="a">DEMO</tspan><tspan class="b">DOGS</tspan></text>
+            </svg>
+          </h1>
+          <button class="settingsBtn gear" aria-label="Settings">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gear" /></svg
+            ><span>SETTINGS</span>
+          </button>
+        </header>
+        <div class="stage">
+          <div class="slab" aria-hidden="true"></div>
+          <canvas id="garage"></canvas>
+          <button id="prevCar" class="turn" aria-label="Previous car">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg>
+          </button>
+          <button id="nextCar" class="turn" aria-label="Next car">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-next" /></svg>
+          </button>
+          <div class="carCard">
+            <b id="carName">MUTT</b>
+            <small id="carBlurb"></small>
+            <div class="stats">
+              <label
+                >SPEED<i><b id="stSpeed"></b></i
+              ></label>
+              <label
+                >ACCEL<i><b id="stAccel"></b></i
+              ></label>
+              <label
+                >GRIP<i><b id="stGrip"></b></i
+              ></label>
+              <label
+                >TOUGH<i><b id="stArmor"></b></i
+              ></label>
+            </div>
+          </div>
+        </div>
+        <nav class="homeNav">
+          <button id="toQuick" class="mode race">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-flag" /></svg>
+            <span><b>RACE</b><small>Pick a track and go.</small></span>
+          </button>
+          <button id="toCareer" class="mode career">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy" /></svg>
+            <span><b>CAREER</b><small>Win cash, upgrade, climb the ladder.</small></span>
+          </button>
+          <button id="toOnline" class="mode online">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe" /></svg>
+            <span><b>ONLINE</b><small>Host a room, share the code.</small></span>
+          </button>
+          <button id="toTracks" class="mode tracks">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-build" /></svg>
+            <span><b>TRACK CREATOR</b><small>Build your own and race it.</small></span>
+          </button>
+          <div class="homeMore">
+            <button id="toLesson" class="link">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wheel" /></svg
+              >DRIVING LESSON
+            </button>
+            <button id="toHelp" class="link">
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-help" /></svg>HOW
+              TO PLAY
+            </button>
+          </div>
+        </nav>
+      </div>
+    </section>
+
+    <!-- a quick race: the weather along the top, the tracks as a row of cards to flick through -->
+    <section id="quick" class="screen hidden">
+      <div class="pick">
+        <header class="bar">
+          <button id="quickBack" class="back" aria-label="Back">
+            <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-prev" /></svg
+            ><span>BACK</span>
+          </button>
+          <h2>PICK A TRACK</h2>
+          <div id="worldPick"><b>WORLD</b></div>
+        </header>
+        <div id="venues"></div>
+      </div>
+    </section>
+
+    <section id="help" class="screen hidden">
+      <div class="panel narrow">
+        <h2>HOW TO PLAY</h2>
+        <p class="how">
+          <b>Touch</b> Drag on the left to steer and drive. Hold BRAKE to reverse, or with the gas
+          on in a turn to drift. BOOST for nitro, FIRE for pickups.
+        </p>
+        <p class="how"><b>Keys</b> Arrows or WASD, Space boost, X fire, P pause, Tab names.</p>
+        <p class="how">
+          <b>Scrapped?</b> Tap (or Tab) to watch the next car, ZOOM (or Z) to pull back.
+        </p>
+        <p class="how">
+          <b>Score</b> Smash scrap bots for points and boost. Crates give rockets, mines, repairs.
+        </p>
+        <button id="helpBack" class="go">BACK</button>
+      </div>
+    </section>
+
+    <!-- somebody new: the lesson is offered once, and can be turned down -->
+    <section id="tutAsk" class="screen hidden">
+      <div class="panel narrow">
+        <h2>NEW HERE?</h2>
+        <p class="tag">Learn to drive, boost and shoot. It takes about a minute.</p>
+        <button id="tutYes" class="go">START THE LESSON</button>
+        <button id="tutNo" class="quiet">SKIP, I'LL WORK IT OUT</button>
+      </div>
+    </section>
+
+    <!-- the lesson's last card: the two kinds of event, and straight into one -->
+    <section id="tutEnd" class="screen hidden">
+      <div class="panel narrow">
+        <h2>YOU'RE READY!</h2>
+        <p class="tag">There are two kinds of event. Pick one for your first go.</p>
+        <div class="tutModes">
+          <button id="tutRace" class="venue race">
+            <em>RACE</em><b>FIRST OVER THE LINE</b
+            ><small
+              >Laps of a track against five rivals. Wrecked? You are towed back to the road.</small
+            >
+          </button>
+          <button id="tutDerby" class="venue derby">
+            <em>DERBY</em><b>LAST CAR RUNNING</b
+            ><small>A walled bowl. Ram and shoot until yours is the only car still moving.</small>
+          </button>
+        </div>
+        <p class="note">
+          Smash the little scrap bots for points and boost. The lesson is on the menu if you want it
+          again.
+        </p>
+        <button id="tutMenu" class="quiet">TO THE MENU</button>
+      </div>
+    </section>
+
+    <section id="online" class="screen hidden">
+      <div class="panel narrow" id="onlinePanel"></div>
+    </section>
+
+    <section id="tracks" class="screen hidden">
+      <div class="panel" id="tracksPanel"></div>
+    </section>
+
+    <section id="career" class="screen hidden">
+      <div class="panel" id="careerPanel"></div>
+    </section>
+
+    <section id="loader" class="screen hidden">
+      <div class="panel narrow">
+        <h2 id="loadTitle">GETTING READY</h2>
+        <div class="loadBar"><b id="loadFill"></b></div>
+        <p id="loadLine">&nbsp;</p>
+        <small id="loadCount">&nbsp;</small>
+      </div>
+    </section>
+
+    <section id="pauseMenu" class="screen hidden">
+      <div class="panel narrow">
+        <h2>PAUSED</h2>
+        <button id="resume" class="go">RESUME</button>
+        <button id="restart">RESTART</button>
+        <button class="settingsBtn">SETTINGS</button>
+        <button id="quit" class="quiet">QUIT TO MENU</button>
+      </div>
+    </section>
+
+    <!-- every setting in one sheet, from the menu or the pause menu: it sits to one side of a
+         paused race, so a slider's doing is seen as it is dragged -->
+    <section id="settings" class="screen hidden">
+      <div class="sheet">
+        <header>
+          <h2>SETTINGS</h2>
+          <button id="settingsBack" class="go">DONE</button>
+        </header>
+        <nav class="setTabs">
+          <button data-tab="race" class="on">RACE</button>
+          <button data-tab="view">VIEW</button>
+          <button data-tab="sound">SOUND</button>
+          <button data-tab="hud">HUD</button>
+          <button data-tab="feel">FEEL</button>
+          <button data-tab="dev" class="tuneBtn">DEV</button>
+        </nav>
+        <div class="setBody">
+          <div data-pane="race">
+            <button class="rivalsBtn">RIVALS NORMAL</button>
+            <p class="note">
+              How hard the other drivers race, from the next race. Online races are always NORMAL.
+            </p>
+          </div>
+          <div data-pane="view" class="hidden">
+            <label class="slide">
+              <span>CAMERA <b class="zoomName">NORMAL</b></span>
+              <input class="zoomRange" type="range" min="0" max="6" step="1" value="3" />
+            </label>
+            <label class="slide">
+              <span>SUN <b class="sunTurnName">0°</b></span>
+              <input class="sunTurn" type="range" min="0" max="345" step="15" value="0" />
+            </label>
+            <label class="slide">
+              <span>SHADOWS <b class="sunLongName">AUTO</b></span>
+              <input class="sunLong" type="range" min="0" max="12" step="1" value="0" />
+            </label>
+            <button class="flameBtn tog">FLAME LIGHT ON</button>
+            <button class="resBtn">RESOLUTION AUTO</button>
+          </div>
+          <div data-pane="sound" class="hidden">
+            <button class="muteBtn tog">SOUND ON</button>
+            <div id="volume"></div>
+          </div>
+          <div data-pane="hud" class="hidden">
+            <button class="speedoBtn tog">SPEEDOMETER ON</button>
+            <button class="speedoPlaceBtn">SPEEDOMETER BOTTOM MIDDLE</button>
+            <label class="slide">
+              <span>SPEEDOMETER SIZE <b class="speedoSizeName">100%</b></span>
+              <input class="speedoSize" type="range" min="0.6" max="1.8" step="0.1" value="1" />
+            </label>
+            <button class="namesBtn tog">NAMES ON</button>
+            <button class="hintsBtn tog">KEY HINTS ON</button>
+          </div>
+          <div data-pane="feel" class="hidden">
+            <label class="slide">
+              <span>SCREEN SHAKE <b class="shakeName">100%</b></span>
+              <input class="shakeRange" type="range" min="0" max="2" step="0.1" value="1" />
+            </label>
+            <label class="slide">
+              <span>HIT-STOP <b class="stopName">100%</b></span>
+              <input class="stopRange" type="range" min="0" max="2" step="0.1" value="1" />
+            </label>
+            <label class="slide">
+              <span>VIBRATION <b class="buzzName">100%</b></span>
+              <input class="buzzRange" type="range" min="0" max="1" step="0.1" value="1" />
+            </label>
+            <button class="padBtn tog">GAMEPAD ON</button>
+            <p class="note">
+              Hit-stop holds the race still for a blink on a big blow (never online). Gamepad: left
+              stick drives, or right trigger gas and left trigger brake; A boost, X fire, B brake,
+              START pause. The stick and A work the menus too.
+            </p>
+          </div>
+          <div data-pane="dev" class="hidden">
+            <button id="toDev">TEST RANGE</button>
+            <button class="recBtn">RECORD PERFORMANCE</button>
+            <button class="hitBtn">HITBOXES</button>
+            <p class="note">
+              Numbers of the game's rules, for trying things out. Saved on this device. Online races
+              always use the game's own.
+            </p>
+            <div id="tuneRows"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="screen hidden">
+      <div class="panel card">
+        <h2 id="resTitle">RESULTS</h2>
+        <p id="resSub" class="tag"></p>
+        <div id="payout"></div>
+        <div class="tableWrap"><table id="resTable"></table></div>
+        <div class="row"><button id="again">GO AGAIN</button><button id="toMenu">MENU</button></div>
+      </div>
+    </section>
+
+  </body>
+</html>
