@@ -3,6 +3,7 @@ import {
   belowRoad,
   cornerSpeed,
   defineAi,
+  driftBend,
   looksNow,
   pickPath,
   rampAhead,
@@ -18,7 +19,8 @@ import {
 /**
  * ai.racer: drive the racing line, each driver a little off it in a lane of its own. Go round
  * what is in the way (slower cars, wrecks, scenery, mines, pools), go out of the way for crates
- * and boost tiles, brake only as late as the bend ahead needs, shut the door on a car coming up
+ * and boost tiles, brake only as late as the bend ahead needs, drift round the bends that are
+ * worth it, shut the door on a car coming up
  * behind, ram the car ahead when spoiling for it. Fire what it carries when it would hit, drop
  * what it carries on a car on its tail, and boost down a clear straight when there is a place to
  * gain. Back out of what it gets stuck on, and find the way back up beside raised road. A rubber
@@ -65,12 +67,17 @@ export default defineAi({
     // no faster than the bends ahead allow, and off the power while it is pointing the wrong way
     const cap = cornerSpeed(w, c);
     if (ramp) out.throttle = 1;
-    else if (sp > cap + 14) out.brake = true;
-    else if (sp > cap) out.throttle = 0.2;
+    else if (sp > cap + 14) {
+      // (off the power, or it would be a drift)
+      out.brake = true;
+      out.throttle = 0;
+    } else if (sp > cap) out.throttle = 0.2;
     if (Math.abs(d) > 1.1 && sp > 70) out.throttle = Math.min(out.throttle, 0.25);
     // something square in the way that it cannot get round in time
     if (way.blocked < 16 + sp * 0.12 && sp > 60) out.throttle = Math.min(out.throttle, 0.3);
     out.boost = !below && wantsBoost(w, c, d, cap > topSpeed(c) * 1.3);
+    // a bend worth sliding round: on the brake with the power on, and let go as it opens
+    if (!below && !ramp) driftBend(w, c, out, tx, ty);
     out.fire = wantsFire(w, c);
     // rubber band: rivals far ahead of the humans ease off, far behind push harder
     if (!c.isPlayer) {

@@ -42,6 +42,8 @@ export type SimEvent =
   /** A car drove into a pool that scalds (lava) at (x, y); `out` when it leaves it again. */
   | { t: 'scald'; car: number; x: number; y: number; out?: boolean }
   | { t: 'land'; car: number; impact: number }
+  /** A drift came to a stage of its charge (`go` false) or was let go and paid out (`go` true). */
+  | { t: 'drift'; car: number; stage: number; go: boolean }
   /** z: up on a deck, art px; absent on the ground. */
   | { t: 'explode'; x: number; y: number; power: number; z?: number }
   | { t: 'smash'; bot: number; by: number; x: number; y: number; vx: number; vy: number }

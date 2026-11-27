@@ -2,6 +2,7 @@ import { batter, footing } from './damage';
 import { wading } from './rescue';
 import {
   BASE_SPEED,
+  DRIFT,
   DT,
   GRAVITY,
   HELD,
@@ -53,6 +54,10 @@ const LIP = 3;
 const SLIDE = 420;
 /** A car that goes further than this in a tick has the way looked at in steps this long (px). */
 const STRIDE = 4;
+/** How much quicker a car's nose may come round than the car itself can, at speed. */
+const NOSE = 1.3;
+/** How much of the engine's push is lost to wheelspin in a full sideways slide. */
+const WHEELSPIN = 0.8;
 
 export function makeCar(
   w: World,
@@ -126,6 +131,8 @@ export function makeCar(
     throttle: 0,
     boosting: false,
     handbrake: false,
+    drift: 0,
+    charge: 0,
     sliding: false,
     offroad: false,
     held: 0,
@@ -245,6 +252,21 @@ export function toLocal(c: Car, x: number, y: number): [number, number] {
 }
 
 /**
+ * A drift is over: let go (`paid`), it gives the car a short burst as strong as it was held long;
+ * lost (too slow, a knock, off the power), it gives nothing.
+ */
+export function endDrift(w: World, c: Car, paid: boolean): void {
+  const stage = c.charge >= DRIFT.stage[1] ? 2 : c.charge >= DRIFT.stage[0] ? 1 : 0;
+  c.drift = 0;
+  c.charge = 0;
+  if (!paid || stage === 0) return;
+  const k = 1 + (DRIFT.burst[stage - 1]! - 1) * w.tuning.driftBoost;
+  c.surgeK = c.surge > 0 ? Math.max(c.surgeK, k) : k;
+  c.surge = Math.max(c.surge, DRIFT.seconds[stage - 1]!);
+  w.emit({ t: 'drift', car: c.index, stage, go: true });
+}
+
+/**
  * One tick of driving. Steering turns the car; the speed it already has keeps going the way it was,
  * and grip pulls it round, so a car drifts when it turns hard or the handbrake is on.
  */
@@ -273,6 +295,19 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   const weak = c.hp < 35 ? 0.86 : 1;
   const grip = clamp(Math.abs(vf) / 50, 0, 1);
   c.handbrake = ctl.brake && vf > 45 && Math.abs(ctl.steer) > 0.3;
+  // a drift: the brake with the power still on, going into a bend. It holds for as long as the
+  // brake does (or the car has speed to slide on), and pays out when it is let go
+  if (c.drift !== 0) {
+    if (!ctl.brake) endDrift(w, c, true);
+    else if (vf < DRIFT.out || ctl.throttle <= 0) endDrift(w, c, false);
+  } else if (c.handbrake && ctl.throttle > 0.2 && vf > DRIFT.from && !airborne && jet <= 1) {
+    c.drift = ctl.steer < 0 ? -1 : 1;
+    c.charge = 0;
+    // (the tail steps out at once)
+    c.spin += c.drift * DRIFT.flick;
+  }
+  const drifting = c.drift !== 0;
+  if (drifting) c.handbrake = true;
   // the deck is clean: pools and pits are on the ground below it
   // (and so is a boardwalk: what it crosses is under its planks)
   const foot =
@@ -296,6 +331,11 @@ export function drive(w: World, c: Car, ctl: Controls): void {
   // dropping into a crater at speed throws the car up off its far lip
   if (pit && !c.pit && Math.abs(vf) > 70) c.vz = Math.max(c.vz, Math.min(70, Math.abs(vf) * 0.3));
   if (!airborne) c.pit = pit;
+  // what the tyres can pull the car sideways with, px a second squared: at speed it is less than
+  // the wheels ask for, and the car runs wide of where its nose points
+  // (a comet runs as if on rails: it goes faster than any tyre could turn)
+  const pull =
+    T.cornerGrip * (0.4 + 0.6 * S.grip) * hold * (1 - 0.45 * harsh) * (c.tricks.dash ? 4 : 1);
   let turn =
     ctl.steer *
     3.0 *
@@ -304,6 +344,14 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     Math.sign(vf || 1) *
     (c.handbrake ? 1.4 : 1) *
     (0.45 + 0.55 * hold);
+  // into the bend the steering tightens the slide, against it it lets the car run straighter
+  const into = drifting ? clamp(0.55 + 0.45 * ctl.steer * c.drift, 0.1, 1) : 0;
+  if (drifting) turn = (c.drift * into * pull * T.driftGrip) / Math.max(vf, DRIFT.out);
+  else {
+    // the nose comes round quicker than the car does, but not so much quicker that it spins
+    const most = ((c.handbrake ? 2.6 : NOSE) * pull) / Math.max(Math.abs(vf), 1);
+    turn = clamp(turn, -most, most);
+  }
   if (c.hp < 30 && !c.haunt) turn += Math.sin(w.time * 9 + c.wheelDist * 0.05) * 0.25 * grip;
   // loose boards under the wheels wag the car from side to side as it goes over them (and
   // let it straighten as it leaves them)
@@ -345,7 +393,10 @@ export function drive(w: World, c: Car, ctl: Controls): void {
     wake;
   const before = vf;
   if (!airborne) {
-    if (ctl.brake) {
+    if (drifting) {
+      if (vf < maxS * DRIFT.pace)
+        vf += 240 * S.accel * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
+    } else if (ctl.brake) {
       if (vf > 15) vf -= 330 * DT;
       else vf = Math.max(-72, vf - 150 * DT);
     } else if (ctl.throttle > 0 && vf < maxS) {
@@ -356,11 +407,33 @@ export function drive(w: World, c: Car, ctl: Controls): void {
         Math.max(1, c.pace) *
         (jet > 1 ? 3 : 1) *
         (wake > 1 ? 1.3 : 1);
-      vf += acc * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
+      // a car going sideways spins its wheels: it cannot power its way round a bend
+      const bite = 1 - WHEELSPIN * clamp(Math.abs(vl) / Math.max(40, Math.abs(vf)), 0, 1);
+      vf += acc * bite * ctl.throttle * DT * clamp(1.05 - vf / (maxS * 1.1), 0.12, 1);
     }
     vf -= vf * (0.42 + T.offroadDrag * harsh + bog) * DT;
     if (vf > maxS) vf -= (vf - maxS) * 2.6 * DT;
-    vl *= Math.exp(-8 * S.grip * hold * (1 - 0.45 * harsh) * (c.handbrake ? 0.22 : 1) * DT);
+    // grip pulls the sideways speed out of it, as hard as the tyres can and no harder
+    const rate = drifting
+      ? DRIFT.hold
+      : 8 * S.grip * hold * (1 - 0.45 * harsh) * (c.handbrake ? 0.22 : 1);
+    // (it is at speed that the tyres run out: a car standing or crawling is not shoved about
+    // like one on ice)
+    const most =
+      pull * (drifting ? T.driftGrip : 1 + 3 * (1 - clamp(Math.abs(vf) / 100, 0, 1))) * DT;
+    const side = clamp(vl * (1 - Math.exp(-rate * DT)), -most, most);
+    if (drifting) {
+      // a held slide keeps most of the speed a loose one would scrub off
+      const v0 = Math.hypot(vf, vl);
+      vl -= side;
+      vf += (v0 - Math.hypot(vf, vl)) * DRIFT.keep;
+      const was = c.charge;
+      if (Math.abs(vl) > 12)
+        c.charge = Math.min(DRIFT.stage[1], c.charge + DT * (0.35 + 0.65 * into));
+      for (let i = 0; i < 2; i++)
+        if (was < DRIFT.stage[i]! && c.charge >= DRIFT.stage[i]!)
+          w.emit({ t: 'drift', car: c.index, stage: i + 1, go: false });
+    } else vl -= side;
   }
   c.vx = cs * vf - sn * vl;
   c.vy = sn * vf + cs * vl;
@@ -574,6 +647,9 @@ function bump(
   c.spin += clamp(L[1] * vn * 0.004 * Math.sign(L[0] || 1), -4, 4);
   const impact = -vn;
   if (impact > 30) {
+    // (a knock ends a drift with nothing to show for it)
+    c.drift = 0;
+    c.charge = 0;
     if (c.hitCd <= 0) {
       c.hitCd = 0.15;
       if (!padded(w, c, px, py)) damage(w, c, (impact - 28) * 0.24 * hard, null, px, py);

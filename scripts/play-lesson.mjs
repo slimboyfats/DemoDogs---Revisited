@@ -124,7 +124,9 @@ const read = () =>
       screen: d.screen,
       lesson: d.lesson.state,
       end: !document.getElementById('tutEnd').classList.contains('hidden'),
-      car: P ? { x: P.x, y: P.y, h: P.h, v: Math.hypot(P.vx, P.vy), armed: !!P.weapon } : null,
+      car: P
+        ? { x: P.x, y: P.y, h: P.h, v: Math.hypot(P.vx, P.vy), armed: !!P.weapon, charge: P.charge }
+        : null,
       mid: w ? { x: w.w / 2, y: w.h / 2 } : null,
       crate: w?.pickups[0] ?? null,
       targets: w
@@ -141,7 +143,7 @@ await page.locator('#tutYes').click();
 await page.waitForFunction(() => window.__dd.lesson.state, null, { timeout: 120000 });
 await page.waitForTimeout(600);
 
-const STEP_NO = { drive: 1, brake: 2, boost: 3, crate: 4, fire: 5 };
+const STEP_NO = { drive: 1, brake: 2, boost: 3, drift: 4, crate: 5, fire: 6 };
 const seen = new Set();
 const t0 = Date.now();
 let cheered = '';
@@ -180,6 +182,18 @@ for (;;) {
   } else if (L.step === 'boost') {
     await steer(to(s.mid), 1);
     await press('btnBoost', true);
+  } else if (L.step === 'drift') {
+    // up to speed towards the middle, then round in a slide until it has paid, and let go
+    if (s.car.charge >= 0.75) {
+      await press('btnBrake', false);
+      await steer(s.car.h, 1);
+    } else if (s.car.charge > 0 || s.car.v > 110) {
+      await steer(s.car.h + 1.1, 1);
+      await press('btnBrake', true);
+    } else {
+      await press('btnBrake', false);
+      await steer(to(s.mid), 1);
+    }
   } else if (L.step === 'crate' && s.crate) await steer(to(s.crate), 0.8);
   else if (L.step === 'fire' && s.targets[0]) {
     const aim = to(s.targets[0]);

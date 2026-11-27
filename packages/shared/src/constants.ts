@@ -56,3 +56,24 @@ export const DIFFICULTIES = Object.keys(DIFFICULTY) as Difficulty[];
 
 /** How far a car's body rides over the ground its wheels are on, art px on a car of its own size. */
 export const BODY_UP = 0.6;
+
+/**
+ * Drifting (sim/physics.ts): the brake held with the power on, into a bend. `from` and `out` are
+ * the speeds it starts at and is lost under; `stage` the seconds of held slide that earn the
+ * small burst and the big one, `burst` what each lifts the top speed by and `seconds` for how long.
+ */
+export const DRIFT = {
+  from: 70,
+  out: 50,
+  /** How hard the tail steps out as it starts, rad a second. */
+  flick: 1.1,
+  /** How fast grip takes the slide back, 1/s (lower: more sideways). */
+  hold: 3.2,
+  /** How much of the speed a slide scrubs off a held drift keeps. */
+  keep: 0.7,
+  /** Top speed while it is held, of the car's own. */
+  pace: 0.97,
+  stage: [0.6, 1.3],
+  burst: [1.16, 1.26],
+  seconds: [0.7, 1.1],
+} as const;
