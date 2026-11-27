@@ -278,7 +278,10 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   or calls `spray`, and spent particles go back to a pool. Judge a change there with `pnpm perf:fight`.
 - **The menus wear one look** (client `theme.css`, loaded after `styles.css`; V2, "grand prix blue"): a deep blue
   hall with bands of light sliding across it, white slabs with a thick foot, yellow for the way forward, navy words
-  on white, white on blue. A new screen is built from the pieces it lists (`.panel`, `.events button`,
+  on white, white on blue. The hall is one element behind every menu (`#hall` in `index.html`: beams, bands, a
+  wheel, dots, a chequered flag, streaks, each one sheet moved by `transform`), so a menu screen has no background
+  of its own; a new menu screen's id goes in the `body:has(...) #hall` list. Home must fit a phone on its side
+  down to about 771×306 with nothing cut off or overlapped (the `max-height: 400px` blocks). A new screen is built from the pieces it lists (`.panel`, `.events button`,
   `.row button`, `.go`, `.quiet`, `.slide`, `.tog`, `.bar` with a `.back`) and wears it without rules of its own.
   Home (`#menu`, `.home`) is the car on its stage and four ways in (`.mode`): RACE opens the tracks to pick from
   (`#quick`, a row of cards to flick through), HOW TO PLAY is a screen of its own (`#help`). The HUD drawn on the

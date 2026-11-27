@@ -553,9 +553,15 @@ export class Hud {
       const rh = 12 * u;
       const rx = W - pad - rw - rh * 0.26;
       ctx.textBaseline = 'middle';
-      // (six rows: of a bigger field, the six round this screen's car)
-      const from = Math.max(0, Math.min(st.length - 6, st.indexOf(focus ?? w.player) - 3));
-      for (let i = from; i < Math.min(from + 6, st.length); i++) {
+      // (six rows: of a bigger field, the six round this screen's car; fewer on a phone on its
+      // side, where the FIRE button is not far under the map, and none where two would not fit)
+      const room = W > H ? Math.floor((H - 205 * u - y) / (14 * u)) : 6;
+      const rows = room < 2 ? 0 : Math.min(6, room);
+      const from = Math.max(
+        0,
+        Math.min(st.length - rows, st.indexOf(focus ?? w.player) - (rows >> 1)),
+      );
+      for (let i = from; i < Math.min(from + rows, st.length); i++) {
         const c = st[i]!;
         const me = c === w.player;
         const out = c.wrecked && w.kind === 'derby';
