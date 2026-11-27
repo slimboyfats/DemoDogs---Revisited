@@ -278,6 +278,11 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   sheet (`#settings`, `ui/settings.ts`: RACE, VIEW, SOUND, HUD, FEEL, DEV), wired by class, and it sits beside a paused race so a
   slider's doing is seen. The race is laid out for a phone on its side and upright (`zoomSides`, the portrait block
   in `theme.css`); nothing forces landscape.
+  Words are set in two faces kept in `src/fonts/` (`--display` for names, buttons and numbers, `--body` for small
+  print; a canvas takes them from `render/type.ts`). A button's colour is its `--c` (and `--c2` for its foot): its
+  lit face is `var(--face)`, so a new kind of button sets `--c` and never a flat `background`. Signs are drawn once
+  in the sheet at the top of `index.html` and used by name (`<use href="#i-...">`, class `ic`). What moves in a
+  menu or over a race moves by `transform` or `opacity` only, and stops under `prefers-reduced-motion`.
 - **A blow is felt through one number.** An effect asks for shake (`fx.shake`, 3 a nudge, 10 a wreck) and nothing
   else: the session (`blow` in game/session.ts) turns a rise in it into a kick of the picture on a spring (`Shaker`
   in game/feel.ts), a buzz of the phone or gamepad (`Feel`) and, for a big one, a few frames of hit-stop (never

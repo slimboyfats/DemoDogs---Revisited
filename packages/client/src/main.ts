@@ -10,6 +10,7 @@ import { SliceFx } from './render/slice-fx';
 import { Resolution, resSteps } from './game/resolution';
 import './styles.css';
 import './theme.css';
+import { loadType } from './render/type';
 import { RANGE, SCHOOL, loadContent, loadLooks, withRange, withSchool } from '@demodogs/content';
 import type { CarManifest } from '@demodogs/shared';
 import { engineNote } from './audio/engine';
@@ -163,6 +164,7 @@ const rendererName = useCanvas ? 'canvas' : 'pixel';
 groundMode.shader = !useCanvas && params.get('ground') !== 'map';
 // ?look=bright: sunny colours, plain clean roads, a mown lawn
 groundMode.bright = groundMode.shader && params.get('look') !== 'classic';
+loadType();
 const hud = new Hud(octx);
 const speedo = new Speedo(safeStore());
 const garage = new Garage($<HTMLCanvasElement>('garage'), art);

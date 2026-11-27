@@ -3,6 +3,7 @@ import type { Effects } from './effects';
 import type { Ground } from './ground';
 import type { Camera } from './scene';
 import { drawMud } from './tricks-fx';
+import { BODY, DISPLAY } from './type';
 import { fitWords, type Word } from './words';
 
 /** World to device pixels, for drawing flat things over the world. */
@@ -40,7 +41,7 @@ export function drawOverlay(
   // (they are for fun: small, none over another, none cut off by the edge of the screen)
   const spots = fx.texts.map((tx): Word => {
     const px = Math.round((tx.big ? 17 : 13) * dpr);
-    ctx.font = `900 ${px}px system-ui, sans-serif`;
+    ctx.font = `400 ${px}px ${DISPLAY}`;
     return {
       x: P.sx(tx.x),
       y: P.sy(tx.y, tx.z + P.rise(tx.x, tx.y)),
@@ -50,7 +51,7 @@ export function drawOverlay(
   });
   // what they keep off: the gauges, the map and the standings, and every car with its name
   const taken: Word[] = [
-    { x: 105 * dpr, y: 62 * dpr, w: 210 * dpr, h: 124 * dpr },
+    { x: 125 * dpr, y: 62 * dpr, w: 250 * dpr, h: 124 * dpr },
     { x: W - 70 * dpr, y: 95 * dpr, w: 140 * dpr, h: 190 * dpr },
   ];
   for (const c of w.cars) {
@@ -66,9 +67,9 @@ export function drawOverlay(
     const tx = fx.texts[i]!;
     const at = spots[i]!;
     ctx.globalAlpha = Math.min(0.92, (tx.life / tx.max) * 2.5);
-    ctx.font = `900 ${Math.round((tx.big ? 17 : 13) * dpr)}px system-ui, sans-serif`;
+    ctx.font = `400 ${Math.round((tx.big ? 17 : 13) * dpr)}px ${DISPLAY}`;
     ctx.lineWidth = 3.5 * dpr;
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeStyle = 'rgba(27,34,51,0.92)';
     ctx.strokeText(tx.text, at.x, at.y);
     ctx.fillStyle = tx.col;
     ctx.fillText(tx.text, at.x, at.y);
@@ -98,6 +99,10 @@ export function drawOverlay(
       ctx.lineTo(-6 * dpr, 7 * dpr);
       ctx.closePath();
       ctx.fill();
+      ctx.lineJoin = 'round';
+      ctx.lineWidth = 2 * dpr;
+      ctx.strokeStyle = 'rgba(27,34,51,0.92)';
+      ctx.stroke();
       ctx.restore();
     }
 }
@@ -128,9 +133,9 @@ export function drawNames(
     const sx = P.sx(c.x);
     const sy = P.sy(c.y, c.z + 16 + P.rise(c.x, c.y)) - 4 * dpr;
     if (sx < 0 || sx > W || sy < 0 || sy > H) continue;
-    ctx.font = `900 ${Math.round((on ? 13 : 10) * dpr)}px system-ui, sans-serif`;
+    ctx.font = `400 ${Math.round((on ? 13 : 10) * dpr)}px ${DISPLAY}`;
     ctx.lineWidth = 3.5 * dpr;
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
+    ctx.strokeStyle = 'rgba(27,34,51,0.92)';
     const label = on ? `▼ ${c.name}` : c.name;
     ctx.strokeText(label, sx, sy);
     ctx.fillStyle = on ? '#ffd24a' : c.paint;
@@ -139,7 +144,7 @@ export function drawNames(
     const kind = c.isPlayer ? '' : (c.ai?.style ?? '');
     if (kind) {
       const up = Math.round((on ? 13 : 10) * dpr);
-      ctx.font = `900 ${Math.round(7 * dpr)}px system-ui, sans-serif`;
+      ctx.font = `700 ${Math.round(7.5 * dpr)}px ${BODY}`;
       ctx.lineWidth = 2.5 * dpr;
       ctx.strokeText(kind, sx, sy - up);
       ctx.fillStyle = 'rgba(255,255,255,0.85)';

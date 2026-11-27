@@ -50,7 +50,8 @@ page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 const tag = portrait ? '-portrait' : '';
 const shot = async (name) => {
-  await page.waitForTimeout(250);
+  // (long enough for a screen to have settled into place)
+  await page.waitForTimeout(800);
   await page.screenshot({ path: join(out, `${name}${tag}.png`) });
   console.log(`  ${name}${tag}.png`);
 };
@@ -91,14 +92,22 @@ if (await tap('#menu .tuneBtn', '.tuneBtn')) {
   await tap('#tuneBack');
 }
 
+// your tracks, and the online room
+if (await tap('#toTracks')) await shot('tracks');
+await page.goto(base);
+await page.waitForTimeout(900);
+if (await tap('#toOnline')) await shot('online');
+
 // the career hub
 await page.goto(`${base}?career`);
 await page.waitForTimeout(900);
 await shot('career');
 
-// a race: the HUD and the touch buttons
+// a race: the track's name before the lights, then the HUD and the touch buttons
 await page.goto(`${base}?start=kennel-loop&car=mutt&autoplay&seed=7`);
-await page.waitForTimeout(6500);
+await page.waitForTimeout(3000);
+await shot('countdown');
+await page.waitForTimeout(3500);
 await page.evaluate(() => {
   const s = window.__dd.session;
   for (let i = 0; i < 60 * 9; i++) s.step();

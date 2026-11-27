@@ -1,4 +1,5 @@
 import { rangeGive, rangeMend, rangeMove, type Car, type World } from '@demodogs/sim';
+import { DISPLAY } from '../render/type';
 import {
   CHEERS,
   Lesson,
@@ -319,7 +320,7 @@ export class Tutor {
     px: number,
     col: string,
   ): void {
-    ctx.font = `900 ${Math.round(px)}px system-ui, sans-serif`;
+    ctx.font = `400 ${Math.round(px)}px ${DISPLAY}`;
     ctx.lineWidth = Math.max(4, px * 0.26);
     ctx.strokeStyle = INK;
     ctx.strokeText(text, x, y + px * 0.08);

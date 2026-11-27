@@ -14,6 +14,74 @@
     <title>DemoDogs</title>
   </head>
   <body data-screen="menu">
+    <!-- the signs the menus and the buttons wear, drawn once here and used by name -->
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="i-trophy" viewBox="0 0 24 24">
+        <path
+          d="M6.5 2.5h11v5.2a5.5 5.5 0 0 1-11 0zM10.6 13h2.8v3.6h-2.8zM7.5 16.6h9a1.2 1.2 0 0 1 1.2 1.2v2.4a1.2 1.2 0 0 1-1.2 1.2h-9a1.2 1.2 0 0 1-1.2-1.2v-2.4a1.2 1.2 0 0 1 1.2-1.2z"
+        />
+        <path
+          d="M6.5 4.6H3.4v1.2a4 4 0 0 0 3.8 4M17.5 4.6h3.1v1.2a4 4 0 0 1-3.8 4"
+          fill="none"
+          stroke-width="2.2"
+        />
+      </symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24">
+        <g fill="none" stroke-width="2.3">
+          <circle cx="12" cy="12" r="9" />
+          <ellipse cx="12" cy="12" rx="4" ry="9" />
+          <path d="M3.4 9h17.2M3.4 15h17.2" />
+        </g>
+      </symbol>
+      <symbol id="i-build" viewBox="0 0 24 24">
+        <path d="M14.6 3.6l5.8 5.8-9.9 9.9-6.9 1.1 1.1-6.9z" />
+        <path d="M12.3 6.9l4.8 4.8" fill="none" stroke="#fff" stroke-width="1.8" />
+      </symbol>
+      <symbol id="i-gear" viewBox="0 0 24 24">
+        <g fill="none">
+          <circle cx="12" cy="12" r="5.6" stroke-width="3.6" />
+          <circle
+            cx="12"
+            cy="12"
+            r="8.6"
+            stroke-width="3.8"
+            stroke-dasharray="3.38 3.38"
+            stroke-linecap="butt"
+          />
+        </g>
+      </symbol>
+      <symbol id="i-prev" viewBox="0 0 24 24">
+        <path d="M15.5 4.5L7.5 12l8 7.5" fill="none" stroke-width="4.6" />
+      </symbol>
+      <symbol id="i-next" viewBox="0 0 24 24">
+        <path d="M8.5 4.5l8 7.5-8 7.5" fill="none" stroke-width="4.6" />
+      </symbol>
+      <symbol id="i-pause" viewBox="0 0 24 24">
+        <rect x="5" y="4" width="5" height="16" rx="1.6" />
+        <rect x="14" y="4" width="5" height="16" rx="1.6" />
+      </symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24">
+        <path d="M14.2 1.8L4.6 13.4h5.6L8.6 22.2l10.8-12.4h-6.2z" />
+      </symbol>
+      <symbol id="i-brake" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="6.4" />
+        <path
+          d="M4.2 5.6a10 10 0 0 0 0 12.8M19.8 5.6a10 10 0 0 1 0 12.8"
+          fill="none"
+          stroke-width="2.6"
+        />
+      </symbol>
+      <symbol id="i-aim" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="6.6" fill="none" stroke-width="2.8" />
+        <path d="M12 1.6v5M12 17.4v5M1.6 12h5M17.4 12h5" fill="none" stroke-width="2.8" />
+        <circle cx="12" cy="12" r="2.2" />
+      </symbol>
+      <symbol id="i-wheel" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8.8" fill="none" stroke-width="3" />
+        <circle cx="12" cy="12" r="2.6" />
+        <path d="M3.6 10.4L12 12M20.4 10.4L12 12M12 12v8.6" fill="none" stroke-width="2.8" />
+      </symbol>
+    </svg>
     <canvas id="game"></canvas>
     <canvas id="overlay"></canvas>
 
@@ -22,10 +90,17 @@
       <div id="stickZone"><span class="hint">DRAG TO DRIVE</span></div>
       <div id="stickBase"><div id="stickKnob"></div></div>
       <button id="btnFire" class="pad empty">
-        <span id="fireLabel">FIRE</span><kbd data-act="fire"></kbd>
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-aim" /></svg
+        ><span id="fireLabel">FIRE</span><kbd data-act="fire"></kbd>
       </button>
-      <button id="btnBrake" class="pad">BRAKE<kbd data-act="brake"></kbd></button>
-      <button id="btnBoost" class="pad">BOOST<kbd data-act="boost"></kbd></button>
+      <button id="btnBrake" class="pad">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-brake" /></svg
+        ><span>BRAKE</span><kbd data-act="brake"></kbd>
+      </button>
+      <button id="btnBoost" class="pad">
+        <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-bolt" /></svg
+        ><span>BOOST</span><kbd data-act="boost"></kbd>
+      </button>
       <!-- key hints: with a mouse these stand where the touch buttons would be -->
       <div id="keyHints" aria-hidden="true">
         <div class="khDrive">
@@ -78,7 +153,9 @@
         <small>RESULTS</small><span>SKIP &#9654;&#9654;</span><kbd data-act="skip"></kbd>
       </button>
     </div>
-    <button id="pauseBtn" aria-label="Pause">II</button>
+    <button id="pauseBtn" aria-label="Pause">
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-pause" /></svg>
+    </button>
     <kbd id="pauseKey" data-act="pause" aria-hidden="true"></kbd>
     <!-- the driving lesson: what to do now, said big, and a way out of it -->
     <div id="tutor" class="hidden">
@@ -108,18 +185,50 @@
         <div class="cols">
           <div class="menuSide">
             <header class="menuTop">
-              <h1>DEMO<span>DOGS</span></h1>
+              <h1 class="logo" aria-label="DemoDogs">
+                <svg viewBox="0 0 300 84" role="img" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="lgA" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0.1" stop-color="#fff39a" />
+                      <stop offset="0.55" stop-color="#ffd23f" />
+                      <stop offset="1" stop-color="#ff9d1c" />
+                    </linearGradient>
+                    <linearGradient id="lgB" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0.1" stop-color="#ffc387" />
+                      <stop offset="0.55" stop-color="#ff8a3d" />
+                      <stop offset="1" stop-color="#ee4a1c" />
+                    </linearGradient>
+                    <clipPath id="lgClip"><text x="10" y="60">DEMODOGS</text></clipPath>
+                  </defs>
+                  <!-- prettier-ignore -->
+                  <g transform="rotate(-3 150 42)">
+                    <text class="out" x="10" y="66">DEMODOGS</text>
+                    <text class="out" x="10" y="60">DEMODOGS</text>
+                    <text x="10" y="60"><tspan fill="url(#lgA)">DEMO</tspan><tspan fill="url(#lgB)">DOGS</tspan></text>
+                    <path clip-path="url(#lgClip)" d="M0 0h300v30q-150 12-300 0z" fill="#fff" opacity="0.3" />
+                  </g>
+                </svg>
+              </h1>
               <button class="settingsBtn gear" aria-label="Settings">
-                <i aria-hidden="true">&#9881;</i><span>SETTINGS</span>
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-gear" /></svg
+                ><span>SETTINGS</span>
               </button>
             </header>
             <p class="tag">Scrap-metal racing. Ram, wreck and outrun the pack.</p>
             <div class="garageBox">
               <canvas id="garage"></canvas>
               <div class="carPick">
-                <button id="prevCar" aria-label="Previous car">&#9664;</button>
+                <button id="prevCar" aria-label="Previous car">
+                  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#i-prev" />
+                  </svg>
+                </button>
                 <div><b id="carName">MUTT</b><small id="carBlurb"></small></div>
-                <button id="nextCar" aria-label="Next car">&#9654;</button>
+                <button id="nextCar" aria-label="Next car">
+                  <svg class="ic" viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="#i-next" />
+                  </svg>
+                </button>
               </div>
               <div class="stats">
                 <label
@@ -140,14 +249,17 @@
           <div class="events">
             <div class="modes">
               <button id="toCareer" class="career">
-                <b>CAREER</b
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-trophy" /></svg
+                ><b>CAREER</b
                 ><small>Race for cash, fix and upgrade your car, climb the ladder.</small>
               </button>
               <button id="toOnline" class="career online">
-                <b>ONLINE</b><small>Race friends: host a room, share the code.</small>
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe" /></svg
+                ><b>ONLINE</b><small>Race friends: host a room, share the code.</small>
               </button>
               <button id="toTracks" class="career tracks">
-                <b>TRACK CREATOR</b><small>Build your own track, save it, race it.</small>
+                <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-build" /></svg
+                ><b>TRACK CREATOR</b><small>Build your own track, save it, race it.</small>
               </button>
             </div>
             <h3 class="sect">QUICK RACE <small>pick the weather, tap a track</small></h3>
@@ -156,7 +268,8 @@
             </div>
             <div id="venues"></div>
             <button id="toLesson" class="lesson">
-              <b>DRIVING LESSON</b><small>One minute: steer, boost, grab a crate, fire.</small>
+              <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wheel" /></svg
+              ><b>DRIVING LESSON</b><small>One minute: steer, boost, grab a crate, fire.</small>
             </button>
             <details class="help">
               <summary>HOW TO PLAY</summary>
