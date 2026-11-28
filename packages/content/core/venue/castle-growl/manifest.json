@@ -3137,7 +3137,7 @@
       "count": 7,
       "gap": 6,
       "cross": {
-        "at": 0.1727,
+        "at": 0.7953,
         "reach": 60
       },
       "speed": 12,
@@ -3165,8 +3165,8 @@
       "rule": "trek",
       "prop": "prop.tractor",
       "beside": {
-        "from": 0.7051,
-        "to": 0.7417,
+        "from": 0.5771,
+        "to": 0.6137,
         "lane": -1.36
       },
       "speed": 20,
