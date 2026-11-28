@@ -936,7 +936,15 @@ function startCareerRace(race: RaceId): void {
   careerRace = race;
   const venue = content.venue.get(s.venue)!.meta.name.toUpperCase();
   void launch(
-    { venue: s.venue, car: k.car, seed: s.seed, field: s.field, player: s.player, knockout: true },
+    {
+      venue: s.venue,
+      car: k.car,
+      seed: s.seed,
+      field: s.field,
+      player: s.player,
+      knockout: true,
+      purse: true,
+    },
     venue,
   );
 }
@@ -959,6 +967,7 @@ function startCupRound(): void {
       field: r.field,
       player: r.player,
       knockout: true,
+      purse: true,
       modifiers: r.modifiers,
       ...(r.laps ? { laps: r.laps } : {}),
     },

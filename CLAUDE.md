@@ -161,6 +161,8 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   controls, so an online race needs nothing more on the wire; the client sends none while its driver watches
   (`Session.ghost`, the GHOST CAR button on the spectator's bar). A rule that asks whether a wreck is there to be
   hit or seen asks `away(c)` too.
+- **Cash is the career's.** A world built `cashless` (every race but a career one: quick, online, the range) rolls
+  no cash out of a crate and pays none; the client asks for a `purse` only where money is spent.
 - **Rules never read `world.player`**: in online play it is each screen's own car. Use `world.humans` / `isPlayer`.
 - **The sim reports, the client shows.** Anything visual or audible is driven by a `SimEvent` or by reading world
   state; the sim holds no client state.

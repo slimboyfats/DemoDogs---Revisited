@@ -129,6 +129,11 @@ export interface WorldOptions {
    * Online, every peer gets the same list.
    */
   modifiers?: string[];
+  /**
+   * Money counts for nothing here (a quick race, an online one): no crate hands out cash and
+   * nothing pays any. Off, as in the career, it does. Online, every peer gets the same.
+   */
+  cashless?: boolean;
 }
 
 export interface Oval {
@@ -199,6 +204,8 @@ export class World {
   readonly knockout: boolean;
   readonly playOn: boolean;
   readonly sandbox: boolean;
+  /** Money counts for nothing in this race: crates hold none (see WorldOptions). */
+  readonly cashless: boolean;
   /** The gun every car carries: the pack's gun, if it has one. */
   readonly gun: WeaponManifest | null;
   private readonly lapsOpt: number | undefined;
@@ -315,6 +322,7 @@ export class World {
     this.knockout = opts.knockout ?? false;
     this.playOn = opts.playOn ?? false;
     this.sandbox = opts.sandbox ?? false;
+    this.cashless = opts.cashless ?? false;
     this.leak =
       [...C.material.values()]
         .filter((d) => d.wreck !== undefined)

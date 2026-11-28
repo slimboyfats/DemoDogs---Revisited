@@ -217,7 +217,7 @@ export function chew(w: World, by: Car, c: Car, dealt: number, px: number, py: n
   if (!J || Math.hypot(by.x - c.x, by.y - c.y) > JAW_REACH) return;
   const armor = Math.min(100 - by.hp, dealt * (J.def.factor ?? 0.5));
   by.hp += armor;
-  const cash = Math.round(dealt * (J.def.amount ?? 5));
+  const cash = w.cashless ? 0 : Math.round(dealt * (J.def.amount ?? 5));
   by.cash += cash;
   if (dealt > 2) w.emit({ t: 'chew', car: by.index, from: c.index, x: px, y: py, armor, cash });
 }

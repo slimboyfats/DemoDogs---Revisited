@@ -42,6 +42,8 @@ export interface SessionOptions {
   field?: Entrant[];
   player?: Setup;
   knockout?: boolean;
+  /** Cash counts here (the career): crates hold it. Anywhere else there is none to pick up. */
+  purse?: boolean;
   /** A derby plays on after this screen's car is scrapped, to be watched (or skipped). */
   playOn?: boolean;
   /** A test range: parked targets, no countdown, no end. */
@@ -88,6 +90,7 @@ function makeWorld(o: SessionOptions): World {
     ...(o.field ? { field: o.field } : {}),
     ...(o.player ? { player: o.player } : {}),
     ...(o.knockout ? { knockout: true } : {}),
+    ...(o.purse ? {} : { cashless: true }),
     ...(o.playOn ? { playOn: true } : {}),
     ...(o.sandbox ? { sandbox: true } : {}),
     ...(o.laps ? { laps: o.laps } : {}),

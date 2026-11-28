@@ -316,7 +316,10 @@ export function updatePickups(w: World): void {
         break;
       }
       const hurt = c.hp < 70;
-      const kinds = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
+      const all = w.venue.pickups.map((id) => w.content.pickup.get(id)!);
+      // (where money counts for nothing, no crate holds any, unless a venue has nothing else)
+      const rest = w.cashless ? all.filter((k) => k.kind !== 'cash') : all;
+      const kinds = rest.length ? rest : all;
       // where the car is running leans the odds: the back of the field rolls the strong ones
       const at = place(w, c);
       const total = kinds.reduce((s, k) => s + odds(k, hurt, at, w.mode.crates), 0);
@@ -519,9 +522,10 @@ export function shoot(w: World, c: Car): void {
   w.emit({ t: 'shot', car: c.index, x, y, tx, ty, hit: hit ? best.index : -1 });
   if (!hit) return;
   // a mirrored car sends the round back where it came from
-  const back = bounced(w, best, c, tx, ty, g.damage ?? 1.5);
+  const blow = (g.damage ?? 1.5) * w.tuning.gunDamage;
+  const back = bounced(w, best, c, tx, ty, blow);
   if (back) damage(w, c, back, best, x, y);
-  else damage(w, best, g.damage ?? 1.5, c, tx, ty);
+  else damage(w, best, blow, c, tx, ty);
 }
 
 export function updateRockets(w: World): void {
