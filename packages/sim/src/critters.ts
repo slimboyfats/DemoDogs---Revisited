@@ -9,6 +9,7 @@ import { damage } from './damage';
 import type { Car, StaticProp } from './entities';
 import { TAU, angDiff, clamp } from './math';
 import { carShape, newShape, newTouch, pointGap, propPoint, reach } from './shapes';
+import { newSlot, slotAt, type Trek } from './treks';
 
 /** A car's hull and where an animal meets it: filled again for each pair. */
 const HULL = newShape();
@@ -46,7 +47,7 @@ export interface Critter {
    * flying. fly: a bird on the wing. wind: turned on a car, pawing the ground. charge: running
    * at it.
    */
-  state: 'idle' | 'walk' | 'flee' | 'air' | 'fly' | 'wind' | 'charge';
+  state: 'idle' | 'walk' | 'flee' | 'air' | 'fly' | 'wind' | 'charge' | 'trek';
   /** Seconds left of standing, of fright, of flight, of pawing or of the charge. */
   t: number;
   /** The car it has picked out (an index into world.cars), or -1. */
@@ -55,6 +56,13 @@ export interface Critter {
   blown: number;
   /** How far it has gone on foot, art px: its gait. */
   gait: number;
+  /**
+   * A traveller (see treks.ts): the trek it is on (its place in world.treks), its place in the
+   * line and how far to the side of the way it keeps. `gone` while it is off the way: not there
+   * to be seen or hit until it sets out again.
+   */
+  trek?: { on: number; i: number; off: number };
+  gone?: boolean;
 }
 
 /** How far off a car still wakes an animal up, art px. Further than this it just stands. */
@@ -99,6 +107,80 @@ export function spawnCritters(
   }
 }
 
+/** Put a trek's travellers down, each at its place in the line. */
+export function spawnTrek(w: World, on: number, K: Trek, rng: Rng): void {
+  const R = K.rule;
+  for (let i = 0; i < R.count; i++) {
+    const def = w.content.prop.get(i === 0 && R.lead ? R.lead : R.prop)!;
+    const off = R.wide ? rng.range(-R.wide, R.wide) : 0;
+    const S = slotAt(K, i, off, 0, SLOT);
+    w.critters.push({
+      index: w.critters.length,
+      def,
+      x: S.x,
+      y: S.y,
+      z: 0,
+      vx: 0,
+      vy: 0,
+      vz: 0,
+      h: S.h,
+      hx: S.x,
+      hy: S.y,
+      tx: S.x,
+      ty: S.y,
+      state: 'trek',
+      t: 0,
+      prey: -1,
+      blown: 0,
+      gait: 0,
+      trek: { on, i, off },
+      gone: !S.on,
+    });
+  }
+}
+
+const SLOT = newSlot();
+
+/**
+ * A traveller goes where its trek has it now. One that was bowled over runs after its place in
+ * the line until it has it again.
+ */
+function travel(w: World, k: Critter, D: CritterManifest): void {
+  const K = w.treks[k.trek!.on]!;
+  const S = slotAt(K, k.trek!.i, k.trek!.off, w.time, SLOT);
+  if (!S.on) {
+    k.gone = true;
+    k.state = 'trek';
+    k.x = S.x;
+    k.y = S.y;
+    k.vx = k.vy = 0;
+    return;
+  }
+  const dx = S.x - k.x;
+  const dy = S.y - k.y;
+  const d = Math.hypot(dx, dy);
+  const pace = Math.max(D.run, K.rule.speed * 1.7) * DT;
+  if (!k.gone && k.state !== 'trek' && d > pace + 1) {
+    k.h = Math.atan2(dy, dx);
+    k.x += (dx / d) * pace;
+    k.y += (dy / d) * pace;
+    k.vx = ((dx / d) * pace) / DT;
+    k.vy = ((dy / d) * pace) / DT;
+    k.gait += pace;
+  } else {
+    // (set down on the way again after being gone, it has not walked there)
+    if (!k.gone) k.gait += Math.min(d, 4);
+    k.state = 'trek';
+    k.x = S.x;
+    k.y = S.y;
+    k.h = S.h;
+    k.vx = S.vx;
+    k.vy = S.vy;
+  }
+  k.gone = false;
+  if (D.kind === 'ground') for (const c of w.cars) meet(w, k, D, c);
+}
+
 /** A spot within its roaming ground. */
 function spot(w: World, k: Critter, D: CritterManifest): [number, number] {
   const a = w.rng.next() * TAU;
@@ -134,6 +216,8 @@ export function blastCritters(w: World, x: number, y: number, rad: number): void
     if (Math.abs(dx) > rad * 2 || Math.abs(dy) > rad * 2) continue;
     const d = Math.hypot(dx, dy);
     const D = k.def.critter!;
+    // (a traveller that is not there, or is too heavy to throw, a blast leaves where it is)
+    if (k.gone || (k.trek && D.mass >= FLUNG_BELOW)) continue;
     if (D.kind === 'bird') {
       if (k.state !== 'fly' && k.state !== 'air') takeOff(w, k, D, dx, dy);
       continue;
@@ -162,6 +246,10 @@ export function updateCritters(w: World): void {
         k.state = 'flee';
         k.t = 2.2;
       }
+      continue;
+    }
+    if (k.trek) {
+      travel(w, k, D);
       continue;
     }
     // what is there to be afraid of
@@ -373,6 +461,9 @@ function fly(w: World, k: Critter, D: CritterManifest): void {
 }
 
 /** A car and an animal on the ground. */
+/** The most a traveller on its way takes off a car that runs into it. */
+const TREK_HURT = 8;
+
 function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
   const far = k.def.radius + reach(c) + 2;
   if (Math.abs(c.x - k.x) > far || Math.abs(c.y - k.y) > far) return;
@@ -387,7 +478,9 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
     const ny = AT.ny;
     const px = AT.px;
     const py = AT.py;
-    const closing = c.vx * nx + c.vy * ny;
+    // (a traveller is under way itself: what counts is how fast the two come together)
+    const going = k.trek && k.state === 'trek';
+    const closing = going ? (c.vx - k.vx) * nx + (c.vy - k.vy) * ny : c.vx * nx + c.vy * ny;
     if (D.mass < FLUNG_BELOW) {
       if (closing > 30 && !c.wrecked) {
         // bowled over: thrown on ahead and a little to the side, the heavier the lower
@@ -423,7 +516,7 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
       return;
     }
     // too heavy to throw: the car is what gives way
-    const share = clamp(1 / (1 + D.mass), 0.2, 0.6);
+    const share = k.trek ? 0 : clamp(1 / (1 + D.mass), 0.2, 0.6);
     c.x -= nx * over * (1 - share);
     c.y -= ny * over * (1 - share);
     k.x += nx * over * share;
@@ -464,14 +557,16 @@ function meet(w: World, k: Critter, D: CritterManifest, c: Car): void {
     if (D.charge) {
       // one that attacks does not run from a knock: it turns on whoever gave it
       if (k.state !== 'wind' && closing > 25) k.blown = 0;
-    } else {
+    } else if (!k.trek) {
       k.h = Math.atan2(ny, nx);
       k.state = 'flee';
       k.t = 1.6;
     }
     if (closing > 25 && c.hitCd <= 0) {
       c.hitCd = 0.25;
-      if (closing > 45 && !c.wrecked) damage(w, c, (closing - 35) * 0.2, null, px, py);
+      // (a train is a knock and a fright, never a wreck out of nowhere: what travels hurts little)
+      if (closing > 45 && !c.wrecked)
+        damage(w, c, Math.min(k.trek ? TREK_HURT : Infinity, (closing - 35) * 0.2), null, px, py);
       w.emit({
         t: 'critter',
         what: 'bump',

@@ -148,6 +148,36 @@ export function propTest(id: string, speed: number, clearance = 30) {
   return { world: w, prop, piece, events, blocked, maxZ, start: x };
 }
 
+/**
+ * The derby bowl with nothing in it but what one `trek` rule puts there, the player and a parked
+ * rival: a place to watch something travel. The race is under way.
+ */
+export function trekBench(rule: Record<string, unknown>): World {
+  const C = testContent();
+  const v = VenueSchema.parse({
+    ...benchPit,
+    id: 'venue.bench-trek',
+    scenery: [{ rule: 'trek', ...rule }],
+  });
+  const w = startRace(
+    new World({
+      content: { ...C, venue: new Map(C.venue).set(v.id, v) },
+      venue: v.id,
+      car: 'car.mutt',
+      seed: 1,
+      rivals: 1,
+    }),
+  );
+  w.bots.length = 0;
+  w.props.length = 0;
+  w.spills.length = 0;
+  const r = w.cars.find((c) => !c.isPlayer)!;
+  r.ai = null;
+  put(r, w.oval!.cx + 250, w.oval!.cy + 250, 0);
+  put(w.player, w.oval!.cx - 250, w.oval!.cy + 250, 0);
+  return w;
+}
+
 /** The derby bowl emptied of everything: open flat ground with no road to leave. */
 export function flatBench(opts: Partial<Omit<WorldOptions, 'content'>> = {}): World {
   // one parked rival out of the way, or the derby would be won on the spot

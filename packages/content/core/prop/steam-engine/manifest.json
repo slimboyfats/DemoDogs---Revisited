@@ -1,0 +1,28 @@
+{
+  "id": "prop.steam-engine",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Steam engine",
+    "description": "A little red locomotive. Put it at the head of a train on a trek: it whistles as it sets out, runs to its timetable and gives way to nothing.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 10.4,
+  "critter": {
+    "kind": "ground",
+    "group": [1, 1],
+    "roam": 20,
+    "walk": 3,
+    "run": 30,
+    "scare": 1,
+    "cry": "toot",
+    "mass": 12,
+    "shy": 40,
+    "step": 0
+  },
+  "spout": {
+    "what": "steam",
+    "at": [9.9, 0.0, 23.2],
+    "rate": 14
+  }
+}

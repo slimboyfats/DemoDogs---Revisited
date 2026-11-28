@@ -144,8 +144,14 @@ export class Scene implements WorldRenderer {
 
     // shadows
     ctx.fillStyle = '#000';
-    queueShadows(R, this.art, w, null, false, (x, y, rx, ry, rot, a) =>
-      this.shadow(x, y, rx, ry, rot, a),
+    queueShadows(
+      R,
+      this.art,
+      w,
+      null,
+      false,
+      (x, y, rx, ry, rot, a) => this.shadow(x, y, rx, ry, rot, a),
+      fx.ambient,
     );
     ctx.globalAlpha = 1;
 

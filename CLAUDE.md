@@ -46,6 +46,7 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
 | `pnpm perf:fight [venue ...]`; `SECONDS=20`, `PROFILE=1`        | what a derby's heaviest ticks cost the page: worst tick, garbage a tick, collections, texels sent             |
 | `pnpm water [out-dir] [--clip] [--spots] [--only=venue]`        | a car wading the lagoon and going under in the deep, and a still of every water (`captures/water/`)           |
 | `pnpm pools [out-dir] [--seconds=7] [--only=lava]`              | a car driven into Cinder Peak's lava and over Frostbite Quarry's ice: frames and stills (`captures/pools/`)   |
+| `pnpm alive [out-dir] [venue] [--at=0.3,@prop.id,lap]`          | what goes on round a race: trains, animal files, fans, fountains, balloons, flybys (`captures/alive/`)        |
 | `pnpm format`                                                   | Prettier, write                                                                                               |
 | `pnpm content:validate`                                         | resolve and validate every manifest                                                                           |
 | `UPDATE_GOLDEN=1 pnpm vitest run --project content golden`      | regenerate golden hashes after an intended sim change                                                         |
@@ -241,6 +242,18 @@ An original top-down combat racer for phones, drawn with animated sprite stacks.
   raises the banks only inside the road's loop (a mountain to drive round), as `infield: false` does outside it.
   Sights stand close beside the road (about 50 px off its edge), since that is all a phone shows. Every built-in
   track opens in the track creator as a copy (`trackFromVenue` in sim/custom.ts, COPY THIS TRACK on the tracks screen).
+- **What goes on round a race is worked out from the clock.** A `trek` scenery rule (shared/pieces.ts,
+  sim/treks.ts) is a way (`cross` the road, `beside` it, or `points`) and a timetable; where each traveller is comes
+  from the race's time alone (`slotAt`), so nothing is stepped while nobody is near, every screen of an online race
+  agrees, and a `signal` lamp shows what is coming. The travellers are animals like any other (`Critter.trek`): light
+  ones (ducks, sheep) are bowled over and run back to their place, heavy ones (`prop.steam-engine`, `prop.tram`,
+  `prop.tractor`) do not give way, take little off a car (`TREK_HURT`) and are waited for by rival drivers
+  (`crossingAhead` in sim/ai-kit.ts). Scenery keeps off a way, `rails` paints a railway and its crossing, `ends`
+  stands a shed at each end. The rest is for show and the sim never knows (client `render/ambient.ts`, `Ambient`):
+  a prop's `spout` (smoke, steam, water, a sprinkler's jets), its `float` (a balloon drawn lifted), a `cheer` bone
+  (`prop.fans` jump when a car is near), a venue's `flyby` (planes, an airship, flocks across the sky) and paper over
+  the line when the driver ends a lap. Life stands at the roadside (lanes 1.2 to 1.5: a phone shows about 45 px past
+  the kerb) or crosses on a straight away from pads and raised road; judge a change with `pnpm alive` and `pnpm bots`.
 - **Ground fog is sheets and a small fluid** (client `render/pixel/fog.ts`; `Atmosphere.fog`, the skies `mist`,
   `dawn`, `fog-night`, a modifier's `sky.fog`). `FogPass` draws a few flat sheets a little over the ground after the
   stacks, each tested against their depth, so things stand in it; `FogFluid` is stable fluids on a coarse grid over

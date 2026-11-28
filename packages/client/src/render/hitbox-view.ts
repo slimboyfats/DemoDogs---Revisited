@@ -534,7 +534,7 @@ export class HitboxView {
       if (heights) this.pin(p.x, p.y, p.z, COL.loose);
     }
     for (const k of w.critters) {
-      if (!this.seen(k.x, k.y, 20)) continue;
+      if (k.gone || !this.seen(k.x, k.y, 20)) continue;
       this.ring(k.x, k.y, k.def.radius, k.z);
       this.stroke(k.state === 'fly' ? COL.ghost : COL.loose, 1.2);
       if (heights) this.pin(k.x, k.y, k.z, COL.loose);

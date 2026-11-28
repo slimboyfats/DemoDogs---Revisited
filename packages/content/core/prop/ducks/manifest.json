@@ -1,0 +1,24 @@
+{
+  "id": "prop.ducks",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Ducks",
+    "description": "Ducks. Left alone they potter about; on a trek they cross the road in a file, and one bowled over gets up and runs after the rest.",
+    "since": "core@0.12.0"
+  },
+  "body": "loose",
+  "radius": 1.9,
+  "critter": {
+    "kind": "ground",
+    "group": [3, 6],
+    "roam": 30,
+    "walk": 6,
+    "run": 42,
+    "scare": 40,
+    "cry": "quack",
+    "mass": 0.06,
+    "shy": 40,
+    "step": 0.45,
+    "points": 5
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "prop.hot-air-balloon",
+  "schemaVersion": 1,
+  "meta": {
+    "name": "Hot-air balloon",
+    "description": "A striped balloon tethered high over the roadside, rising and sinking a little. Its shadow lies on the ground under it; cars pass beneath.",
+    "since": "core@0.12.0"
+  },
+  "body": "static",
+  "radius": 6,
+  "solid": false,
+  "float": {
+    "high": 34,
+    "drift": 5
+  }
+}

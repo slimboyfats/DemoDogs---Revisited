@@ -12,6 +12,8 @@ const FAR_BAND = 36;
 
 /** Does this piece of scenery throw a shadow of its own shape (rather than a soft oval)? */
 export function casts(s: StaticProp, strip: Strip): boolean {
+  // (what floats has a shadow that drifts with it: a blob, drawn each frame)
+  if (s.def.float) return false;
   return (s.lift ?? 0) > 0 || tall(strip) >= TALL;
 }
 

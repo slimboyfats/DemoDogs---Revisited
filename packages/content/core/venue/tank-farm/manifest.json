@@ -182,6 +182,179 @@
           "rot": -2.502
         }
       ]
+    },
+    {
+      "rule": "place",
+      "items": [
+        {
+          "prop": "prop.fans",
+          "x": 602.9,
+          "y": 107.2,
+          "rot": 5.055
+        },
+        {
+          "prop": "prop.fans",
+          "x": 594.8,
+          "y": 129.8,
+          "rot": 5.055
+        },
+        {
+          "prop": "prop.fans",
+          "x": 448.0,
+          "y": 316.7,
+          "rot": 5.639
+        },
+        {
+          "prop": "prop.fans",
+          "x": 428.8,
+          "y": 331.1,
+          "rot": 5.639
+        },
+        {
+          "prop": "prop.fans",
+          "x": 172.2,
+          "y": 440.0,
+          "rot": 6.085
+        },
+        {
+          "prop": "prop.fans",
+          "x": 148.7,
+          "y": 444.8,
+          "rot": 6.085
+        },
+        {
+          "prop": "prop.fans",
+          "x": -148.7,
+          "y": 444.8,
+          "rot": 0.199
+        },
+        {
+          "prop": "prop.fans",
+          "x": -172.2,
+          "y": 440.0,
+          "rot": 0.199
+        },
+        {
+          "prop": "prop.fans",
+          "x": -428.8,
+          "y": 331.1,
+          "rot": 0.644
+        },
+        {
+          "prop": "prop.fans",
+          "x": -448.0,
+          "y": 316.7,
+          "rot": 0.644
+        },
+        {
+          "prop": "prop.fans",
+          "x": -594.8,
+          "y": 129.8,
+          "rot": 1.228
+        },
+        {
+          "prop": "prop.fans",
+          "x": -602.9,
+          "y": 107.2,
+          "rot": 1.228
+        },
+        {
+          "prop": "prop.fans",
+          "x": -602.9,
+          "y": -107.2,
+          "rot": 1.914
+        },
+        {
+          "prop": "prop.fans",
+          "x": -594.8,
+          "y": -129.8,
+          "rot": 1.914
+        },
+        {
+          "prop": "prop.fans",
+          "x": -448.0,
+          "y": -316.7,
+          "rot": 2.498
+        },
+        {
+          "prop": "prop.fans",
+          "x": -428.8,
+          "y": -331.1,
+          "rot": 2.498
+        },
+        {
+          "prop": "prop.fans",
+          "x": -172.2,
+          "y": -440.0,
+          "rot": 2.943
+        },
+        {
+          "prop": "prop.fans",
+          "x": -148.7,
+          "y": -444.8,
+          "rot": 2.943
+        },
+        {
+          "prop": "prop.fans",
+          "x": 148.7,
+          "y": -444.8,
+          "rot": 3.34
+        },
+        {
+          "prop": "prop.fans",
+          "x": 172.2,
+          "y": -440.0,
+          "rot": 3.34
+        },
+        {
+          "prop": "prop.fans",
+          "x": 428.8,
+          "y": -331.1,
+          "rot": 3.786
+        },
+        {
+          "prop": "prop.fans",
+          "x": 448.0,
+          "y": -316.7,
+          "rot": 3.786
+        },
+        {
+          "prop": "prop.fans",
+          "x": 594.8,
+          "y": -129.8,
+          "rot": 4.37
+        },
+        {
+          "prop": "prop.fans",
+          "x": 602.9,
+          "y": -107.2,
+          "rot": 4.37
+        },
+        {
+          "prop": "prop.hot-air-balloon",
+          "x": 285,
+          "y": 214,
+          "rot": 0
+        },
+        {
+          "prop": "prop.hot-air-balloon",
+          "x": -285,
+          "y": -214,
+          "rot": 0
+        },
+        {
+          "prop": "prop.sprinkler",
+          "x": -325,
+          "y": 268,
+          "rot": 0
+        },
+        {
+          "prop": "prop.sprinkler",
+          "x": 325,
+          "y": -268,
+          "rot": 0
+        }
+      ]
     }
   ],
   "bots": {
@@ -209,5 +382,20 @@
     "pickup.hackles",
     "pickup.scrap-jaws",
     "pickup.roll-cage"
+  ],
+  "flyby": [
+    {
+      "prop": "prop.gulls",
+      "every": 13,
+      "high": 36,
+      "speed": 70,
+      "flock": 6
+    },
+    {
+      "prop": "prop.biplane",
+      "every": 24,
+      "high": 46,
+      "speed": 110
+    }
   ]
 }

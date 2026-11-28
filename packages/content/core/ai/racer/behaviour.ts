@@ -2,6 +2,7 @@ import { type Controls } from '@demodogs/shared';
 import {
   belowRoad,
   cornerSpeed,
+  crossingAhead,
   defineAi,
   driftBend,
   looksNow,
@@ -20,7 +21,7 @@ import {
  * ai.racer: drive the racing line, each driver a little off it in a lane of its own. Go round
  * what is in the way (slower cars, wrecks, scenery, mines, pools), go out of the way for crates
  * and boost tiles, brake only as late as the bend ahead needs, drift round the bends that are
- * worth it, shut the door on a car coming up
+ * worth it, wait at a crossing for a train, shut the door on a car coming up
  * behind, ram the car ahead when spoiling for it. Fire what it carries when it would hit, drop
  * what it carries on a car on its tail, and boost down a clear straight when there is a place to
  * gain. Back out of what it gets stuck on, and find the way back up beside raised road. A rubber
@@ -65,13 +66,16 @@ export default defineAi({
     const [steer, d] = steerTo(c, tx, ty);
     const out: Controls = { steer, throttle: 1, brake: false, boost: false, fire: false };
     // no faster than the bends ahead allow, and off the power while it is pointing the wrong way
-    const cap = cornerSpeed(w, c);
+    // (nor than a train about to cross allows: it waits at the line)
+    const cap = Math.min(cornerSpeed(w, c), crossingAhead(w, c));
     if (ramp) out.throttle = 1;
     else if (sp > cap + 14) {
       // (off the power, or it would be a drift)
       out.brake = true;
       out.throttle = 0;
-    } else if (sp > cap) out.throttle = 0.2;
+    } else if (cap < 8)
+      out.throttle = 0; // (held at a crossing)
+    else if (sp > cap) out.throttle = 0.2;
     if (Math.abs(d) > 1.1 && sp > 70) out.throttle = Math.min(out.throttle, 0.25);
     // something square in the way that it cannot get round in time
     if (way.blocked < 16 + sp * 0.12 && sp > 60) out.throttle = Math.min(out.throttle, 0.3);

@@ -53,6 +53,7 @@ import { GuardState, guardEvent, guardTick } from './guards-fx';
 import { CatchupFx } from './catchup-fx';
 import { TrickFx } from './tricks-fx';
 import { DriftFx } from './drift-fx';
+import { Ambient } from './ambient';
 import { LifeFx } from './life-fx';
 import { armsEvent, armsTick } from './arms-fx';
 import { arsenalEvent, arsenalTick } from './arsenal-fx';
@@ -273,6 +274,8 @@ export class Effects {
   /** Track tiles and animals: boost fire, ramp dust, feathers. */
   readonly life = new LifeFx();
   readonly drift = new DriftFx();
+  /** Smoke, sprinklers, balloons and what flies over: see ambient.ts. */
+  readonly ambient = new Ambient();
   /** World modifiers: rain, wind, lightning, night, quakes and the rest. */
   readonly weather: WeatherFx;
   /** Add-ons going on, coming off and at work. */
